@@ -1,0 +1,19 @@
+{
+  "name": "@bossgeekgo/geek-auto-start-chat-with-boss",
+  "private": true,
+  "version": "1.0.0",
+  "description": "geek-auto-start-chat-with-boss",
+  "module": "./main/index.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node ./main/index.mjs"
+  },
+  "author": "bossgeekgo",
+  "license": "ISC",
+  "dependencies": {
+    "dayjs": "^1.11.10",
+    "puppeteer": "^21.6.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}
