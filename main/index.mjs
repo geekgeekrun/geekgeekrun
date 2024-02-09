@@ -17,14 +17,13 @@ if (!bossCookies?.length) {
 }
 
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
-const pages = []
-globalThis.pages = pages
 
 const expectCompanySet = new Set(targetCompanyList)
 
-;(async () => {
+let browser, page
+async function mainLoop () {
   try {
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: false,
       ignoreHTTPSErrors: true,
       defaultViewport: {
@@ -34,7 +33,7 @@ const expectCompanySet = new Set(targetCompanyList)
       devtools: true
     })
   
-    const page = await browser.newPage()
+    page = await browser.newPage()
     sleep(2000).then(() => {
       page.bringToFront()
     })
@@ -45,22 +44,21 @@ const expectCompanySet = new Set(targetCompanyList)
     }
   
     await page.goto(recommendJobPageUrl, { timeout: 0 })
-    pages.push(page)
   
     await sleepWithRandomDelay(2500)
     
-    const recommendJobLink = (await pages[0].$('[ka=header-job-recommend]'))
+    const recommendJobLink = (await page.$('[ka=header-job-recommend]'))
     await recommendJobLink.click()
 
     while (true) {
       await sleepWithRandomDelay(3000)
   
-      const expectJobList = (await pages[0].evaluate(`
+      const expectJobList = (await page.evaluate(`
         document.querySelector('.job-recommend-search')?.__vue__?.expectList
       `)
       )
       
-      const expectJobTabHandlers = await pages[0].$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
+      const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
       expectJobTabHandlers.shift()
   
       // click first expect job
@@ -79,9 +77,9 @@ const expectCompanySet = new Set(targetCompanyList)
 
       const { targetJobElProxy, targetJobIndex } = await new Promise(async (resolve) => {
         // job list
-        const recommendJobListElProxy = await pages[0].$('.job-list-container .rec-job-list')
+        const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
 
-        let jobListData = await pages[0].evaluate(
+        let jobListData = await page.evaluate(
           `
             document.querySelector('.job-recommend-main')?.__vue__?.jobList
           `
@@ -90,8 +88,8 @@ const expectCompanySet = new Set(targetCompanyList)
         while (targetJobIndex < 0) {
           // fetch new
           const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
-          const windowInnerHeight = await pages[0].evaluate('window.innerHeight')
-          await pages[0].mouse.move(
+          const windowInnerHeight = await page.evaluate('window.innerHeight')
+          await page.mouse.move(
             recommendJobListElBBox.x + recommendJobListElBBox.width / 2,
             windowInnerHeight / 2
           )
@@ -100,12 +98,12 @@ const expectCompanySet = new Set(targetCompanyList)
           const increase = 40 + Math.floor(30 * Math.random())
           while (scrolledHeight < targetHeight) {
             scrolledHeight += increase
-            await pages[0].mouse.wheel({deltaY: increase});
+            await page.mouse.wheel({deltaY: increase});
             await sleep(1)
           }
 
           await sleep(3000)
-          jobListData = await pages[0].evaluate(
+          jobListData = await page.evaluate(
             `
               document.querySelector('.job-recommend-main')?.__vue__?.jobList
             `
@@ -123,7 +121,7 @@ const expectCompanySet = new Set(targetCompanyList)
       })
       if (targetJobIndex > 0) {
         // scroll that target element into view
-        await pages[0].evaluate(`
+        await page.evaluate(`
           const targetEl = document.querySelector("ul.rec-job-list").children[${targetJobIndex}]
           targetEl.scrollIntoView({
             behavior: 'smooth',
@@ -148,11 +146,11 @@ const expectCompanySet = new Set(targetCompanyList)
         await sleepWithRandomDelay(2000)
       }
 
-      const jobData = await pages[0].evaluate('document.querySelector(".job-detail-box").__vue__.data')
+      const jobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
   
-      const startChatButtonInnerHTML = await pages[0].evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
+      const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
       if (startChatButtonInnerHTML === '立即沟通') {
-        const startChatButtonProxy = await pages[0].$('.job-detail-box .op-btn.op-btn-chat')
+        const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
         await startChatButtonProxy.click()
 
         const addFriendResponse = await page.waitForResponse(
@@ -177,17 +175,17 @@ const expectCompanySet = new Set(targetCompanyList)
         } finally {
           //#region TODO: temporary work with legacy logic
           await sleep(500)
-          const continueChatButtonProxy = await pages[0].$('.greet-boss-dialog .greet-boss-footer .sure-btn')
+          const continueChatButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .sure-btn')
 
           await continueChatButtonProxy.click()
           //#endregion
           await sleepWithRandomDelay(2500)
-          if (pages[0].url().startsWith('https://www.zhipin.com/web/geek/chat')) {
+          if (page.url().startsWith('https://www.zhipin.com/web/geek/chat')) {
             await sleepWithRandomDelay(3000)
 
             await Promise.all([
-              pages[0].waitForNavigation(),
-              pages[0].goBack(),
+              page.waitForNavigation(),
+              page.goBack(),
             ])
             await sleepWithRandomDelay(1000)
           }
@@ -198,6 +196,21 @@ const expectCompanySet = new Set(targetCompanyList)
 
     // ;await browser.close()
   } catch (err) {
+    browser.close()
+    browse = null
+    page = null
+
+    throw err
     console.error(err)
+  }
+}
+
+;(async () => {
+  while (true) {
+    try {
+      await mainLoop()
+    } catch (err) {
+      void err
+    }
   }
 })()
