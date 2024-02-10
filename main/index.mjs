@@ -21,6 +21,8 @@ const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
 const expectCompanySet = new Set(targetCompanyList)
 
 let browser, page
+
+const blockBossNotNewChat = new Set()
 async function mainLoop () {
   try {
     browser = await puppeteer.launch({
@@ -50,30 +52,34 @@ async function mainLoop () {
     const recommendJobLink = (await page.$('[ka=header-job-recommend]'))
     await recommendJobLink.click()
 
+    const INIT_START_EXCEPT_JOB_INDEX = 0
+    let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     afterPageLoad: while (true) {
-      await sleepWithRandomDelay(3000)
-  
-      const expectJobList = (await page.evaluate(`
-        document.querySelector('.job-recommend-search')?.__vue__?.expectList
+      const currentActiveJobIndex = await page.evaluate(`
+        [...document.querySelectorAll('.job-recommend-search .recommend-job-btn')].findIndex(it => it.classList.contains('active'))
       `)
-      )
-      
-      const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
-      expectJobTabHandlers.shift()
-  
-      // click first expect job
-      await expectJobTabHandlers[0].click()
-      await page.waitForResponse(
-        response => {
-          if (
-            response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json')
-          ) {
-            return true
+      if (currentActiveJobIndex === currentExceptJobIndex) {
+        // first navigation and can immediately start chat (recommend job)
+      } else {
+        // not first navigation and should choose a job (except job)
+        const expectJobList = await page.evaluate(`document.querySelector('.job-recommend-search')?.__vue__?.expectList`)
+        
+        const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
+    
+        // click first expect job
+        await expectJobTabHandlers[currentExceptJobIndex].click()
+        await page.waitForResponse(
+          response => {
+            if (
+              response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json')
+            ) {
+              return true
+            }
+            return false
           }
-          return false
-        }
-      );
-      await sleepWithRandomDelay(2000)
+        );
+        await sleepWithRandomDelay(2000)
+      }
 
       try {
         const { targetJobElProxy, targetJobIndex } = await new Promise(async (resolve, reject) => {
@@ -85,7 +91,10 @@ async function mainLoop () {
               document.querySelector('.job-recommend-main')?.__vue__?.jobList
             `
           )
-          let targetJobIndex = jobListData.findIndex(it => [...expectCompanySet].find(name => it.brandName.includes(name)))
+          let targetJobIndex = jobListData.findIndex(
+            it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
+          )
+
           let hasReachLastPage = false
   
           while (targetJobIndex < 0 && !hasReachLastPage) {
@@ -117,7 +126,7 @@ async function mainLoop () {
                 document.querySelector('.job-recommend-main')?.__vue__?.jobList
               `
             )
-            targetJobIndex = targetJobIndex = jobListData.findIndex(it => [...expectCompanySet].find(name => it.brandName.includes(name)))
+            targetJobIndex = jobListData.findIndex(it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name)))
           }
   
           if (targetJobIndex < 0 && hasReachLastPage) {
@@ -204,14 +213,22 @@ async function mainLoop () {
               }
             }
           } else {
+            blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
           }
         }
       } catch (err) {
         if (err instanceof Error && err.message === 'CANNOT_FIND_EXCEPT_JOB') {
-          await Promise.all([
-            page.reload(),
-            page.waitForNavigation()
-          ])
+          if (
+            currentExceptJobIndex + 1 > expectJobTabHandlers.length
+          ) {
+            await Promise.all([
+              page.reload(),
+              page.waitForNavigation()
+            ])
+            currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
+          } else {
+            currentExceptJobIndex += 1
+          }
           continue afterPageLoad;
         } else {
           throw err
@@ -225,8 +242,8 @@ async function mainLoop () {
     browse = null
     page = null
 
-    throw err
     console.error(err)
+    throw err
   }
 }
 
