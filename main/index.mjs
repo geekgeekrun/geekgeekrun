@@ -49,7 +49,7 @@ async function mainLoop () {
       page.goto(recommendJobPageUrl, { timeout: 0 }),
       page.waitForNavigation(),
     ])
-    const INIT_START_EXCEPT_JOB_INDEX = 0
+    const INIT_START_EXCEPT_JOB_INDEX = 1
     let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     afterPageLoad: while (true) {
       await sleepWithRandomDelay(2500)
