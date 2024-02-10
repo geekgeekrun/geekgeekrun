@@ -1,8 +1,8 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
-import bossCookies from '../runtime/boss-cookies.mjs'
-import targetCompanyList from '../runtime/target-company-list.mjs'
+import { cookies as bossCookies } from '../config/boss.mjs'
+import targetCompanyList from '../config/target-company-list.mjs'
 
 import {
   sleep,

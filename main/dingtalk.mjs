@@ -1,4 +1,4 @@
-import { dingTalkAccessToken } from "../runtime/dingtalk.mjs"
+import { dingTalkAccessToken } from "../config/dingtalk.mjs"
 
 export function createTextMessage (text) {
   return JSON.stringify({
