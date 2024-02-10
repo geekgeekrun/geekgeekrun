@@ -146,7 +146,7 @@ async function mainLoop () {
         if (targetJobIndex > 0) {
           // scroll that target element into view
           await page.evaluate(`
-            const targetEl = document.querySelector("ul.rec-job-list").children[${targetJobIndex}]
+            targetEl = document.querySelector("ul.rec-job-list").children[${targetJobIndex}]
             targetEl.scrollIntoView({
               behavior: 'smooth',
               block: ${Math.random() > 0.5 ? '\'center\'' : '\'end\''}
