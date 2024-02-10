@@ -9,6 +9,13 @@ import {
   sleepWithRandomDelay
 } from './utils.mjs'
 
+import {
+  SyncHook,
+  AsyncSeriesHook
+} from 'tapable'
+
+import { initPlugins } from '../plugin/index.mjs'
+
 puppeteer.use(StealthPlugin())
 
 if (!bossCookies?.length) {
@@ -23,7 +30,7 @@ const expectCompanySet = new Set(targetCompanyList)
 let browser, page
 
 const blockBossNotNewChat = new Set()
-async function mainLoop () {
+async function mainLoop (hooks) {
   try {
     browser = await puppeteer.launch({
       headless: false,
@@ -34,6 +41,7 @@ async function mainLoop () {
       },
       devtools: true
     })
+    hooks.puppeteerLaunched.call()
   
     page = await browser.newPage()
     sleep(2000).then(() => {
@@ -41,14 +49,19 @@ async function mainLoop () {
     })
   
     //set cookies
-    for(let i = 0; i < bossCookies.length; i++){
-      await page.setCookie(bossCookies[i]);
+    const copiedBossCookies = JSON.parse(JSON.stringify(bossCookies))
+
+    hooks.cookieWillSet.call(copiedBossCookies)
+    for(let i = 0; i < copiedBossCookies.length; i++){
+      await page.setCookie(copiedBossCookies[i]);
     }
   
     await Promise.all([
       page.goto(recommendJobPageUrl, { timeout: 0 }),
       page.waitForNavigation(),
     ])
+    hooks.pageLoaded.call()
+
     const INIT_START_EXCEPT_JOB_INDEX = 1
     let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     afterPageLoad: while (true) {
@@ -174,6 +187,7 @@ async function mainLoop () {
       
           const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
           if (startChatButtonInnerHTML === '立即沟通') {
+            await hooks.newChatWillStartup.promise(jobData)
             const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
             await startChatButtonProxy.click()
   
@@ -198,6 +212,7 @@ async function mainLoop () {
                 throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
               }
             } else {
+              hooks.newChatStartup.call(jobData)
               blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
 
               await sleepWithRandomDelay(750)
@@ -216,12 +231,16 @@ async function mainLoop () {
               if (
                 currentExceptJobIndex + 1 > expectJobList.length
               ) {
+                hooks.noPositionFoundForCurrentJob.call()
                 await Promise.all([
                   page.reload(),
                   page.waitForNavigation()
                 ])
                 currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
               } else {
+                hooks.noPositionFoundForCurrentJob.call()
+                hooks.noPositionFoundAfterTraverseAllJob.call()
+
                 currentExceptJobIndex += 1
               }
               continue afterPageLoad;
@@ -229,18 +248,23 @@ async function mainLoop () {
             }
             case 'STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT': {
               let nextTrySeconds = 60 * 60
-              console.error(`Today chance has used out. Just explore positions you\'ve chatted. New chat will be tried to start after ${nextTrySeconds} seconds.`)
+              const msg = `Today chance has used out. Just explore positions you\'ve chatted. New chat will be tried to start after ${nextTrySeconds} seconds.`
+              hooks.errorEncounter.call(msg)
+              console.error(msg)
               await sleep(nextTrySeconds * 1000)
               throw err
             }
             case 'STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR': {
+              hooks.errorEncounter.call(err)
               throw err
             }
             default: {
+              hooks.errorEncounter.call(err)
               throw err
             }
           }
         } else {
+          hooks.errorEncounter.call(err)
           throw err
         }
       }
@@ -258,9 +282,20 @@ async function mainLoop () {
 }
 
 ;(async () => {
+  const hooks = {
+    puppeteerLaunched: new SyncHook(),
+    pageLoaded: new SyncHook(),
+    cookieWillSet: new SyncHook(['cookies']),
+    newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
+    newChatStartup: new SyncHook(['positionInfoDetail']),
+    noPositionFoundForCurrentJob: new SyncHook(),
+    noPositionFoundAfterTraverseAllJob: new SyncHook(),
+    errorEncounter: new SyncHook(['errorInfo'])
+  }
+  initPlugins(hooks)
   while (true) {
     try {
-      await mainLoop()
+      await mainLoop(hooks)
     } catch (err) {
       void err
     }

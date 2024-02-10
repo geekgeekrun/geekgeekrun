@@ -1,5 +1,3 @@
-import { dingTalkAccessToken } from "../config/dingtalk.mjs"
-
 export function createTextMessage (text) {
   return JSON.stringify({
     "msgtype": "text",
@@ -9,7 +7,7 @@ export function createTextMessage (text) {
   })
 }
 
-export async function requestDingTalkNotify (body) {
+export async function requestDingTalkNotify (dingTalkAccessToken, body) {
   const url = new URL(`https://oapi.dingtalk.com/robot/send`)
   url.searchParams.append(
     'access_token',
