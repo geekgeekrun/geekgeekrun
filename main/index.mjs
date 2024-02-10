@@ -187,51 +187,59 @@ async function mainLoop () {
                 return false
               }
             );
-            try {
-              const res = await addFriendResponse.json()
-      
-              if (res.code !== 0) {
-                console.err(res)
-                break
-              } 
-            } catch(err) {
-              // console.warn(err)
-            } finally {
-              //#region TODO: temporary work with legacy logic
-              await sleep(500)
-              const continueChatButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .sure-btn')
-  
-              await continueChatButtonProxy.click()
-              //#endregion
-              await sleepWithRandomDelay(2500)
-              if (page.url().startsWith('https://www.zhipin.com/web/geek/chat')) {
-                await sleepWithRandomDelay(3000)
-  
-                await Promise.all([
-                  page.waitForNavigation(),
-                  page.goBack(),
-                ])
-                await sleepWithRandomDelay(1000)
+            const res = await addFriendResponse.json()
+
+            if (res.code !== 0) {
+              // startup chat error, may the chance of today has used out
+              if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
+                throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
+              } else {
+                console.error(res)
+                throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
               }
+            } else {
+              blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
+
+              await sleepWithRandomDelay(750)
+              const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
+              await closeDialogButtonProxy.click()
+              await sleepWithRandomDelay(1000)
             }
           } else {
             blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
           }
         }
       } catch (err) {
-        if (err instanceof Error && err.message === 'CANNOT_FIND_EXCEPT_JOB') {
-          if (
-            currentExceptJobIndex + 1 > expectJobList.length
-          ) {
-            await Promise.all([
-              page.reload(),
-              page.waitForNavigation()
-            ])
-            currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
-          } else {
-            currentExceptJobIndex += 1
+        if (err instanceof Error) {
+          switch (err.message) {
+            case 'CANNOT_FIND_EXCEPT_JOB': {
+              if (
+                currentExceptJobIndex + 1 > expectJobList.length
+              ) {
+                await Promise.all([
+                  page.reload(),
+                  page.waitForNavigation()
+                ])
+                currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
+              } else {
+                currentExceptJobIndex += 1
+              }
+              continue afterPageLoad;
+              break;
+            }
+            case 'STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT': {
+              let nextTrySeconds = 60 * 60
+              console.error(`Today chance has used out. Just explore positions you\'ve chatted. New chat will be tried to start after ${nextTrySeconds} seconds.`)
+              await sleep(nextTrySeconds * 1000)
+              throw err
+            }
+            case 'STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR': {
+              throw err
+            }
+            default: {
+              throw err
+            }
           }
-          continue afterPageLoad;
         } else {
           throw err
         }
