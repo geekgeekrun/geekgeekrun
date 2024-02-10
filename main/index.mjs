@@ -45,7 +45,10 @@ async function mainLoop () {
       await page.setCookie(bossCookies[i]);
     }
   
-    await page.goto(recommendJobPageUrl, { timeout: 0 })
+    await Promise.all([
+      page.goto(recommendJobPageUrl, { timeout: 0 }),
+      page.waitForNavigation(),
+    ])
   
     await sleepWithRandomDelay(2500)
     
@@ -58,15 +61,14 @@ async function mainLoop () {
       const currentActiveJobIndex = await page.evaluate(`
         [...document.querySelectorAll('.job-recommend-search .recommend-job-btn')].findIndex(it => it.classList.contains('active'))
       `)
+
+      const expectJobList = await page.evaluate(`document.querySelector('.job-recommend-search')?.__vue__?.expectList`)
       if (currentActiveJobIndex === currentExceptJobIndex) {
         // first navigation and can immediately start chat (recommend job)
       } else {
         // not first navigation and should choose a job (except job)
-        const expectJobList = await page.evaluate(`document.querySelector('.job-recommend-search')?.__vue__?.expectList`)
-        
-        const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
-    
         // click first expect job
+        const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
         await expectJobTabHandlers[currentExceptJobIndex].click()
         await page.waitForResponse(
           response => {
@@ -219,7 +221,7 @@ async function mainLoop () {
       } catch (err) {
         if (err instanceof Error && err.message === 'CANNOT_FIND_EXCEPT_JOB') {
           if (
-            currentExceptJobIndex + 1 > expectJobTabHandlers.length
+            currentExceptJobIndex + 1 > expectJobList.length
           ) {
             await Promise.all([
               page.reload(),
