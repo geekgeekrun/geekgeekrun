@@ -2,7 +2,7 @@ export function createTextMessage (text) {
   return JSON.stringify({
     "msgtype": "text",
     "text": {
-      "content": `${text}【geekgo】`
+      "content": `${text}【bossgeekgo】`
     }
   })
 }
