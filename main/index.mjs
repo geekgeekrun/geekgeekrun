@@ -49,17 +49,17 @@ async function mainLoop () {
       page.goto(recommendJobPageUrl, { timeout: 0 }),
       page.waitForNavigation(),
     ])
-  
-    await sleepWithRandomDelay(2500)
-    
-    const recommendJobLink = (await page.$('[ka=header-job-recommend]'))
-    await recommendJobLink.click()
-
     const INIT_START_EXCEPT_JOB_INDEX = 0
     let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     afterPageLoad: while (true) {
+      await sleepWithRandomDelay(2500)
+
+      await Promise.all([
+        page.waitForSelector('.job-recommend-main .recommend-search-expect .recommend-job-btn'),
+        page.waitForSelector('.job-list-container .rec-job-list')
+      ])
       const currentActiveJobIndex = await page.evaluate(`
-        [...document.querySelectorAll('.job-recommend-search .recommend-job-btn')].findIndex(it => it.classList.contains('active'))
+        [...document.querySelectorAll('.job-recommend-main .recommend-search-expect .recommend-job-btn')].findIndex(it => it.classList.contains('active'))
       `)
 
       const expectJobList = await page.evaluate(`document.querySelector('.job-recommend-search')?.__vue__?.expectList`)
