@@ -25,6 +25,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "electron-updater": "^6.1.7",
     "element-plus": "^2.5.5",
+    "normalize.css": "^8.0.1",
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
@@ -42,6 +43,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-vue": "^9.20.1",
     "prettier": "^3.2.4",
+    "sass": "^1.70.0",
     "typescript": "^5.3.3",
     "unplugin-auto-import": "^0.17.5",
     "unplugin-vue-components": "^0.26.0",
