@@ -8,15 +8,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
 import JSON5 from 'json5'
+import { readConfigFile } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
-const { groupRobotAccessToken: dingTalkAccessToken } = JSON5.parse(
-  fs.readFileSync(
-    path.join(
-      get__dirname(),
-      '../../config/dingtalk.json'
-    )
-  )
-)
+const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)

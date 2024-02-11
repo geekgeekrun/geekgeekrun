@@ -11,25 +11,14 @@ import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
 import path from 'node:path';
 import JSON5 from 'json5'
 
+import { readConfigFile, ensureConfigFileExist } from './runtime-file-utils.mjs'
+ensureConfigFileExist()
+
 puppeteer.use(StealthPlugin())
 
-const { cookies: bossCookies } = JSON5.parse(
-  fs.readFileSync(
-    path.join(
-      get__dirname(),
-      '../../config/boss.json'
-    )
-  )
-)
+const { cookies: bossCookies } = readConfigFile('boss.json')
 
-const targetCompanyList = JSON5.parse(
-  fs.readFileSync(
-    path.join(
-      get__dirname(),
-      '../../config/target-company-list.json'
-    )
-  )
-)
+const targetCompanyList = readConfigFile('target-company-list.json')
 
 if (!bossCookies?.length) {
   console.error('There is no cookies. you can save a copy with EditThisCookie extension.')
