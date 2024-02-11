@@ -1,15 +1,34 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
-import { cookies as bossCookies } from '../../config/boss.mjs'
-import targetCompanyList from '../../config/target-company-list.mjs'
-
 import {
   sleep,
   sleepWithRandomDelay
 } from '@bossgeekgo/utils/sleep.mjs'
 
+import fs from 'node:fs'
+import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
+import path from 'node:path';
+
 puppeteer.use(StealthPlugin())
+
+const { cookies: bossCookies } = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      get__dirname(),
+      '../../config/boss.json'
+    )
+  )
+)
+
+const targetCompanyList = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      get__dirname(),
+      '../../config/target-company-list.json'
+    )
+  )
+)
 
 if (!bossCookies?.length) {
   console.error('There is no cookies. you can save a copy with EditThisCookie extension.')

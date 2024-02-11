@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@bossgeekgo/dingtalk-plugin": "workspace:*",
-    "@bossgeekgo/geek-auto-start-chat-with-boss": "workspace:*"
+    "@bossgeekgo/geek-auto-start-chat-with-boss": "workspace:*",
+    "@bossgeekgo/utils": "workspace:*"
   }
 }
