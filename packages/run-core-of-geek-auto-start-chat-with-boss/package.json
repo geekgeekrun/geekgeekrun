@@ -1,0 +1,16 @@
+{
+  "name": "@bossgeekgo/run-core-of-geek-auto-start-chat-with-boss",
+  "private": true,
+  "version": "1.0.0",
+  "description": "run-core-of-geek-auto-start-chat-with-boss",
+  "module": "./index.mjs",
+  "type": "module",
+  "scripts": {
+  },
+  "author": "bossgeekgo",
+  "license": "ISC",
+  "dependencies": {
+    "@bossgeekgo/dingtalk-plugin": "workspace:*",
+    "@bossgeekgo/geek-auto-start-chat-with-boss": "workspace:*"
+  }
+}

@@ -1,12 +1,12 @@
 {
-  "name": "@bossgeekgo/geek-auto-start-chat-with-boss",
+  "name": "bossgeekgo",
   "private": true,
   "version": "1.0.0",
   "description": "geek-auto-start-chat-with-boss",
   "module": "./main/index.mjs",
   "type": "module",
   "scripts": {
-    "start": "node ./main/index.mjs"
+    "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/index.mjs"
   },
   "author": "bossgeekgo",
   "license": "ISC",

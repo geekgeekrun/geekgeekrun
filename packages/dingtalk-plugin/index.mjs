@@ -1,4 +1,4 @@
-import { requestDingtalkNotify, createTextMessage } from './dingtalk.mjs'
+import { requestDingtalkNotify, createTextMessage } from './service.mjs'
 import dayjs from 'dayjs'
 
 let sendQueueTimer = 0

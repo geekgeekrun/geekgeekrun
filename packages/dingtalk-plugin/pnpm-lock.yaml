@@ -4,44 +4,22 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-importers:
-
-  .:
-    dependencies:
-      dayjs:
-        specifier: ^1.11.10
-        version: 1.11.10
-      puppeteer:
-        specifier: ^21.6.1
-        version: 21.6.1
-      puppeteer-extra:
-        specifier: ^3.3.6
-        version: 3.3.6(puppeteer@21.6.1)
-      puppeteer-extra-plugin-stealth:
-        specifier: ^2.11.2
-        version: 2.11.2(puppeteer-extra@3.3.6)
-      tapable:
-        specifier: ^2.2.1
-        version: 2.2.1
-
-  packages/dingtalk-plugin: {}
-
-  packages/geek-auto-start-chat-with-boss:
-    dependencies:
-      '@bossgeekgo/utils':
-        specifier: workspace:*
-        version: link:../utils
-
-  packages/run-core-of-geek-auto-start-chat-with-boss:
-    dependencies:
-      '@bossgeekgo/dingtalk-plugin':
-        specifier: workspace:*
-        version: link:../dingtalk-plugin
-      '@bossgeekgo/geek-auto-start-chat-with-boss':
-        specifier: workspace:*
-        version: link:../geek-auto-start-chat-with-boss
-
-  packages/utils: {}
+dependencies:
+  dayjs:
+    specifier: ^1.11.10
+    version: 1.11.10
+  puppeteer:
+    specifier: ^21.6.1
+    version: 21.6.1
+  puppeteer-extra:
+    specifier: ^3.3.6
+    version: 3.3.6(puppeteer@21.6.1)
+  puppeteer-extra-plugin-stealth:
+    specifier: ^2.11.2
+    version: 2.11.2(puppeteer-extra@3.3.6)
+  tapable:
+    specifier: ^2.2.1
+    version: 2.2.1
 
 packages:
 
