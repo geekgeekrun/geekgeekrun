@@ -9,10 +9,11 @@ import {
 import fs from 'node:fs'
 import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
 import path from 'node:path';
+import JSON5 from 'json5'
 
 puppeteer.use(StealthPlugin())
 
-const { cookies: bossCookies } = JSON.parse(
+const { cookies: bossCookies } = JSON5.parse(
   fs.readFileSync(
     path.join(
       get__dirname(),
@@ -21,7 +22,7 @@ const { cookies: bossCookies } = JSON.parse(
   )
 )
 
-const targetCompanyList = JSON.parse(
+const targetCompanyList = JSON5.parse(
   fs.readFileSync(
     path.join(
       get__dirname(),

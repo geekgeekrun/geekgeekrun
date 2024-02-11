@@ -7,8 +7,9 @@ import {
 import fs from 'node:fs'
 import path from 'node:path'
 import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
+import JSON5 from 'json5'
 
-const { groupRobotAccessToken: dingTalkAccessToken } = JSON.parse(
+const { groupRobotAccessToken: dingTalkAccessToken } = JSON5.parse(
   fs.readFileSync(
     path.join(
       get__dirname(),
