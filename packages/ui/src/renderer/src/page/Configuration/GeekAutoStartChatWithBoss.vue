@@ -2,5 +2,7 @@
 </script>
 
 <template>
-  <div>Hello !!!</div>
+  <div>
+    <el-button>Hello</el-button>
+  </div>
 </template>
