@@ -26,6 +26,7 @@ if (!bossCookies?.length) {
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
 
 const expectCompanySet = new Set(targetCompanyList)
+const enableCompanyAllowList = Boolean(expectCompanySet.size)
 
 let browser, page
 
@@ -106,8 +107,11 @@ async function mainLoop (hooks) {
               document.querySelector('.job-recommend-main')?.__vue__?.jobList
             `
           )
-          let targetJobIndex = jobListData.findIndex(
+          // when disable company allow list, we will believe that the first one in the list is your expect job.
+          let targetJobIndex = enableCompanyAllowList ? jobListData.findIndex(
             it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
+          ) : jobListData.findIndex(
+            it => !blockBossNotNewChat.has(it.encryptBossId)
           )
 
           let hasReachLastPage = false
