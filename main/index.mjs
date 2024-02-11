@@ -258,11 +258,11 @@ async function mainLoop (hooks) {
               throw err
             }
             case 'STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR': {
-              hooks.errorEncounter.call(err)
+              hooks.errorEncounter.call([err.message, err.stack].join('\n'))
               throw err
             }
             default: {
-              hooks.errorEncounter.call(err)
+              hooks.errorEncounter.call([err.message, err.stack].join('\n'))
               throw err
             }
           }

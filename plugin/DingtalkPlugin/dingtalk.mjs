@@ -1,13 +1,16 @@
 export function createTextMessage (text) {
-  return JSON.stringify({
-    "msgtype": "text",
-    "text": {
-      "content": `${text}【bossgeekgo】`
-    }
-  })
+  return {
+    "dingtalkRequestBody": {
+      "msgtype": "text",
+      "text": {
+        "content": `${text}`
+      },
+    },
+    insertedTime: new Date(),
+  }
 }
 
-export async function requestDingTalkNotify (dingTalkAccessToken, body) {
+export async function requestDingtalkNotify (dingTalkAccessToken, body) {
   const url = new URL(`https://oapi.dingtalk.com/robot/send`)
   url.searchParams.append(
     'access_token',
