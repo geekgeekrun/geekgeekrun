@@ -1,8 +1,8 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
-
+import { mainLoop } from '@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs'
+console.log(mainLoop)
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({

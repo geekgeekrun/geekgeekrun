@@ -43,6 +43,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@bossgeekgo/geek-auto-start-chat-with-boss':
+        specifier: workspace:*
+        version: link:../geek-auto-start-chat-with-boss
       '@electron-toolkit/preload':
         specifier: ^3.0.0
         version: 3.0.0(electron@28.2.0)
