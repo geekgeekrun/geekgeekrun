@@ -158,7 +158,7 @@ async function mainLoop (hooks) {
             }
           )
         })
-        if (targetJobIndex > 0) {
+        if (targetJobIndex >= 0) {
           // scroll that target element into view
           await page.evaluate(`
             targetEl = document.querySelector("ul.rec-job-list").children[${targetJobIndex}]
@@ -170,19 +170,22 @@ async function mainLoop (hooks) {
     
           await sleepWithRandomDelay(200)
     
-          // click that element
-          await targetJobElProxy.click()
-          await page.waitForResponse(
-            response => {
-              if (
-                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')
-              ) {
-                return true
+          if (targetJobIndex === 0) {
+          } else {
+            // click that element
+            await targetJobElProxy.click()
+            await page.waitForResponse(
+              response => {
+                if (
+                  response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')
+                ) {
+                  return true
+                }
+                return false
               }
-              return false
-            }
-          );
-          await sleepWithRandomDelay(2000)
+            );
+            await sleepWithRandomDelay(2000)
+          }
           const jobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
       
           const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
