@@ -20,11 +20,6 @@ const { cookies: bossCookies } = readConfigFile('boss.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json')
 
-if (!bossCookies?.length) {
-  console.error('There is no cookies. you can save a copy with EditThisCookie extension.')
-  process.exit(1)
-}
-
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
 
 const expectCompanySet = new Set(targetCompanyList)

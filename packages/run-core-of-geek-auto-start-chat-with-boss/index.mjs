@@ -9,7 +9,7 @@ import path from 'node:path'
 import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
 import JSON5 from 'json5'
 import { readConfigFile } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-
+const { cookies: bossCookies } = readConfigFile('boss.json')
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
@@ -17,6 +17,10 @@ const initPlugins = (hooks) => {
 }
 
 ;(async () => {
+  if (!bossCookies?.length) {
+    console.error('There is no cookies. You can save a copy with EditThisCookie extension.')
+    process.exit(1)
+  }
   const hooks = {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
