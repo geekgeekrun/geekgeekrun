@@ -10,12 +10,12 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/configuration',
-    component: import('@renderer/page/Configuration/index.vue'),
+    component: () => import('@renderer/page/Configuration/index.vue'),
     redirect: '/configuration/GeekAutoStartChatWithBoss',
     children: [
       {
         path: 'GeekAutoStartChatWithBoss',
-        component: import('@renderer/page/Configuration/GeekAutoStartChatWithBoss.vue'),
+        component: () => import('@renderer/page/Configuration/GeekAutoStartChatWithBoss.vue'),
         meta: {
           title: '"geek auto start chat with boss" configuration'
         }

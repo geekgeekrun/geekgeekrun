@@ -1,10 +1,13 @@
 import fs from 'node:fs'
+import fsPromise from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 
 import defaultDingtalkConf from './default-config-file/dingtalk.json' assert {type: 'json'}
 import defaultBossConf from './default-config-file/boss.json' assert {type: 'json'}
 import defaultTargetCompanyListConf from './default-config-file/target-company-list.json' assert {type: 'json'}
+
+export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json']
 
 const defaultConfigFileContentMap = {
   'boss.json': JSON.stringify(defaultBossConf),
@@ -28,15 +31,13 @@ const ensureRuntimeFolderPathExist = () => {
   })
 }
 
-const configFolderPath = path.join(
+export const configFolderPath = path.join(
   runtimeFolderPath,
   'config'
 )
 export const ensureConfigFileExist = () => {
   ensureRuntimeFolderPathExist()
-  ;[
-    'boss.json', 'dingtalk.json', 'target-company-list.json'
-  ].forEach(
+  ;configFileNameList.forEach(
     fileName => {
       if (!fs.existsSync(
         path.join(configFolderPath, fileName)
@@ -69,5 +70,14 @@ export const readConfigFile = (fileName) => {
   }
 
   return o
+}
+
+export const writeConfigFile = async (fileName, content) => {
+  const filePath = path.join(configFolderPath, fileName)
+  const fileContent = JSON.stringify(content)
+  return fsPromise.writeFile(
+    filePath,
+    fileContent
+  )
 }
 
