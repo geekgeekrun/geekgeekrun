@@ -34,6 +34,7 @@
 import { ref } from 'vue'
 import JSON5 from 'json5'
 import { ElForm, ElMessage } from 'element-plus'
+import router from '../../router/index';
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -78,6 +79,7 @@ const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
   await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss', JSON.stringify(formContent.value))
+  router.replace('/geekAutoStartChatWithBoss/runningStatus')
 }
 const handleSave = async () => {
   await formRef.value!.validate()

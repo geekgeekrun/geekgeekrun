@@ -11,7 +11,7 @@ export default class DingtalkPlugin {
   setSendQueueTimer () {
     const _this = this
     const interval = 2 * 60 * 1000
-    sendQueueTimer = setTimeout(function sendMergedMessage () {
+    function sendMergedMessage () {
       if (collectedMessageList.length === 0) {
       } else if (collectedMessageList.length === 1) {
         collectedMessageList[0].dingtalkRequestBody.text.content += `\n${dayjs(collectedMessageList[0].insertedTime).format('MM-DD HH:mm:ss')}\n\n【bossgeekgo】`
@@ -29,7 +29,15 @@ export default class DingtalkPlugin {
       }
       collectedMessageList.length = 0
       sendQueueTimer = setTimeout(sendMergedMessage, interval)
-    }, interval)
+    }
+    sendQueueTimer = setTimeout(sendMergedMessage, interval)
+    // FIXME: exit immediate without wait
+    process.on('SIGINT', () => {
+      sendMergedMessage()
+      setTimeout(() => {
+        process.exit(0)
+      }, 5000)
+    })
   }
   destroySendQueueTimer () {
     clearTimeout(sendQueueTimer)

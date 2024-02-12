@@ -80,8 +80,11 @@ export function createMainWindow(): void {
   // const currentExecutablePath = app.getPath('exe')
   // console.log(currentExecutablePath)
 
-  let subProcessOfPuppeteer: ChildProcess
+  let subProcessOfPuppeteer: ChildProcess | null = null
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
+    if (subProcessOfPuppeteer) {
+      return
+    }
     console.log(process)
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: {
@@ -89,6 +92,16 @@ export function createMainWindow(): void {
         MAIN_BOSSGEEKGO_RUN_MODE: 'geekAutoStartWithBoss'
       }
     })
+    ipcMain.emit('geek-auto-start-chat-with-boss-started')
+    subProcessOfPuppeteer.once('exit', () => {
+      mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopped')
+
+      subProcessOfPuppeteer = null
+    })
     console.log(subProcessOfPuppeteer)
+  })
+  ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
+    mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopping')
+    subProcessOfPuppeteer?.kill('SIGINT')
   })
 }

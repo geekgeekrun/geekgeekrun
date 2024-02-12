@@ -21,6 +21,19 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
+  },
+  {
+    path: '/geekAutoStartChatWithBoss',
+    component: () => import('@renderer/page/GeekAutoStartChatWithBoss/index.vue'),
+    children: [
+      {
+        path: 'runningStatus',
+        component: () => import('@renderer/page/GeekAutoStartChatWithBoss/RunningStatus.vue'),
+        meta: {
+          title: 'geek auto start chat with boss is running!'
+        }
+      }
+    ]
   }
 ]
 
