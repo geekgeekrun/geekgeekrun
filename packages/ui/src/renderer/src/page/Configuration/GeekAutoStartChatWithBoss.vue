@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import JSON5 from 'json5'
-import { ElForm } from 'element-plus';
+import { ElForm, ElMessage } from 'element-plus'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -75,7 +75,7 @@ const handleSubmit = async () => {
 const handleSave = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
-  window.alert('Configuration saved.')
+  ElMessage.success('Configuration saved.')
 }
 
 const handleExpectCompaniesInputBlur = (event) => {
