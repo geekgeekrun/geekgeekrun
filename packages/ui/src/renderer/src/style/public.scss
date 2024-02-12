@@ -1,0 +1,7 @@
+html, body {
+  --monospace-font-family: Monaco, Consolas, Menlo, monospace;
+  font-family: var(--monospace-font-family);
+}
+button, input, textarea {
+  font-family: inherit;
+}

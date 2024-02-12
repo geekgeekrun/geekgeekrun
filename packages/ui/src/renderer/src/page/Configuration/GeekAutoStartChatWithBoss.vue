@@ -94,7 +94,6 @@ const handleExpectCompaniesInputBlur = (event) => {
 
 <style scoped lang="scss">
 .form-wrap {
-  --monospace-font-family: Monaco, Consolas, Menlo, monospace;
   padding-top: 100px;
   margin: 0 auto;
   max-width: 640px;
@@ -103,11 +102,6 @@ const handleExpectCompaniesInputBlur = (event) => {
       margin-top: 40px;
       justify-content: flex-end;
     }
-  }
-
-  font-family: var(--monospace-font-family);
-  button, input, textarea {
-    font-family: var(--monospace-font-family);
   }
 }
 </style>

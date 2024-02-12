@@ -3,7 +3,7 @@
     <article>
       <h1>Hi buddy!</h1>
       <p>I'm finding your expected job and will start a chat with recruiter.</p>
-      <p>You can view the positions I've chatted with in BossZhipin App on your cellphone.</p>
+      <p>You can view the positions you've chatted with in BossZhipin App on your cellphone.</p>
       <p>Good luck to you!</p>
     </article>
     <el-button :disabled="isStopping" @click="handleStop">Stop</el-button>
