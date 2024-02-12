@@ -56,10 +56,16 @@ const formRules = {
     {
       trigger: 'blur',
       validator (rule, val, cb) {
+        let arr
         try {
-          JSON5.parse(val)
+          arr = JSON5.parse(val)
         } catch (err) {
           cb(new Error(`JSON content is invalid: ${err.message}`))
+          return
+        }
+        if (!Array.isArray(arr) || !arr.length) {
+          cb(new Error(`Invalid cookies. Please copy with EditThisCookie extension`))
+          return
         }
         cb()
       }
