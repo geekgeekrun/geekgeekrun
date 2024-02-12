@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
+import * as childProcess from 'node:child_process'
 import { is } from '@electron-toolkit/utils'
 import {
   readConfigFile,
@@ -7,6 +8,7 @@ import {
   ensureConfigFileExist,
   writeConfigFile
 } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { ChildProcess } from 'child_process'
 let mainWindow: BrowserWindow
 
 export function createMainWindow(): void {
@@ -73,5 +75,20 @@ export function createMainWindow(): void {
       writeConfigFile('dingtalk.json', dingtalkConfig),
       writeConfigFile('target-company-list.json', payload.expectCompanies.split(','))
     ])
+  })
+
+  // const currentExecutablePath = app.getPath('exe')
+  // console.log(currentExecutablePath)
+
+  let subProcessOfPuppeteer: ChildProcess
+  ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
+    console.log(process)
+    subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
+      env: {
+        ...process.env,
+        MAIN_BOSSGEEKGO_RUN_MODE: 'geekAutoStartWithBoss'
+      }
+    })
+    console.log(subProcessOfPuppeteer)
   })
 }
