@@ -36,7 +36,7 @@ const initPlugins = (hooks) => {
     try {
       await mainLoop(hooks)
     } catch (err) {
-      void err
+      console.error(err)
     }
   }
 })()
