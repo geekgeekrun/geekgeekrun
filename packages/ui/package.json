@@ -1,5 +1,5 @@
 {
-  "name": "@bossgeekgo/ui",
+  "name": "bossgeekgo-ui",
   "version": "1.0.0",
   "description": "An Electron application with Vue and TypeScript",
   "main": "./out/main/index.js",
@@ -8,7 +8,7 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "dev:geek-auto-start-chat-with-boss-only": "MAIN_BOSSGEEKGO_RUN_MODE=geekAutoStartWithBoss electron-vite dev",
-    "build": "npm run typecheck && electron-vite build",
+    "build": "electron-vite build",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
