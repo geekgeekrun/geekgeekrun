@@ -78,7 +78,12 @@ const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
-  await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss', JSON.stringify(formContent.value))
+  try {
+    await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss', JSON.stringify(formContent.value))
+  } catch (err) {
+    console.log(err)
+    return
+  }
   router.replace('/geekAutoStartChatWithBoss/runningStatus')
 }
 const handleSave = async () => {

@@ -85,6 +85,12 @@ export function createMainWindow(): void {
     if (subProcessOfPuppeteer) {
       return
     }
+    try {
+      await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')
+    } catch (err){
+      console.log(err) // TODO: what's the error?
+      throw new Error('PUPPETEER_MAY_NOT_INSTALLED')
+    }
     console.log(process)
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: {

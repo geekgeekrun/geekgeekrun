@@ -4,7 +4,16 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@bossgeekgo/geek-auto-start-chat-with-boss', '@bossgeekgo/dingtalk-plugin'] })]
+    build: {
+      rollupOptions: {
+        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth']
+      }
+    },
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: ['@bossgeekgo/geek-auto-start-chat-with-boss', '@bossgeekgo/dingtalk-plugin']
+      })
+    ]
   },
   preload: {
     plugins: [externalizeDepsPlugin()]
