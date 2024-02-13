@@ -1,6 +1,3 @@
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-
 import {
   sleep,
   sleepWithRandomDelay
@@ -14,7 +11,21 @@ import JSON5 from 'json5'
 import { readConfigFile, ensureConfigFileExist } from './runtime-file-utils.mjs'
 ensureConfigFileExist()
 
-puppeteer.use(StealthPlugin())
+let puppeteer
+async function initPuppeteer () {
+  const [
+    puppeteerModule,
+    StealthPluginModule,
+  ] = await Promise.all(
+    [
+      import('puppeteer-extra'),
+      import('puppeteer-extra-plugin-stealth')
+    ]
+  )
+
+  puppeteerModule.default.use(StealthPluginModule.default())
+  puppeteer = puppeteerModule.default
+}
 
 const { cookies: bossCookies } = readConfigFile('boss.json')
 
@@ -29,6 +40,9 @@ let browser, page
 
 const blockBossNotNewChat = new Set()
 export async function mainLoop (hooks) {
+  if (!puppeteer) {
+    await initPuppeteer()
+  }
   try {
     browser = await puppeteer.launch({
       headless: false,
