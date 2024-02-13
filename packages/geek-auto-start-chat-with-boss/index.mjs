@@ -4,6 +4,7 @@ import {
 } from '@bossgeekgo/utils/sleep.mjs'
 
 import fs from 'node:fs'
+import os from 'node:os'
 import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
 import path from 'node:path';
 import JSON5 from 'json5'
@@ -11,20 +12,35 @@ import JSON5 from 'json5'
 import { readConfigFile, ensureConfigFileExist } from './runtime-file-utils.mjs'
 ensureConfigFileExist()
 
-let puppeteer
+const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
+let puppeteer, StealthPlugin
 async function initPuppeteer () {
-  const [
-    puppeteerModule,
-    StealthPluginModule,
-  ] = await Promise.all(
-    [
-      import('puppeteer-extra'),
-      import('puppeteer-extra-plugin-stealth')
-    ]
-  )
-
-  puppeteerModule.default.use(StealthPluginModule.default())
-  puppeteer = puppeteerModule.default
+  // production
+  if (
+    isRunFromUi
+    // &&
+    // process.mainModule.filename.indexOf('app.asar') !== -1
+  ) {
+    const runtimeDependencies = await import(
+      path.join(
+        os.homedir(),
+        '.bossgeekgo',
+        'external-node-runtime-dependencies/index.mjs'
+      )
+    )
+    puppeteer = runtimeDependencies.puppeteerExtra.default
+    StealthPlugin = runtimeDependencies.PuppeteerExtraPluginStealth.default
+  } else {
+    const importResult = await Promise.all(
+      [
+        import('puppeteer-extra'),
+        import('puppeteer-extra-plugin-stealth')
+      ]
+    )
+    puppeteer = importResult[0].default
+    StealthPlugin = importResult[1].default
+  }
+  puppeteer.use(StealthPlugin())
 }
 
 const { cookies: bossCookies } = readConfigFile('boss.json')

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "dev:geek-auto-start-chat-with-boss-only": "MAIN_BOSSGEEKGO_RUN_MODE=geekAutoStartWithBoss electron-vite dev",
+    "dev:geek-auto-start-chat-with-boss-only": "MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBoss electron-vite dev",
     "build": "electron-vite build",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",

@@ -87,7 +87,7 @@ export function createMainWindow(): void {
     }
     try {
       await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')
-    } catch (err){
+    } catch (err) {
       console.log(err) // TODO: what's the error?
       throw new Error('PUPPETEER_MAY_NOT_INSTALLED')
     }
@@ -95,7 +95,7 @@ export function createMainWindow(): void {
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: {
         ...process.env,
-        MAIN_BOSSGEEKGO_RUN_MODE: 'geekAutoStartWithBoss'
+        MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss'
       }
     })
     ipcMain.emit('geek-auto-start-chat-with-boss-started')
