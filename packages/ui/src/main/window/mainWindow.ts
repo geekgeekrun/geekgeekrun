@@ -9,6 +9,8 @@ import {
   writeConfigFile
 } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
+import { isDev } from '../runtimeDesidedEnv'
+import { getExpectPuppeteerExecutablePath } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 let mainWindow: BrowserWindow
 
 export function createMainWindow(): void {
@@ -20,8 +22,8 @@ export function createMainWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
       ? {
-          /* icon */
-        }
+        /* icon */
+      }
       : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -85,13 +87,18 @@ export function createMainWindow(): void {
     if (subProcessOfPuppeteer) {
       return
     }
-    console.log(process)
+
+    const subProcessEnv = {
+      ...process.env,
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss'
+    }
+    if (!isDev) {
+      Object.assign(subProcessEnv, {
+        PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
+      })
+    }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-      env: {
-        ...process.env,
-        MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss'
-        // PUPPETEER_EXECUTABLE_PATH: '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
-      },
+      env: subProcessEnv,
       stdio: [null, null, null, 'pipe']
     })
     subProcessOfPuppeteer.once('exit', () => {
@@ -103,11 +110,15 @@ export function createMainWindow(): void {
     return new Promise((resolve) => {
       subProcessOfPuppeteer!.stdio[3]!.on('data', (raw) => {
         const data = JSON.parse(raw.toString())
-        if (data.type === 'PUPPETEER_MAY_NOT_INSTALLED') {
-          resolve(data)
-        }
-        if (data.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
-          resolve(data)
+        switch (data.type) {
+          case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED':
+          case 'PUPPETEER_MAY_NOT_INSTALLED': {
+            resolve(data)
+            break
+          }
+          default: {
+            return
+          }
         }
       })
     })

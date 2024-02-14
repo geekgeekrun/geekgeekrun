@@ -13,13 +13,13 @@ import { readConfigFile, ensureConfigFileExist } from './runtime-file-utils.mjs'
 ensureConfigFileExist()
 
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
+const isUiDev = process.env.NODE_ENV === 'development'
+
 let puppeteer, StealthPlugin
 export async function initPuppeteer () {
   // production
   if (
-    isRunFromUi
-    // &&
-    // process.mainModule.filename.indexOf('app.asar') !== -1
+    isRunFromUi && !isUiDev
   ) {
     const runtimeDependencies = await import(
       path.join(

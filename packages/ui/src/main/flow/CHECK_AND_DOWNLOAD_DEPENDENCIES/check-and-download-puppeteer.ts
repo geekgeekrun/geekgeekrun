@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as fs from 'node:fs'
 import type { InstalledBrowser } from '@puppeteer/browsers'
+import { isDev } from '../../runtimeDesidedEnv'
 
 const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '121.0.6167.85'
 const cacheDir = path.join(
@@ -11,22 +12,40 @@ const cacheDir = path.join(
   'static'
 )
 
-const checkAndDownloadPuppeteer = async (options: {
-  downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void
-}) => {
-  const puppeteerManager = await import('@puppeteer/browsers')
-  const executablePath = puppeteerManager.computeExecutablePath({
+const getPuppeteerManagerModule = async () => {
+  if (!isDev) {
+    const runtimeDependencies = await import(
+      path.join(os.homedir(), '.bossgeekgo', 'external-node-runtime-dependencies/index.mjs')
+    )
+    return runtimeDependencies.puppeteerManager
+  } else {
+    const importResult = await import('@puppeteer/browsers')
+    return importResult
+  }
+}
+
+export const getExpectPuppeteerExecutablePath = async () => {
+  const puppeteerManager = await getPuppeteerManagerModule()
+
+  return puppeteerManager.computeExecutablePath({
     browser: puppeteerManager.Browser.CHROME,
     cacheDir,
     buildId: expectBuildId
   })
+}
+
+const checkAndDownloadPuppeteer = async (options: {
+  downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void
+}) => {
+  const puppeteerManager = await getPuppeteerManagerModule()
+  const executablePath = await getExpectPuppeteerExecutablePath()
   let installedBrowser: InstalledBrowser
   if (!fs.existsSync(executablePath)) {
     // maybe the exist installation is broken.
     await puppeteerManager.uninstall({
       cacheDir,
       buildId: expectBuildId,
-      browser: puppeteerManager.Browser.CHROME,
+      browser: puppeteerManager.Browser.CHROME
     })
     installedBrowser = await puppeteerManager.install({
       browser: puppeteerManager.Browser.CHROME,

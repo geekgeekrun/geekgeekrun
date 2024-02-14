@@ -6,7 +6,7 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth']
+        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', '@puppeteer/browsers']
       }
     },
     plugins: [
