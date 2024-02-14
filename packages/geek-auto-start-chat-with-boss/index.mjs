@@ -14,7 +14,7 @@ ensureConfigFileExist()
 
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 let puppeteer, StealthPlugin
-async function initPuppeteer () {
+export async function initPuppeteer () {
   // production
   if (
     isRunFromUi

@@ -1,4 +1,5 @@
 import DingtalkPlugin from '@bossgeekgo/dingtalk-plugin/index.mjs'
+import { app } from 'electron'
 import {
   SyncHook,
   AsyncSeriesHook
@@ -11,13 +12,15 @@ const initPlugins = (hooks) => {
 }
 
 export const runAutoChat = async () => {
-  let mainLoop
   try {
-    mainLoop = (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).mainLoop
+    await (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).initPuppeteer()
   } catch {
     console.error(new Error('PUPPETEER_MAY_NOT_INSTALLED'))
-    process.exit(1)
+    app.exit(1)
+    return
   }
+
+  const mainLoop = (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).mainLoop
   const hooks = {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
@@ -33,7 +36,10 @@ export const runAutoChat = async () => {
     try {
       await mainLoop(hooks)
     } catch (err) {
-      void err
+      console.log(err)
+      if(err instanceof Error && err.message.includes('ERR_MODULE_NOT_FOUND')) {
+        throw err
+      }
     }
   }
 }
