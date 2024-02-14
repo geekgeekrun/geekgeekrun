@@ -33,8 +33,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import JSON5 from 'json5'
-import { ElForm, ElMessage } from 'element-plus'
-import router from '../../router/index';
+import { ElForm, ElMessage, ElMessageBox } from 'element-plus'
+import router from '../../router/index'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -52,11 +52,11 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
 const formRules = {
   bossZhipinCookies: [
     {
-      required: true,
+      required: true
     },
     {
       trigger: 'blur',
-      validator (rule, val, cb) {
+      validator(rule, val, cb) {
         let arr
         try {
           arr = JSON5.parse(val)
@@ -78,13 +78,29 @@ const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
-  try {
-    await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss', JSON.stringify(formContent.value))
-  } catch (err) {
-    console.log(err)
-    return
+  const res = await electron.ipcRenderer.invoke(
+    'run-geek-auto-start-chat-with-boss',
+    JSON.stringify(formContent.value)
+  )
+
+  if (res.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
+    router.replace('/geekAutoStartChatWithBoss/runningStatus')
+  } else if (res.type === 'PUPPETEER_MAY_NOT_INSTALLED') {
+    ElMessageBox.confirm(
+      'Some core components is broken, please reinstall this program. Will you go to the download page?',
+      'Error',
+      {
+        confirmButtonText: 'OK',
+        cancelButtonText: 'Cancel',
+        type: 'error'
+      }
+    )
+      .then(() => {
+        electron.ipcRenderer.emit('open-project-homepage-on-github')
+      })
+      .catch(() => {})
+      return
   }
-  router.replace('/geekAutoStartChatWithBoss/runningStatus')
 }
 const handleSave = async () => {
   await formRef.value!.validate()
@@ -93,7 +109,11 @@ const handleSave = async () => {
 }
 
 const handleExpectCompaniesInputBlur = (event) => {
-  event.target.value = (event.target?.value ?? '').split(/,|，/).map(it => it.trim()).filter(Boolean).join(',')
+  event.target.value = (event.target?.value ?? '')
+    .split(/,|，/)
+    .map((it) => it.trim())
+    .filter(Boolean)
+    .join(',')
 }
 </script>
 

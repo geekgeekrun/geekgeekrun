@@ -1,10 +1,9 @@
 import DingtalkPlugin from '@bossgeekgo/dingtalk-plugin/index.mjs'
 import { app } from 'electron'
-import {
-  SyncHook,
-  AsyncSeriesHook
-} from 'tapable'
+import { SyncHook, AsyncSeriesHook } from 'tapable'
 import { readConfigFile } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import * as net from 'net'
+
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
@@ -12,10 +11,31 @@ const initPlugins = (hooks) => {
 }
 
 export const runAutoChat = async () => {
+  let pipe: null | net.Socket = null
+  try {
+    pipe = new net.Socket({ fd: 3 })
+  } catch {
+    console.warn('pipe is not available')
+  }
+  pipe?.write(
+    JSON.stringify({
+      type: 'INITIALIZE_PUPPETEER'
+    })
+  )
   try {
     await (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).initPuppeteer()
+    pipe?.write(
+      JSON.stringify({
+        type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
+      })
+    )
   } catch {
     console.error(new Error('PUPPETEER_MAY_NOT_INSTALLED'))
+    pipe?.write(
+      JSON.stringify({
+        type: 'PUPPETEER_MAY_NOT_INSTALLED'
+      })
+    )
     app.exit(1)
     return
   }
@@ -32,14 +52,21 @@ export const runAutoChat = async () => {
     errorEncounter: new SyncHook(['errorInfo'])
   }
   initPlugins(hooks)
+  pipe?.write(
+    JSON.stringify({
+      type: 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED' //geek-auto-start-chat-with-boss-started
+    })
+  )
   while (true) {
     try {
       await mainLoop(hooks)
     } catch (err) {
       console.log(err)
-      if(err instanceof Error && err.message.includes('ERR_MODULE_NOT_FOUND')) {
-        throw err
-      }
+      // if(err instanceof Error && err.message.includes('ERR_MODULE_NOT_FOUND')) {
+      //   throw err
+      // } else {
+      void err
+      // }
     }
   }
 }

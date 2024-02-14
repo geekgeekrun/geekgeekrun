@@ -85,30 +85,41 @@ export function createMainWindow(): void {
     if (subProcessOfPuppeteer) {
       return
     }
-    try {
-      await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')
-    } catch (err) {
-      console.log(err) // TODO: what's the error?
-      throw new Error('PUPPETEER_MAY_NOT_INSTALLED')
-    }
     console.log(process)
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: {
         ...process.env,
         MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss'
         // PUPPETEER_EXECUTABLE_PATH: '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
-      }
+      },
+      stdio: [null, null, null, 'pipe']
     })
-    ipcMain.emit('geek-auto-start-chat-with-boss-started')
     subProcessOfPuppeteer.once('exit', () => {
       mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopped')
 
       subProcessOfPuppeteer = null
     })
     console.log(subProcessOfPuppeteer)
+    return new Promise((resolve) => {
+      subProcessOfPuppeteer!.stdio[3]!.on('data', (raw) => {
+        const data = JSON.parse(raw.toString())
+        if (data.type === 'PUPPETEER_MAY_NOT_INSTALLED') {
+          resolve(data)
+        }
+        if (data.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
+          resolve(data)
+        }
+      })
+    })
+    // TODO:
   })
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopping')
     subProcessOfPuppeteer?.kill('SIGINT')
+  })
+  ipcMain.on('open-project-homepage-on-github', () => {
+    shell.openExternal(`https://github.com/bossgeekgo`, {
+      activate: true
+    })
   })
 }
