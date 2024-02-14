@@ -9,7 +9,6 @@ import {
   writeConfigFile
 } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
-import { isDev } from '../runtimeDesidedEnv'
 import { getExpectPuppeteerExecutablePath } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 let mainWindow: BrowserWindow
 
@@ -90,12 +89,8 @@ export function createMainWindow(): void {
 
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss'
-    }
-    if (!isDev) {
-      Object.assign(subProcessEnv, {
-        PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
-      })
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss',
+      PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: subProcessEnv,
