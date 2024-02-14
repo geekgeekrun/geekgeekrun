@@ -96,6 +96,7 @@ export function createMainWindow(): void {
       env: {
         ...process.env,
         MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss'
+        // PUPPETEER_EXECUTABLE_PATH: '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
       }
     })
     ipcMain.emit('geek-auto-start-chat-with-boss-started')
