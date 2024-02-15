@@ -10,6 +10,7 @@ import {
 } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import { getExpectPuppeteerExecutablePath } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
+import * as JSONStream from 'JSONStream'
 let mainWindow: BrowserWindow
 
 export function createMainWindow(): void {
@@ -103,12 +104,20 @@ export function createMainWindow(): void {
     })
     console.log(subProcessOfPuppeteer)
     return new Promise((resolve) => {
-      subProcessOfPuppeteer!.stdio[3]!.on('data', (raw) => {
-        const data = JSON.parse(raw.toString())
+      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', (raw) => {
+        const data = raw
         switch (data.type) {
           case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED':
           case 'PUPPETEER_MAY_NOT_INSTALLED': {
             resolve(data)
+            break
+          }
+          case 'NEED_WARMING_UP_DEPENDENCIES': {
+            mainWindow.webContents.send('NEED_WARMING_UP_DEPENDENCIES', data)
+            break
+          }
+          case 'PUPPETEER_DOWNLOAD_PROGRESS': {
+            mainWindow.webContents.send('PUPPETEER_DOWNLOAD_PROGRESS', data)
             break
           }
           default: {

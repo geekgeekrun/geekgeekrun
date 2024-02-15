@@ -28,13 +28,23 @@ export const getExpectPuppeteerExecutablePath = async () => {
   })
 }
 
-const checkAndDownloadPuppeteer = async (options: {
-  downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void
-}) => {
-  const puppeteerManager = await getPuppeteerManagerModule()
+export const checkPuppeteerExecutable = async () => {
   const executablePath = await getExpectPuppeteerExecutablePath()
+  return fs.existsSync(executablePath)
+}
+
+const checkAndDownloadPuppeteer = async (options: {
+  downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void,
+  confirmContinuePromise?: Promise<void>
+} = {}) => {
+  const puppeteerManager = await getPuppeteerManagerModule()
   let installedBrowser: InstalledBrowser
-  if (!fs.existsSync(executablePath)) {
+  if (!(await checkPuppeteerExecutable())) {
+    try {
+      await options.confirmContinuePromise
+    } catch {
+      throw new Error('USER_CANCEL_DOWNLOAD_PUPPETEER')
+    }
     // maybe the exist installation is broken.
     await puppeteerManager.uninstall({
       cacheDir,

@@ -27,14 +27,16 @@
         <el-button type="primary" @click="handleSubmit"> I'm ready, geekgeekgo! </el-button>
       </el-form-item>
     </el-form>
+    <dependencies-warming-up-dialog v-model="shouldShowDependenciesWarmingUpDialog" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import JSON5 from 'json5'
 import { ElForm, ElMessage, ElMessageBox } from 'element-plus'
 import router from '../../router/index'
+import DependenciesWarmingUpDialog from '../../features/DependenciesWarmingUpDialog.vue'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -99,7 +101,7 @@ const handleSubmit = async () => {
         electron.ipcRenderer.emit('open-project-homepage-on-github')
       })
       .catch(() => {})
-      return
+    return
   }
 }
 const handleSave = async () => {
@@ -115,6 +117,16 @@ const handleExpectCompaniesInputBlur = (event) => {
     .filter(Boolean)
     .join(',')
 }
+
+const shouldShowDependenciesWarmingUpDialog = ref(false)
+
+const needWarmingUpDenpendenciesHandler = () => {
+  shouldShowDependenciesWarmingUpDialog.value = true
+}
+electron.ipcRenderer.on('NEED_WARMING_UP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
+onUnmounted(
+  () => electron.ipcRenderer.off('NEED_WARMING_UP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
+)
 </script>
 
 <style scoped lang="scss">
