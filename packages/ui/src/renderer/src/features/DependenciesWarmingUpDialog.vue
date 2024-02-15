@@ -13,6 +13,6 @@ const handleProgress = (ev, { downloadedBytes, totalBytes }) => {
 }
 electron.ipcRenderer.on('PUPPETEER_DOWNLOAD_PROGRESS', handleProgress)
 onUnmounted(
-  () => electron.ipcRenderer.off('PUPPETEER_DOWNLOAD_PROGRESS', handleProgress)
+  () => electron.ipcRenderer.removeListener('PUPPETEER_DOWNLOAD_PROGRESS', handleProgress)
 )
 </script>

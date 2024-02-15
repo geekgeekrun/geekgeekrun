@@ -68,10 +68,9 @@ export const runAutoChat = async () => {
         (raw) => {
           const data = raw
           switch (data.type) {
-            case 'NEED_RESETUP_DEPENDENCIES': {
-              pipe?.write(JSON.stringify(data) + '\r\n')
-              break
-            }
+            case 'NEED_RESETUP_DEPENDENCIES':
+            case 'PUPPETEER_DOWNLOAD_ERROR':
+            case 'PUPPETEER_DOWNLOAD_FINISHED':
             case 'PUPPETEER_DOWNLOAD_PROGRESS': {
               pipe?.write(JSON.stringify(data) + '\r\n')
               break

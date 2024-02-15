@@ -112,12 +112,10 @@ export function createMainWindow(): void {
             resolve(data)
             break
           }
-          case 'NEED_RESETUP_DEPENDENCIES': {
-            mainWindow.webContents.send('NEED_RESETUP_DEPENDENCIES', data)
-            break
-          }
+          case 'NEED_RESETUP_DEPENDENCIES':
+          case 'PUPPETEER_DOWNLOAD_FINISHED':
           case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-            mainWindow.webContents.send('PUPPETEER_DOWNLOAD_PROGRESS', data)
+            mainWindow.webContents.send(data.type, data)
             break
           }
           default: {

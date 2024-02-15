@@ -122,10 +122,15 @@ const shouldShowDependenciesWarmingUpDialog = ref(false)
 
 const needWarmingUpDenpendenciesHandler = () => {
   shouldShowDependenciesWarmingUpDialog.value = true
+
+  const handlePuppeteerDownloadFinished = () => {
+    shouldShowDependenciesWarmingUpDialog.value = false
+  }
+  electron.ipcRenderer.once('PUPPETEER_DOWNLOAD_FINISHED', handlePuppeteerDownloadFinished)
 }
-electron.ipcRenderer.on('NEED_CONFIGURATE_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
+electron.ipcRenderer.on('NEED_RESETUP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
 onUnmounted(
-  () => electron.ipcRenderer.off('NEED_RESETUP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
+  () => electron.ipcRenderer.removeListener('NEED_RESETUP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
 )
 </script>
 

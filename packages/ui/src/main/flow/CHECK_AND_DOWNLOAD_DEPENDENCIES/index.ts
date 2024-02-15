@@ -15,17 +15,31 @@ export const checkAndDownloadDependenciesForInit = async () => {
     }) + '\r\n'
   )
 
-  const browser = await checkAndDownloadPuppeteer({
-    downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
-      pipe?.write(
-        JSON.stringify({
-          type: 'PUPPETEER_DOWNLOAD_PROGRESS',
-          totalBytes,
-          downloadedBytes
-        })
-      ) + '\r\n'
-    }
-  })
+  let browser
+  try {
+    browser = await checkAndDownloadPuppeteer({
+      downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
+        pipe?.write(
+          JSON.stringify({
+            type: 'PUPPETEER_DOWNLOAD_PROGRESS',
+            totalBytes,
+            downloadedBytes
+          })
+        ) + '\r\n'
+      }
+    })
+    pipe?.write(
+      JSON.stringify({
+        type: 'PUPPETEER_DOWNLOAD_FINISHED'
+      })
+    ) + '\r\n'
+  } catch (err) {
+    pipe?.write(
+      JSON.stringify({
+        type: 'PUPPETEER_DOWNLOAD_ERROR'
+      })
+    ) + '\r\n'
+  }
 
   console.log(browser)
 }
