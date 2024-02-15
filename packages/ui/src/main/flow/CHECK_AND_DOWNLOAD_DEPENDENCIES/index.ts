@@ -11,7 +11,7 @@ export const checkAndDownloadDependenciesForInit = async () => {
 
   pipe?.write(
     JSON.stringify({
-      type: 'NEED_WARMING_UP_DEPENDENCIES'
+      type: 'NEED_RESETUP_DEPENDENCIES'
     }) + '\r\n'
   )
 

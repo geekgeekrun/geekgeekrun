@@ -68,7 +68,7 @@ export const runAutoChat = async () => {
         (raw) => {
           const data = raw
           switch (data.type) {
-            case 'NEED_WARMING_UP_DEPENDENCIES': {
+            case 'NEED_RESETUP_DEPENDENCIES': {
               pipe?.write(JSON.stringify(data) + '\r\n')
               break
             }

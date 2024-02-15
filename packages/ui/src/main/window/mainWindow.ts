@@ -112,8 +112,8 @@ export function createMainWindow(): void {
             resolve(data)
             break
           }
-          case 'NEED_WARMING_UP_DEPENDENCIES': {
-            mainWindow.webContents.send('NEED_WARMING_UP_DEPENDENCIES', data)
+          case 'NEED_RESETUP_DEPENDENCIES': {
+            mainWindow.webContents.send('NEED_RESETUP_DEPENDENCIES', data)
             break
           }
           case 'PUPPETEER_DOWNLOAD_PROGRESS': {

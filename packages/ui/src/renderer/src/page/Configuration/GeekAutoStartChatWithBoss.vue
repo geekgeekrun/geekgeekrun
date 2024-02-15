@@ -123,9 +123,9 @@ const shouldShowDependenciesWarmingUpDialog = ref(false)
 const needWarmingUpDenpendenciesHandler = () => {
   shouldShowDependenciesWarmingUpDialog.value = true
 }
-electron.ipcRenderer.on('NEED_WARMING_UP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
+electron.ipcRenderer.on('NEED_CONFIGURATE_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
 onUnmounted(
-  () => electron.ipcRenderer.off('NEED_WARMING_UP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
+  () => electron.ipcRenderer.off('NEED_RESETUP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
 )
 </script>
 

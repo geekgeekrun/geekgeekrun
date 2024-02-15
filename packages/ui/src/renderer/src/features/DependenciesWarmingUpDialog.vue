@@ -1,7 +1,3 @@
-
-import { log } from 'console';
-
-import { onUnmounted } from 'vue';
 <template>
   <el-dialog v-bind="$attrs" @open="percentage = 0">
     <el-progress :percentage="percentage" :format="(n) => `${n.toFixed(1)}%`" />
