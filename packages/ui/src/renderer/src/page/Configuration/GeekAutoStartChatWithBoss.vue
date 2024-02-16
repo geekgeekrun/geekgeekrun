@@ -27,7 +27,7 @@
         <el-button type="primary" @click="handleSubmit"> I'm ready, geekgeekgo! </el-button>
       </el-form-item>
     </el-form>
-    <dependencies-warming-up-dialog v-model="shouldShowDependenciesWarmingUpDialog" />
+    <DependenciesSetupProgressIndicatorDialog v-model="shouldShowDependenciesSetupProgressIndicatorDialog" />
   </div>
 </template>
 
@@ -36,7 +36,7 @@ import { onUnmounted, ref } from 'vue'
 import JSON5 from 'json5'
 import { ElForm, ElMessage, ElMessageBox } from 'element-plus'
 import router from '../../router/index'
-import DependenciesWarmingUpDialog from '../../features/DependenciesWarmingUpDialog.vue'
+import DependenciesSetupProgressIndicatorDialog from '../../features/DependenciesSetupProgressIndicatorDialog/index.vue'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -118,13 +118,13 @@ const handleExpectCompaniesInputBlur = (event) => {
     .join(',')
 }
 
-const shouldShowDependenciesWarmingUpDialog = ref(false)
+const shouldShowDependenciesSetupProgressIndicatorDialog = ref(false)
 
 const needWarmingUpDenpendenciesHandler = () => {
-  shouldShowDependenciesWarmingUpDialog.value = true
+  shouldShowDependenciesSetupProgressIndicatorDialog.value = true
 
   const handlePuppeteerDownloadFinished = () => {
-    shouldShowDependenciesWarmingUpDialog.value = false
+    shouldShowDependenciesSetupProgressIndicatorDialog.value = false
   }
   electron.ipcRenderer.once('PUPPETEER_DOWNLOAD_FINISHED', handlePuppeteerDownloadFinished)
 }
