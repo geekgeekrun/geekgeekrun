@@ -9,7 +9,10 @@ import {
   writeConfigFile
 } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
-import { getExpectPuppeteerExecutablePath } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
+import {
+  checkPuppeteerExecutable,
+  getExpectPuppeteerExecutablePath
+} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 import * as JSONStream from 'JSONStream'
 let mainWindow: BrowserWindow
 
@@ -22,8 +25,8 @@ export function createMainWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
       ? {
-        /* icon */
-      }
+          /* icon */
+        }
       : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -126,6 +129,65 @@ export function createMainWindow(): void {
     })
     // TODO:
   })
+
+  ipcMain.handle('check-dependencies', async () => {
+    return await checkPuppeteerExecutable()
+  })
+
+  let subProcessOfCheckAndDownloadDependencies: ChildProcess
+  ipcMain.handle('setup-dependencies', async () => {
+    if (subProcessOfCheckAndDownloadDependencies) {
+      return
+    }
+    const subProcessEnv = {
+      ...process.env,
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit',
+      PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
+    }
+    subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
+      process.argv[0],
+      process.argv.slice(1),
+      {
+        env: subProcessEnv,
+        stdio: [null, null, null, 'pipe']
+      }
+    )
+    return new Promise((resolve) => {
+      subProcessOfCheckAndDownloadDependencies!.stdio[3]!.pipe(JSONStream.parse()).on(
+        'data',
+        (raw) => {
+          const data = raw
+          switch (data.type) {
+            case 'PUPPETEER_DOWNLOAD_FINISHED': {
+              mainWindow.webContents.send(data.type, data)
+              resolve(data)
+              break
+            }
+            case 'NEED_RESETUP_DEPENDENCIES':
+            case 'PUPPETEER_DOWNLOAD_PROGRESS': {
+              mainWindow.webContents.send(data.type, data)
+              break
+            }
+            default: {
+              return
+            }
+            // case 'PUPPETEER_DOWNLOAD_ERROR': {
+            //   subProcessOfCheckAndDownloadDependencies?.kill()
+            //   pipe?.write(JSON.stringify(data) + '\r\n')
+            //   resolve(data)
+            //   break
+            // }
+            // case 'PUPPETEER_MAY_NOT_INSTALLED': {
+            //   pipe?.write(JSON.stringify(data) + '\r\n')
+            //   resolve(data)
+            //   break
+            // }
+          }
+        }
+      )
+    })
+  })
+
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopping')
     subProcessOfPuppeteer?.kill('SIGINT')

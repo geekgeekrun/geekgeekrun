@@ -31,11 +31,10 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
 import JSON5 from 'json5'
 import { ElForm, ElMessage, ElMessageBox } from 'element-plus'
 import router from '../../router/index'
-import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -116,19 +115,6 @@ const handleExpectCompaniesInputBlur = (event) => {
     .filter(Boolean)
     .join(',')
 }
-
-const needWarmingUpDenpendenciesHandler = () => {
-  const processDialog = mountDependenciesSetupProgressIndicatorDialog()
-
-  const handlePuppeteerDownloadFinished = () => {
-    processDialog?.dispose()
-  }
-  electron.ipcRenderer.once('PUPPETEER_DOWNLOAD_FINISHED', handlePuppeteerDownloadFinished)
-}
-electron.ipcRenderer.on('NEED_RESETUP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
-onUnmounted(
-  () => electron.ipcRenderer.removeListener('NEED_RESETUP_DEPENDENCIES', needWarmingUpDenpendenciesHandler)
-)
 </script>
 
 <style scoped lang="scss">

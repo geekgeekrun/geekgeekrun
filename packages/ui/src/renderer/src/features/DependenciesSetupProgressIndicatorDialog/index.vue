@@ -1,5 +1,6 @@
 <template>
   <el-dialog v-bind="$attrs" @open="percentage = 0">
+    <div>Downloading the necessary dependencies...</div>
     <el-progress :percentage="percentage" :format="(n) => `${n.toFixed(1)}%`" />
   </el-dialog>
 </template>
