@@ -69,13 +69,24 @@ export const runAutoChat = async () => {
           const data = raw
           switch (data.type) {
             case 'NEED_RESETUP_DEPENDENCIES':
-            case 'PUPPETEER_DOWNLOAD_ERROR':
-            case 'PUPPETEER_DOWNLOAD_FINISHED':
             case 'PUPPETEER_DOWNLOAD_PROGRESS': {
               pipe?.write(JSON.stringify(data) + '\r\n')
               break
             }
+            case 'PUPPETEER_DOWNLOAD_FINISHED': {
+              subProcessOfCheckAndDownloadDependencies?.kill()
+              pipe?.write(JSON.stringify(data) + '\r\n')
+              resolve(data)
+              break
+            }
+            case 'PUPPETEER_DOWNLOAD_ERROR': {
+              subProcessOfCheckAndDownloadDependencies?.kill()
+              pipe?.write(JSON.stringify(data) + '\r\n')
+              resolve(data)
+              break
+            }
             case 'PUPPETEER_MAY_NOT_INSTALLED': {
+              pipe?.write(JSON.stringify(data) + '\r\n')
               resolve(data)
               break
             }
