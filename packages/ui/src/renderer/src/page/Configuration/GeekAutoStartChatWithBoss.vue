@@ -27,7 +27,6 @@
         <el-button type="primary" @click="handleSubmit"> I'm ready, geekgeekgo! </el-button>
       </el-form-item>
     </el-form>
-    <DependenciesSetupProgressIndicatorDialog v-model="shouldShowDependenciesSetupProgressIndicatorDialog" />
   </div>
 </template>
 
@@ -36,7 +35,7 @@ import { onUnmounted, ref } from 'vue'
 import JSON5 from 'json5'
 import { ElForm, ElMessage, ElMessageBox } from 'element-plus'
 import router from '../../router/index'
-import DependenciesSetupProgressIndicatorDialog from '../../features/DependenciesSetupProgressIndicatorDialog/index.vue'
+import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -118,13 +117,11 @@ const handleExpectCompaniesInputBlur = (event) => {
     .join(',')
 }
 
-const shouldShowDependenciesSetupProgressIndicatorDialog = ref(false)
-
 const needWarmingUpDenpendenciesHandler = () => {
-  shouldShowDependenciesSetupProgressIndicatorDialog.value = true
+  const processDialog = mountDependenciesSetupProgressIndicatorDialog()
 
   const handlePuppeteerDownloadFinished = () => {
-    shouldShowDependenciesSetupProgressIndicatorDialog.value = false
+    processDialog?.dispose()
   }
   electron.ipcRenderer.once('PUPPETEER_DOWNLOAD_FINISHED', handlePuppeteerDownloadFinished)
 }
