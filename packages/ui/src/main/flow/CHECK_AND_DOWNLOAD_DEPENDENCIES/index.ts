@@ -1,6 +1,11 @@
+import { app } from 'electron'
 import checkAndDownloadPuppeteer from './check-and-download-puppeteer'
 import * as net from 'net'
 
+export enum DOWNLOAD_ERROR_EXIT_CODE {
+  NO_ERROR = 0,
+  DOWNLOAD_ERROR = 1
+}
 export const checkAndDownloadDependenciesForInit = async () => {
   let pipe: null | net.Socket = null
   try {
@@ -15,9 +20,8 @@ export const checkAndDownloadDependenciesForInit = async () => {
     }) + '\r\n'
   )
 
-  let browser
   try {
-    browser = await checkAndDownloadPuppeteer({
+    await checkAndDownloadPuppeteer({
       downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
         pipe?.write(
           JSON.stringify({
@@ -28,18 +32,8 @@ export const checkAndDownloadDependenciesForInit = async () => {
         ) + '\r\n'
       }
     })
-    pipe?.write(
-      JSON.stringify({
-        type: 'PUPPETEER_DOWNLOAD_FINISHED'
-      })
-    ) + '\r\n'
+    app.exit(DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR)
   } catch (err) {
-    pipe?.write(
-      JSON.stringify({
-        type: 'PUPPETEER_DOWNLOAD_ERROR'
-      })
-    ) + '\r\n'
+    app.exit(DOWNLOAD_ERROR_EXIT_CODE.DOWNLOAD_ERROR)
   }
-
-  console.log(browser)
 }

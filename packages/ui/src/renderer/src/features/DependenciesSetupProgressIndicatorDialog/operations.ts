@@ -26,7 +26,8 @@ export const mountGlobalDialog = () => {
     modelValue: true,
     onClosed() {
       dispose()
-    }
+    },
+    dispose
   }).use(ElementPlus)
   app.mount(containerEl)
 

@@ -14,6 +14,7 @@ import {
   getExpectPuppeteerExecutablePath
 } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 import * as JSONStream from 'JSONStream'
+import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
 let mainWindow: BrowserWindow
 
 export function createMainWindow(): void {
@@ -134,7 +135,7 @@ export function createMainWindow(): void {
     return await checkPuppeteerExecutable()
   })
 
-  let subProcessOfCheckAndDownloadDependencies: ChildProcess
+  let subProcessOfCheckAndDownloadDependencies: ChildProcess | null = null
   ipcMain.handle('setup-dependencies', async () => {
     if (subProcessOfCheckAndDownloadDependencies) {
       return
@@ -152,17 +153,12 @@ export function createMainWindow(): void {
         stdio: [null, null, null, 'pipe']
       }
     )
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       subProcessOfCheckAndDownloadDependencies!.stdio[3]!.pipe(JSONStream.parse()).on(
         'data',
         (raw) => {
           const data = raw
           switch (data.type) {
-            case 'PUPPETEER_DOWNLOAD_FINISHED': {
-              mainWindow.webContents.send(data.type, data)
-              resolve(data)
-              break
-            }
             case 'NEED_RESETUP_DEPENDENCIES':
             case 'PUPPETEER_DOWNLOAD_PROGRESS': {
               mainWindow.webContents.send(data.type, data)
@@ -171,20 +167,22 @@ export function createMainWindow(): void {
             default: {
               return
             }
-            // case 'PUPPETEER_DOWNLOAD_ERROR': {
-            //   subProcessOfCheckAndDownloadDependencies?.kill()
-            //   pipe?.write(JSON.stringify(data) + '\r\n')
-            //   resolve(data)
-            //   break
-            // }
-            // case 'PUPPETEER_MAY_NOT_INSTALLED': {
-            //   pipe?.write(JSON.stringify(data) + '\r\n')
-            //   resolve(data)
-            //   break
-            // }
           }
         }
       )
+      subProcessOfCheckAndDownloadDependencies!.once('exit', (exitCode) => {
+        switch (exitCode) {
+          case DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR: {
+            resolve(exitCode)
+            break
+          }
+          default: {
+            reject(exitCode)
+            break
+          }
+        }
+        subProcessOfCheckAndDownloadDependencies = null
+      })
     })
   })
 
