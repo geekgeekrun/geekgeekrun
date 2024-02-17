@@ -175,7 +175,7 @@ export function createMainWindow(): void {
             break
           }
           default: {
-            reject(exitCode)
+            reject('PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR')
             break
           }
         }
