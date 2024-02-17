@@ -21,16 +21,34 @@ export const checkAndDownloadDependenciesForInit = async () => {
   )
 
   try {
-    await checkAndDownloadPuppeteer({
-      downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
-        pipe?.write(
-          JSON.stringify({
-            type: 'PUPPETEER_DOWNLOAD_PROGRESS',
-            totalBytes,
-            downloadedBytes
-          })
-        ) + '\r\n'
-      }
+    let timeoutTimer = 0
+    await new Promise((resolve, reject) => {
+      checkAndDownloadPuppeteer({
+        downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
+          clearTimeout(timeoutTimer)
+          if (downloadedBytes !== totalBytes) {
+            timeoutTimer = setTimeout(() => {
+              // will encounter this when network disconnected when downloading
+              reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
+            }, 30 * 1000)
+          }
+          console.log(downloadedBytes / totalBytes)
+          pipe?.write(
+            JSON.stringify({
+              type: 'PUPPETEER_DOWNLOAD_PROGRESS',
+              totalBytes,
+              downloadedBytes
+            })
+          ) + '\r\n'
+        }
+      }).then(
+        () => {
+          resolve(void 0)
+        },
+        (err) => {
+          reject(err)
+        }
+      )
     })
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR)
   } catch (err) {
