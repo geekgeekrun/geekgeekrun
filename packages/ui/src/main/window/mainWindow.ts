@@ -101,13 +101,8 @@ export function createMainWindow(): void {
       env: subProcessEnv,
       stdio: [null, null, null, 'pipe']
     })
-    subProcessOfPuppeteer.once('exit', () => {
-      mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopped')
-
-      subProcessOfPuppeteer = null
-    })
     console.log(subProcessOfPuppeteer)
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', (raw) => {
         const data = raw
         switch (data.type) {
@@ -118,6 +113,16 @@ export function createMainWindow(): void {
           default: {
             return
           }
+        }
+      })
+
+      subProcessOfPuppeteer!.once('exit', (exitCode) => {
+        subProcessOfPuppeteer = null
+        if (exitCode === 1) {
+          // means cannot find downloaded puppeteer
+          reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+        } else {
+          mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopped')
         }
       })
     })

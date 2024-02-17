@@ -33,8 +33,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import JSON5 from 'json5'
-import { ElForm, ElMessage, ElMessageBox } from 'element-plus'
+import { ElForm, ElMessage } from 'element-plus'
 import router from '../../router/index'
+import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
 
 const formContent = ref({
   bossZhipinCookies: '',
@@ -78,13 +79,28 @@ const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
-  const res = await electron.ipcRenderer.invoke(
-    'run-geek-auto-start-chat-with-boss',
-    JSON.stringify(formContent.value)
-  )
 
-  if (res.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
-    router.replace('/geekAutoStartChatWithBoss/runningStatus')
+  try {
+    const res = await electron.ipcRenderer.invoke(
+      'run-geek-auto-start-chat-with-boss',
+      JSON.stringify(formContent.value)
+    )
+
+    if (res.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
+      router.replace('/geekAutoStartChatWithBoss/runningStatus')
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
+      ElMessage.error({
+        message: `Some dependencies might be corrupt. I'm trying to check and fix them.`
+      })
+      const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
+      if (!checkDependenciesResult) {
+        mountDependenciesSetupProgressIndicatorDialog()
+        // TODO: should continue interrupted task
+      }
+    }
+    console.error(err)
   }
 }
 const handleSave = async () => {
