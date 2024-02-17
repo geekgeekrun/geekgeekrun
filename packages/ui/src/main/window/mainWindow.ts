@@ -111,15 +111,8 @@ export function createMainWindow(): void {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', (raw) => {
         const data = raw
         switch (data.type) {
-          case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED':
-          case 'PUPPETEER_MAY_NOT_INSTALLED': {
+          case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
             resolve(data)
-            break
-          }
-          case 'NEED_RESETUP_DEPENDENCIES':
-          case 'PUPPETEER_DOWNLOAD_FINISHED':
-          case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-            mainWindow.webContents.send(data.type, data)
             break
           }
           default: {

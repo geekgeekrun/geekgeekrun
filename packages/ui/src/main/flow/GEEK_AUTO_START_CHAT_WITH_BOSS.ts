@@ -5,10 +5,7 @@ import { readConfigFile } from '@bossgeekgo/geek-auto-start-chat-with-boss/runti
 import * as net from 'net'
 import {
   checkPuppeteerExecutable,
-  getExpectPuppeteerExecutablePath
 } from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
-import * as childProcess from 'node:child_process'
-import * as JSONStream from 'JSONStream'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -36,67 +33,14 @@ export const runAutoChat = async () => {
       }) + '\r\n'
     )
   } catch {
-    console.error(new Error('PUPPETEER_MAY_NOT_INSTALLED'))
-    pipe?.write(
-      JSON.stringify({
-        type: 'PUPPETEER_MAY_NOT_INSTALLED'
-      }) + '\r\n'
-    )
     app.exit(1)
     return
   }
 
   const isPuppeteerExecutable = await checkPuppeteerExecutable()
   if (!isPuppeteerExecutable) {
-    const subProcessEnv = {
-      ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit',
-      PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
-    }
-    const subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
-      process.argv[0],
-      process.argv.slice(1),
-      {
-        env: subProcessEnv,
-        stdio: [null, null, null, 'pipe']
-      }
-    )
-
-    await new Promise((resolve) => {
-      subProcessOfCheckAndDownloadDependencies!.stdio[3]!.pipe(JSONStream.parse()).on(
-        'data',
-        (raw) => {
-          const data = raw
-          switch (data.type) {
-            case 'NEED_RESETUP_DEPENDENCIES':
-            case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-              pipe?.write(JSON.stringify(data) + '\r\n')
-              break
-            }
-            case 'PUPPETEER_DOWNLOAD_FINISHED': {
-              subProcessOfCheckAndDownloadDependencies?.kill()
-              pipe?.write(JSON.stringify(data) + '\r\n')
-              resolve(data)
-              break
-            }
-            case 'PUPPETEER_DOWNLOAD_ERROR': {
-              subProcessOfCheckAndDownloadDependencies?.kill()
-              pipe?.write(JSON.stringify(data) + '\r\n')
-              resolve(data)
-              break
-            }
-            case 'PUPPETEER_MAY_NOT_INSTALLED': {
-              pipe?.write(JSON.stringify(data) + '\r\n')
-              resolve(data)
-              break
-            }
-            default: {
-              return
-            }
-          }
-        }
-      )
-    })
+    app.exit(1)
+    return
   }
 
   const mainLoop = (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).mainLoop

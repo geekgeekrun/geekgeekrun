@@ -85,21 +85,6 @@ const handleSubmit = async () => {
 
   if (res.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
     router.replace('/geekAutoStartChatWithBoss/runningStatus')
-  } else if (res.type === 'PUPPETEER_MAY_NOT_INSTALLED') {
-    ElMessageBox.confirm(
-      'Some core components is broken, please reinstall this program. Will you go to the download page?',
-      'Error',
-      {
-        confirmButtonText: 'OK',
-        cancelButtonText: 'Cancel',
-        type: 'error'
-      }
-    )
-      .then(() => {
-        electron.ipcRenderer.emit('open-project-homepage-on-github')
-      })
-      .catch(() => {})
-    return
   }
 }
 const handleSave = async () => {
