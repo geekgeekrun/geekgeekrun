@@ -12,10 +12,8 @@ const cacheDir = path.join(
 )
 
 const getPuppeteerManagerModule = async () => {
-  const runtimeDependencies = await import(
-    path.join(os.homedir(), '.bossgeekgo', 'external-node-runtime-dependencies/index.mjs')
-  )
-  return runtimeDependencies.puppeteerManager
+  const puppeteerManager = await import('@puppeteer/browsers')
+  return puppeteerManager
 }
 
 export const getExpectPuppeteerExecutablePath = async () => {
@@ -29,14 +27,21 @@ export const getExpectPuppeteerExecutablePath = async () => {
 }
 
 export const checkPuppeteerExecutable = async () => {
-  const executablePath = await getExpectPuppeteerExecutablePath()
-  return fs.existsSync(executablePath)
+  try {
+    const executablePath = await getExpectPuppeteerExecutablePath()
+    return fs.existsSync(executablePath)
+  } catch {
+    // should limit [ERR_MODULE_NOT_FOUND]
+    return false
+  }
 }
 
-const checkAndDownloadPuppeteer = async (options: {
-  downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void,
-  confirmContinuePromise?: Promise<void>
-} = {}) => {
+const checkAndDownloadPuppeteer = async (
+  options: {
+    downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void
+    confirmContinuePromise?: Promise<void>
+  } = {}
+) => {
   const puppeteerManager = await getPuppeteerManagerModule()
   let installedBrowser: InstalledBrowser
   if (!(await checkPuppeteerExecutable())) {

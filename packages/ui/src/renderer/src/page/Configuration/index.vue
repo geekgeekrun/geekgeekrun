@@ -15,8 +15,8 @@ onUnmounted(() => {
 })
 ;(async () => {
   const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
-  if (!checkDependenciesResult) {
-    mountDependenciesSetupProgressIndicatorDialog()
+  if (Object.values(checkDependenciesResult).includes(false)) {
+    mountDependenciesSetupProgressIndicatorDialog(checkDependenciesResult)
   }
 })()
 </script>

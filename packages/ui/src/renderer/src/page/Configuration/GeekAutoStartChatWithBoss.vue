@@ -95,8 +95,8 @@ const handleSubmit = async () => {
         message: `Some dependencies might be corrupt. I'm trying to check and fix them.`
       })
       const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
-      if (!checkDependenciesResult) {
-        mountDependenciesSetupProgressIndicatorDialog()
+      if (Object.values(checkDependenciesResult).includes(false)) {
+        mountDependenciesSetupProgressIndicatorDialog(checkDependenciesResult)
         // TODO: should continue interrupted task
       }
     }

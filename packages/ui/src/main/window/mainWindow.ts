@@ -130,7 +130,10 @@ export function createMainWindow(): void {
   })
 
   ipcMain.handle('check-dependencies', async () => {
-    return await checkPuppeteerExecutable()
+    const [puppeteerExecutableAvailable] = await Promise.all([checkPuppeteerExecutable()])
+    return {
+      puppeteerExecutableAvailable
+    }
   })
 
   let subProcessOfCheckAndDownloadDependencies: ChildProcess | null = null
