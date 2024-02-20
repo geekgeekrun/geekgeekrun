@@ -6,27 +6,36 @@
       <p>📱 你可以在<b>手机</b> / <b>平板电脑</b>上，使用BOSS直聘App与为你开聊的BOSS聊天</p>
       <p>🍀 祝你求职顺利！</p>
     </article>
-    <el-button :disabled="isStopping" @click="handleStop">停止开聊</el-button>
+    <el-button :disabled="isStopping" @click="handleStopButtonClick">停止开聊</el-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
 
 const { ipcRenderer } = electron
 const router = useRouter()
 
-const isStopping = ref(false)
-const handleStop = async () => {
-  ipcRenderer.once('geek-auto-start-chat-with-boss-stopping', () => {
-    isStopping.value = true
-    ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', () => {
-      router.replace('/configuration/GeekAutoStartChatWithBoss')
-    })
-  })
+const handleStopButtonClick = async () => {
   ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
 }
+
+const isStopping = ref(false)
+const handleStopping = () => {
+  isStopping.value = true
+}
+ipcRenderer.once('geek-auto-start-chat-with-boss-stopping', handleStopping)
+
+const handleStopped = () => {
+  router.replace('/configuration/GeekAutoStartChatWithBoss')
+}
+ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', handleStopped)
+
+onUnmounted(() => {
+  ipcRenderer.removeListener('geek-auto-start-chat-with-boss-stopped', handleStopped)
+  ipcRenderer.removeListener('geek-auto-start-chat-with-boss-stopping', handleStopping)
+})
 </script>
 
 <style scoped lang="scss"></style>
