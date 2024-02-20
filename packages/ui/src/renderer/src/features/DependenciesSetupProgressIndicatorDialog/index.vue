@@ -7,7 +7,7 @@
     @open="handleDialogOpen"
   >
     <template v-if="!copiedDependenciesStatus.puppeteerExecutableAvailable">
-      <div>正在下载核心组件</div>
+      <div mb14px>正在下载核心组件</div>
       <el-progress
         :percentage="browserDownloadPercentage"
         :format="(n) => `${n.toFixed(1)}%`"
