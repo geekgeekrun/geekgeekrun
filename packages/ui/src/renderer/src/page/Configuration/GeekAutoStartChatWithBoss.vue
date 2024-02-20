@@ -92,7 +92,7 @@ const handleSubmit = async () => {
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
       ElMessage.error({
-        message: `Some dependencies might be corrupt. I'm trying to check and fix them.`
+        message: `核心组件损坏，正在尝试修复`
       })
       const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
       if (Object.values(checkDependenciesResult).includes(false)) {
