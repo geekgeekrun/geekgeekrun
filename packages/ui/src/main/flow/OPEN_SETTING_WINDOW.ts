@@ -3,6 +3,12 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createMainWindow } from '../window/mainWindow'
 
 export function openSettingWindow() {
+  // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
+  if (!app.requestSingleInstanceLock()) {
+    // TODO: log
+    app.exit(0)
+  }
+
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
