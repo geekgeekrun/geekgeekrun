@@ -78,6 +78,7 @@ const processTasks = async () => {
         })
     }
   }
+  props.dispose?.()
 }
 
 processTasks()
