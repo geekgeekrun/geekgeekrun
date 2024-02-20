@@ -1,12 +1,12 @@
 <template>
   <div class="geek-auto-start-chat-with-boss__running-status">
     <article>
-      <h1>Hi buddy!</h1>
-      <p>I'm finding your expected job and will start a chat with recruiter.</p>
-      <p>You can view the positions you've chatted with in BossZhipin App on your cellphone.</p>
-      <p>Good luck to you!</p>
+      <h1>👋 BOSS炸弹正在运行</h1>
+      <p>💬 正在为你开聊BOSS，请静候佳音</p>
+      <p>📱 你可以在<b>手机</b> / <b>平板电脑</b>上，使用BOSS直聘App与为你开聊的BOSS聊天</p>
+      <p>🍀 祝你求职顺利！</p>
     </article>
-    <el-button :disabled="isStopping" @click="handleStop">Stop</el-button>
+    <el-button :disabled="isStopping" @click="handleStop">停止开聊</el-button>
   </div>
 </template>
 

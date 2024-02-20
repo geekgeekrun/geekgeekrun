@@ -17,7 +17,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'GeekAutoStartChatWithBoss',
         component: () => import('@renderer/page/Configuration/GeekAutoStartChatWithBoss.vue'),
         meta: {
-          title: '"geek auto start chat with boss" configuration'
+          title: '"BOSS炸弹" 设置'
         }
       }
     ]
@@ -30,7 +30,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'runningStatus',
         component: () => import('@renderer/page/GeekAutoStartChatWithBoss/RunningStatus.vue'),
         meta: {
-          title: 'geek auto start chat with boss is running!'
+          title: 'BOSS炸弹 正在为你开聊BOSS'
         }
       }
     ]

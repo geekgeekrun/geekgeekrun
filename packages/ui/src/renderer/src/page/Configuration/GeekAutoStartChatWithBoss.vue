@@ -2,7 +2,7 @@
   <div class="form-wrap">
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
       <el-form-item
-        label="BossZhipin cookies (copy with EditThisCookie Extension from a window which has been logined)"
+        label="BOSS直聘 Cookie （使用EditThisCookie扩展程序，从你已登录过BOSS直聘的浏览器复制）"
         prop="bossZhipinCookies"
       >
         <el-input
@@ -11,10 +11,10 @@
           type="textarea"
         />
       </el-form-item>
-      <el-form-item label="Dingtalk robot access token" prop="dingtalkRobotAccessToken">
+      <el-form-item label="钉钉机器人 AccessToken" prop="dingtalkRobotAccessToken">
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
-      <el-form-item label="Your Expect Companies (separate with comma)" prop="expectCompanies">
+      <el-form-item label="期望公司（以逗号分隔）" prop="expectCompanies">
         <el-input
           v-model="formContent.expectCompanies"
           :autosize="{ minRows: 4 }"
@@ -23,8 +23,8 @@
         />
       </el-form-item>
       <el-form-item class="last-form-item">
-        <el-button @click="handleSave">Just save the configuration</el-button>
-        <el-button type="primary" @click="handleSubmit"> I'm ready, geekgeekgo! </el-button>
+        <el-button @click="handleSave">仅保存配置</el-button>
+        <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
       </el-form-item>
     </el-form>
   </div>
