@@ -2,17 +2,32 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as fs from 'node:fs'
 import type { InstalledBrowser } from '@puppeteer/browsers'
+import { is } from '@electron-toolkit/utils'
+import electron from 'electron'
 
 const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '121.0.6167.85'
 const cacheDir = path.join(
   os.homedir(),
   '.bossgeekgo',
-  'external-node-runtime-dependencies',
-  'static'
+  'cache'
 )
 
 const getPuppeteerManagerModule = async () => {
-  const puppeteerManager = await import('@puppeteer/browsers')
+  let puppeteerManager
+  if (is.dev) {
+    puppeteerManager = await import('@puppeteer/browsers')
+  } else {
+    puppeteerManager = (
+      await import(
+        path.resolve(
+          electron.app.getAppPath(),
+          '..',
+          'external-node-runtime-dependencies/index.mjs'
+        )
+      )
+    ).puppeteerManager
+  }
+
   return puppeteerManager
 }
 

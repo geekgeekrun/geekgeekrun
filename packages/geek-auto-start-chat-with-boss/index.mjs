@@ -21,10 +21,11 @@ export async function initPuppeteer () {
   if (
     isRunFromUi && !isUiDev
   ) {
+    const electron = await import('electron')
     const runtimeDependencies = await import(
-      path.join(
-        os.homedir(),
-        '.bossgeekgo',
+      path.resolve(
+        electron.app.getAppPath(),
+        '..',
         'external-node-runtime-dependencies/index.mjs'
       )
     )
