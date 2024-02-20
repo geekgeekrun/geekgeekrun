@@ -1,5 +1,11 @@
 <template>
-  <el-dialog v-bind="$attrs" @open="handleDialogOpen">
+  <el-dialog
+    v-bind="$attrs"
+    @open="handleDialogOpen"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+    :show-close="false"
+  >
     <template v-if="!copiedDependenciesStatus.puppeteerExecutableAvailable">
       <div>Downloading Dedicate Browser</div>
       <el-progress :percentage="browserDownloadPercentage" :format="(n) => `${n.toFixed(1)}%`" />
@@ -57,17 +63,20 @@ const processTasks = async () => {
     promiseList.push(p)
     p.then(() => {
       copiedDependenciesStatus.puppeteerExecutableAvailable = true
-    }).finally(() => {
-      const idx = promiseList.indexOf(p)
-      idx >= 0 && promiseList.splice(idx, 1)
     })
   }
 
   while (promiseList.length) {
+    const p = promiseList.shift()!
     try {
-      await promiseList[0]
+      p.then(() => {
+        if (!promiseList.length) {
+          props.dispose?.()
+        }
+      })
+      await p
     } catch {
-      ElMessageBox.confirm('Encounter error while setup dependencies. Retry?')
+      await ElMessageBox.confirm('Encounter error while setup dependencies. Retry?')
         .then(() => {
           processTasks()
         })
@@ -78,7 +87,6 @@ const processTasks = async () => {
         })
     }
   }
-  props.dispose?.()
 }
 
 processTasks()
