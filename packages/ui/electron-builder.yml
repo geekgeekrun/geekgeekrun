@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: ui
+appId: com.geekgeekrun.ui
+productName: GeekGeekRun
 directories:
   buildResources: build
 files:
@@ -14,7 +14,7 @@ asarUnpack:
 extraResources:
   - external-node-runtime-dependencies/**
 win:
-  executableName: ui
+  executableName: geekgeekrun
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
