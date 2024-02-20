@@ -5,5 +5,6 @@ import router from './router'
 import 'normalize.css'
 import './style/public.scss'
 import 'element-plus/dist/index.css'
+import 'virtual:uno.css'
 
 createApp(App).use(router).use(ElementPlus).mount('#app')

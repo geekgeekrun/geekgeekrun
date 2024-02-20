@@ -1,6 +1,9 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
+import UnoCSS from 'unocss/vite'
+import { presetUno, presetAttributify, presetIcons } from 'unocss'
+import transformerDirective from "@unocss/transformer-directives";
 
 export default defineConfig({
   main: {
@@ -25,7 +28,11 @@ export default defineConfig({
       }
     },
     plugins: [
-      vue()
-    ]
+      vue(),
+      UnoCSS({
+        presets: [presetUno(), presetAttributify(), presetIcons()],
+        transformers: [transformerDirective()],
+      })
+    ],
   }
 })
