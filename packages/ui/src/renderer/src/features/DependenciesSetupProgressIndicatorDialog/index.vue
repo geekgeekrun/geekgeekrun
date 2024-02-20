@@ -1,14 +1,18 @@
 <template>
   <el-dialog
     v-bind="$attrs"
-    @open="handleDialogOpen"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     :show-close="false"
+    @open="handleDialogOpen"
   >
     <template v-if="!copiedDependenciesStatus.puppeteerExecutableAvailable">
       <div>正在下载核心组件</div>
-      <el-progress :percentage="browserDownloadPercentage" :format="(n) => `${n.toFixed(1)}%`" />
+      <el-progress
+        :percentage="browserDownloadPercentage"
+        :format="(n) => `${n.toFixed(1)}%`"
+        :stroke-width="10"
+      />
     </template>
   </el-dialog>
 </template>
@@ -76,7 +80,13 @@ const processTasks = async () => {
       })
       await p
     } catch {
-      await ElMessageBox.confirm('Encounter error while setup dependencies. Retry?')
+      await ElMessageBox.confirm('需要重试吗？', '核心组件下载失败', {
+        closeOnClickModal: false,
+        closeOnPressEscape: false,
+        showClose: false,
+        type: 'error',
+        cancelButtonText: '退出程序'
+      })
         .then(() => {
           processTasks()
         })
