@@ -14,7 +14,7 @@ export default class DingtalkPlugin {
     sendQueueTimer = setTimeout(function sendMergedMessage () {
       if (collectedMessageList.length === 0) {
       } else if (collectedMessageList.length === 1) {
-        collectedMessageList[0].dingtalkRequestBody.text.content += `\n${dayjs(collectedMessageList[0].insertedTime).format('MM-DD HH:mm:ss')}\n\n【bossgeekgo】`
+        collectedMessageList[0].dingtalkRequestBody.text.content += `\n${dayjs(collectedMessageList[0].insertedTime).format('MM-DD HH:mm:ss')}\n\n【geekgeekrun】`
         requestDingtalkNotify(
           _this.dingtalkAccessToken, JSON.stringify(collectedMessageList[0].dingtalkRequestBody)
         )
@@ -23,7 +23,7 @@ export default class DingtalkPlugin {
           _this.dingtalkAccessToken, JSON.stringify((createTextMessage(
             collectedMessageList.map(it => {
               return `${it.dingtalkRequestBody.text.content}\n${dayjs(it.insertedTime).format('MM-DD HH:mm:ss')}\n`
-            }).join('-----\n') + '\n【bossgeekgo】'
+            }).join('-----\n') + '\n【geekgeekrun】'
           )).dingtalkRequestBody)
         )
       }
