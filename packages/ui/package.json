@@ -1,9 +1,9 @@
 {
-  "name": "bossgeekgo-ui",
+  "name": "geekgeekrun-ui",
   "version": "1.0.0",
   "description": "An Electron application with Vue and TypeScript",
   "main": "./out/main/index.js",
-  "author": "bossgeekgo",
+  "author": "geekgeekrun",
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
@@ -22,8 +22,8 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "@bossgeekgo/dingtalk-plugin": "workspace:*",
-    "@bossgeekgo/geek-auto-start-chat-with-boss": "workspace:*",
+    "@geekgeekrun/dingtalk-plugin": "workspace:*",
+    "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@puppeteer/browsers": "^2.0.0",

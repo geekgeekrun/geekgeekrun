@@ -8,7 +8,7 @@ import electron from 'electron'
 const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '121.0.6167.85'
 const cacheDir = path.join(
   os.homedir(),
-  '.bossgeekgo',
+  '.geekgeekrun',
   'cache'
 )
 

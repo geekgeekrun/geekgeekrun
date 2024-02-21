@@ -1,5 +1,5 @@
 {
-  "name": "bossgeekgo",
+  "name": "geekgeekrun",
   "private": true,
   "version": "1.0.0",
   "description": "geek-auto-start-chat-with-boss",
@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/index.mjs"
   },
-  "author": "bossgeekgo",
+  "author": "geekgeekrun",
   "license": "ISC",
   "dependencies": {
     "dayjs": "^1.11.10",

@@ -15,7 +15,7 @@ const defaultConfigFileContentMap = {
   'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf)
 }
 
-const runtimeFolderPath = path.join(os.homedir(), '.bossgeekgo')
+const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
 const ensureRuntimeFolderPathExist = () => {
   if (!fs.existsSync(runtimeFolderPath)) {
     fs.mkdirSync(runtimeFolderPath)

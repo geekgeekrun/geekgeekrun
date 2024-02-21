@@ -1,7 +1,7 @@
-import DingtalkPlugin from '@bossgeekgo/dingtalk-plugin/index.mjs'
+import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/index.mjs'
 import { app } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
-import { readConfigFile } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as net from 'net'
 import {
   checkPuppeteerExecutable,
@@ -26,7 +26,7 @@ export const runAutoChat = async () => {
     }) + '\r\n'
   )
   try {
-    await (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).initPuppeteer()
+    await (await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')).initPuppeteer()
     pipe?.write(
       JSON.stringify({
         type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
@@ -43,7 +43,7 @@ export const runAutoChat = async () => {
     return
   }
 
-  const mainLoop = (await import('@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs')).mainLoop
+  const mainLoop = (await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')).mainLoop
   const hooks = {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),

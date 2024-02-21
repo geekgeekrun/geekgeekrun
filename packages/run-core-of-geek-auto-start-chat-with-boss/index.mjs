@@ -1,14 +1,14 @@
-import DingtalkPlugin from '@bossgeekgo/dingtalk-plugin/index.mjs'
-import { mainLoop } from '@bossgeekgo/geek-auto-start-chat-with-boss/index.mjs'
+import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/index.mjs'
+import { mainLoop } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
 import {
   SyncHook,
   AsyncSeriesHook
 } from 'tapable'
 import fs from 'node:fs'
 import path from 'node:path'
-import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
+import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import JSON5 from 'json5'
-import { readConfigFile } from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 const { cookies: bossCookies } = readConfigFile('boss.json')
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 

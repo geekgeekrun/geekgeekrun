@@ -1,4 +1,4 @@
-# Geek Auto Start Chat With Boss - BossGeekGo
+# Geek Auto Start Chat With Boss - GeekGeekRun
 
 一款可以帮助你在Boss直聘上**自动批量开聊Boss**的辅助脚本，基于Puppeteer。
 

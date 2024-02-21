@@ -7,7 +7,7 @@ import {
   configFileNameList,
   ensureConfigFileExist,
   writeConfigFile
-} from '@bossgeekgo/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import {
   checkPuppeteerExecutable,
@@ -192,7 +192,7 @@ export function createMainWindow(): void {
     subProcessOfPuppeteer?.kill('SIGINT')
   })
   ipcMain.on('open-project-homepage-on-github', () => {
-    shell.openExternal(`https://github.com/bossgeekgo`, {
+    shell.openExternal(`https://github.com/geekgeekrun`, {
       activate: true
     })
   })

@@ -31,28 +31,28 @@ importers:
 
   packages/geek-auto-start-chat-with-boss:
     dependencies:
-      '@bossgeekgo/utils':
+      '@geekgeekrun/utils':
         specifier: workspace:*
         version: link:../utils
 
   packages/run-core-of-geek-auto-start-chat-with-boss:
     dependencies:
-      '@bossgeekgo/dingtalk-plugin':
+      '@geekgeekrun/dingtalk-plugin':
         specifier: workspace:*
         version: link:../dingtalk-plugin
-      '@bossgeekgo/geek-auto-start-chat-with-boss':
+      '@geekgeekrun/geek-auto-start-chat-with-boss':
         specifier: workspace:*
         version: link:../geek-auto-start-chat-with-boss
-      '@bossgeekgo/utils':
+      '@geekgeekrun/utils':
         specifier: workspace:*
         version: link:../utils
 
   packages/ui:
     dependencies:
-      '@bossgeekgo/dingtalk-plugin':
+      '@geekgeekrun/dingtalk-plugin':
         specifier: workspace:*
         version: link:../dingtalk-plugin
-      '@bossgeekgo/geek-auto-start-chat-with-boss':
+      '@geekgeekrun/geek-auto-start-chat-with-boss':
         specifier: workspace:*
         version: link:../geek-auto-start-chat-with-boss
       '@electron-toolkit/preload':

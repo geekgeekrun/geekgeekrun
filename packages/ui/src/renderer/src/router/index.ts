@@ -44,9 +44,9 @@ const router = createRouter({
 
 router.afterEach((to) => {
   if (to.meta?.title) {
-    document.title = `${to.meta.title} - BossGeekGo`
+    document.title = `${to.meta.title} - GeekGeekRun`
   } else {
-    document.title = `BossGeekGo`
+    document.title = `GeekGeekRun`
   }
 })
 

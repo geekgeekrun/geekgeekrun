@@ -1,5 +1,5 @@
 {
-  "name": "@bossgeekgo/geek-auto-start-chat-with-boss",
+  "name": "@geekgeekrun/geek-auto-start-chat-with-boss",
   "private": true,
   "version": "1.0.0",
   "description": "geek-auto-start-chat-with-boss",
@@ -7,9 +7,9 @@
   "type": "module",
   "scripts": {
   },
-  "author": "bossgeekgo",
+  "author": "geekgeekrun",
   "license": "ISC",
   "dependencies": {
-    "@bossgeekgo/utils": "workspace:*"
+    "@geekgeekrun/utils": "workspace:*"
   }
 }

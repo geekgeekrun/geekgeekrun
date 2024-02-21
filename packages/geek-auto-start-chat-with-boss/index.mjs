@@ -1,11 +1,11 @@
 import {
   sleep,
   sleepWithRandomDelay
-} from '@bossgeekgo/utils/sleep.mjs'
+} from '@geekgeekrun/utils/sleep.mjs'
 
 import fs from 'node:fs'
 import os from 'node:os'
-import { get__dirname } from '@bossgeekgo/utils/legacy-path.mjs';
+import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import path from 'node:path';
 import JSON5 from 'json5'
 

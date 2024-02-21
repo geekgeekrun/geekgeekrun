@@ -1,11 +1,11 @@
 {
-  "name": "@bossgeekgo/utils",
+  "name": "@geekgeekrun/utils",
   "private": true,
   "version": "1.0.0",
   "description": "utils",
   "scripts": {
   },
-  "author": "bossgeekgo",
+  "author": "geekgeekrun",
   "license": "ISC",
   "dependencies": {}
 }

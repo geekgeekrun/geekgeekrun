@@ -1,5 +1,5 @@
 {
-  "name": "@bossgeekgo/run-core-of-geek-auto-start-chat-with-boss",
+  "name": "@geekgeekrun/run-core-of-geek-auto-start-chat-with-boss",
   "private": true,
   "version": "1.0.0",
   "description": "run-core-of-geek-auto-start-chat-with-boss",
@@ -7,11 +7,11 @@
   "type": "module",
   "scripts": {
   },
-  "author": "bossgeekgo",
+  "author": "geekgeekrun",
   "license": "ISC",
   "dependencies": {
-    "@bossgeekgo/dingtalk-plugin": "workspace:*",
-    "@bossgeekgo/geek-auto-start-chat-with-boss": "workspace:*",
-    "@bossgeekgo/utils": "workspace:*"
+    "@geekgeekrun/dingtalk-plugin": "workspace:*",
+    "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
+    "@geekgeekrun/utils": "workspace:*"
   }
 }
