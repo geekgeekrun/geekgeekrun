@@ -38,4 +38,10 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.geek-auto-start-chat-with-boss__running-status {
+  padding-top: 100px;
+  margin: 0 auto;
+  max-width: 640px;
+}
+</style>
