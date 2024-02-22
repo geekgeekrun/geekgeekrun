@@ -7,12 +7,14 @@
       <p>🍀 祝你求职顺利！</p>
     </article>
     <el-button :disabled="isStopping" @click="handleStopButtonClick">停止开聊</el-button>
+    <FlyingCompanyLogoList />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
+import FlyingCompanyLogoList from '../../features/FlyingCompanyLogoList/index.vue'
 
 const { ipcRenderer } = electron
 const router = useRouter()
@@ -40,7 +42,6 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .geek-auto-start-chat-with-boss__running-status {
-  padding-top: 100px;
   margin: 0 auto;
   max-width: 640px;
 }

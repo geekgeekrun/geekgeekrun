@@ -1,6 +1,5 @@
 <template>
   <div class="form-wrap">
-    <FlyingCompanyLogoList />
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
       <el-form-item
         label="BOSS直聘 Cookie （使用EditThisCookie扩展程序，从你已登录过BOSS直聘的浏览器复制）"
@@ -37,7 +36,6 @@ import JSON5 from 'json5'
 import { ElForm, ElMessage } from 'element-plus'
 import router from '../../router/index'
 import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
-import FlyingCompanyLogoList from '../../features/FlyingCompanyLogoList/index.vue'
 
 const formContent = ref({
   bossZhipinCookies: '',
