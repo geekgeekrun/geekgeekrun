@@ -7,6 +7,8 @@ import {
   checkPuppeteerExecutable,
 } from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 
+app.dock.hide()
+
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
