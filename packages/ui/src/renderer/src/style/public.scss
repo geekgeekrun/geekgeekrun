@@ -1,7 +1,14 @@
 html, body {
   --monospace-font-family: Monaco, Consolas, Menlo, monospace;
   font-family: var(--monospace-font-family);
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 button, input, textarea {
   font-family: inherit;
+}
+#app {
+  position: absolute;
+  inset: 0;
 }

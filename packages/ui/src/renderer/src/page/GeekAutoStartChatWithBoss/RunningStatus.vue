@@ -1,13 +1,15 @@
 <template>
   <div class="geek-auto-start-chat-with-boss__running-status">
-    <article>
-      <h1>👋 BOSS炸弹正在运行</h1>
-      <p>💬 正在为你开聊BOSS，请静候佳音</p>
-      <p>📱 你可以在<b>手机</b> / <b>平板电脑</b>上，使用BOSS直聘App与为你开聊的BOSS聊天</p>
-      <p>🍀 祝你求职顺利！</p>
-    </article>
-    <el-button :disabled="isStopping" @click="handleStopButtonClick">停止开聊</el-button>
-    <FlyingCompanyLogoList />
+    <div class="tip">
+      <article>
+        <h1>👋 BOSS炸弹正在运行</h1>
+        <p>💬 正在为你开聊BOSS，请静候佳音</p>
+        <p>📱 你可以在<b>手机</b> / <b>平板电脑</b>上，使用BOSS直聘App与为你开聊的BOSS聊天</p>
+        <p>🍀 祝你求职顺利！</p>
+      </article>
+      <el-button :disabled="isStopping" @click="handleStopButtonClick">停止开聊</el-button>
+    </div>
+    <FlyingCompanyLogoList class="flying-company-logo-list" />
   </div>
 </template>
 
@@ -42,7 +44,12 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .geek-auto-start-chat-with-boss__running-status {
-  margin: 0 auto;
-  max-width: 640px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  .tip {
+    margin: 0 auto;
+    max-width: 640px;
+  }
 }
 </style>
