@@ -1,5 +1,11 @@
 <template>
-  <div class="container">
+  <div
+    class="container"
+    :style="{
+      gridTemplateColumns: `repeat(${colCount}, 1fr)`,
+      gridTemplateRows: `repeat(${rowCount}, 1fr)`
+    }"
+  >
     <img
       v-for="n in rowCount * colCount"
       :key="n"
@@ -20,8 +26,8 @@ import { logoQueueInjectKey } from './types'
 
 const logoQueue = ref<string[]>([])
 
-const rowCount = 6
-const colCount = 5
+const rowCount = 4
+const colCount = 6
 const currentIndexToSrcMap: string[] = ref([])
 
 Promise.all(
@@ -59,8 +65,6 @@ const handleAnimationiteration = (ev, indexInSrcMap) => {
   height: 600px;
   perspective: 1200px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: repeat(5, 1fr);
   align-items: center;
   justify-items: center;
   justify-content: center;
@@ -69,11 +73,14 @@ const handleAnimationiteration = (ev, indexInSrcMap) => {
 
 .dot {
   display: block;
-  --dot-run-duration: 1.5s;
+  --dot-run-duration: 1s;
   animation: fly-in var(--dot-run-duration) linear infinite;
   transform-origin: center;
   mix-blend-mode: darken;
   width: 200px;
+}
+.dot:nth-child(2n) {
+  animation-delay: calc(-1 * var(--dot-run-duration));
 }
 .dot:nth-child(2n + 1) {
   animation-delay: calc(-0.1 * var(--dot-run-duration));
