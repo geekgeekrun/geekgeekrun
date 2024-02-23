@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import checkAndDownloadPuppeteer from './check-and-download-puppeteer'
 import * as net from 'net'
+import { pipeWriteRegardlessError } from '../utils/pipe'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
@@ -16,7 +17,8 @@ export const checkAndDownloadDependenciesForInit = async () => {
     console.warn('pipe is not available')
   }
 
-  pipe?.write(
+  pipeWriteRegardlessError(
+    pipe,
     JSON.stringify({
       type: 'NEED_RESETUP_DEPENDENCIES'
     }) + '\r\n'
@@ -35,7 +37,8 @@ export const checkAndDownloadDependenciesForInit = async () => {
             }, 30 * 1000)
           }
           console.log(downloadedBytes / totalBytes)
-          pipe?.write(
+          pipeWriteRegardlessError(
+            pipe,
             JSON.stringify({
               type: 'PUPPETEER_DOWNLOAD_PROGRESS',
               totalBytes,

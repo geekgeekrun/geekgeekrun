@@ -122,7 +122,7 @@ export function createMainWindow(): void {
           // means cannot find downloaded puppeteer
           reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
         } else {
-          mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopped')
+          mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
         }
       })
     })
@@ -162,7 +162,7 @@ export function createMainWindow(): void {
           switch (data.type) {
             case 'NEED_RESETUP_DEPENDENCIES':
             case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-              mainWindow.webContents.send(data.type, data)
+              mainWindow?.webContents.send(data.type, data)
               break
             }
             default: {
@@ -188,7 +188,7 @@ export function createMainWindow(): void {
   })
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
-    mainWindow.webContents.send('geek-auto-start-chat-with-boss-stopping')
+    mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
     subProcessOfPuppeteer?.kill('SIGINT')
   })
   ipcMain.on('open-project-homepage-on-github', () => {

@@ -6,6 +6,7 @@ import * as net from 'net'
 import {
   checkPuppeteerExecutable,
 } from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
+import { pipeWriteRegardlessError } from './utils/pipe'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -31,14 +32,16 @@ export const runAutoChat = async () => {
   } catch {
     console.warn('pipe is not available')
   }
-  pipe?.write(
+  pipeWriteRegardlessError(
+    pipe,
     JSON.stringify({
       type: 'INITIALIZE_PUPPETEER'
     }) + '\r\n'
   )
   try {
     await initPuppeteer()
-    pipe?.write(
+    pipeWriteRegardlessError(
+      pipe,
       JSON.stringify({
         type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
       }) + '\r\n'
@@ -65,7 +68,8 @@ export const runAutoChat = async () => {
     errorEncounter: new SyncHook(['errorInfo'])
   }
   initPlugins(hooks)
-  pipe?.write(
+  pipeWriteRegardlessError(
+    pipe,
     JSON.stringify({
       type: 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED' //geek-auto-start-chat-with-boss-started
     }) + '\r\n'
