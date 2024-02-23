@@ -307,11 +307,15 @@ export async function mainLoop (hooks) {
 
     // ;await browser.close()
   } catch (err) {
-    browser.close()
-    browse = null
-    page = null
+    closeBrowserWindow()
 
     console.error(err)
     throw err
   }
+}
+
+export async function closeBrowserWindow () {
+  browser?.close()
+  browse = null
+  page = null
 }

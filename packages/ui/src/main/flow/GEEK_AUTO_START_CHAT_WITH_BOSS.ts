@@ -13,7 +13,17 @@ const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
 }
 
+let isParentProcessDisconnect = false
+
 export const runAutoChat = async () => {
+  const { initPuppeteer, mainLoop, closeBrowserWindow } = await import(
+    '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
+  )
+  process.on('disconnect', () => {
+    isParentProcessDisconnect = true
+    closeBrowserWindow()
+    app.exit()
+  })
   app.dock.hide()
   let pipe: null | net.Socket = null
   try {
@@ -27,7 +37,7 @@ export const runAutoChat = async () => {
     }) + '\r\n'
   )
   try {
-    await (await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')).initPuppeteer()
+    await initPuppeteer()
     pipe?.write(
       JSON.stringify({
         type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
@@ -44,7 +54,6 @@ export const runAutoChat = async () => {
     return
   }
 
-  const mainLoop = (await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')).mainLoop
   const hooks = {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
@@ -61,7 +70,7 @@ export const runAutoChat = async () => {
       type: 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED' //geek-auto-start-chat-with-boss-started
     }) + '\r\n'
   )
-  while (true) {
+  while (!([isParentProcessDisconnect].includes(true))) {
     try {
       await mainLoop(hooks)
     } catch (err) {
@@ -73,4 +82,5 @@ export const runAutoChat = async () => {
       // }
     }
   }
+  closeBrowserWindow()
 }

@@ -99,7 +99,7 @@ export function createMainWindow(): void {
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: subProcessEnv,
-      stdio: [null, null, null, 'pipe']
+      stdio: [null, null, null, 'pipe', 'ipc']
     })
     console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
@@ -151,7 +151,7 @@ export function createMainWindow(): void {
       process.argv.slice(1),
       {
         env: subProcessEnv,
-        stdio: [null, null, null, 'pipe']
+        stdio: [null, null, null, 'pipe', 'ipc']
       }
     )
     return new Promise((resolve, reject) => {
