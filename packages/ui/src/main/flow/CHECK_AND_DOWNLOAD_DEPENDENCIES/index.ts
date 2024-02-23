@@ -2,13 +2,12 @@ import { app } from 'electron'
 import checkAndDownloadPuppeteer from './check-and-download-puppeteer'
 import * as net from 'net'
 
-app.dock.hide()
-
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
   DOWNLOAD_ERROR = 1
 }
 export const checkAndDownloadDependenciesForInit = async () => {
+  app.dock.hide()
   let pipe: null | net.Socket = null
   try {
     pipe = new net.Socket({ fd: 3 })

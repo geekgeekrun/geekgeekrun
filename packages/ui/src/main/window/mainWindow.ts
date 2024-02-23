@@ -15,7 +15,7 @@ import {
 } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 import * as JSONStream from 'JSONStream'
 import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
-let mainWindow: BrowserWindow
+let mainWindow: BrowserWindow = null
 
 export function createMainWindow(): void {
   // Create the browser window.
@@ -195,5 +195,9 @@ export function createMainWindow(): void {
     shell.openExternal(`https://github.com/geekgeekrun`, {
       activate: true
     })
+  })
+
+  mainWindow!.once('closed', () => {
+    mainWindow = null
   })
 }

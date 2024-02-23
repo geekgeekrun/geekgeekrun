@@ -7,8 +7,6 @@ import {
   checkPuppeteerExecutable,
 } from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
 
-app.dock.hide()
-
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
@@ -16,6 +14,7 @@ const initPlugins = (hooks) => {
 }
 
 export const runAutoChat = async () => {
+  app.dock.hide()
   let pipe: null | net.Socket = null
   try {
     pipe = new net.Socket({ fd: 3 })
