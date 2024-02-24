@@ -69,6 +69,9 @@ importers:
       element-plus:
         specifier: ^2.5.5
         version: 2.5.5(vue@3.4.15)
+      find-chrome-bin:
+        specifier: ^2.0.1
+        version: 2.0.1
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
@@ -3055,6 +3058,15 @@ packages:
     dependencies:
       to-regex-range: 5.0.1
     dev: true
+
+  /find-chrome-bin@2.0.1:
+    resolution: {integrity: sha512-aDwC2y0dLxt0GFmQ+q8bqBCZ10VW9zYT/lNV806tRDqDAh5XpkTWulB96RKDHDuKu36m/dEvhmhD5IU237oOTg==}
+    engines: {node: '>=18.0.0'}
+    dependencies:
+      '@puppeteer/browsers': 1.9.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /find-up@5.0.0:
     resolution: {integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==}

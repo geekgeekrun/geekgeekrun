@@ -4,7 +4,7 @@ import { SyncHook, AsyncSeriesHook } from 'tapable'
 import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as net from 'net'
 import {
-  checkPuppeteerExecutable,
+  checkCachedPuppeteerExecutable,
 } from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import { pipeWriteRegardlessError } from './utils/pipe'
 
@@ -51,7 +51,7 @@ export const runAutoChat = async () => {
     return
   }
 
-  const isPuppeteerExecutable = await checkPuppeteerExecutable()
+  const isPuppeteerExecutable = await checkCachedPuppeteerExecutable()
   if (!isPuppeteerExecutable) {
     app.exit(1)
     return

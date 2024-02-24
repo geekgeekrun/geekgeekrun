@@ -4,6 +4,7 @@ import * as fs from 'node:fs'
 import type { InstalledBrowser } from '@puppeteer/browsers'
 import { is } from '@electron-toolkit/utils'
 import electron from 'electron'
+import { saveLastUsedAndAvailableBrowserPath } from './history-utils'
 
 const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '121.0.6167.85'
 const cacheDir = path.join(
@@ -31,7 +32,7 @@ const getPuppeteerManagerModule = async () => {
   return puppeteerManager
 }
 
-export const getExpectPuppeteerExecutablePath = async () => {
+export const getExpectCachedPuppeteerExecutablePath = async () => {
   const puppeteerManager = await getPuppeteerManagerModule()
 
   return puppeteerManager.computeExecutablePath({
@@ -41,9 +42,9 @@ export const getExpectPuppeteerExecutablePath = async () => {
   })
 }
 
-export const checkPuppeteerExecutable = async () => {
+export const checkCachedPuppeteerExecutable = async () => {
   try {
-    const executablePath = await getExpectPuppeteerExecutablePath()
+    const executablePath = await getExpectCachedPuppeteerExecutablePath()
     return fs.existsSync(executablePath)
   } catch {
     // should limit [ERR_MODULE_NOT_FOUND]
@@ -59,7 +60,7 @@ const checkAndDownloadPuppeteerExecutable = async (
 ) => {
   const puppeteerManager = await getPuppeteerManagerModule()
   let installedBrowser: InstalledBrowser
-  if (!(await checkPuppeteerExecutable())) {
+  if (!(await checkCachedPuppeteerExecutable())) {
     try {
       await options.confirmContinuePromise
     } catch {
@@ -84,6 +85,7 @@ const checkAndDownloadPuppeteerExecutable = async (
       })
     ).find((it) => it.buildId === expectBuildId)!
   }
+  await saveLastUsedAndAvailableBrowserPath(await getExpectCachedPuppeteerExecutablePath())
 
   return installedBrowser
 }
