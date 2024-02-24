@@ -9,7 +9,7 @@ export enum DOWNLOAD_ERROR_EXIT_CODE {
 }
 export const checkAndDownloadDependenciesForInit = async () => {
   process.on('disconnect', () => app.exit())
-  app.dock.hide()
+  app.dock?.hide()
   let pipe: null | net.Socket = null
   try {
     pipe = new net.Socket({ fd: 3 })

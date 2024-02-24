@@ -25,7 +25,7 @@ export const runAutoChat = async () => {
     closeBrowserWindow()
     app.exit()
   })
-  app.dock.hide()
+  app.dock?.hide()
   let pipe: null | net.Socket = null
   try {
     pipe = new net.Socket({ fd: 3 })
