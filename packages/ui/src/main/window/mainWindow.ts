@@ -145,7 +145,6 @@ export function createMainWindow(): void {
     const subProcessEnv = {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit',
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutablePath())!
     }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],
