@@ -3,10 +3,8 @@ import { app } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
 import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as net from 'net'
-import {
-  checkCachedPuppeteerExecutable,
-} from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import { pipeWriteRegardlessError } from './utils/pipe'
+import { getAnyAvailablePuppeteerExecutablePath } from './CHECK_AND_DOWNLOAD_DEPENDENCIES'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -29,7 +27,7 @@ export const runAutoChat = async () => {
   let pipe: null | net.Socket = null
   try {
     pipe = new net.Socket({ fd: 3 })
-  } catch {
+  } catch (err) {
     console.warn('pipe is not available')
   }
   pipeWriteRegardlessError(
@@ -46,12 +44,13 @@ export const runAutoChat = async () => {
         type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
       }) + '\r\n'
     )
-  } catch {
+  } catch (err) {
+    console.error(err)
     app.exit(1)
     return
   }
 
-  const isPuppeteerExecutable = await checkCachedPuppeteerExecutable()
+  const isPuppeteerExecutable = !!(await getAnyAvailablePuppeteerExecutablePath())
   if (!isPuppeteerExecutable) {
     app.exit(1)
     return
