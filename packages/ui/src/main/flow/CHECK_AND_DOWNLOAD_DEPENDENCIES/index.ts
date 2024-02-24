@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import checkAndDownloadPuppeteerExecutable from './check-and-download-puppeteer-executable'
-import * as net from 'net'
+import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
@@ -10,9 +10,9 @@ export enum DOWNLOAD_ERROR_EXIT_CODE {
 export const checkAndDownloadDependenciesForInit = async () => {
   process.on('disconnect', () => app.exit())
   app.dock?.hide()
-  let pipe: null | net.Socket = null
+  let pipe: null | fs.WriteStream = null
   try {
-    pipe = new net.Socket({ fd: 3 })
+    pipe = fs.createWriteStream(null, { fd: 3 })
   } catch {
     console.warn('pipe is not available')
   }

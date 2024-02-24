@@ -1,12 +1,17 @@
-import * as net from 'net'
+import * as fs from 'fs'
 
-export const pipeWriteRegardlessError = (
-  pipe: net.Socket | null,
-  ...writeArgs: Parameters<net.Socket['write']>
+export const pipeWriteRegardlessError = async (
+  pipe: fs.WriteStream | null,
+  chunk: unknown,
+  option?
 ) => {
-  try {
-    pipe?.write(...writeArgs)
-  } catch (error) {
-    console.log('pipe.write Error', error)
-  }
+  return new Promise((resolve) => {
+    // debugger
+    pipe?.write(chunk, option, (error) => {
+      if (error) {
+        console.log('pipe.write Error', error)
+      }
+      resolve(undefined)
+    })
+  })
 }
