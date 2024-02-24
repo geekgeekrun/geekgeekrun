@@ -51,7 +51,7 @@ export const checkPuppeteerExecutable = async () => {
   }
 }
 
-const checkAndDownloadPuppeteer = async (
+const checkAndDownloadPuppeteerExecutable = async (
   options: {
     downloadProgressCallback?: (downloadedBytes: number, totalBytes: number) => void
     confirmContinuePromise?: Promise<void>
@@ -88,4 +88,4 @@ const checkAndDownloadPuppeteer = async (
   return installedBrowser
 }
 
-export default checkAndDownloadPuppeteer
+export default checkAndDownloadPuppeteerExecutable

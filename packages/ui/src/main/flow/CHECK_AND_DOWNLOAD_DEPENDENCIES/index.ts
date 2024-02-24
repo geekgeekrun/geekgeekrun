@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import checkAndDownloadPuppeteer from './check-and-download-puppeteer'
+import checkAndDownloadPuppeteerExecutable from './check-and-download-puppeteer-executable'
 import * as net from 'net'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 
@@ -27,7 +27,7 @@ export const checkAndDownloadDependenciesForInit = async () => {
   try {
     let timeoutTimer = 0
     await new Promise((resolve, reject) => {
-      checkAndDownloadPuppeteer({
+      checkAndDownloadPuppeteerExecutable({
         downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
           clearTimeout(timeoutTimer)
           if (downloadedBytes !== totalBytes) {

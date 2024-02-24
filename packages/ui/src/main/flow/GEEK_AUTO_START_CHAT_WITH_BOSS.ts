@@ -5,7 +5,7 @@ import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runt
 import * as net from 'net'
 import {
   checkPuppeteerExecutable,
-} from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
+} from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import { pipeWriteRegardlessError } from './utils/pipe'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')

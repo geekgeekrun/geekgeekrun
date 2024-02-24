@@ -12,7 +12,7 @@ import { ChildProcess } from 'child_process'
 import {
   checkPuppeteerExecutable,
   getExpectPuppeteerExecutablePath
-} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer'
+} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import * as JSONStream from 'JSONStream'
 import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
 let mainWindow: BrowserWindow = null
