@@ -7,14 +7,15 @@ import { EXPECT_CHROMIUM_BUILD_ID } from './check-and-download-puppeteer-executa
 import {
   getExecutableFileVersion
 } from '@geekgeekrun/utils/windows-only/file.mjs'
+import { BrowserInfo } from './history-utils'
 
-export default async function findAndLocateExistedChromiumExecutable() {
-  const exceptChromiumMainVersion = Number(EXPECT_CHROMIUM_BUILD_ID.split('.')[0]) + 1
+export default async function findAndLocateExistedChromiumExecutable(): Promise<BrowserInfo> {
+  const exceptChromiumMainVersion = Number(EXPECT_CHROMIUM_BUILD_ID.split('.')[0])
   // For windows, try to find Edge(chromium)
   if (os.platform() === 'win32') {
     // TODO: handle windows
     const edgeExecutableLocation = path.join(
-      process.env['ProgramFiles(x86)'],
+      process.env['ProgramFiles(x86)']!,
       'Microsoft/Edge/Application',
       'msedge.exe'
     )
@@ -26,7 +27,7 @@ export default async function findAndLocateExistedChromiumExecutable() {
         const mainVersion = Number(version.split('.')[0])
         if ( mainVersion >= exceptChromiumMainVersion) {
           return {
-            path: edgeExecutableLocation,
+            executablePath: edgeExecutableLocation,
             browser: `Edge ${version}`
           }
         }
@@ -59,7 +60,7 @@ export default async function findAndLocateExistedChromiumExecutable() {
     throw new Error('NO_EXPECT_CHROMIUM_FOUND')
   }
   return {
-    path: targetBrowser.executablePath,
+    executablePath: targetBrowser.executablePath,
     browser: targetBrowser.browser
   }
 }

@@ -3,11 +3,8 @@ import { app } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
 import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as fs from 'fs'
-import {
-  checkPuppeteerExecutable,
-} from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import { pipeWriteRegardlessError } from './utils/pipe'
-import { getAnyAvailablePuppeteerExecutablePath } from './CHECK_AND_DOWNLOAD_DEPENDENCIES'
+import { getAnyAvailablePuppeteerExecutable } from './CHECK_AND_DOWNLOAD_DEPENDENCIES'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -53,7 +50,7 @@ export const runAutoChat = async () => {
     return
   }
 
-  const isPuppeteerExecutable = !!(await getAnyAvailablePuppeteerExecutablePath())
+  const isPuppeteerExecutable = !!(await getAnyAvailablePuppeteerExecutable())
   if (!isPuppeteerExecutable) {
     app.exit(1)
     return

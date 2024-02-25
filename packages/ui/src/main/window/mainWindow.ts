@@ -12,7 +12,7 @@ import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import {
   DOWNLOAD_ERROR_EXIT_CODE,
-  getAnyAvailablePuppeteerExecutablePath
+  getAnyAvailablePuppeteerExecutable
 } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
 let mainWindow: BrowserWindow | null = null
 
@@ -94,7 +94,7 @@ export function createMainWindow(): void {
     const subProcessEnv = {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss',
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutablePath())!
+      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: subProcessEnv,
@@ -129,11 +129,11 @@ export function createMainWindow(): void {
   })
 
   ipcMain.handle('check-dependencies', async () => {
-    const [anyAvailablePuppeteerExecutablePath] = await Promise.all([
-      getAnyAvailablePuppeteerExecutablePath()
+    const [anyAvailablePuppeteerExecutable] = await Promise.all([
+      getAnyAvailablePuppeteerExecutable()
     ])
     return {
-      puppeteerExecutableAvailable: !!anyAvailablePuppeteerExecutablePath
+      puppeteerExecutableAvailable: !!anyAvailablePuppeteerExecutable
     }
   })
 

@@ -1,14 +1,15 @@
 import { app } from 'electron'
 import checkAndDownloadPuppeteerExecutable, {
   checkCachedPuppeteerExecutable,
-  getExpectCachedPuppeteerExecutablePath
+  getExpectCachedPuppeteerExecutable
 } from './check-and-download-puppeteer-executable'
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import {
   removeLastUsedAndAvailableBrowserPath,
-  getLastUsedAndAvailableBrowserPath,
-  saveLastUsedAndAvailableBrowserPath
+  getLastUsedAndAvailableBrowser,
+  saveLastUsedAndAvailableBrowserInfo,
+  BrowserInfo
 } from './history-utils'
 import findAndLocateExistedChromiumExecutable from './check-and-locate-existed-chromium-executable'
 import {
@@ -19,23 +20,27 @@ export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
   DOWNLOAD_ERROR = 1
 }
-export const getAnyAvailablePuppeteerExecutablePath = async (): Promise<string | null> => {
-  const lastUsedOnePath = await getLastUsedAndAvailableBrowserPath()
-  if (lastUsedOnePath) {
-    return lastUsedOnePath
+
+export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo | null> => {
+  const lastUsedOne = await getLastUsedAndAvailableBrowser()
+  if (lastUsedOne) {
+    return lastUsedOne
   }
   // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
   try {
-    const existedOnePath = (await findAndLocateExistedChromiumExecutable()).path
-    await saveLastUsedAndAvailableBrowserPath(existedOnePath)
+    const existedOne = (await findAndLocateExistedChromiumExecutable())
+    await saveLastUsedAndAvailableBrowserInfo(existedOne)
     // save its path
-    return existedOnePath
+    return existedOne
   } catch {
     console.log('no existed browser path found')
   }
   // find existed browser - the fallback one
   if (await checkCachedPuppeteerExecutable()) {
-    return await getExpectCachedPuppeteerExecutablePath()
+    const cachedOne = await getExpectCachedPuppeteerExecutable()
+    await saveLastUsedAndAvailableBrowserInfo(cachedOne)
+
+    return cachedOne
   }
 
   // if no one available, then return null and remove last used browser
