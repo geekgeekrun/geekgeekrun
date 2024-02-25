@@ -10,6 +10,7 @@ export default async function findAndLocateExistedChromiumExecutable() {
   } else {
     findChrome = (
       await import(
+        'file://' +
         path.resolve(
           electron.app.getAppPath(),
           '..',

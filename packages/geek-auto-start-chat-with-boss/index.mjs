@@ -23,6 +23,7 @@ export async function initPuppeteer () {
   ) {
     const electron = await import('electron')
     const runtimeDependencies = await import(
+      'file://' + 
       path.resolve(
         electron.app.getAppPath(),
         '..',

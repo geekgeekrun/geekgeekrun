@@ -20,6 +20,7 @@ const getPuppeteerManagerModule = async () => {
   } else {
     puppeteerManager = (
       await import(
+        'file://' +
         path.resolve(
           electron.app.getAppPath(),
           '..',
