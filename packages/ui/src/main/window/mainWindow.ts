@@ -9,13 +9,12 @@ import {
   writeConfigFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
-import {
-  checkPuppeteerExecutable,
-  getExpectPuppeteerExecutablePath
-} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import * as JSONStream from 'JSONStream'
-import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
-let mainWindow: BrowserWindow = null
+import {
+  DOWNLOAD_ERROR_EXIT_CODE,
+  getAnyAvailablePuppeteerExecutablePath
+} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
+let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): void {
   // Create the browser window.
@@ -95,7 +94,7 @@ export function createMainWindow(): void {
     const subProcessEnv = {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss',
-      PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
+      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutablePath())!
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: subProcessEnv,
@@ -130,9 +129,11 @@ export function createMainWindow(): void {
   })
 
   ipcMain.handle('check-dependencies', async () => {
-    const [puppeteerExecutableAvailable] = await Promise.all([checkPuppeteerExecutable()])
+    const [anyAvailablePuppeteerExecutablePath] = await Promise.all([
+      getAnyAvailablePuppeteerExecutablePath()
+    ])
     return {
-      puppeteerExecutableAvailable
+      puppeteerExecutableAvailable: !!anyAvailablePuppeteerExecutablePath
     }
   })
 
@@ -144,7 +145,6 @@ export function createMainWindow(): void {
     const subProcessEnv = {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit',
-      PUPPETEER_EXECUTABLE_PATH: await getExpectPuppeteerExecutablePath()
     }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],

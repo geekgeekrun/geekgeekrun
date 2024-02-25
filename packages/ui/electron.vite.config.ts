@@ -9,12 +9,12 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', '@puppeteer/browsers']
+        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', '@puppeteer/browsers', 'find-chrome-bin']
       }
     },
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@geekgeekrun/geek-auto-start-chat-with-boss', '@geekgeekrun/dingtalk-plugin']
+        exclude: ['@geekgeekrun/geek-auto-start-chat-with-boss', '@geekgeekrun/dingtalk-plugin', 'find-chrome-bin']
       })
     ]
   },

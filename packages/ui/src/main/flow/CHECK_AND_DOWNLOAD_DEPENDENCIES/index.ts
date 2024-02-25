@@ -1,12 +1,45 @@
 import { app } from 'electron'
-import checkAndDownloadPuppeteerExecutable from './check-and-download-puppeteer-executable'
+import checkAndDownloadPuppeteerExecutable, {
+  checkCachedPuppeteerExecutable,
+  getExpectCachedPuppeteerExecutablePath
+} from './check-and-download-puppeteer-executable'
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
+import {
+  removeLastUsedAndAvailableBrowserPath,
+  getLastUsedAndAvailableBrowserPath,
+  saveLastUsedAndAvailableBrowserPath
+} from './history-utils'
+import findAndLocateExistedChromiumExecutable from './check-and-locate-existed-chromium-executable'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
   DOWNLOAD_ERROR = 1
 }
+export const getAnyAvailablePuppeteerExecutablePath = async (): Promise<string | null> => {
+  const lastUsedOnePath = await getLastUsedAndAvailableBrowserPath()
+  if (lastUsedOnePath) {
+    return lastUsedOnePath
+  }
+  // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
+  try {
+    const existedOnePath = (await findAndLocateExistedChromiumExecutable()).path
+    await saveLastUsedAndAvailableBrowserPath(existedOnePath)
+    // save its path
+    return existedOnePath
+  } catch {
+    console.log('no existed browser path found')
+  }
+  // find existed browser - the fallback one
+  if (await checkCachedPuppeteerExecutable()) {
+    return await getExpectCachedPuppeteerExecutablePath()
+  }
+
+  // if no one available, then return null and remove last used browser
+  await removeLastUsedAndAvailableBrowserPath()
+  return null
+}
+
 export const checkAndDownloadDependenciesForInit = async () => {
   process.on('disconnect', () => app.exit())
   app.dock?.hide()

@@ -7,6 +7,7 @@ import {
   checkPuppeteerExecutable,
 } from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import { pipeWriteRegardlessError } from './utils/pipe'
+import { getAnyAvailablePuppeteerExecutablePath } from './CHECK_AND_DOWNLOAD_DEPENDENCIES'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -46,12 +47,13 @@ export const runAutoChat = async () => {
         type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
       }) + '\r\n'
     )
-  } catch {
+  } catch (err) {
+    console.error(err)
     app.exit(1)
     return
   }
 
-  const isPuppeteerExecutable = await checkPuppeteerExecutable()
+  const isPuppeteerExecutable = !!(await getAnyAvailablePuppeteerExecutablePath())
   if (!isPuppeteerExecutable) {
     app.exit(1)
     return
