@@ -6,7 +6,7 @@ import { is } from '@electron-toolkit/utils'
 import electron from 'electron'
 import { saveLastUsedAndAvailableBrowserPath } from './history-utils'
 
-const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '113.0.5672.63'
+export const EXPECT_CHROMIUM_BUILD_ID = '113.0.5672.63'
 const cacheDir = path.join(
   os.homedir(),
   '.geekgeekrun',
@@ -39,7 +39,7 @@ export const getExpectCachedPuppeteerExecutablePath = async () => {
   return puppeteerManager.computeExecutablePath({
     browser: puppeteerManager.Browser.CHROME,
     cacheDir,
-    buildId: expectBuildId
+    buildId: EXPECT_CHROMIUM_BUILD_ID
   })
 }
 
@@ -70,13 +70,13 @@ const checkAndDownloadPuppeteerExecutable = async (
     // maybe the exist installation is broken.
     await puppeteerManager.uninstall({
       cacheDir,
-      buildId: expectBuildId,
+      buildId: EXPECT_CHROMIUM_BUILD_ID,
       browser: puppeteerManager.Browser.CHROME
     })
     installedBrowser = await puppeteerManager.install({
       browser: puppeteerManager.Browser.CHROME,
       cacheDir,
-      buildId: expectBuildId,
+      buildId: EXPECT_CHROMIUM_BUILD_ID,
       downloadProgressCallback: options.downloadProgressCallback
     })
   } else {
@@ -84,7 +84,7 @@ const checkAndDownloadPuppeteerExecutable = async (
       await puppeteerManager.getInstalledBrowsers({
         cacheDir
       })
-    ).find((it) => it.buildId === expectBuildId)!
+    ).find((it) => it.buildId === EXPECT_CHROMIUM_BUILD_ID)!
   }
   await saveLastUsedAndAvailableBrowserPath(await getExpectCachedPuppeteerExecutablePath())
 
