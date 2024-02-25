@@ -13,9 +13,9 @@
   "dependencies": {
     "dayjs": "^1.11.10",
     "json5": "^2.2.3",
-    "puppeteer": "^21.6.1",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "puppeteer": "20.1.0",
+    "puppeteer-extra": "3.3.6",
+    "puppeteer-extra-plugin-stealth": "2.11.2",
     "tapable": "^2.2.1"
   }
 }

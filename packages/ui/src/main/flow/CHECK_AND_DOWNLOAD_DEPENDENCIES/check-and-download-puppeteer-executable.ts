@@ -6,7 +6,7 @@ import { is } from '@electron-toolkit/utils'
 import electron from 'electron'
 import { saveLastUsedAndAvailableBrowserPath } from './history-utils'
 
-const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '121.0.6167.85'
+const expectBuildId = process.env.EXPECT_CHROME_FOR_PUPPETEER_BUILD_ID || '113.0.5672.63'
 const cacheDir = path.join(
   os.homedir(),
   '.geekgeekrun',

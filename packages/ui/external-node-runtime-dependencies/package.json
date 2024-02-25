@@ -11,9 +11,9 @@
   "dependencies": {
     "@puppeteer/browsers": "^2.0.0",
     "find-chrome-bin": "^2.0.1",
-    "puppeteer": "^22.0.0",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
+    "puppeteer": "20.1.0",
+    "puppeteer-extra": "3.3.6",
+    "puppeteer-extra-plugin-stealth": "2.11.2"
   },
   "packageManager": "npm"
 }
