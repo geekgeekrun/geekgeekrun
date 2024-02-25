@@ -14,7 +14,7 @@ export default defineConfig({
     },
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@geekgeekrun/geek-auto-start-chat-with-boss', '@geekgeekrun/dingtalk-plugin', 'find-chrome-bin']
+        exclude: ['@geekgeekrun/geek-auto-start-chat-with-boss', '@geekgeekrun/dingtalk-plugin', '@geekgeekrun/utils', 'find-chrome-bin']
       })
     ]
   },

@@ -11,6 +11,9 @@ import {
   saveLastUsedAndAvailableBrowserPath
 } from './history-utils'
 import findAndLocateExistedChromiumExecutable from './check-and-locate-existed-chromium-executable'
+import {
+  sleep
+} from '@geekgeekrun/utils/sleep.mjs'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
@@ -118,6 +121,18 @@ export const checkAndDownloadDependenciesForInit = async () => {
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR)
   } catch (err) {
     console.error(err)
+    pipeWriteRegardlessError(
+      pipe,
+      JSON.stringify({
+        type: 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR',
+        ...err instanceof Error ? {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        } : null
+      }) + '\r\n'
+    )
+    await sleep(1000)
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.DOWNLOAD_ERROR)
   }
 }

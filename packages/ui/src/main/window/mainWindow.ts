@@ -165,6 +165,10 @@ export function createMainWindow(): void {
               mainWindow?.webContents.send(data.type, data)
               break
             }
+            case 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR': {
+              console.error(data)
+              break;
+            }
             default: {
               return
             }
