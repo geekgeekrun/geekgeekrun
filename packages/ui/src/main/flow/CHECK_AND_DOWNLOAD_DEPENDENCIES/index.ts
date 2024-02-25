@@ -39,6 +39,7 @@ export const checkAndDownloadDependenciesForInit = async () => {
       return o
     })()
 
+    let throttleProgressTimer: number | null = null
     checkAndDownloadPuppeteerExecutable({
       downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
         clearTimeout(timeoutTimer)
@@ -47,16 +48,30 @@ export const checkAndDownloadDependenciesForInit = async () => {
             // will encounter this when network disconnected when downloading
             promiseWithResolver.reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
           }, 5 * 1000)
+        } else {
+          clearTimeout(throttleProgressTimer)
+          throttleProgressTimer = null
         }
-        console.log(downloadedBytes / totalBytes)
-        pipeWriteRegardlessError(
-          pipe,
-          JSON.stringify({
-            type: 'PUPPETEER_DOWNLOAD_PROGRESS',
-            totalBytes,
-            downloadedBytes
-          })
-        ) + '\r\n'
+
+        if (!throttleProgressTimer) {
+          // console.log(JSON.stringify({
+          //   type: 'DOWNLOAD_PROGRESS_UPDATE',
+          //   level: 'DEBUG',
+          //   percent: downloadedBytes / totalBytes
+          // }))
+
+          pipeWriteRegardlessError(
+            pipe,
+            JSON.stringify({
+              type: 'PUPPETEER_DOWNLOAD_PROGRESS',
+              totalBytes,
+              downloadedBytes
+            }) + '\r\n'
+          )
+          throttleProgressTimer = setTimeout(() => {
+            throttleProgressTimer = null
+          }, 2500)
+        }
       }
     })
       .then(() => {
