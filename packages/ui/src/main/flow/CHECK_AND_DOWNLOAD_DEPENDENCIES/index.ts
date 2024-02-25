@@ -26,37 +26,50 @@ export const checkAndDownloadDependenciesForInit = async () => {
 
   try {
     let timeoutTimer = 0
-    await new Promise((resolve, reject) => {
-      checkAndDownloadPuppeteerExecutable({
-        downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
-          clearTimeout(timeoutTimer)
-          if (downloadedBytes !== totalBytes) {
-            timeoutTimer = setTimeout(() => {
-              // will encounter this when network disconnected when downloading
-              reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
-            }, 30 * 1000)
-          }
-          console.log(downloadedBytes / totalBytes)
-          pipeWriteRegardlessError(
-            pipe,
-            JSON.stringify({
-              type: 'PUPPETEER_DOWNLOAD_PROGRESS',
-              totalBytes,
-              downloadedBytes
-            })
-          ) + '\r\n'
+    const promiseWithResolver = (() => {
+      const o = {} as unknown as {
+        promise: Promise<unknown>
+        resolve: (result: unknown) => void
+        reject: (reason: unknown) => void
+      }
+      o.promise = new Promise((resolve, reject) => {
+        o.resolve = resolve
+        o.reject = reject
+      })
+      return o
+    })()
+
+    checkAndDownloadPuppeteerExecutable({
+      downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
+        clearTimeout(timeoutTimer)
+        if (downloadedBytes !== totalBytes) {
+          timeoutTimer = setTimeout(() => {
+            // will encounter this when network disconnected when downloading
+            promiseWithResolver.reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
+          }, 5 * 1000)
         }
-      }).then(
-        () => {
-          resolve(void 0)
-        },
-        (err) => {
-          reject(err)
-        }
-      )
+        console.log(downloadedBytes / totalBytes)
+        pipeWriteRegardlessError(
+          pipe,
+          JSON.stringify({
+            type: 'PUPPETEER_DOWNLOAD_PROGRESS',
+            totalBytes,
+            downloadedBytes
+          })
+        ) + '\r\n'
+      }
     })
+      .then(() => {
+        promiseWithResolver.resolve(void 0)
+      })
+      .catch((err) => {
+        promiseWithResolver.reject(err)
+      })
+
+    await promiseWithResolver.promise
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR)
   } catch (err) {
+    console.error(err)
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.DOWNLOAD_ERROR)
   }
 }
