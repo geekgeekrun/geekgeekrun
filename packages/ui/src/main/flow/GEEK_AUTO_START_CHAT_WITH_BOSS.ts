@@ -2,7 +2,10 @@ import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/index.mjs'
 import { app } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
 import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import * as net from 'net'
+import * as fs from 'fs'
+import {
+  checkPuppeteerExecutable,
+} from './CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-download-puppeteer-executable'
 import { pipeWriteRegardlessError } from './utils/pipe'
 import { getAnyAvailablePuppeteerExecutablePath } from './CHECK_AND_DOWNLOAD_DEPENDENCIES'
 
@@ -23,11 +26,11 @@ export const runAutoChat = async () => {
     closeBrowserWindow()
     app.exit()
   })
-  app.dock.hide()
-  let pipe: null | net.Socket = null
+  app.dock?.hide()
+  let pipe: null | fs.WriteStream = null
   try {
-    pipe = new net.Socket({ fd: 3 })
-  } catch (err) {
+    pipe = fs.createWriteStream(null, { fd: 3 })
+  } catch {
     console.warn('pipe is not available')
   }
   pipeWriteRegardlessError(

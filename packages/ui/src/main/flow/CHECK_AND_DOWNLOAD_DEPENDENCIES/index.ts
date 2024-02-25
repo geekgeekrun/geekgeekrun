@@ -3,7 +3,7 @@ import checkAndDownloadPuppeteerExecutable, {
   checkCachedPuppeteerExecutable,
   getExpectCachedPuppeteerExecutablePath
 } from './check-and-download-puppeteer-executable'
-import * as net from 'net'
+import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import {
   removeLastUsedAndAvailableBrowserPath,
@@ -42,10 +42,10 @@ export const getAnyAvailablePuppeteerExecutablePath = async (): Promise<string |
 
 export const checkAndDownloadDependenciesForInit = async () => {
   process.on('disconnect', () => app.exit())
-  app.dock.hide()
-  let pipe: null | net.Socket = null
+  app.dock?.hide()
+  let pipe: null | fs.WriteStream = null
   try {
-    pipe = new net.Socket({ fd: 3 })
+    pipe = fs.createWriteStream(null, { fd: 3 })
   } catch {
     console.warn('pipe is not available')
   }
@@ -59,37 +59,65 @@ export const checkAndDownloadDependenciesForInit = async () => {
 
   try {
     let timeoutTimer = 0
-    await new Promise((resolve, reject) => {
-      checkAndDownloadPuppeteerExecutable({
-        downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
-          clearTimeout(timeoutTimer)
-          if (downloadedBytes !== totalBytes) {
-            timeoutTimer = setTimeout(() => {
-              // will encounter this when network disconnected when downloading
-              reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
-            }, 30 * 1000)
-          }
-          console.log(downloadedBytes / totalBytes)
+    const promiseWithResolver = (() => {
+      const o = {} as unknown as {
+        promise: Promise<unknown>
+        resolve: (result: unknown) => void
+        reject: (reason: unknown) => void
+      }
+      o.promise = new Promise((resolve, reject) => {
+        o.resolve = resolve
+        o.reject = reject
+      })
+      return o
+    })()
+
+    let throttleProgressTimer: number | null = null
+    checkAndDownloadPuppeteerExecutable({
+      downloadProgressCallback(downloadedBytes: number, totalBytes: number) {
+        clearTimeout(timeoutTimer)
+        if (downloadedBytes !== totalBytes) {
+          timeoutTimer = setTimeout(() => {
+            // will encounter this when network disconnected when downloading
+            promiseWithResolver.reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
+          }, 5 * 1000)
+        } else {
+          clearTimeout(throttleProgressTimer)
+          throttleProgressTimer = null
+        }
+
+        if (!throttleProgressTimer) {
+          // console.log(JSON.stringify({
+          //   type: 'DOWNLOAD_PROGRESS_UPDATE',
+          //   level: 'DEBUG',
+          //   percent: downloadedBytes / totalBytes
+          // }))
+
           pipeWriteRegardlessError(
             pipe,
             JSON.stringify({
               type: 'PUPPETEER_DOWNLOAD_PROGRESS',
               totalBytes,
               downloadedBytes
-            })
-          ) + '\r\n'
+            }) + '\r\n'
+          )
+          throttleProgressTimer = setTimeout(() => {
+            throttleProgressTimer = null
+          }, 2500)
         }
-      }).then(
-        () => {
-          resolve(void 0)
-        },
-        (err) => {
-          reject(err)
-        }
-      )
+      }
     })
+      .then(() => {
+        promiseWithResolver.resolve(void 0)
+      })
+      .catch((err) => {
+        promiseWithResolver.reject(err)
+      })
+
+    await promiseWithResolver.promise
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR)
   } catch (err) {
+    console.error(err)
     app.exit(DOWNLOAD_ERROR_EXIT_CODE.DOWNLOAD_ERROR)
   }
 }
