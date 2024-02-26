@@ -1,9 +1,7 @@
 import { app } from 'electron'
-import {
-  sleep
-} from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
-;(async () => {
+export const loginToBossZhipin = async () => {
   const { initPuppeteer, closeBrowserWindow } = await import(
     '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
   )
@@ -37,7 +35,7 @@ import {
 
     await Promise.all([
       page.goto(`https://www.zhipin.com/web/geek/chat`, { timeout: 0 }),
-      page.waitForNavigation(),
+      page.waitForNavigation()
     ])
 
     // TODO:
@@ -47,4 +45,5 @@ import {
     console.error(err)
     throw err
   }
-})()
+}
+
