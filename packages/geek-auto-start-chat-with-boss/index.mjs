@@ -15,8 +15,8 @@ ensureConfigFileExist()
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
 
-let puppeteer, StealthPlugin
 export async function initPuppeteer () {
+  let StealthPlugin, puppeteer
   // production
   if (
     isRunFromUi && !isUiDev
@@ -43,8 +43,11 @@ export async function initPuppeteer () {
     StealthPlugin = importResult[1].default
   }
   puppeteer.use(StealthPlugin())
-}
 
+  return {
+    puppeteer
+  }
+}
 const { cookies: bossCookies } = readConfigFile('boss.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json')
@@ -57,9 +60,10 @@ const enableCompanyAllowList = Boolean(expectCompanySet.size)
 let browser, page
 
 const blockBossNotNewChat = new Set()
+let puppeteer
 export async function mainLoop (hooks) {
   if (!puppeteer) {
-    await initPuppeteer()
+    puppeteer = (await initPuppeteer()).puppeteer
   }
   try {
     browser = await puppeteer.launch({
