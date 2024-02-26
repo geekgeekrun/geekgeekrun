@@ -1,10 +1,9 @@
 import { app } from 'electron'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { blockNavigation } from '@geekgeekrun/utils/puppeteer/block-navigation.mjs'
 
 export const loginToBossZhipin = async () => {
-  const { initPuppeteer, closeBrowserWindow } = await import(
-    '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
-  )
+  const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
   let isParentProcessDisconnect = true
   process.on('disconnect', () => {
     isParentProcessDisconnect = true
@@ -23,7 +22,7 @@ export const loginToBossZhipin = async () => {
       ignoreHTTPSErrors: true,
       defaultViewport: {
         width: 1440,
-        height: 900 - 140,
+        height: 900 - 140
       },
       devtools: true
     })
@@ -33,17 +32,34 @@ export const loginToBossZhipin = async () => {
       page.bringToFront()
     })
 
-    await Promise.all([
-      page.goto(`https://www.zhipin.com/web/geek/chat`, { timeout: 0 }),
-      page.waitForNavigation()
-    ])
+    const entryPageUrl = `https://www.zhipin.com/web/geek/chat`
+    await page.goto(entryPageUrl, {
+      timeout: 0,
+      waitUntil: 'domcontentloaded'
+    })
+    let userInfoResponse
+    let disposeBlockNavigation
+    try {
+      userInfoResponse = await (
+        await page.waitForResponse((response) => {
+          if (
+            response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')
+          ) {
+            return true
+          }
+          return false
+        })
+      ).json()
 
-    // TODO:
+      disposeBlockNavigation = (await blockNavigation(page, entryPageUrl)).dispose
+    } finally {
+      // setTimeout(() => {
+      disposeBlockNavigation()
+      // }, 2000)
+    }
+    console.log(userInfoResponse)
   } catch (err) {
-    closeBrowserWindow()
-
     console.error(err)
     throw err
   }
 }
-
