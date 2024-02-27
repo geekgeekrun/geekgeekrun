@@ -1,6 +1,9 @@
 import { app } from 'electron'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { blockNavigation } from '@geekgeekrun/utils/puppeteer/block-navigation.mjs'
+import path from 'node:path'
+import os from 'node:os'
+import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES'
 
 export const loginToBossZhipin = async () => {
   const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
@@ -16,6 +19,15 @@ export const loginToBossZhipin = async () => {
   if (!puppeteer) {
     await initPuppeteer()
   }
+
+  const browserToUse = await getAnyAvailablePuppeteerExecutable()
+  if (!browserToUse) {
+    process.exit(1)
+    return
+  }
+
+  const userDataDirPath = path.join(os.homedir(), '.geekgeekrun', 'userData', browserToUse.browser)
+
   try {
     browser = await puppeteer.launch({
       headless: false,
@@ -24,7 +36,8 @@ export const loginToBossZhipin = async () => {
         width: 1440,
         height: 900 - 140
       },
-      devtools: true
+      devtools: true,
+      userDataDir: userDataDirPath
     })
 
     page = await browser.newPage()

@@ -61,6 +61,6 @@ export default async function findAndLocateExistedChromiumExecutable(): Promise<
   }
   return {
     executablePath: targetBrowser.executablePath,
-    browser: targetBrowser.browser
+    browser: targetBrowser.browser.replace(/Google|Microsoft/, '').trim()
   }
 }
