@@ -1,9 +1,9 @@
-export async function blockNavigation(page, url) {
-  console.log(`block navigation for puppeteer page from url ${url}`)
+export async function blockNavigation(page, predictor = (url) => true) {
+  console.log(`block navigation for puppeteer page from url ${page.url()}`)
   await page.setRequestInterception(true)
 
   const handler = (req) => {
-    if (req.isNavigationRequest() && req.frame() === page.mainFrame() && req.url() !== url) {
+    if (req.isNavigationRequest() && req.frame() === page.mainFrame() && predictor(req)) {
       req.abort('aborted')
     } else {
       try {

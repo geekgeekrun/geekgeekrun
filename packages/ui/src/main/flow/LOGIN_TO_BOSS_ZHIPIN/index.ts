@@ -38,7 +38,8 @@ export const loginToBossZhipin = async () => {
       timeout: 0,
       waitUntil: 'domcontentloaded'
     })
-    const userInfoResponse = await (
+    let userInfoResponse
+    userInfoResponse = await (
       await page.waitForResponse((response) => {
         if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
           return true
@@ -46,12 +47,61 @@ export const loginToBossZhipin = async () => {
         return false
       })
     ).json()
-    if (userInfoResponse.code === 7) {
+    while (userInfoResponse.code !== 0) {
       await page.goto(loginPageUrl, {
         timeout: 0
       })
+      const loginSuccessPromiseList = [
+        page.waitForResponse(
+          (response) =>
+            response.url().startsWith('https://www.zhipin.com/wapi/zppassport/qrcode/loginConfirm'),
+          {
+            timeout: 0
+          }
+        ),
+        page.waitForResponse(
+          (response) =>
+            response.url().startsWith('https://www.zhipin.com/wapi/zppassport/qrcode/dispatcher'),
+          {
+            timeout: 0
+          }
+        ),
+        page.waitForResponse(
+          (response) =>
+            response.url().startsWith('https://www.zhipin.com/wapi/zppassport/login/phoneV2'),
+          { timeout: 0 }
+        )
+      ]
+      const { dispose: disposeBlockNavigation } = await blockNavigation(page, (req) => {
+        const requestUrl = req.url()
+        return requestUrl !== loginPageUrl
+      })
+
+      const loginSuccessResponse = await (await Promise.race(loginSuccessPromiseList)).json()
+
+      await disposeBlockNavigation()
+
+      const redirectUrl =
+        loginSuccessResponse.zpData.pcToUrl ?? loginSuccessResponse.zpData.toUrl ?? entryPageUrl
+
+      await Promise.all([
+        page.goto(redirectUrl),
+        page.waitForNavigation({
+          waitUntil: 'domcontentloaded'
+        })
+      ])
+      userInfoResponse = await (
+        await page.waitForResponse((response) => {
+          if (
+            response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')
+          ) {
+            return true
+          }
+          return false
+        })
+      ).json()
     }
-    console.log(userInfoResponse)
+    console.log('logined')
   } catch (err) {
     console.error(err)
     throw err
