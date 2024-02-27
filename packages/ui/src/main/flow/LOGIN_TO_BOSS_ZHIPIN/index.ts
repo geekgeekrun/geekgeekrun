@@ -32,30 +32,24 @@ export const loginToBossZhipin = async () => {
       page.bringToFront()
     })
 
-    const entryPageUrl = `https://www.zhipin.com/web/geek/chat`
+    const entryPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
+    const loginPageUrl = `https://www.zhipin.com/web/user/`
     await page.goto(entryPageUrl, {
       timeout: 0,
       waitUntil: 'domcontentloaded'
     })
-    let userInfoResponse
-    let disposeBlockNavigation
-    try {
-      userInfoResponse = await (
-        await page.waitForResponse((response) => {
-          if (
-            response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')
-          ) {
-            return true
-          }
-          return false
-        })
-      ).json()
-
-      disposeBlockNavigation = (await blockNavigation(page, entryPageUrl)).dispose
-    } finally {
-      // setTimeout(() => {
-      disposeBlockNavigation()
-      // }, 2000)
+    const userInfoResponse = await (
+      await page.waitForResponse((response) => {
+        if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
+          return true
+        }
+        return false
+      })
+    ).json()
+    if (userInfoResponse.code === 7) {
+      await page.goto(loginPageUrl, {
+        timeout: 0
+      })
     }
     console.log(userInfoResponse)
   } catch (err) {
