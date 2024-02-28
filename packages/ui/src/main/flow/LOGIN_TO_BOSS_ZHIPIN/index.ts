@@ -5,6 +5,59 @@ import path from 'node:path'
 import os from 'node:os'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES'
 
+const entryPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
+const loginPageUrl = `https://www.zhipin.com/web/user/`
+export const getBossZhipinUserInfo = async () => {
+  const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
+  const { puppeteer } = await initPuppeteer()
+
+  const browserToUse = await getAnyAvailablePuppeteerExecutable()
+  if (!browserToUse) {
+    console.log({ type: 'NEED_TO_CHECK_DEPENDENCIES' })
+    process.exit(1)
+    return
+  }
+
+  const userDataDirPath = path.join(os.homedir(), '.geekgeekrun', 'userData', browserToUse.browser)
+  let browser, page
+
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      ignoreHTTPSErrors: true,
+      defaultViewport: {
+        width: 1440,
+        height: 900 - 140
+      },
+      userDataDir: userDataDirPath
+    })
+
+    page = await browser.newPage()
+
+    await page.goto(entryPageUrl, {
+      timeout: 0,
+      waitUntil: 'domcontentloaded'
+    })
+    const userInfo = await (
+      await page.waitForResponse((response) => {
+        if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
+          return true
+        }
+        return false
+      })
+    ).json()
+
+    console.log({ type: 'GET_USER_INFO_SUCCESS', data: userInfo })
+    return userInfo
+  } catch (err) {
+    console.log({ type: 'GET_USER_INFO_ERROR' })
+    console.error(err)
+    throw err
+  } finally {
+    browser.close()
+  }
+}
+
 export const loginToBossZhipin = async () => {
   const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
   let isParentProcessDisconnect = true
@@ -15,6 +68,22 @@ export const loginToBossZhipin = async () => {
 
   const { puppeteer } = await initPuppeteer()
 
+  let hasLogin = false
+  let userInfoResponse
+
+  try {
+    userInfoResponse = await getBossZhipinUserInfo()
+    hasLogin = userInfoResponse.code === 0
+  } catch {
+    //
+  }
+  if (hasLogin) {
+    console.log({ type: 'PERVIOUS_LOGIN_STATUS_IS_VALID' })
+    app.exit()
+    return
+  }
+  console.log({ type: 'NEED_TO_LOGIN' })
+
   let browser, page
   if (!puppeteer) {
     await initPuppeteer()
@@ -22,7 +91,8 @@ export const loginToBossZhipin = async () => {
 
   const browserToUse = await getAnyAvailablePuppeteerExecutable()
   if (!browserToUse) {
-    process.exit(1)
+    console.log({ type: 'NEED_TO_CHECK_DEPENDENCIES' })
+    app.exit(1)
     return
   }
 
@@ -45,13 +115,18 @@ export const loginToBossZhipin = async () => {
       page.bringToFront()
     })
 
-    const entryPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
-    const loginPageUrl = `https://www.zhipin.com/web/user/`
+    page.once('close', () => {
+      if (!hasLogin) {
+        console.log({ type: 'USER_IS_NOT_LOGIN_UNTIL_PAGE_CLOSED' })
+        app.exit(1)
+        return
+      }
+    })
+
     await page.goto(entryPageUrl, {
       timeout: 0,
       waitUntil: 'domcontentloaded'
     })
-    let userInfoResponse
     userInfoResponse = await (
       await page.waitForResponse((response) => {
         if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
@@ -114,9 +189,11 @@ export const loginToBossZhipin = async () => {
         })
       ).json()
     }
-    console.log('logined')
+    hasLogin = true
+    console.log({ type: 'USER_LOGIN_SUCCESSFUL' })
+    app.exit()
   } catch (err) {
     console.error(err)
-    throw err
+    app.exit(1)
   }
 }
