@@ -1,4 +1,3 @@
-import { app } from 'electron'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { blockNavigation } from '@geekgeekrun/utils/puppeteer/block-navigation.mjs'
 import path from 'node:path'
@@ -63,7 +62,7 @@ export const loginToBossZhipin = async () => {
   let isParentProcessDisconnect = true
   process.on('disconnect', () => {
     isParentProcessDisconnect = true
-    app.exit()
+    process.exit()
   })
 
   const { puppeteer } = await initPuppeteer()
@@ -79,7 +78,7 @@ export const loginToBossZhipin = async () => {
   }
   if (hasLogin) {
     console.log({ type: 'PERVIOUS_LOGIN_STATUS_IS_VALID' })
-    app.exit()
+    process.exit()
     return
   }
   console.log({ type: 'NEED_TO_LOGIN' })
@@ -92,7 +91,7 @@ export const loginToBossZhipin = async () => {
   const browserToUse = await getAnyAvailablePuppeteerExecutable()
   if (!browserToUse) {
     console.log({ type: 'NEED_TO_CHECK_DEPENDENCIES' })
-    app.exit(1)
+    process.exit(1)
     return
   }
 
@@ -118,7 +117,7 @@ export const loginToBossZhipin = async () => {
     page.once('close', () => {
       if (!hasLogin) {
         console.log({ type: 'USER_IS_NOT_LOGIN_UNTIL_PAGE_CLOSED' })
-        app.exit(1)
+        process.exit(1)
         return
       }
     })
@@ -191,9 +190,9 @@ export const loginToBossZhipin = async () => {
     }
     hasLogin = true
     console.log({ type: 'USER_LOGIN_SUCCESSFUL' })
-    app.exit()
+    process.exit()
   } catch (err) {
     console.error(err)
-    app.exit(1)
+    process.exit(1)
   }
 }
