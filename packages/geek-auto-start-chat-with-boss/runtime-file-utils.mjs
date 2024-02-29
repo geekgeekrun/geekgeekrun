@@ -7,6 +7,7 @@ import defaultDingtalkConf from './default-config-file/dingtalk.json' assert {ty
 import defaultBossConf from './default-config-file/boss.json' assert {type: 'json'}
 import defaultTargetCompanyListConf from './default-config-file/target-company-list.json' assert {type: 'json'}
 
+import defaultBossCookieStorage from './default-storage-file/boss-cookies.json' assert { type: 'json' }
 export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json']
 
 const defaultConfigFileContentMap = {
@@ -20,7 +21,7 @@ const ensureRuntimeFolderPathExist = () => {
   if (!fs.existsSync(runtimeFolderPath)) {
     fs.mkdirSync(runtimeFolderPath)
   }
-  ;['config'].forEach(dirPath => {
+  ;['config', 'storage'].forEach(dirPath => {
     if (!fs.existsSync(
       path.join(runtimeFolderPath, dirPath)
     )) {
@@ -52,8 +53,9 @@ export const ensureConfigFileExist = () => {
 }
 
 export const readConfigFile = (fileName) => {
+  const joinedPath = path.join(configFolderPath, fileName)
   if (!fs.existsSync(
-    path.join(configFolderPath, fileName)
+    joinedPath
   )) {
     ensureConfigFileExist()
   }
@@ -61,10 +63,10 @@ export const readConfigFile = (fileName) => {
   let o
   try {
     o = JSON.parse(
-      fs.readFileSync(path.join(configFolderPath, fileName))
+      fs.readFileSync(joinedPath)
     )
   } catch {
-    fs.unlinkSync(fs.readFileSync(path.join(configFolderPath, fileName)))
+    fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
     ensureConfigFileExist()
     o = JSON.parse(defaultConfigFileContentMap[fileName])
   }
@@ -81,3 +83,50 @@ export const writeConfigFile = async (fileName, content) => {
   )
 }
 
+export const storageFilePath = path.join(
+  runtimeFolderPath,
+  'storage'
+)
+export const storageFileNameList = ['boss-cookies.json']
+
+const defaultStorageFileContentMap = {
+  'boss-cookies.json': JSON.stringify(defaultBossCookieStorage)
+}
+export const ensureStorageFileExist = () => {
+  ensureRuntimeFolderPathExist()
+  ;storageFileNameList.forEach(
+    fileName => {
+      if (!fs.existsSync(
+        path.join(storageFilePath, fileName)
+      )) {
+        fs.writeFileSync(
+          path.join(storageFilePath, fileName),
+          defaultStorageFileContentMap[fileName]
+        )
+      }
+    }
+  )
+}
+
+export const readStorageFile = (fileName) => {
+  const joinedPath = path.join(storageFilePath, fileName)
+
+  if (!fs.existsSync(
+    joinedPath
+  )) {
+    ensureStorageFileExist()
+  }
+
+  let o
+  try {
+    o = JSON.parse(
+      fs.readFileSync(joinedPath)
+    )
+  } catch {
+    fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
+    ensureStorageFileExist()
+    o = JSON.parse(defaultStorageFileContentMap[fileName])
+  }
+
+  return o
+}

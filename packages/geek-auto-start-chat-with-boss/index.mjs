@@ -9,8 +9,9 @@ import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import path from 'node:path';
 import JSON5 from 'json5'
 
-import { readConfigFile, ensureConfigFileExist } from './runtime-file-utils.mjs'
+import { readConfigFile, ensureConfigFileExist, readStorageFile, ensureStorageFileExist } from './runtime-file-utils.mjs'
 ensureConfigFileExist()
+ensureStorageFileExist()
 
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
@@ -45,7 +46,7 @@ export async function initPuppeteer () {
   puppeteer.use(StealthPlugin())
 }
 
-const { cookies: bossCookies } = readConfigFile('boss.json')
+const bossCookies = readStorageFile('boss-cookie.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json')
 
