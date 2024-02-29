@@ -1,0 +1,12 @@
+{
+  "name": "@geekgeekrun/browser-cookie-reader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Read cookie from some browser.",
+  "author": "geekgeekrun",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  }
+}
