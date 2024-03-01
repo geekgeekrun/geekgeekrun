@@ -65,9 +65,7 @@ async function main() {
       if (!closeAttachedSet.has(page)) {
         closeAttachedSet.add(page)
         page.once('domcontentloaded', () => {
-          page.evaluate(() => {
-            window.close()
-          })
+          page.close()
         })
       }
     }
