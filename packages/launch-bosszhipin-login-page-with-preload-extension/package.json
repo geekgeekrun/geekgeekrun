@@ -1,8 +1,8 @@
 {
-  "name": "@geekgeekrun/launch-browser-with-preload-extension",
+  "name": "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension",
   "private": true,
   "version": "1.0.0",
-  "description": "launch-browser-with-preload-extension",
+  "description": "launch-bosszhipin-login-page-with-preload-extension",
   "module": "./index.mjs",
   "type": "module",
   "scripts": {},
