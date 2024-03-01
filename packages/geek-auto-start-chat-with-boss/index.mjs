@@ -44,6 +44,11 @@ export async function initPuppeteer () {
     StealthPlugin = importResult[1].default
   }
   puppeteer.use(StealthPlugin())
+
+  return {
+    puppeteer,
+    StealthPlugin
+  }
 }
 
 const bossCookies = readStorageFile('boss-cookie.json')

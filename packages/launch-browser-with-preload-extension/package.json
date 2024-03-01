@@ -1,0 +1,17 @@
+{
+  "name": "@geekgeekrun/launch-browser-with-preload-extension",
+  "private": true,
+  "version": "1.0.0",
+  "description": "launch-browser-with-preload-extension",
+  "module": "./index.mjs",
+  "type": "module",
+  "scripts": {},
+  "author": "geekgeekrun",
+  "license": "ISC",
+  "dependencies": {
+    "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
+    "@geekgeekrun/utils": "workspace:*",
+    "extract-zip": "^2.0.1",
+    "node-fetch": "^3.3.2"
+  }
+}
