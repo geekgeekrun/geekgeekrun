@@ -19,7 +19,8 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:linux": "npm run build && electron-builder --linux",
+    "install": "cd ./external-node-runtime-dependencies && cross-env PUPPETEER_SKIP_DOWNLOAD=geekAutoStartWithBoss npm install"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
