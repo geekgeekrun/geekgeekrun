@@ -130,3 +130,12 @@ export const readStorageFile = (fileName) => {
 
   return o
 }
+
+export const writeStorageFile = async (fileName, content) => {
+  const filePath = path.join(storageFilePath, fileName)
+  const fileContent = JSON.stringify(content)
+  return fsPromise.writeFile(
+    filePath,
+    fileContent
+  )
+}

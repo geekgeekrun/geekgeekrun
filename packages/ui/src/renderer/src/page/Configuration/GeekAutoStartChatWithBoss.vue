@@ -45,9 +45,9 @@ const formContent = ref({
 
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   console.log(res)
-  formContent.value.bossZhipinCookies = JSON.stringify(res['boss.json'].cookies, null, 2)
-  formContent.value.dingtalkRobotAccessToken = res['dingtalk.json']['groupRobotAccessToken']
-  formContent.value.expectCompanies = res['target-company-list.json'].join(',')
+  formContent.value.bossZhipinCookies = JSON.stringify(res.storage['boss-cookies.json'], null, 2)
+  formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
+  formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
 })
 
 const formRules = {

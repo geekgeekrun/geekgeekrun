@@ -3,10 +3,16 @@ import path from 'path'
 import * as childProcess from 'node:child_process'
 import { is } from '@electron-toolkit/utils'
 import {
-  readConfigFile,
-  configFileNameList,
   ensureConfigFileExist,
-  writeConfigFile
+  ensureStorageFileExist,
+
+  configFileNameList,
+  readConfigFile,
+  writeConfigFile,
+
+  storageFileNameList,
+  readStorageFile,
+  writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
@@ -54,29 +60,38 @@ export function createMainWindow(): void {
   }
 
   ipcMain.handle('fetch-config-file-content', async () => {
-    const fileContentList = configFileNameList.map((fileName) => {
+    const configFileContentList = configFileNameList.map((fileName) => {
       return readConfigFile(fileName)
     })
-    const result = {}
+    const storageFileContentList = storageFileNameList.map((fileName) => {
+      return readStorageFile(fileName)
+    })
+    const result = {
+      config: {},
+      storage: {}
+    }
 
     configFileNameList.forEach((fileName, index) => {
-      result[fileName] = fileContentList[index]
+      result.config[fileName] = configFileContentList[index]
     })
+
+    storageFileNameList.forEach((fileName, index) => {
+      result.storage[fileName] = storageFileContentList[index]
+    })
+
     return result
   })
 
   ipcMain.handle('save-config-file-from-ui', async (ev, payload) => {
     payload = JSON.parse(payload)
     ensureConfigFileExist()
+    ensureStorageFileExist()
 
     const dingtalkConfig = readConfigFile('dingtalk.json')
     dingtalkConfig.groupRobotAccessToken = payload.dingtalkRobotAccessToken
 
-    const bossZhipinConfig = readConfigFile('boss.json')
-    bossZhipinConfig.cookies = JSON.parse(payload.bossZhipinCookies)
-
     return await Promise.all([
-      writeConfigFile('boss.json', bossZhipinConfig),
+      writeStorageFile('boss-cookies.json', JSON.parse(payload.bossZhipinCookies)),
       writeConfigFile('dingtalk.json', dingtalkConfig),
       writeConfigFile('target-company-list.json', payload.expectCompanies.split(','))
     ])
