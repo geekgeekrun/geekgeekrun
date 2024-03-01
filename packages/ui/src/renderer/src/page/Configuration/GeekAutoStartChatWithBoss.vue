@@ -11,7 +11,7 @@
           <!-- <div>操作过程中，本程序缓存的 Boss直聘 Cookie 会被自动更新</div> -->
           <div>
             您可
-            <el-button size="small" type="primary" font-size-inherit
+            <el-button size="small" type="primary" font-size-inherit @click="launchLogin"
               >点击此处打开BOSS直聘登录页</el-button
             >，按照稍后的提示，使用EditThisCookie复制Cookie，并进行粘贴
           </div>
@@ -126,6 +126,10 @@ const handleExpectCompaniesInputBlur = (event) => {
     .map((it) => it.trim())
     .filter(Boolean)
     .join(',')
+}
+
+const launchLogin = () => {
+  electron.ipcRenderer.send('launch-bosszhipin-login-page-with-preload-extension')
 }
 </script>
 

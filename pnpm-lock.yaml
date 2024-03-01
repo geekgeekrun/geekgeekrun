@@ -76,6 +76,9 @@ importers:
       '@geekgeekrun/geek-auto-start-chat-with-boss':
         specifier: workspace:*
         version: link:../geek-auto-start-chat-with-boss
+      '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
+        specifier: workspace:*
+        version: link:../launch-bosszhipin-login-page-with-preload-extension
       '@geekgeekrun/utils':
         specifier: workspace:*
         version: link:../utils

@@ -216,6 +216,30 @@ export function createMainWindow(): void {
     })
   })
 
+  let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
+  ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
+    if (subProcessOfBossZhipinLoginPageWithPreloadExtension) {
+      return
+    }
+    const subProcessEnv = {
+      ...process.env,
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossZhipinLoginPageWithPreloadExtension',
+      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
+    }
+    subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
+      process.argv[0],
+      process.argv.slice(1),
+      {
+        env: subProcessEnv,
+        stdio: [null, null, null, 'pipe', 'ipc']
+      }
+    )
+
+    subProcessOfBossZhipinLoginPageWithPreloadExtension!.once('exit', () => {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
+    })
+  })
+
   mainWindow!.once('closed', () => {
     mainWindow = null
   })

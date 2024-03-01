@@ -35,7 +35,7 @@ if (!fs.existsSync(extensionDir)) {
 const editThisCookieZipPath = path.join(__dirname, 'extensions', 'EditThisCookie.zip')
 const editThisCookieExtensionPath = path.join(extensionDir, 'EditThisCookie')
 
-async function main() {
+export async function main() {
   if (!fs.existsSync(
     path.join(editThisCookieExtensionPath, 'manifest.json')
   )) {
@@ -80,5 +80,3 @@ async function main() {
   const { dispose: disposeNavigation } = await blockNavigation(page, (req) => !req.url().startsWith('https://www.zhipin.com'))
   await page.goto('https://www.zhipin.com/web/user/');
 }
-
-main()
