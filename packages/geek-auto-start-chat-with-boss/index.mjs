@@ -51,7 +51,7 @@ export async function initPuppeteer () {
   }
 }
 
-const bossCookies = readStorageFile('boss-cookie.json')
+const bossCookies = readStorageFile('boss-cookies.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json')
 
