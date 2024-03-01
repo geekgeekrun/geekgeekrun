@@ -1,10 +1,19 @@
 <template>
   <div class="form-wrap">
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
-      <el-form-item
-        label="BOSS直聘 Cookie （使用EditThisCookie扩展程序，从你已登录过BOSS直聘的浏览器复制）"
-        prop="bossZhipinCookies"
-      >
+      <el-form-item label="BOSS直聘 Cookie" prop="bossZhipinCookies">
+        <div class="description" font-size-0.8em>
+          <div>Cookie 是您登录BOSS直聘的凭据。</div>
+          <div>
+            本程序承诺，<b style="color: #e40">您的Cookie仅在您的PC与BOSS直聘网站之间存储、传递</b>，不做其它用途；请放心填写
+          </div>
+          <!-- <div>操作过程中，本程序缓存的 Boss直聘 Cookie 会被自动更新</div> -->
+          <div>
+            您可
+            <el-button size="small" type="primary" font-size-inherit>点击此处打开BOSS直聘登录页</el-button>
+            ，按照稍后的提示，使用EditThisCookie复制Cookie，并进行粘贴
+          </div>
+        </div>
         <el-input
           v-model="formContent.bossZhipinCookies"
           :autosize="{ minRows: 4 }"
