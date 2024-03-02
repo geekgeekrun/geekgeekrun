@@ -73,8 +73,12 @@ export async function main() {
 
   const [page] = await browser.pages();
 
-  page.once('close', () => {
+  page.once('close', async () => {
     browser.close()
+    if (isRunFromUi) {
+      const electron = await import('electron')
+      electron.app.quit()
+    }
   })
 
   const { dispose: disposeNavigation } = await blockNavigation(page, (req) => !req.url().startsWith('https://www.zhipin.com'))
