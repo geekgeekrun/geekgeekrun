@@ -8,6 +8,9 @@ import {
 } from '@geekgeekrun/utils/sleep.mjs'
 import extractZip from 'extract-zip'
 import { blockNavigation } from '@geekgeekrun/utils/puppeteer/block-navigation.mjs'
+import {
+  writeStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -97,4 +100,48 @@ export async function main() {
 
   const { dispose: disposeNavigation } = await blockNavigation(page, (req) => !req.url().startsWith('https://www.zhipin.com'))
   await page.goto('https://www.zhipin.com/web/user/');
+
+  const loginSuccessPromiseList = [
+    page.waitForResponse(
+      (response) =>
+        response.url().startsWith('https://www.zhipin.com/wapi/zppassport/qrcode/loginConfirm'),
+      {
+        timeout: 0
+      }
+    ),
+    page.waitForResponse(
+      (response) =>
+        response.url().startsWith('https://www.zhipin.com/wapi/zppassport/qrcode/dispatcher'),
+      {
+        timeout: 0
+      }
+    ),
+    page.waitForResponse(
+      (response) =>
+        response.url().startsWith('https://www.zhipin.com/wapi/zppassport/login/phoneV2'),
+      { timeout: 0 }
+    )
+  ]
+
+  Promise.all([
+    Promise.race(loginSuccessPromiseList),
+    page.waitForNavigation({
+      timeout: 0
+    }),
+  ]).then(async () => {
+    await sleep(2000)
+    const headerLogoAnchorHandler = await page.$('.header-home-logo')
+    return Promise.all([
+      headerLogoAnchorHandler ? headerLogoAnchorHandler.click() : page.goto('https://www.zhipin.com/'),
+      page.waitForNavigation({
+        timeout: 0,
+      })
+    ])
+  }).then(async () => {
+    await sleep(2000)
+    const cookies = await page.cookies()
+    return writeStorageFile('boss-cookies.json', cookies)
+  }).catch((err) => {
+    console.log(err)
+  })
 }
