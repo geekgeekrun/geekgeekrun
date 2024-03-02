@@ -14,6 +14,7 @@ import os from 'node:os'
 import path from 'node:path';
 import JSON5 from 'json5'
 import url from 'url';
+import packageJson from './package.json' assert {type: 'json'}
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -32,15 +33,28 @@ if (!fs.existsSync(
 if (!fs.existsSync(extensionDir)) {
   fs.mkdirSync(extensionDir)
 }
-const editThisCookieZipPath = path.join(__dirname, 'extensions', 'EditThisCookie.zip')
 const editThisCookieExtensionPath = path.join(extensionDir, 'EditThisCookie')
+
+let editThisCookieZipPath
+async function getEditThisCookieZipPath () {
+  if (editThisCookieZipPath) {
+    return editThisCookieZipPath
+  }
+  if (isRunFromUi) {
+    const { app } = await import('electron')
+    editThisCookieZipPath = path.join(app.getAppPath(), './node_modules', packageJson.name, 'extensions', 'EditThisCookie.zip')
+  } else {
+    editThisCookieZipPath = path.join(__dirname, 'extensions', 'EditThisCookie.zip')
+  }
+  return editThisCookieZipPath
+}
 
 export async function main() {
   if (!fs.existsSync(
     path.join(editThisCookieExtensionPath, 'manifest.json')
   )) {
     await extractZip(
-      editThisCookieZipPath,
+      await getEditThisCookieZipPath(),
       {
         dir: extensionDir
       }
