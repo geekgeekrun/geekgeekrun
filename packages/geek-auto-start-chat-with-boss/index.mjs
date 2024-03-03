@@ -122,7 +122,7 @@ export async function mainLoop (hooks) {
       writeStorageFile('boss-cookies.json', [])
       throw new Error("LOGIN_STATUS_INVALID")
     } else {
-      await storeStorage().catch(() => void 0)
+      await storeStorage(page).catch(() => void 0)
     }
 
     const INIT_START_EXCEPT_JOB_INDEX = 1
@@ -156,6 +156,7 @@ export async function mainLoop (hooks) {
             return false
           }
         );
+        await storeStorage(page).catch(() => void 0)
         await sleepWithRandomDelay(2000)
       }
 
@@ -275,6 +276,7 @@ export async function mainLoop (hooks) {
             if (res.code !== 0) {
               // startup chat error, may the chance of today has used out
               if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
+                await storeStorage(page).catch(() => void 0)
                 throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
               } else {
                 console.error(res)
@@ -283,7 +285,8 @@ export async function mainLoop (hooks) {
             } else {
               hooks.newChatStartup?.call(jobData)
               blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
-
+              
+              await storeStorage(page).catch(() => void 0)
               await sleepWithRandomDelay(750)
               const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
               await closeDialogButtonProxy.click()
