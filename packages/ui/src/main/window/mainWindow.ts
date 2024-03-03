@@ -31,8 +31,8 @@ export function createMainWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
       ? {
-          /* icon */
-        }
+        /* icon */
+      }
       : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -58,6 +58,12 @@ export function createMainWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  ipcMain.on('open-external-link', (_, link) => {
+    shell.openExternal(link, {
+      activate: true
+    })
+  })
 
   ipcMain.handle('fetch-config-file-content', async () => {
     const configFileContentList = configFileNameList.map((fileName) => {
@@ -210,11 +216,6 @@ export function createMainWindow(): void {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
     subProcessOfPuppeteer?.kill('SIGINT')
   })
-  ipcMain.on('open-project-homepage-on-github', () => {
-    shell.openExternal(`https://github.com/geekgeekrun`, {
-      activate: true
-    })
-  })
 
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
   ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
@@ -232,6 +233,21 @@ export function createMainWindow(): void {
       {
         env: subProcessEnv,
         stdio: [null, null, null, 'pipe', 'ipc']
+      }
+    )
+    subProcessOfBossZhipinLoginPageWithPreloadExtension!.stdio[3]!.pipe(JSONStream.parse()).on(
+      'data',
+      (raw) => {
+        const data = raw
+        switch (data.type) {
+          case 'BOSS_ZHIPIN_COOKIE_COLLECTED': {
+            mainWindow?.webContents.send(data.type, data)
+            break
+          }
+          default: {
+            return
+          }
+        }
       }
     )
 

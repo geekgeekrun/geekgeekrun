@@ -1,6 +1,7 @@
 import { app } from 'electron'
-import { main } from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension'
+import { main, loginEventBus } from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension'
 import { pipeWriteRegardlessError } from './utils/pipe'
+import fs from "node:fs";
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
@@ -37,5 +38,14 @@ export const launchBossZhipinLoginPageWithPreloadExtension = async () => {
     return
   }
 
+  loginEventBus.once('cookie-collected', (cookies) => {
+    pipeWriteRegardlessError(
+      pipe,
+      JSON.stringify({
+        type: 'BOSS_ZHIPIN_COOKIE_COLLECTED',
+        cookies
+      }) + '\r\n'
+    )
+  })
   main()
 }

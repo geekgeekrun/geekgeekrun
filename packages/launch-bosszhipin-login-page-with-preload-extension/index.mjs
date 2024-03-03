@@ -19,6 +19,10 @@ import JSON5 from 'json5'
 import url from 'url';
 import packageJson from './package.json' assert {type: 'json'}
 
+import { EventEmitter } from 'node:events'
+
+export const loginEventBus = new EventEmitter()
+
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
@@ -98,7 +102,7 @@ export async function main() {
     }
   })
 
-  const { dispose: disposeNavigation } = await blockNavigation(page, (req) => !req.url().startsWith('https://www.zhipin.com'))
+  const { dispose: disposeNavigationLock } = await blockNavigation(page, (req) => !req.url().startsWith('https://www.zhipin.com'))
   await page.goto('https://www.zhipin.com/web/user/');
 
   const loginSuccessPromiseList = [
@@ -138,8 +142,19 @@ export async function main() {
       })
     ])
   }).then(async () => {
+    if (
+      page.url().startsWith('https://www.zhipin.com/web/common/security-check.html')
+    ) {
+      await page.waitForNavigation({
+        timeout: 0,
+      })
+    }
     await sleep(2000)
     const cookies = await page.cookies()
+    loginEventBus.emit(
+      'cookie-collected',
+      cookies
+    )
     return writeStorageFile('boss-cookies.json', cookies)
   }).catch((err) => {
     console.log(err)
