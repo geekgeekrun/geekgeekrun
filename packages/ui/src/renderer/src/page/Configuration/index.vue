@@ -1,7 +1,7 @@
 <template><RouterView /></template>
 
 <script lang="ts" setup>
-import { onUnmounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
 import { mountGlobalDialog as mountWaitForLoginDialog } from '@renderer/features/WaitForLoginDialog/operations'
 
@@ -13,6 +13,12 @@ onUnmounted(() => {
       fn()
     } catch {}
   }
+})
+onMounted(() => {
+  electron.ipcRenderer.on('check-boss-zhipin-cookie-file', mountWaitForLoginDialog)
+})
+onUnmounted(() => {
+  electron.ipcRenderer.removeListener('check-boss-zhipin-cookie-file', mountWaitForLoginDialog)
 })
 ;(async () => {
   const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')

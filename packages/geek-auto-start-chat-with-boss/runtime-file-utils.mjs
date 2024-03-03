@@ -8,6 +8,7 @@ import defaultBossConf from './default-config-file/boss.json' assert {type: 'jso
 import defaultTargetCompanyListConf from './default-config-file/target-company-list.json' assert {type: 'json'}
 
 import defaultBossCookieStorage from './default-storage-file/boss-cookies.json' assert { type: 'json' }
+import defaultBossLocalStorageStorage from './default-storage-file/boss-local-storage.json' assert { type: 'json' }
 export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json']
 
 const defaultConfigFileContentMap = {
@@ -90,7 +91,8 @@ export const storageFilePath = path.join(
 export const storageFileNameList = ['boss-cookies.json']
 
 const defaultStorageFileContentMap = {
-  'boss-cookies.json': JSON.stringify(defaultBossCookieStorage)
+  'boss-cookies.json': JSON.stringify(defaultBossCookieStorage),
+  'boss-local-storage.json': JSON.stringify(defaultBossLocalStorageStorage)
 }
 export const ensureStorageFileExist = () => {
   ensureRuntimeFolderPathExist()

@@ -19,6 +19,7 @@ import {
   DOWNLOAD_ERROR_EXIT_CODE,
   getAnyAvailablePuppeteerExecutable
 } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): void {
@@ -123,12 +124,17 @@ export function createMainWindow(): void {
     })
     console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
-      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', (raw) => {
+      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
         const data = raw
         switch (data.type) {
           case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
             resolve(data)
             break
+          }
+          case 'LOGIN_STATUS_INVALID': {
+            await sleep(500)
+            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
+            return
           }
           default: {
             return
