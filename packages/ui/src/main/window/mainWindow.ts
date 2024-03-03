@@ -103,6 +103,12 @@ export function createMainWindow(): void {
     ])
   })
 
+  ipcMain.handle('write-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+
+    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
+  })
+
   // const currentExecutablePath = app.getPath('exe')
   // console.log(currentExecutablePath)
 
