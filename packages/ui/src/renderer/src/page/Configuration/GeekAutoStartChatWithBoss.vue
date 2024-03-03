@@ -1,26 +1,10 @@
 <template>
   <div class="form-wrap">
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
-      <el-form-item label="BOSS直聘 Cookie" prop="bossZhipinCookies">
-        <div class="description" font-size-0.8em>
-          <div>Cookie 是您访问BOSS直聘聊天功能的凭据。</div>
-          <div>
-            本程序承诺，<b style="color: #e40">您的Cookie仅在您的PC与BOSS直聘网站之间存储、传递</b
-            >，不做其它用途；请放心填写
-          </div>
-          <!-- <div>操作过程中，本程序缓存的 Boss直聘 Cookie 会被自动更新</div> -->
-          <div>
-            如果您不清楚如何操作您可
-            <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
-              >点击此处打开BOSS直聘 Cookie助手</el-button
-            >来帮您填写。
-          </div>
-        </div>
-        <el-input
-          v-model="formContent.bossZhipinCookies"
-          :autosize="{ minRows: 4 }"
-          type="textarea"
-        />
+      <el-form-item label="BOSS直聘 Cookie">
+        <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
+          >Cookie助手</el-button
+        >
       </el-form-item>
       <el-form-item label="钉钉机器人 AccessToken" prop="dingtalkRobotAccessToken">
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
@@ -43,48 +27,23 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import JSON5 from 'json5'
 import { ElForm, ElMessage } from 'element-plus'
 import router from '../../router/index'
 import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
 import { mountGlobalDialog as mountWaitForLoginDialog } from '@renderer/features/WaitForLoginDialog/operations'
 
 const formContent = ref({
-  bossZhipinCookies: '',
   dingtalkRobotAccessToken: '',
   expectCompanies: ''
 })
 
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   console.log(res)
-  formContent.value.bossZhipinCookies = JSON.stringify(res.storage['boss-cookies.json'], null, 2)
   formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
   formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
 })
 
 const formRules = {
-  bossZhipinCookies: [
-    {
-      required: true
-    },
-    {
-      trigger: 'blur',
-      validator(rule, val, cb) {
-        let arr
-        try {
-          arr = JSON5.parse(val)
-        } catch (err) {
-          cb(new Error(`JSON content is invalid: ${err.message}`))
-          return
-        }
-        if (!Array.isArray(arr) || !arr.length) {
-          cb(new Error(`Invalid cookies. Please copy with EditThisCookie extension`))
-          return
-        }
-        cb()
-      }
-    }
-  ]
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
@@ -136,7 +95,7 @@ const handleClickLaunchLogin = () => {
 
 <style scoped lang="scss">
 .form-wrap {
-  padding-top: 100px;
+  padding-top: 60px;
   margin: 0 auto;
   max-width: 640px;
   .last-form-item {

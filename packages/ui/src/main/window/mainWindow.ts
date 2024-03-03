@@ -69,20 +69,12 @@ export function createMainWindow(): void {
     const configFileContentList = configFileNameList.map((fileName) => {
       return readConfigFile(fileName)
     })
-    const storageFileContentList = storageFileNameList.map((fileName) => {
-      return readStorageFile(fileName)
-    })
     const result = {
       config: {},
-      storage: {}
     }
 
     configFileNameList.forEach((fileName, index) => {
       result.config[fileName] = configFileContentList[index]
-    })
-
-    storageFileNameList.forEach((fileName, index) => {
-      result.storage[fileName] = storageFileContentList[index]
     })
 
     return result
@@ -91,13 +83,11 @@ export function createMainWindow(): void {
   ipcMain.handle('save-config-file-from-ui', async (ev, payload) => {
     payload = JSON.parse(payload)
     ensureConfigFileExist()
-    ensureStorageFileExist()
 
     const dingtalkConfig = readConfigFile('dingtalk.json')
     dingtalkConfig.groupRobotAccessToken = payload.dingtalkRobotAccessToken
 
     return await Promise.all([
-      writeStorageFile('boss-cookies.json', JSON.parse(payload.bossZhipinCookies)),
       writeConfigFile('dingtalk.json', dingtalkConfig),
       writeConfigFile('target-company-list.json', payload.expectCompanies.split(','))
     ])
