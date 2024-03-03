@@ -129,23 +129,20 @@ const formRules = {
         if (
           !Array.isArray(arr) ||
           !arr.length ||
-          !(
-            arr.length > 0 &&
-            arr.some((it) => {
-              const currentOwnedKeySet = new Set(Object.keys(it))
-              if (currentOwnedKeySet.size < allExpectKeySet.size) {
+          !arr.every((it) => {
+            const currentOwnedKeySet = new Set(Object.keys(it))
+            if (currentOwnedKeySet.size < allExpectKeySet.size) {
+              return false
+            }
+
+            const allExpectKeyArr = [...allExpectKeySet]
+            for (let i = 0; i < allExpectKeyArr.length; i++) {
+              if (!currentOwnedKeySet.has(allExpectKeyArr[i])) {
                 return false
               }
-
-              const allExpectKeyArr = [...allExpectKeySet]
-              for (let i = 0; i < allExpectKeyArr.length; i++) {
-                if (!currentOwnedKeySet.has(allExpectKeyArr[i])) {
-                  return false
-                }
-              }
-              return true
-            })
-          )
+            }
+            return true
+          })
         ) {
           cb(new Error(`Cookie格式无效 - 部分字段缺失；建议使用EditThisCookie扩展程序进行复制。`))
           return
