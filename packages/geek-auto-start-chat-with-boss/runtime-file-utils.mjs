@@ -88,7 +88,7 @@ export const storageFilePath = path.join(
   runtimeFolderPath,
   'storage'
 )
-export const storageFileNameList = ['boss-cookies.json']
+export const storageFileNameList = ['boss-cookies.json', 'boss-local-storage.json']
 
 const defaultStorageFileContentMap = {
   'boss-cookies.json': JSON.stringify(defaultBossCookieStorage),
