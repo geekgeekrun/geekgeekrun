@@ -70,26 +70,48 @@
             maxRows: 10
           }"
           font-size-12px
+          @input="hasUserMutateInput = true"
         ></el-input>
         <el-alert
-          v-if="!formContent.collectedCookies"
+          v-if="loginCookieWaitingStatus === LOGIN_COOKIE_WAITING_STATUS.WAITING_FOR_LOGIN"
           :closable="false"
-          title="正在等待登录……"
-        ></el-alert>
+          >正在等待登录……</el-alert
+        >
+        <el-alert
+          v-if="loginCookieWaitingStatus === LOGIN_COOKIE_WAITING_STATUS.COOKIE_COLLECTED"
+          :closable="false"
+          type="success"
+          >已获取到Cookie<template v-if="hasUserMutateInput"
+            >；看起来您似乎正在尝试手动输入Cookie？<el-button
+              size="small"
+              type="primary"
+              font-size-inherit
+              @click="fillCollectedCookie"
+              >使用获取到的Cookie</el-button
+            ></template
+          ></el-alert
+        >
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button type="primary" @click="handleSubmit">确定</el-button>
+      <el-button type="primary" @click="handleSubmit">保存Cookie</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script lang="ts" setup>
-import { ElForm, ElMessage } from 'element-plus';
+import { ElForm, ElMessage } from 'element-plus'
 import { ref, onUnmounted, onMounted } from 'vue'
 const props = defineProps({
   dispose: Function
 })
+
+enum LOGIN_COOKIE_WAITING_STATUS {
+  INIT,
+  WAITING_FOR_LOGIN,
+  COOKIE_COLLECTED
+}
+const loginCookieWaitingStatus = ref(LOGIN_COOKIE_WAITING_STATUS.INIT)
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const formContent = ref({
@@ -153,12 +175,26 @@ const formRules = {
   ]
 }
 
+const hasUserMutateInput = ref(false)
+const collectedCookie = ref()
 const handleCookieCollected = (_, payload) => {
-  formContent.value.collectedCookies = JSON.stringify(payload.cookies, null, 2)
+  loginCookieWaitingStatus.value = LOGIN_COOKIE_WAITING_STATUS.COOKIE_COLLECTED
+  collectedCookie.value = payload.cookies
+  if (!hasUserMutateInput.value) {
+    fillCollectedCookie()
+  }
+}
+const fillCollectedCookie = () => {
+  if (loginCookieWaitingStatus.value !== LOGIN_COOKIE_WAITING_STATUS.COOKIE_COLLECTED) {
+    return
+  }
+  formContent.value.collectedCookies = JSON.stringify(collectedCookie.value, null, 2)
+  hasUserMutateInput.value = false
 }
 
 const handleClickLaunchLogin = () => {
   electron.ipcRenderer.send('launch-bosszhipin-login-page-with-preload-extension')
+  loginCookieWaitingStatus.value = LOGIN_COOKIE_WAITING_STATUS.WAITING_FOR_LOGIN
 }
 
 const handleEditThisCookieExtensionStoreLinkClick = () => {
@@ -178,11 +214,23 @@ const handleSubmit = async () => {
   props.dispose()
 }
 
+const handleBossZhipinLoginPageClosed = () => {
+  if (loginCookieWaitingStatus.value === LOGIN_COOKIE_WAITING_STATUS.WAITING_FOR_LOGIN) {
+    loginCookieWaitingStatus.value = LOGIN_COOKIE_WAITING_STATUS.INIT
+  }
+}
+
 onMounted(() => {
   electron.ipcRenderer.once('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)
+  electron.ipcRenderer.on('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED', handleBossZhipinLoginPageClosed)
 })
 onUnmounted(() => {
   electron.ipcRenderer.removeListener('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)
+  electron.ipcRenderer.removeListener(
+    'BOSS_ZHIPIN_LOGIN_PAGE_CLOSED',
+    handleBossZhipinLoginPageClosed
+  )
+  electron.ipcRenderer.send('kill-bosszhipin-login-page-with-preload-extension')
 })
 </script>
 

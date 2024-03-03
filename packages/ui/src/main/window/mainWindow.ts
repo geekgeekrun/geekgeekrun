@@ -225,8 +225,10 @@ export function createMainWindow(): void {
 
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
   ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
-    if (subProcessOfBossZhipinLoginPageWithPreloadExtension) {
-      return
+    try {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
+    } catch {
+      //
     }
     const subProcessEnv = {
       ...process.env,
@@ -258,8 +260,18 @@ export function createMainWindow(): void {
     )
 
     subProcessOfBossZhipinLoginPageWithPreloadExtension!.once('exit', () => {
+      mainWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
       subProcessOfBossZhipinLoginPageWithPreloadExtension = null
     })
+  })
+  ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', async () => {
+    try {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
+    } catch {
+      //
+    } finally {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
+    }
   })
 
   mainWindow!.once('closed', () => {
