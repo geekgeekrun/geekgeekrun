@@ -9,13 +9,12 @@ import {
   configFileNameList,
   readConfigFile,
   writeConfigFile,
-
-  storageFileNameList,
   readStorageFile,
   writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
+import { checkCookieListFormat } from '../../common/utils/cookie'
 import {
   DOWNLOAD_ERROR_EXIT_CODE,
   getAnyAvailablePuppeteerExecutable
@@ -91,6 +90,11 @@ export function createMainWindow(): void {
       writeConfigFile('dingtalk.json', dingtalkConfig),
       writeConfigFile('target-company-list.json', payload.expectCompanies.split(','))
     ])
+  })
+
+  ipcMain.handle('read-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+    return await readStorageFile(payload.fileName)
   })
 
   ipcMain.handle('write-storage-file', async (ev, payload) => {
@@ -262,6 +266,11 @@ export function createMainWindow(): void {
     } finally {
       subProcessOfBossZhipinLoginPageWithPreloadExtension = null
     }
+  })
+
+  ipcMain.handle('check-boss-zhipin-cookie-file', () => {
+    const cookies = readStorageFile('boss-cookies.json')
+    return checkCookieListFormat(cookies)
   })
 
   mainWindow!.once('closed', () => {
