@@ -95,7 +95,6 @@ export async function mainLoop (hooks) {
       await page.setCookie(bossCookies[i]);
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
-    debugger
 
     let userInfoResponse
     await Promise.all([
