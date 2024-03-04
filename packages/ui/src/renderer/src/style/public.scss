@@ -1,6 +1,7 @@
 html, body {
-  --monospace-font-family: Monaco, Consolas, Menlo, monospace;
-  font-family: var(--monospace-font-family);
+  --monospace-font-family: Monaco, Consolas, Menlo;
+  --sans-serif-font-family: 'PingFang SC', 'Microsoft Yahei', Helvetica, Arial;
+  font-family: var(--monospace-font-family), var(--sans-serif-font-family);
   position: relative;
   width: 100%;
   height: 100%;
