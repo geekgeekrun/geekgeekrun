@@ -117,7 +117,8 @@ import { ref, onUnmounted, onMounted } from 'vue'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
 
 const props = defineProps({
-  dispose: Function
+  dispose: Function,
+  processWaitee: Object
 })
 
 const cookieInvalid = ref(false)
@@ -201,6 +202,7 @@ const handleSubmit = async () => {
     data: formContent.value.collectedCookies
   })
   ElMessage.success('Boss直聘 Cookie 保存成功')
+  props.processWaitee?.resolve?.()
   props.dispose()
 }
 

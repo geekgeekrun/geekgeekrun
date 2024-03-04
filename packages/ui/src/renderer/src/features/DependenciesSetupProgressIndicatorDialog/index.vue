@@ -26,7 +26,8 @@ const props = defineProps({
   dependenciesStatus: {
     type: Object as PropType<Record<string, boolean>>,
     default: () => ({})
-  }
+  },
+  processWaitee: Object
 })
 
 // shallow copy
@@ -75,6 +76,7 @@ const processTasks = async () => {
     try {
       p.then(() => {
         if (!promiseList.length) {
+          props.processWaitee?.resolve?.()
           props.dispose?.()
         }
       })

@@ -23,12 +23,22 @@ onUnmounted(() => {
 ;(async () => {
   const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
   if (Object.values(checkDependenciesResult).includes(false)) {
-    mountDependenciesSetupProgressIndicatorDialog(checkDependenciesResult)
+    const processWaitee = Promise.withResolvers()
+    mountDependenciesSetupProgressIndicatorDialog({
+      checkDependenciesResult, processWaitee
+    })
+
+    await processWaitee.promise
   }
 
   const isCookieFileValid = await electron.ipcRenderer.invoke('check-boss-zhipin-cookie-file')
   if (!isCookieFileValid) {
-    mountWaitForLoginDialog()
+    const processWaitee = Promise.withResolvers()
+    mountWaitForLoginDialog({
+      processWaitee
+    })
+
+    await processWaitee.promise
   }
 })()
 </script>

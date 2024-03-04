@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import DependenciesSetupProgressIndicatorDialog from './index.vue'
 
-export const mountGlobalDialog = (dependenciesStatus: Record<string, boolean>) => {
+export const mountGlobalDialog = (o: { dependenciesStatus: Record<string, boolean>, processWaitee? }) => {
   const containerElId = `elForDependenciesSetupProgressIndicatorDialog`
 
   if (document.getElementById(containerElId)) {
@@ -28,7 +28,8 @@ export const mountGlobalDialog = (dependenciesStatus: Record<string, boolean>) =
       dispose()
     },
     dispose,
-    dependenciesStatus
+    dependenciesStatus: o?.dependenciesStatus,
+    processWaitee: o?.processWaitee
   }).use(ElementPlus)
   app.mount(containerEl)
 

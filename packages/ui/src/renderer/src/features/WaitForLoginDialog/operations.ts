@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import WaitForLogin from './index.vue'
 
-export const mountGlobalDialog = () => {
+export const mountGlobalDialog = (o: { processWaitee? }) => {
   const containerElId = `elForWaitForLogin`
 
   if (document.getElementById(containerElId)) {
@@ -28,6 +28,7 @@ export const mountGlobalDialog = () => {
       dispose()
     },
     dispose,
+    processWaitee: o?.processWaitee
   }).use(ElementPlus)
   app.mount(containerEl)
 
