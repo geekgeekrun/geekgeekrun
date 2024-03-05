@@ -11,15 +11,25 @@ import {
   saveLastUsedAndAvailableBrowserInfo,
   BrowserInfo
 } from './history-utils'
-import findAndLocateExistedChromiumExecutable from './check-and-locate-existed-chromium-executable'
+import { type Worker } from 'worker_threads'
 import {
   sleep
 } from '@geekgeekrun/utils/sleep.mjs'
+
+import CheckAndLocateExistedChromiumExecutableWorker from '../../worker/check-and-locate-existed-chromium-executable?nodeWorker&url'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
   DOWNLOAD_ERROR = 1
 }
+
+async function findAndLocateExistedChromiumExecutable(): Promise<BrowserInfo | null> {
+  const worker: Worker = new CheckAndLocateExistedChromiumExecutableWorker()
+  worker.on('message', () => {
+    debugger
+  })
+  // TODO:
+};
 
 export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo | null> => {
   const lastUsedOne = await getLastUsedAndAvailableBrowser()
@@ -28,11 +38,14 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   }
   // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
   try {
+    debugger
     const existedOne = (await findAndLocateExistedChromiumExecutable())
     await saveLastUsedAndAvailableBrowserInfo(existedOne)
     // save its path
     return existedOne
-  } catch {
+  } catch (err) {
+    console.error(err)
+    debugger
     console.log('no existed browser path found')
   }
   // find existed browser - the fallback one
