@@ -15,7 +15,7 @@ const initPlugins = (hooks) => {
 let isParentProcessDisconnect = false
 
 export const runAutoChat = async () => {
-  const { initPuppeteer, mainLoop, closeBrowserWindow } = await import(
+  const { initPuppeteer, mainLoop, closeBrowserWindow, autoStartChatEventBus } = await import(
     '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
   )
   process.on('disconnect', () => {
@@ -73,16 +73,27 @@ export const runAutoChat = async () => {
       type: 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED' //geek-auto-start-chat-with-boss-started
     }) + '\r\n'
   )
-  while (!([isParentProcessDisconnect].includes(true))) {
+
+  autoStartChatEventBus.once('LOGIN_STATUS_INVALID', () => {
+    pipeWriteRegardlessError(
+      pipe,
+      JSON.stringify({
+        type: 'LOGIN_STATUS_INVALID' //geek-auto-start-chat-with-boss-started
+      }) + '\r\n'
+    )
+  })
+
+  while (![isParentProcessDisconnect].includes(true)) {
     try {
       await mainLoop(hooks)
     } catch (err) {
       console.log(err)
-      // if(err instanceof Error && err.message.includes('ERR_MODULE_NOT_FOUND')) {
-      //   throw err
-      // } else {
-      void err
-      // }
+      if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
+        process.exit(2)
+        break
+      } else {
+        throw err
+      }
     }
   }
   closeBrowserWindow()

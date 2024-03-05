@@ -8,12 +8,16 @@ import os from 'node:os'
 import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import path from 'node:path';
 import JSON5 from 'json5'
+import { EventEmitter } from 'node:events'
+import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
 
-import { readConfigFile, ensureConfigFileExist } from './runtime-file-utils.mjs'
+import { readConfigFile, writeStorageFile, ensureConfigFileExist, readStorageFile, ensureStorageFileExist } from './runtime-file-utils.mjs'
 ensureConfigFileExist()
+ensureStorageFileExist()
 
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
+export const autoStartChatEventBus = new EventEmitter()
 
 let puppeteer, StealthPlugin
 export async function initPuppeteer () {
@@ -43,12 +47,19 @@ export async function initPuppeteer () {
     StealthPlugin = importResult[1].default
   }
   puppeteer.use(StealthPlugin())
+
+  return {
+    puppeteer,
+    StealthPlugin
+  }
 }
 
-const { cookies: bossCookies } = readConfigFile('boss.json')
+const bossCookies = readStorageFile('boss-cookies.json')
+const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json')
 
+const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
 
 const expectCompanySet = new Set(targetCompanyList)
@@ -79,18 +90,39 @@ export async function mainLoop (hooks) {
     })
   
     //set cookies
-    const copiedBossCookies = JSON.parse(JSON.stringify(bossCookies))
-
-    hooks.cookieWillSet?.call(copiedBossCookies)
-    for(let i = 0; i < copiedBossCookies.length; i++){
-      await page.setCookie(copiedBossCookies[i]);
+    hooks.cookieWillSet?.call(bossCookies)
+    for(let i = 0; i < bossCookies.length; i++){
+      await page.setCookie(bossCookies[i]);
     }
-  
+    await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
+
+    let userInfoResponse
     await Promise.all([
       page.goto(recommendJobPageUrl, { timeout: 0 }),
+      page.waitForResponse((response) => {
+        if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
+          return true
+        }
+        return false
+      }).then((res) => {
+        return res.json()
+      }).then((res) => {
+        userInfoResponse = res
+      }),
       page.waitForNavigation(),
     ])
     hooks.pageLoaded?.call()
+    hooks.userInfoResponse?.call(userInfoResponse)
+
+    if (userInfoResponse.code !== 0) {
+      autoStartChatEventBus.emit('LOGIN_STATUS_INVALID', {
+        userInfoResponse
+      })
+      writeStorageFile('boss-cookies.json', [])
+      throw new Error("LOGIN_STATUS_INVALID")
+    } else {
+      await storeStorage(page).catch(() => void 0)
+    }
 
     const INIT_START_EXCEPT_JOB_INDEX = 1
     let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
@@ -123,6 +155,7 @@ export async function mainLoop (hooks) {
             return false
           }
         );
+        await storeStorage(page).catch(() => void 0)
         await sleepWithRandomDelay(2000)
       }
 
@@ -242,6 +275,7 @@ export async function mainLoop (hooks) {
             if (res.code !== 0) {
               // startup chat error, may the chance of today has used out
               if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
+                await storeStorage(page).catch(() => void 0)
                 throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
               } else {
                 console.error(res)
@@ -250,7 +284,8 @@ export async function mainLoop (hooks) {
             } else {
               hooks.newChatStartup?.call(jobData)
               blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
-
+              
+              await storeStorage(page).catch(() => void 0)
               await sleepWithRandomDelay(750)
               const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
               await closeDialogButtonProxy.click()
@@ -317,6 +352,23 @@ export async function mainLoop (hooks) {
 
 export async function closeBrowserWindow () {
   browser?.close()
-  browse = null
+  browser = null
   page = null
+}
+
+async function storeStorage (page) {
+  const [
+    cookies, localStorage
+  ] = await Promise.all([
+    page.cookies(),
+    page.evaluate(() => {
+      return JSON.stringify(window.localStorage)
+    }).then(res => JSON.parse(res))
+  ])
+  return Promise.all(
+    [
+      writeStorageFile('boss-cookies.json', cookies),
+      writeStorageFile('boss-local-storage.json', localStorage),      
+    ]
+  )
 }

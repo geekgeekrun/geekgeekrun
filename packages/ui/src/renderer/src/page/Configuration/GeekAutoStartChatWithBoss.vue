@@ -1,15 +1,10 @@
 <template>
   <div class="form-wrap">
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
-      <el-form-item
-        label="BOSS直聘 Cookie （使用EditThisCookie扩展程序，从你已登录过BOSS直聘的浏览器复制）"
-        prop="bossZhipinCookies"
-      >
-        <el-input
-          v-model="formContent.bossZhipinCookies"
-          :autosize="{ minRows: 4 }"
-          type="textarea"
-        />
+      <el-form-item label="BOSS直聘 Cookie">
+        <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
+          >编辑Cookie</el-button
+        >
       </el-form-item>
       <el-form-item label="钉钉机器人 AccessToken" prop="dingtalkRobotAccessToken">
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
@@ -32,47 +27,23 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import JSON5 from 'json5'
 import { ElForm, ElMessage } from 'element-plus'
 import router from '../../router/index'
 import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
+import { mountGlobalDialog as mountWaitForLoginDialog } from '@renderer/features/WaitForLoginDialog/operations'
 
 const formContent = ref({
-  bossZhipinCookies: '',
   dingtalkRobotAccessToken: '',
   expectCompanies: ''
 })
 
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   console.log(res)
-  formContent.value.bossZhipinCookies = JSON.stringify(res['boss.json'].cookies, null, 2)
-  formContent.value.dingtalkRobotAccessToken = res['dingtalk.json']['groupRobotAccessToken']
-  formContent.value.expectCompanies = res['target-company-list.json'].join(',')
+  formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
+  formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
 })
 
 const formRules = {
-  bossZhipinCookies: [
-    {
-      required: true
-    },
-    {
-      trigger: 'blur',
-      validator(rule, val, cb) {
-        let arr
-        try {
-          arr = JSON5.parse(val)
-        } catch (err) {
-          cb(new Error(`JSON content is invalid: ${err.message}`))
-          return
-        }
-        if (!Array.isArray(arr) || !arr.length) {
-          cb(new Error(`Invalid cookies. Please copy with EditThisCookie extension`))
-          return
-        }
-        cb()
-      }
-    }
-  ]
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
@@ -116,11 +87,15 @@ const handleExpectCompaniesInputBlur = (event) => {
     .filter(Boolean)
     .join(',')
 }
+
+const handleClickLaunchLogin = () => {
+  mountWaitForLoginDialog()
+}
 </script>
 
 <style scoped lang="scss">
 .form-wrap {
-  padding-top: 100px;
+  padding-top: 60px;
   margin: 0 auto;
   max-width: 640px;
   .last-form-item {

@@ -1,9 +1,9 @@
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
-import DependenciesSetupProgressIndicatorDialog from './index.vue'
+import WaitForLogin from './index.vue'
 
-export const mountGlobalDialog = (o: { dependenciesStatus: Record<string, boolean>, processWaitee? }) => {
-  const containerElId = `elForDependenciesSetupProgressIndicatorDialog`
+export const mountGlobalDialog = (o: { processWaitee? }) => {
+  const containerElId = `elForWaitForLogin`
 
   if (document.getElementById(containerElId)) {
     return
@@ -22,13 +22,12 @@ export const mountGlobalDialog = (o: { dependenciesStatus: Record<string, boolea
     app = null
     containerEl = null
   }
-  let app: null | ReturnType<typeof createApp> = createApp(DependenciesSetupProgressIndicatorDialog, {
+  let app: null | ReturnType<typeof createApp> = createApp(WaitForLogin, {
     modelValue: true,
     onClosed() {
       dispose()
     },
     dispose,
-    dependenciesStatus: o?.dependenciesStatus,
     processWaitee: o?.processWaitee
   }).use(ElementPlus)
   app.mount(containerEl)

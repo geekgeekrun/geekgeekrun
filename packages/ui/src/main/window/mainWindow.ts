@@ -3,17 +3,23 @@ import path from 'path'
 import * as childProcess from 'node:child_process'
 import { is } from '@electron-toolkit/utils'
 import {
-  readConfigFile,
-  configFileNameList,
   ensureConfigFileExist,
-  writeConfigFile
+  ensureStorageFileExist,
+
+  configFileNameList,
+  readConfigFile,
+  writeConfigFile,
+  readStorageFile,
+  writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
+import { checkCookieListFormat } from '../../common/utils/cookie'
 import {
   DOWNLOAD_ERROR_EXIT_CODE,
   getAnyAvailablePuppeteerExecutable
 } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): void {
@@ -25,8 +31,8 @@ export function createMainWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
       ? {
-          /* icon */
-        }
+        /* icon */
+      }
       : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -53,15 +59,24 @@ export function createMainWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 
+  ipcMain.on('open-external-link', (_, link) => {
+    shell.openExternal(link, {
+      activate: true
+    })
+  })
+
   ipcMain.handle('fetch-config-file-content', async () => {
-    const fileContentList = configFileNameList.map((fileName) => {
+    const configFileContentList = configFileNameList.map((fileName) => {
       return readConfigFile(fileName)
     })
-    const result = {}
+    const result = {
+      config: {},
+    }
 
     configFileNameList.forEach((fileName, index) => {
-      result[fileName] = fileContentList[index]
+      result.config[fileName] = configFileContentList[index]
     })
+
     return result
   })
 
@@ -72,14 +87,21 @@ export function createMainWindow(): void {
     const dingtalkConfig = readConfigFile('dingtalk.json')
     dingtalkConfig.groupRobotAccessToken = payload.dingtalkRobotAccessToken
 
-    const bossZhipinConfig = readConfigFile('boss.json')
-    bossZhipinConfig.cookies = JSON.parse(payload.bossZhipinCookies)
-
     return await Promise.all([
-      writeConfigFile('boss.json', bossZhipinConfig),
       writeConfigFile('dingtalk.json', dingtalkConfig),
       writeConfigFile('target-company-list.json', payload.expectCompanies.split(','))
     ])
+  })
+
+  ipcMain.handle('read-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+    return await readStorageFile(payload.fileName)
+  })
+
+  ipcMain.handle('write-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+
+    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
   })
 
   // const currentExecutablePath = app.getPath('exe')
@@ -102,12 +124,17 @@ export function createMainWindow(): void {
     })
     console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
-      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', (raw) => {
+      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
         const data = raw
         switch (data.type) {
           case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
             resolve(data)
             break
+          }
+          case 'LOGIN_STATUS_INVALID': {
+            await sleep(500)
+            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
+            return
           }
           default: {
             return
@@ -195,10 +222,61 @@ export function createMainWindow(): void {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
     subProcessOfPuppeteer?.kill('SIGINT')
   })
-  ipcMain.on('open-project-homepage-on-github', () => {
-    shell.openExternal(`https://github.com/geekgeekrun`, {
-      activate: true
+
+  let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
+  ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
+    try {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
+    } catch {
+      //
+    }
+    const subProcessEnv = {
+      ...process.env,
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossZhipinLoginPageWithPreloadExtension',
+      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
+    }
+    subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
+      process.argv[0],
+      process.argv.slice(1),
+      {
+        env: subProcessEnv,
+        stdio: [null, null, null, 'pipe', 'ipc']
+      }
+    )
+    subProcessOfBossZhipinLoginPageWithPreloadExtension!.stdio[3]!.pipe(JSONStream.parse()).on(
+      'data',
+      (raw) => {
+        const data = raw
+        switch (data.type) {
+          case 'BOSS_ZHIPIN_COOKIE_COLLECTED': {
+            mainWindow?.webContents.send(data.type, data)
+            break
+          }
+          default: {
+            return
+          }
+        }
+      }
+    )
+
+    subProcessOfBossZhipinLoginPageWithPreloadExtension!.once('exit', () => {
+      mainWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
+      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
     })
+  })
+  ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', async () => {
+    try {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
+    } catch {
+      //
+    } finally {
+      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
+    }
+  })
+
+  ipcMain.handle('check-boss-zhipin-cookie-file', () => {
+    const cookies = readStorageFile('boss-cookies.json')
+    return checkCookieListFormat(cookies)
   })
 
   mainWindow!.once('closed', () => {
