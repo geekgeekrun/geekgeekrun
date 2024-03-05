@@ -1,4 +1,3 @@
-import { is } from '@electron-toolkit/utils'
 import electron from 'electron'
 import * as os from 'node:os'
 import * as fs from 'node:fs'
@@ -39,7 +38,7 @@ export default async function findAndLocateExistedChromiumExecutable(): Promise<
 
   // For other, use findChrome
   let findChrome: typeof import('find-chrome-bin').findChrome
-  if (is.dev) {
+  if (process.env.NODE_ENV === 'development') {
     findChrome = (await import('find-chrome-bin')).findChrome
   } else {
     findChrome = (

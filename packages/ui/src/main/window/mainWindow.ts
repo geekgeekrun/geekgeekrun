@@ -1,7 +1,6 @@
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import * as childProcess from 'node:child_process'
-import { is } from '@electron-toolkit/utils'
 import {
   ensureConfigFileExist,
   ensureStorageFileExist,
@@ -40,7 +39,7 @@ export function createMainWindow(): void {
     }
   })
 
-  is.dev && mainWindow.webContents.openDevTools()
+  process.env.NODE_ENV === 'development' && mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -53,7 +52,7 @@ export function createMainWindow(): void {
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  if (process.env.NODE_ENV === 'development' && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))

@@ -2,7 +2,6 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as fs from 'node:fs'
 import type { InstalledBrowser } from '@puppeteer/browsers'
-import { is } from '@electron-toolkit/utils'
 import electron from 'electron'
 import { saveLastUsedAndAvailableBrowserInfo, BrowserInfo } from './history-utils'
 
@@ -15,7 +14,7 @@ const cacheDir = path.join(
 
 const getPuppeteerManagerModule = async () => {
   let puppeteerManager
-  if (is.dev) {
+  if (process.env.NODE_ENV === 'development') {
     puppeteerManager = await import('@puppeteer/browsers')
   } else {
     puppeteerManager = (
