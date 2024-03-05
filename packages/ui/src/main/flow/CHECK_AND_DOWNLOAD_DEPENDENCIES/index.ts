@@ -24,11 +24,19 @@ export enum DOWNLOAD_ERROR_EXIT_CODE {
 }
 
 async function findAndLocateExistedChromiumExecutable(): Promise<BrowserInfo | null> {
-  const worker: Worker = new CheckAndLocateExistedChromiumExecutableWorker()
-  worker.on('message', () => {
-    debugger
+  return new Promise((resolve, reject) => {
+    const worker: Worker = new CheckAndLocateExistedChromiumExecutableWorker()
+    worker.once('message', (data) => {
+      if (data.type === 'RESULT') {
+        resolve(data.data)
+      }
+    })
+    worker.once('message', (data) => {
+      if (data.type === 'ERROR') {
+        reject(data.error)
+      }
+    })
   })
-  // TODO:
 };
 
 export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo | null> => {
@@ -38,14 +46,12 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   }
   // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
   try {
-    debugger
     const existedOne = (await findAndLocateExistedChromiumExecutable())
     await saveLastUsedAndAvailableBrowserInfo(existedOne)
     // save its path
     return existedOne
   } catch (err) {
     console.error(err)
-    debugger
     console.log('no existed browser path found')
   }
   // find existed browser - the fallback one
