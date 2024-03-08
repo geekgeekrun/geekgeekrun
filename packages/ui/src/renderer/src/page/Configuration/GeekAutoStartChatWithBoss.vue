@@ -28,9 +28,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
-import router from '../../router/index'
-import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
-import { mountGlobalDialog as mountWaitForLoginDialog } from '@renderer/features/WaitForLoginDialog/operations'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 const formContent = ref({
   dingtalkRobotAccessToken: '',
@@ -67,7 +66,7 @@ const handleSubmit = async () => {
       })
       const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
       if (Object.values(checkDependenciesResult).includes(false)) {
-        mountDependenciesSetupProgressIndicatorDialog(checkDependenciesResult)
+        router.replace('/')
         // TODO: should continue interrupted task
       }
     }
@@ -89,7 +88,7 @@ const handleExpectCompaniesInputBlur = (event) => {
 }
 
 const handleClickLaunchLogin = () => {
-  mountWaitForLoginDialog()
+  router.replace('/cookieAssistant')
 }
 </script>
 

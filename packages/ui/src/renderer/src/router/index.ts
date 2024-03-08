@@ -1,12 +1,11 @@
 import { defineComponent, h } from 'vue'
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
+import BootstrapSplash from '@renderer/page/BootstrapSplash/index.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
-    path: '/',
-    component: defineComponent({ setup: () => h('div') }),
-    redirect: '/configuration',
-    children: []
+    path: '/cookieAssistant',
+    component: () => import('@renderer/page/CookieAssistant/index.vue')
   },
   {
     path: '/configuration',
@@ -34,7 +33,21 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
-  }
+  },
+  {
+    path: '/',
+    component: BootstrapSplash,
+    children: [
+      // {
+      //   path: '/',
+      //   component: () => defineComponent({ setup: () => () => h('div') })
+      // },
+      {
+        path: '/downloadingDependencies',
+        component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue')
+      }
+    ]
+  },
 ]
 
 const router = createRouter({

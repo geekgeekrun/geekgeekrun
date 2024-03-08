@@ -2,9 +2,8 @@
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted } from 'vue'
-import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
-import { mountGlobalDialog as mountWaitForLoginDialog } from '@renderer/features/WaitForLoginDialog/operations'
-
+import { useRouter } from 'vue-router'
+const router = useRouter()
 const unmountedCbs: Array<InstanceType<typeof Function>> = []
 onUnmounted(() => {
   while (unmountedCbs.length) {
@@ -14,31 +13,27 @@ onUnmounted(() => {
     } catch {}
   }
 })
+const goToCheckBossZhipinCookieFile = () => router.replace('/cookieAssistant')
 onMounted(() => {
-  electron.ipcRenderer.on('check-boss-zhipin-cookie-file', mountWaitForLoginDialog)
+  electron.ipcRenderer.on('check-boss-zhipin-cookie-file', goToCheckBossZhipinCookieFile)
 })
 onUnmounted(() => {
-  electron.ipcRenderer.removeListener('check-boss-zhipin-cookie-file', mountWaitForLoginDialog)
+  electron.ipcRenderer.removeListener(
+    'check-boss-zhipin-cookie-file',
+    goToCheckBossZhipinCookieFile
+  )
 })
 ;(async () => {
   const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
   if (Object.values(checkDependenciesResult).includes(false)) {
-    const processWaitee = Promise.withResolvers()
-    mountDependenciesSetupProgressIndicatorDialog({
-      checkDependenciesResult, processWaitee
-    })
-
-    await processWaitee.promise
+    router.replace('/')
+    return
   }
 
   const isCookieFileValid = await electron.ipcRenderer.invoke('check-boss-zhipin-cookie-file')
   if (!isCookieFileValid) {
-    const processWaitee = Promise.withResolvers()
-    mountWaitForLoginDialog({
-      processWaitee
-    })
-
-    await processWaitee.promise
+    router.replace('/cookieAssistant')
+    return
   }
 })()
 </script>
