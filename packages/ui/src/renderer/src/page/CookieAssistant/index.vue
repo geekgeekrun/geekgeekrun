@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <h1>Cookie 配置助手</h1>
+  <div class="cookie-assistant-page">
+    <div ml1em mt1em mb1em >Cookie 助手</div>
     <el-alert
       v-if="cookieInvalid"
       type="warning"
@@ -10,21 +10,17 @@
       由于您是首次使用本程序，或者您之前使用的Boss直聘账号登录状态失效，因此您需要重新获取登录凭证。
     </el-alert>
     <div ml1em mt1em line-height-normal>
-      如果您了解如何获取Cookie、了解有效的Cookie格式，可以直接在下方输入框中进行编辑。<br />
-      手动编辑较为麻烦，建议您打开已登录过Boss直聘的浏览器，使用
-      <a
+      如果您了解如何获取Cookie、了解有效的Cookie格式，可以直接在下方输入框中进行编辑。由于手动编辑较为麻烦，建议您打开已登录过Boss直聘的浏览器，使用<a
         color-blue
         decoration-none
         href="javascript:void(0)"
         @click.prevent="handleEditThisCookieExtensionStoreLinkClick"
         >EditThisCookie 扩展程序</a
-      >
-      复制Cookie，然后粘贴在下方输入框中。<br />
-      格式为被序列化为JSON的数组，不含两侧引号。
+      >复制Cookie，然后粘贴在下方输入框中。文本格式为被序列化为JSON的数组，不含两侧引号。
     </div>
     <br />
     <div ml1em line-height-normal>
-      如果您不了解Cookie相关概念，或者不能访问Chrome扩展程序商店下载EditThisCookie来获取Cookie，请按照以下步骤进行操作：
+      如果您不了解Cookie相关概念，或者期望操作简单一些，请按照以下步骤进行操作：
     </div>
     <ol lh-2em mt-0>
       <li>
@@ -225,6 +221,13 @@ onUnmounted(() => {
   electron.ipcRenderer.send('kill-bosszhipin-login-page-with-preload-extension')
 })
 </script>
+
+<style lang="scss" scoped>
+.cookie-assistant-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+</style>
 
 <style lang="scss">
 .cookie-form.el-form {
