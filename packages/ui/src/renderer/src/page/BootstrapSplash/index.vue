@@ -10,22 +10,25 @@
 
 <script lang="ts" setup>
 import { useRouter } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
 const router = useRouter()
 
-onMounted(async () => {
-  const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
-  const downloadProcessWaitee = Promise.withResolvers()
+const checkDependenciesResult = ref({})
+const downloadProcessWaitee = ref(null)
 
-  if (Object.values(checkDependenciesResult).includes(false)) {
+onMounted(async () => {
+  checkDependenciesResult.value = await electron.ipcRenderer.invoke('check-dependencies')
+  downloadProcessWaitee.value = Promise.withResolvers()
+
+  if (Object.values(checkDependenciesResult.value).includes(false)) {
     router.replace('/downloadingDependencies')
   } else {
-    downloadProcessWaitee.resolve()
+    downloadProcessWaitee.value!.resolve()
   }
 
-  downloadProcessWaitee.promise.then(async () => {
+  downloadProcessWaitee.value!.promise.then(async () => {
     const isCookieFileValid = await electron.ipcRenderer.invoke('check-boss-zhipin-cookie-file')
     if (!isCookieFileValid) {
       router.replace('/cookieAssistant')

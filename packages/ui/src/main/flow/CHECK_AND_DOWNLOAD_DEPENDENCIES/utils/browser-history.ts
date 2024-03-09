@@ -4,8 +4,8 @@ import * as fs from 'fs'
 import * as fsPromise from 'fs/promises'
 
 export interface BrowserInfo {
-  browser: string;
-  executablePath: string;
+  browser: string
+  executablePath: string
 }
 
 const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
@@ -27,7 +27,7 @@ export const getLastUsedAndAvailableBrowser = async (): Promise<BrowserInfo | nu
   }
   try {
     const fileContent = (await fsPromise.readFile(lastUsedBrowserRecordFilePath)).toString()
-    const [path, browser] = fileContent.split('\n').map(it => it.trim())
+    const [path, browser] = fileContent.split('\n').map((it) => it.trim())
     if (!path || !fs.existsSync(path)) {
       await removeLastUsedAndAvailableBrowserPath()
       return null
@@ -48,10 +48,8 @@ export const saveLastUsedAndAvailableBrowserInfo = async (browserInfo: BrowserIn
       await fsPromise.mkdir(runtimeFolderPath)
     }
     await fsPromise.writeFile(
-      lastUsedBrowserRecordFilePath, [
-        browserInfo.executablePath,
-        browserInfo.browser
-      ].join('\n')
+      lastUsedBrowserRecordFilePath,
+      [browserInfo.executablePath, browserInfo.browser].join('\n')
     )
   } catch {
     console.warn('lastUsedBrowserRecordFile write error')

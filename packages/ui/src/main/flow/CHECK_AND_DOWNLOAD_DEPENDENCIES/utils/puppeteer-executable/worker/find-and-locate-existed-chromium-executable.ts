@@ -1,8 +1,8 @@
 import { parentPort } from 'node:worker_threads'
-import findAndLocateExistedChromiumExecutable from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/check-and-locate-existed-chromium-executable'
+import { findAndLocateExistedChromiumExecutableSync } from '../index'
 ;(async () => {
   try {
-    const result = await findAndLocateExistedChromiumExecutable()
+    const result = await findAndLocateExistedChromiumExecutableSync()
     parentPort?.postMessage({
       type: 'RESULT',
       data: result

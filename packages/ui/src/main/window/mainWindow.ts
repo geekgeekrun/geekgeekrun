@@ -14,10 +14,8 @@ import {
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../common/utils/cookie'
-import {
-  DOWNLOAD_ERROR_EXIT_CODE,
-  getAnyAvailablePuppeteerExecutable
-} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
+import { getAnyAvailablePuppeteerExecutable } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
+import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/index'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 let mainWindow: BrowserWindow | null = null
 
