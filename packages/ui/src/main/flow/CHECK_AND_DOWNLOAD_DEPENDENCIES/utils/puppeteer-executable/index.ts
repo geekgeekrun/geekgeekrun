@@ -118,7 +118,7 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   }
   // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
   try {
-    const existedOne = await findAndLocateExistedChromiumExecutable()
+    const existedOne = await findAndLocateUserInstalledChromiumExecutable()
     await saveLastUsedAndAvailableBrowserInfo(existedOne)
     // save its path
     return existedOne
@@ -139,7 +139,7 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   return null
 }
 
-export async function findAndLocateExistedChromiumExecutableSync(): Promise<BrowserInfo> {
+export async function findAndLocateUserInstalledChromiumExecutableSync(): Promise<BrowserInfo> {
   const exceptChromiumMainVersion = Number(EXPECT_CHROMIUM_BUILD_ID.split('.')[0])
   // For windows, try to find Edge(chromium)
   if (os.platform() === 'win32') {
@@ -193,7 +193,7 @@ export async function findAndLocateExistedChromiumExecutableSync(): Promise<Brow
   }
 }
 
-export async function findAndLocateExistedChromiumExecutable(): Promise<BrowserInfo> {
+export async function findAndLocateUserInstalledChromiumExecutable(): Promise<BrowserInfo> {
   return new Promise((resolve, reject) => {
     const worker: Worker = new CheckAndLocateExistedChromiumExecutableWorker()
     worker.once('message', (data) => {
