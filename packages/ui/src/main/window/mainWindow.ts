@@ -4,7 +4,6 @@ import * as childProcess from 'node:child_process'
 import {
   ensureConfigFileExist,
   ensureStorageFileExist,
-
   configFileNameList,
   readConfigFile,
   writeConfigFile,
@@ -28,8 +27,8 @@ export function createMainWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
       ? {
-        /* icon */
-      }
+          /* icon */
+        }
       : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -67,7 +66,7 @@ export function createMainWindow(): void {
       return readConfigFile(fileName)
     })
     const result = {
-      config: {},
+      config: {}
     }
 
     configFileNameList.forEach((fileName, index) => {
@@ -109,11 +108,14 @@ export function createMainWindow(): void {
     if (subProcessOfPuppeteer) {
       return
     }
-
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+    }
     const subProcessEnv = {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss',
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: subProcessEnv,
@@ -168,7 +170,7 @@ export function createMainWindow(): void {
     }
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit',
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit'
     }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],
@@ -191,7 +193,7 @@ export function createMainWindow(): void {
             }
             case 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR': {
               console.error(data)
-              break;
+              break
             }
             default: {
               return
