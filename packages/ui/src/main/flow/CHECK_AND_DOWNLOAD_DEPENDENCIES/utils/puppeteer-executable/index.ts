@@ -2,7 +2,6 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as fs from 'node:fs'
 import type { InstalledBrowser } from '@puppeteer/browsers'
-import electron from 'electron'
 import {
   saveLastUsedAndAvailableBrowserInfo,
   BrowserInfo,
@@ -14,6 +13,8 @@ import CheckAndLocateExistedChromiumExecutableWorker from './worker/find-and-loc
 import { type Worker } from 'worker_threads'
 
 const getPuppeteerManagerModule = async () => {
+  const electron = await import('electron')
+
   let puppeteerManager
   if (process.env.NODE_ENV === 'development') {
     puppeteerManager = await import('@puppeteer/browsers')
@@ -140,6 +141,8 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
 }
 
 export async function findAndLocateUserInstalledChromiumExecutableSync(): Promise<BrowserInfo> {
+  const electron = await import('electron')
+
   const exceptChromiumMainVersion = Number(EXPECT_CHROMIUM_BUILD_ID.split('.')[0])
   // For windows, try to find Edge(chromium)
   if (os.platform() === 'win32') {
