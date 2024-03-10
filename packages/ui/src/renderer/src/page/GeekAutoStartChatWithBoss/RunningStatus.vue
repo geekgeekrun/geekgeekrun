@@ -17,6 +17,7 @@
 import { ref, onUnmounted, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FlyingCompanyLogoList from '../../features/FlyingCompanyLogoList/index.vue'
+import { ElMessage } from 'element-plus';
 
 const { ipcRenderer } = electron
 const router = useRouter()
