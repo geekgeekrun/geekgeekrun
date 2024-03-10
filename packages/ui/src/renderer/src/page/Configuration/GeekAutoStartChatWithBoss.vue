@@ -28,9 +28,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
-import router from '../../router/index'
-import { mountGlobalDialog as mountDependenciesSetupProgressIndicatorDialog } from '@renderer/features/DependenciesSetupProgressIndicatorDialog/operations'
-import { mountGlobalDialog as mountWaitForLoginDialog } from '@renderer/features/WaitForLoginDialog/operations'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 const formContent = ref({
   dingtalkRobotAccessToken: '',
@@ -51,28 +50,7 @@ const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
 
-  try {
-    const res = await electron.ipcRenderer.invoke(
-      'run-geek-auto-start-chat-with-boss',
-      JSON.stringify(formContent.value)
-    )
-
-    if (res.type === 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED') {
-      router.replace('/geekAutoStartChatWithBoss/runningStatus')
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
-      ElMessage.error({
-        message: `核心组件损坏，正在尝试修复`
-      })
-      const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
-      if (Object.values(checkDependenciesResult).includes(false)) {
-        mountDependenciesSetupProgressIndicatorDialog(checkDependenciesResult)
-        // TODO: should continue interrupted task
-      }
-    }
-    console.error(err)
-  }
+  router.replace('/geekAutoStartChatWithBoss/prepareRun')
 }
 const handleSave = async () => {
   await formRef.value!.validate()
@@ -89,7 +67,7 @@ const handleExpectCompaniesInputBlur = (event) => {
 }
 
 const handleClickLaunchLogin = () => {
-  mountWaitForLoginDialog()
+  router.replace('/cookieAssistant')
 }
 </script>
 

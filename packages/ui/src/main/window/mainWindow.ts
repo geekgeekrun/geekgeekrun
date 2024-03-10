@@ -1,11 +1,9 @@
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import * as childProcess from 'node:child_process'
-import { is } from '@electron-toolkit/utils'
 import {
   ensureConfigFileExist,
   ensureStorageFileExist,
-
   configFileNameList,
   readConfigFile,
   writeConfigFile,
@@ -15,10 +13,8 @@ import {
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../common/utils/cookie'
-import {
-  DOWNLOAD_ERROR_EXIT_CODE,
-  getAnyAvailablePuppeteerExecutable
-} from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES'
+import { getAnyAvailablePuppeteerExecutable } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
+import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/index'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 let mainWindow: BrowserWindow | null = null
 
@@ -31,8 +27,8 @@ export function createMainWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
       ? {
-        /* icon */
-      }
+          /* icon */
+        }
       : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -40,7 +36,7 @@ export function createMainWindow(): void {
     }
   })
 
-  is.dev && mainWindow.webContents.openDevTools()
+  process.env.NODE_ENV === 'development' && mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -53,7 +49,7 @@ export function createMainWindow(): void {
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  if (process.env.NODE_ENV === 'development' && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
@@ -70,7 +66,7 @@ export function createMainWindow(): void {
       return readConfigFile(fileName)
     })
     const result = {
-      config: {},
+      config: {}
     }
 
     configFileNameList.forEach((fileName, index) => {
@@ -106,17 +102,28 @@ export function createMainWindow(): void {
 
   // const currentExecutablePath = app.getPath('exe')
   // console.log(currentExecutablePath)
+  ipcMain.handle('prepare-run-geek-auto-start-chat-with-boss', async () => {
+    mainWindow?.webContents.send('locating-puppeteer-executable')
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+    }
+    mainWindow?.webContents.send('puppeteer-executable-is-located')
+  })
 
   let subProcessOfPuppeteer: ChildProcess | null = null
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
     if (subProcessOfPuppeteer) {
       return
     }
-
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+    }
     const subProcessEnv = {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss',
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
       env: subProcessEnv,
@@ -171,7 +178,7 @@ export function createMainWindow(): void {
     }
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit',
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit'
     }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],
@@ -194,7 +201,7 @@ export function createMainWindow(): void {
             }
             case 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR': {
               console.error(data)
-              break;
+              break
             }
             default: {
               return

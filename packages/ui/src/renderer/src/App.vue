@@ -1,6 +1,8 @@
 <template>
   <el-config-provider :locale="zhCn">
-    <RouterView />
+    <Suspense>
+      <RouterView />
+    </Suspense>
   </el-config-provider>
 </template>
 

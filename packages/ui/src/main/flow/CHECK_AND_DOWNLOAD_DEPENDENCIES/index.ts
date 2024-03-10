@@ -1,51 +1,12 @@
 import { app } from 'electron'
-import checkAndDownloadPuppeteerExecutable, {
-  checkCachedPuppeteerExecutable,
-  getExpectCachedPuppeteerExecutable
-} from './check-and-download-puppeteer-executable'
+import { checkAndDownloadPuppeteerExecutable } from './utils/puppeteer-executable/index'
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
-import {
-  removeLastUsedAndAvailableBrowserPath,
-  getLastUsedAndAvailableBrowser,
-  saveLastUsedAndAvailableBrowserInfo,
-  BrowserInfo
-} from './history-utils'
-import findAndLocateExistedChromiumExecutable from './check-and-locate-existed-chromium-executable'
-import {
-  sleep
-} from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   NO_ERROR = 0,
   DOWNLOAD_ERROR = 1
-}
-
-export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo | null> => {
-  const lastUsedOne = await getLastUsedAndAvailableBrowser()
-  if (lastUsedOne) {
-    return lastUsedOne
-  }
-  // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
-  try {
-    const existedOne = (await findAndLocateExistedChromiumExecutable())
-    await saveLastUsedAndAvailableBrowserInfo(existedOne)
-    // save its path
-    return existedOne
-  } catch {
-    console.log('no existed browser path found')
-  }
-  // find existed browser - the fallback one
-  if (await checkCachedPuppeteerExecutable()) {
-    const cachedOne = await getExpectCachedPuppeteerExecutable()
-    await saveLastUsedAndAvailableBrowserInfo(cachedOne)
-
-    return cachedOne
-  }
-
-  // if no one available, then return null and remove last used browser
-  await removeLastUsedAndAvailableBrowserPath()
-  return null
 }
 
 export const checkAndDownloadDependenciesForInit = async () => {

@@ -3,11 +3,6 @@ import { main, loginEventBus } from '@geekgeekrun/launch-bosszhipin-login-page-w
 import { pipeWriteRegardlessError } from './utils/pipe'
 import fs from "node:fs";
 
-export enum DOWNLOAD_ERROR_EXIT_CODE {
-  NO_ERROR = 0,
-  DOWNLOAD_ERROR = 1
-}
-
 export const launchBossZhipinLoginPageWithPreloadExtension = async () => {
   process.on('disconnect', () => app.exit())
   app.dock?.hide()

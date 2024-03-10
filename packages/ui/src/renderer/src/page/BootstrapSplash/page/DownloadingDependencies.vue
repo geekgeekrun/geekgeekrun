@@ -1,20 +1,12 @@
 <template>
-  <el-dialog
-    v-bind="$attrs"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    :show-close="false"
-    @open="handleDialogOpen"
-  >
-    <template v-if="!copiedDependenciesStatus.puppeteerExecutableAvailable">
-      <div mb14px>正在下载核心组件</div>
-      <el-progress
-        :percentage="browserDownloadPercentage"
-        :format="(n) => `${n.toFixed(1)}%`"
-        :stroke-width="10"
-      />
-    </template>
-  </el-dialog>
+  <div v-if="!dependenciesStatus.puppeteerExecutableAvailable">
+    <div mb14px>正在下载核心组件</div>
+    <el-progress
+      :percentage="browserDownloadPercentage"
+      :format="(n) => `${n.toFixed(1)}%`"
+      :stroke-width="10"
+    />
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -22,22 +14,12 @@ import { ref, onUnmounted, PropType } from 'vue'
 import { ElMessageBox } from 'element-plus'
 
 const props = defineProps({
-  dispose: Function,
   dependenciesStatus: {
     type: Object as PropType<Record<string, boolean>>,
     default: () => ({})
   },
   processWaitee: Object
 })
-
-// shallow copy
-const copiedDependenciesStatus = {
-  ...props.dependenciesStatus
-}
-
-const handleDialogOpen = () => {
-  browserDownloadPercentage.value = 0
-}
 
 const browserDownloadPercentage = ref(0)
 const handleBrowserDownloadProgress = (ev, { downloadedBytes, totalBytes }) => {
@@ -63,11 +45,11 @@ const processDownloadBrowser = async () => {
 
 const promiseList: Array<Promise<void>> = []
 const processTasks = async () => {
-  if (!copiedDependenciesStatus.puppeteerExecutableAvailable) {
+  if (!props.dependenciesStatus.puppeteerExecutableAvailable) {
     const p = processDownloadBrowser()
     promiseList.push(p)
     p.then(() => {
-      copiedDependenciesStatus.puppeteerExecutableAvailable = true
+      props.dependenciesStatus.puppeteerExecutableAvailable = true
     })
   }
 
@@ -77,7 +59,6 @@ const processTasks = async () => {
       p.then(() => {
         if (!promiseList.length) {
           props.processWaitee?.resolve?.()
-          props.dispose?.()
         }
       })
       await p
@@ -95,7 +76,6 @@ const processTasks = async () => {
         .catch(() => {
           // FIXME: should exit app here
           promiseList.length = 0
-          props.dispose?.()
         })
     }
   }

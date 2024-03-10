@@ -3,8 +3,8 @@ import { app } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
 import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as fs from 'fs'
-import { pipeWriteRegardlessError } from './utils/pipe'
-import { getAnyAvailablePuppeteerExecutable } from './CHECK_AND_DOWNLOAD_DEPENDENCIES'
+import { pipeWriteRegardlessError } from '../utils/pipe'
+import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 

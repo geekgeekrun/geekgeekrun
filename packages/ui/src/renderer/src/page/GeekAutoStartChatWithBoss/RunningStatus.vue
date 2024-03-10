@@ -1,5 +1,6 @@
 <template>
   <div class="geek-auto-start-chat-with-boss__running-status">
+    <FlyingCompanyLogoList class="flying-company-logo-list" />
     <div class="tip">
       <article>
         <h1>👋 BOSS炸弹正在运行</h1>
@@ -9,14 +10,14 @@
       </article>
       <el-button :disabled="isStopping" @click="handleStopButtonClick">停止开聊</el-button>
     </div>
-    <FlyingCompanyLogoList class="flying-company-logo-list" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FlyingCompanyLogoList from '../../features/FlyingCompanyLogoList/index.vue'
+import { ElMessage } from 'element-plus';
 
 const { ipcRenderer } = electron
 const router = useRouter()
@@ -40,16 +41,46 @@ onUnmounted(() => {
   ipcRenderer.removeListener('geek-auto-start-chat-with-boss-stopped', handleStopped)
   ipcRenderer.removeListener('geek-auto-start-chat-with-boss-stopping', handleStopping)
 })
+
+onMounted(async () => {
+  try {
+    await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
+      ElMessage.error({
+        message: `核心组件损坏，正在尝试修复`
+      })
+      const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
+      if (Object.values(checkDependenciesResult).includes(false)) {
+        router.replace('/')
+        // TODO: should continue interrupted task
+      }
+    }
+    console.error(err)
+  }
+})
 </script>
 
 <style scoped lang="scss">
 .geek-auto-start-chat-with-boss__running-status {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   .tip {
     margin: 0 auto;
+    margin-top: -15vh;
     max-width: 640px;
+  }
+  .flying-company-logo-list {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.25;
   }
 }
 </style>
