@@ -16,6 +16,7 @@ import { checkCookieListFormat } from '../../common/utils/cookie'
 import { getAnyAvailablePuppeteerExecutable } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/index'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { AUTO_CHAT_ERROR_EXIT_CODE } from '../flow/GEEK_AUTO_START_CHAT_WITH_BOSS'
 let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): void {
@@ -151,7 +152,7 @@ export function createMainWindow(): void {
 
       subProcessOfPuppeteer!.once('exit', (exitCode) => {
         subProcessOfPuppeteer = null
-        if (exitCode === 1) {
+        if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
           // means cannot find downloaded puppeteer
           reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
         } else {
@@ -211,7 +212,7 @@ export function createMainWindow(): void {
       )
       subProcessOfCheckAndDownloadDependencies!.once('exit', (exitCode) => {
         switch (exitCode) {
-          case DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR: {
+          case 0: {
             resolve(exitCode)
             break
           }

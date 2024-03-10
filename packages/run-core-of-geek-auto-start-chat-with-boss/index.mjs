@@ -17,10 +17,15 @@ const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
 }
 
+const AUTO_CHAT_ERROR_EXIT_CODE = {
+  COOKIE_INVALID: 81,
+  LOGIN_STATUS_INVALID: 82
+}
+
 ;(async () => {
   if (!bossCookies?.length) {
     console.error('There is no cookies. You can save a copy with EditThisCookie extension.')
-    process.exit(1)
+    process.exit(AUTO_CHAT_ERROR_EXIT_CODE.COOKIE_INVALID)
   }
   const hooks = {
     puppeteerLaunched: new SyncHook(),
@@ -39,7 +44,7 @@ const initPlugins = (hooks) => {
     } catch (err) {
       console.log(err)
       if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
-        process.exit(2)
+        process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
         break
       }
       await sleep(3000)

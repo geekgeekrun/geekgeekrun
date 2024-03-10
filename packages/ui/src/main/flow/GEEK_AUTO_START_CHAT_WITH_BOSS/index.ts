@@ -7,6 +7,11 @@ import { pipeWriteRegardlessError } from '../utils/pipe'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
+export enum AUTO_CHAT_ERROR_EXIT_CODE {
+  PUPPETEER_IS_NOT_EXECUTABLE = 81,
+  LOGIN_STATUS_INVALID = 82
+}
+
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
@@ -47,13 +52,13 @@ export const runAutoChat = async () => {
     )
   } catch (err) {
     console.error(err)
-    app.exit(1)
+    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
     return
   }
 
   const isPuppeteerExecutable = !!(await getAnyAvailablePuppeteerExecutable())
   if (!isPuppeteerExecutable) {
-    app.exit(1)
+    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
     return
   }
 
@@ -90,7 +95,7 @@ export const runAutoChat = async () => {
     } catch (err) {
       console.log(err)
       if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
-        process.exit(2)
+        process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
         break
       }
       await sleep(3000)

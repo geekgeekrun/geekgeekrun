@@ -5,8 +5,7 @@ import { pipeWriteRegardlessError } from '../utils/pipe'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
-  NO_ERROR = 0,
-  DOWNLOAD_ERROR = 1
+  DOWNLOAD_ERROR = 80
 }
 
 export const checkAndDownloadDependenciesForInit = async () => {
@@ -84,7 +83,7 @@ export const checkAndDownloadDependenciesForInit = async () => {
       })
 
     await promiseWithResolver.promise
-    app.exit(DOWNLOAD_ERROR_EXIT_CODE.NO_ERROR)
+    app.exit()
   } catch (err) {
     console.error(err)
     pipeWriteRegardlessError(
