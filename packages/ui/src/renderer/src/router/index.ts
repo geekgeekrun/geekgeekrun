@@ -1,11 +1,13 @@
-import { defineComponent, h } from 'vue'
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import BootstrapSplash from '@renderer/page/BootstrapSplash/index.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/cookieAssistant',
-    component: () => import('@renderer/page/CookieAssistant/index.vue')
+    component: () => import('@renderer/page/CookieAssistant/index.vue'),
+    meta: {
+      title: 'Cookie 助手'
+    }
   },
   {
     path: '/configuration',
@@ -26,6 +28,13 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@renderer/page/GeekAutoStartChatWithBoss/index.vue'),
     children: [
       {
+        path: 'prepareRun',
+        component: () => import('@renderer/page/GeekAutoStartChatWithBoss/PrepareRun.vue'),
+        meta: {
+          title: 'BOSS炸弹 正在预热'
+        }
+      },
+      {
         path: 'runningStatus',
         component: () => import('@renderer/page/GeekAutoStartChatWithBoss/RunningStatus.vue'),
         meta: {
@@ -37,14 +46,16 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: BootstrapSplash,
+    meta: {
+      title: '薪想事成'
+    },
     children: [
-      // {
-      //   path: '/',
-      //   component: () => defineComponent({ setup: () => () => h('div') })
-      // },
       {
         path: '/downloadingDependencies',
-        component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue')
+        component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue'),
+        meta: {
+          title: '正在下载浏览器'
+        },
       }
     ]
   },

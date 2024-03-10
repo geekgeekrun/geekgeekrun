@@ -102,6 +102,14 @@ export function createMainWindow(): void {
 
   // const currentExecutablePath = app.getPath('exe')
   // console.log(currentExecutablePath)
+  ipcMain.handle('prepare-run-geek-auto-start-chat-with-boss', async () => {
+    mainWindow?.webContents.send('locating-puppeteer-executable')
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+    }
+    mainWindow?.webContents.send('puppeteer-executable-is-located')
+  })
 
   let subProcessOfPuppeteer: ChildProcess | null = null
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {

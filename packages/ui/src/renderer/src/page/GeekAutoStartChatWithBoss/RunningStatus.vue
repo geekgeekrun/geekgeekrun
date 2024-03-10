@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FlyingCompanyLogoList from '../../features/FlyingCompanyLogoList/index.vue'
 
@@ -39,6 +39,24 @@ ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', handleStopped)
 onUnmounted(() => {
   ipcRenderer.removeListener('geek-auto-start-chat-with-boss-stopped', handleStopped)
   ipcRenderer.removeListener('geek-auto-start-chat-with-boss-stopping', handleStopping)
+})
+
+onMounted(async () => {
+  try {
+    await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
+      ElMessage.error({
+        message: `核心组件损坏，正在尝试修复`
+      })
+      const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
+      if (Object.values(checkDependenciesResult).includes(false)) {
+        router.replace('/')
+        // TODO: should continue interrupted task
+      }
+    }
+    console.error(err)
+  }
 })
 </script>
 
