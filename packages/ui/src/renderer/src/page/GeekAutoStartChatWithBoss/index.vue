@@ -24,7 +24,7 @@ onMounted(() => {
     .then(() => {
       router.replace('/geekAutoStartChatWithBoss/runningStatus')
     })
-    .then(async (err) => {
+    .catch(async (err) => {
       if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
         ElMessage.error({
           message: `核心组件损坏，正在尝试修复`
