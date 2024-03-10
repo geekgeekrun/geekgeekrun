@@ -84,18 +84,14 @@ export async function mainLoop (hooks) {
     })
     hooks.puppeteerLaunched?.call()
   
-    page = await browser.newPage()
-    sleep(2000).then(() => {
-      page.bringToFront()
-    })
-  
+    page = (await browser.pages())[0]
     //set cookies
     hooks.cookieWillSet?.call(bossCookies)
     for(let i = 0; i < bossCookies.length; i++){
       await page.setCookie(bossCookies[i]);
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
-
+    await page.bringToFront()
     let userInfoResponse
     await Promise.all([
       page.goto(recommendJobPageUrl, { timeout: 0 }),

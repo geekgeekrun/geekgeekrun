@@ -5,6 +5,7 @@ import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runt
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -91,9 +92,8 @@ export const runAutoChat = async () => {
       if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
         process.exit(2)
         break
-      } else {
-        throw err
       }
+      await sleep(3000)
     }
   }
   closeBrowserWindow()

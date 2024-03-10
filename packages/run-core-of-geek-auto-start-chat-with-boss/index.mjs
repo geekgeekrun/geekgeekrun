@@ -9,6 +9,7 @@ import path from 'node:path'
 import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import JSON5 from 'json5'
 import { readConfigFile, readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 const bossCookies = readStorageFile('boss-cookies.json')
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
@@ -36,7 +37,12 @@ const initPlugins = (hooks) => {
     try {
       await mainLoop(hooks)
     } catch (err) {
-      console.error(err)
+      console.log(err)
+      if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
+        process.exit(2)
+        break
+      }
+      await sleep(3000)
     }
   }
 })()
