@@ -66,7 +66,6 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .flying-company-logo-list-container {
-  height: 600px;
   perspective: 600px;
   display: grid;
   align-items: center;
