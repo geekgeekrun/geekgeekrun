@@ -1,5 +1,5 @@
 import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/index.mjs'
-import { mainLoop } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
+import { mainLoop, closeBrowserWindow } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
 import {
   SyncHook,
   AsyncSeriesHook
@@ -22,7 +22,7 @@ const AUTO_CHAT_ERROR_EXIT_CODE = {
   LOGIN_STATUS_INVALID: 82
 }
 
-;(async () => {
+const main = async () => {
   if (!bossCookies?.length) {
     console.error('There is no cookies. You can save a copy with EditThisCookie extension.')
     process.exit(AUTO_CHAT_ERROR_EXIT_CODE.COOKIE_INVALID)
@@ -42,7 +42,6 @@ const AUTO_CHAT_ERROR_EXIT_CODE = {
     try {
       await mainLoop(hooks)
     } catch (err) {
-      console.log(err)
       if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
         process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
         break
@@ -50,4 +49,23 @@ const AUTO_CHAT_ERROR_EXIT_CODE = {
       await sleep(3000)
     }
   }
-})()
+}
+main()
+
+process.on('error', async (error) => {
+  closeBrowserWindow()
+  console.error('error')
+  console.error(error)
+  await sleep(3000)
+
+  main()
+})
+
+process.on('unhandledRejection', async (reason, promise) => {
+  closeBrowserWindow()
+  console.error('unhandledRejection')
+  console.error(reason, promise)
+  await sleep(3000)
+
+  main()
+});
