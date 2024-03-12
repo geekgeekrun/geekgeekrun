@@ -10,15 +10,14 @@ import {
 } from '../browser-history'
 import { getExecutableFileVersion } from '@geekgeekrun/utils/windows-only/file.mjs'
 import CheckAndLocateExistedChromiumExecutableWorker from './worker/find-and-locate-existed-chromium-executable?nodeWorker&url'
-import { type Worker } from 'worker_threads'
+import { type Worker, isMainThread } from 'node:worker_threads'
 
 const getPuppeteerManagerModule = async () => {
-  const electron = await import('electron')
-
   let puppeteerManager
   if (process.env.NODE_ENV === 'development') {
     puppeteerManager = await import('@puppeteer/browsers')
-  } else {
+  } else if (isMainThread) {
+    const electron = await import('electron')
     puppeteerManager = (
       await import(
         'file://' +
@@ -29,6 +28,9 @@ const getPuppeteerManagerModule = async () => {
           )
       )
     ).puppeteerManager
+  } else {
+    // TODO: Run from worker
+    debugger
   }
 
   return puppeteerManager
@@ -141,8 +143,6 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
 }
 
 export async function findAndLocateUserInstalledChromiumExecutableSync(): Promise<BrowserInfo> {
-  const electron = await import('electron')
-
   const exceptChromiumMainVersion = Number(EXPECT_CHROMIUM_BUILD_ID.split('.')[0])
   // For windows, try to find Edge(chromium)
   if (os.platform() === 'win32') {
@@ -172,7 +172,8 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
   let findChrome: typeof import('find-chrome-bin').findChrome
   if (process.env.NODE_ENV === 'development') {
     findChrome = (await import('find-chrome-bin')).findChrome
-  } else {
+  } else if (isMainThread) {
+    const electron = await import('electron')
     findChrome = (
       await import(
         'file://' +
@@ -183,6 +184,9 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
           )
       )
     ).findChromeBin.findChrome
+  } else {
+    // TODO: Run from worker
+    debugger
   }
   const targetBrowser = await findChrome({
     min: exceptChromiumMainVersion
