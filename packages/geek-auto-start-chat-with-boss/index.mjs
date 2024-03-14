@@ -120,6 +120,20 @@ export async function mainLoop (hooks) {
       await storeStorage(page).catch(() => void 0)
     }
 
+    // check set security question tip modal
+    let setSecurityQuestionTipModelProxy = await page.$('.dialog-wrap.dialog-account-safe')
+    if (
+      setSecurityQuestionTipModelProxy
+    ) {
+      await sleep(1000)
+      setSecurityQuestionTipModelProxy = await page.$('.dialog-wrap.dialog-account-safe')
+      const closeButtonProxy = await setSecurityQuestionTipModelProxy?.$('.close')
+
+      if (setSecurityQuestionTipModelProxy && closeButtonProxy) {
+        await closeButtonProxy.click()
+      }
+    }
+
     const INIT_START_EXCEPT_JOB_INDEX = 1
     let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     afterPageLoad: while (true) {
