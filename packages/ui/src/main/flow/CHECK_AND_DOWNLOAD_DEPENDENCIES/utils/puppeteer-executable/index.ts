@@ -9,7 +9,7 @@ import {
   removeLastUsedAndAvailableBrowserPath
 } from '../browser-history'
 import { getExecutableFileVersion } from '@geekgeekrun/utils/windows-only/file.mjs'
-import CheckAndLocateExistedChromiumExecutableWorker from './worker/find-and-locate-existed-chromium-executable?nodeWorker&url'
+import createCheckAndLocateExistedChromiumExecutableWorker from './worker/find-and-locate-existed-chromium-executable?nodeWorker&url'
 import { type Worker, isMainThread } from 'node:worker_threads'
 
 const getPuppeteerManagerModule = async () => {
@@ -29,8 +29,12 @@ const getPuppeteerManagerModule = async () => {
       )
     ).puppeteerManager
   } else {
-    // TODO: Run from worker
-    debugger
+    puppeteerManager = (
+      await import(
+        'file://' +
+          path.join(__dirname, '../../..', '/external-node-runtime-dependencies/index.mjs')
+      )
+    ).puppeteerManager
   }
 
   return puppeteerManager
@@ -185,8 +189,12 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
       )
     ).findChromeBin.findChrome
   } else {
-    // TODO: Run from worker
-    debugger
+    findChrome = (
+      await import(
+        'file://' +
+          path.join(__dirname, '../../..', '/external-node-runtime-dependencies/index.mjs')
+      )
+    ).findChromeBin.findChrome
   }
   const targetBrowser = await findChrome({
     min: exceptChromiumMainVersion
@@ -202,7 +210,12 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
 
 export async function findAndLocateUserInstalledChromiumExecutable(): Promise<BrowserInfo> {
   return new Promise((resolve, reject) => {
-    const worker: Worker = new CheckAndLocateExistedChromiumExecutableWorker()
+    const worker: Worker = createCheckAndLocateExistedChromiumExecutableWorker({
+      env: {
+        ...process.env,
+        RESOURCES_PATH: process.resourcesPath
+      }
+    })
     worker.once('message', (data) => {
       if (data.type === 'RESULT') {
         resolve(data.data)
