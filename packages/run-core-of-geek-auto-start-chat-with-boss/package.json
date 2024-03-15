@@ -6,6 +6,8 @@
   "module": "./index.mjs",
   "type": "module",
   "scripts": {
+    "start": "node ./daemon-main.mjs",
+    "start:bare": "node ./main.mjs"
   },
   "author": "geekgeekrun",
   "license": "ISC",
