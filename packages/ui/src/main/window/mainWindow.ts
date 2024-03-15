@@ -16,7 +16,7 @@ import { checkCookieListFormat } from '../../common/utils/cookie'
 import { getAnyAvailablePuppeteerExecutable } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { DOWNLOAD_ERROR_EXIT_CODE } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/index'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
-import { AUTO_CHAT_ERROR_EXIT_CODE } from '../flow/GEEK_AUTO_START_CHAT_WITH_BOSS'
+import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../common/enums/auto-start-chat'
 let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): void {
@@ -123,7 +123,7 @@ export function createMainWindow(): void {
     }
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBoss',
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossDaemon',
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
     subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {

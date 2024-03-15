@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "dev:geek-auto-start-chat-with-boss-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBoss electron-vite dev",
+    "dev:geek-auto-start-chat-with-boss-main-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBossMain electron-vite dev",
+    "dev:geek-auto-start-chat-with-boss-daemon-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBossDaemon electron-vite dev",
     "dev:check-and-download-dependencies-for-init-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=checkAndDownloadDependenciesForInit electron-vite dev",
     "dev:launch-bosszhipin-login-page-with-preload-extension-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=launchBossZhipinLoginPageWithPreloadExtension electron-vite dev",
     "build": "electron-vite build",

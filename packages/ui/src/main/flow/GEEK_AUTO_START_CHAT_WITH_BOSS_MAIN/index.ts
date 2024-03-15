@@ -6,11 +6,7 @@ import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
-
-export enum AUTO_CHAT_ERROR_EXIT_CODE {
-  PUPPETEER_IS_NOT_EXECUTABLE = 81,
-  LOGIN_STATUS_INVALID = 82
-}
+import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
 
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
