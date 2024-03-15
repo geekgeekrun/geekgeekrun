@@ -92,22 +92,27 @@ export async function mainLoop (hooks) {
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
     await page.bringToFront()
-    let userInfoResponse
-    await Promise.all([
-      page.goto(recommendJobPageUrl, { timeout: 0 }),
-      page.waitForResponse((response) => {
+    let userInfoPromise = page.waitForResponse((response) => {
         if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
           return true
         }
         return false
       }).then((res) => {
         return res.json()
-      }).then((res) => {
-        userInfoResponse = res
-      }),
+      })
+    await Promise.all([
+      page.goto(recommendJobPageUrl, { timeout: 60 * 1000 }),
       page.waitForNavigation(),
     ])
+    if (
+      page.url().startsWith('https://www.zhipin.com/web/common/403.html') ||
+      page.url().startsWith('https://www.zhipin.com/web/common/error.html')
+    ) {
+      throw new Error("ACCESS_IS_DENIED")
+    }
     hooks.pageLoaded?.call()
+
+    let userInfoResponse = await userInfoPromise
     hooks.userInfoResponse?.call(userInfoResponse)
 
     if (userInfoResponse.code !== 0) {
@@ -354,14 +359,16 @@ export async function mainLoop (hooks) {
     // ;await browser.close()
   } catch (err) {
     closeBrowserWindow()
-
-    console.error(err)
     throw err
   }
 }
 
 export async function closeBrowserWindow () {
   browser?.close()
+  const browserProcess = browser?.process()
+  if (browserProcess) {
+    process.kill(browserProcess.pid)
+  }
   browser = null
   page = null
 }
