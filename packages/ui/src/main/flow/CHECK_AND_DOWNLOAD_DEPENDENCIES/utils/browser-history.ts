@@ -11,6 +11,7 @@ export interface BrowserInfo {
 const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
 export const lastUsedBrowserRecordFilePath = path.join(
   runtimeFolderPath,
+  'storage',
   'last-used-browser-record'
 )
 /**
