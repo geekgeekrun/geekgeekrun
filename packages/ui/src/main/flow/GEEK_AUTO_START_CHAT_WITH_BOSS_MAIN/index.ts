@@ -15,6 +15,15 @@ import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 const { default: SqlitePlugin } = SqlitePluginModule
 
+const rerunInterval = (() => {
+  let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
+  if (isNaN(v)) {
+    v = 3000
+  }
+
+  return v
+})()
+
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
@@ -98,13 +107,26 @@ export const runAutoChat = async () => {
     try {
       await mainLoop(hooks)
     } catch (err) {
-      console.log(err)
-      if (err instanceof Error && err.message.includes('LOGIN_STATUS_INVALID')) {
-        process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
-        break
+      if (err instanceof Error) {
+        if (err.message.includes('LOGIN_STATUS_INVALID')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
+          break
+        }
+        if (err.message.includes('ERR_INTERNET_DISCONNECTED')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ERR_INTERNET_DISCONNECTED)
+          break
+        }
+        if (err.message.includes('ACCESS_IS_DENIED')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ACCESS_IS_DENIED)
+          break
+        }
       }
-      await sleep(3000)
+      closeBrowserWindow?.()
+      console.error(err)
+      console.log(
+        `[Run core main] An internal is caught, and browser will be restarted in ${rerunInterval}ms.`
+      )
+      await sleep(rerunInterval)
     }
   }
-  closeBrowserWindow()
 }
