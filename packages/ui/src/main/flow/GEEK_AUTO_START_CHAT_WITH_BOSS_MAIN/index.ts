@@ -8,10 +8,14 @@ import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPEND
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
 
+import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
+const { default: SqlitePlugin } = SqlitePluginModule
+
 const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.json')
 
 const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
+  new SqlitePlugin().apply(hooks)
 }
 
 let isParentProcessDisconnect = false
@@ -62,8 +66,9 @@ export const runAutoChat = async () => {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
+    userInfoResponse: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
-    newChatStartup: new SyncHook(['positionInfoDetail']),
+    newChatStartup: new AsyncSeriesHook(['positionInfoDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo'])

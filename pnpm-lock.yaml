@@ -103,6 +103,9 @@ importers:
       '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
         specifier: workspace:*
         version: link:../launch-bosszhipin-login-page-with-preload-extension
+      '@geekgeekrun/sqlite-plugin':
+        specifier: workspace:*
+        version: link:../sqlite-plugin
       '@geekgeekrun/utils':
         specifier: workspace:*
         version: link:../utils
