@@ -68,6 +68,7 @@ const main = async () => {
           break
         }
       }
+      closeBrowserWindow?.()
       console.error(err)
       console.log(`[Run core main] An internal is caught, and browser will be restarted in ${rerunInterval}ms.`)
       await sleep(rerunInterval)
