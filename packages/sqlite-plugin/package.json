@@ -11,7 +11,7 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "dev": "NODE_OPTIONS=\"-r ts-node/register --no-warnings\" node ./src/index",
+    "dev": "rimraf dist && tsc --outDir dist --watch true",
     "build": "rimraf dist && tsc --outDir dist",
     "postinstall": "npm run build"
   }
