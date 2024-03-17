@@ -26,18 +26,13 @@ export class JobInfo {
   })
   salaryMonth?: number;
 
-  @Column({
-    nullable: true
-  })
-  experienceYearLow?: number;
-
-  @Column({
-    nullable: true
-  })
-  experienceYearHigh?: number;
-
   @Column()
-  publishDate: Date;
+  experienceName: string;
+
+  @Column({
+    nullable: true
+  })
+  publishDate?: Date;
 
   @Column({
     nullable: true

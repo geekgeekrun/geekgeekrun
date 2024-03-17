@@ -6,7 +6,7 @@ export class ChatStartupLog {
   id: number;
 
   @Column()
-  encryptPositionId: string;
+  encryptJobId: string;
 
   @Column()
   encryptCurrentUserId: string;

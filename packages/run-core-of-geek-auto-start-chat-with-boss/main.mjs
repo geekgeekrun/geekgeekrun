@@ -51,7 +51,7 @@ const main = async () => {
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
-    newChatStartup: new SyncHook(['positionInfoDetail']),
+    newChatStartup: new AsyncSeriesHook(['positionInfoDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo'])

@@ -15,5 +15,5 @@ export class BossInfo {
   date: Date;
 
   @Column()
-  title: Date;
+  title: string;
 }

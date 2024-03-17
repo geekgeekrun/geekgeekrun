@@ -14,12 +14,12 @@ export class CompanyInfo {
   @Column({
     nullable: true
   })
-  scaleLow?: string;
+  scaleLow?: number;
   
   @Column({
     nullable: true
   })
-  scaleHeight?: string;
+  scaleHeight?: number;
 
   @Column({
     nullable: true

@@ -296,7 +296,7 @@ export async function mainLoop (hooks) {
                 throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
               }
             } else {
-              hooks.newChatStartup?.call(jobData)
+              await hooks.newChatStartup?.promise(jobData)
               blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
               
               await storeStorage(page).catch(() => void 0)
