@@ -23,6 +23,9 @@ importers:
       puppeteer-extra-plugin-stealth:
         specifier: 2.11.2
         version: 2.11.2(puppeteer-extra@3.3.6)
+      rimraf:
+        specifier: ^5.0.5
+        version: 5.0.5
       tapable:
         specifier: ^2.2.1
         version: 2.2.1
@@ -5099,6 +5102,14 @@ packages:
     hasBin: true
     dependencies:
       glob: 7.2.3
+
+  /rimraf@5.0.5:
+    resolution: {integrity: sha512-CqDakW+hMe/Bz202FPEymy68P+G50RfMQK+Qo5YUqc9SPipvbGjCGKd0RSKEelbsfQuw3g5NZDSrlZZAJurH1A==}
+    engines: {node: '>=14'}
+    hasBin: true
+    dependencies:
+      glob: 10.3.10
+    dev: false
 
   /roarr@2.15.4:
     resolution: {integrity: sha512-CHhPh+UNHD2GTXNYhPWLnU8ONHdI+5DI+4EYIAOaiD63rHeYlZvyh8P+in5999TTSFgUYuKUAjzRI4mdh/p+2A==}

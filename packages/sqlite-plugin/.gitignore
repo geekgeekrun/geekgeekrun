@@ -2,3 +2,4 @@ node_modules
 src/**/*.js
 src/**/*.js.map
 database.sqlite
+dist
