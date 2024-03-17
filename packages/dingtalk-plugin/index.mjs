@@ -17,7 +17,9 @@ export default class DingtalkPlugin {
         collectedMessageList[0].dingtalkRequestBody.text.content += `\n${dayjs(collectedMessageList[0].insertedTime).format('MM-DD HH:mm:ss')}\n\n【geekgeekrun】`
         requestDingtalkNotify(
           _this.dingtalkAccessToken, JSON.stringify(collectedMessageList[0].dingtalkRequestBody)
-        )
+        ).then(res => res.json()).then((res) => {
+          console.log('[DingtalkPlugin] Response: ', res)
+        }, () => void 0)
       } else {
         requestDingtalkNotify(
           _this.dingtalkAccessToken, JSON.stringify((createTextMessage(
@@ -25,7 +27,9 @@ export default class DingtalkPlugin {
               return `${it.dingtalkRequestBody.text.content}\n${dayjs(it.insertedTime).format('MM-DD HH:mm:ss')}\n`
             }).join('-----\n') + '\n【geekgeekrun】'
           )).dingtalkRequestBody)
-        )
+        ).then(res => res.json()).then((res) => {
+          console.log('[DingtalkPlugin] Response: ', res)
+        }, () => void 0)
       }
       collectedMessageList.length = 0
       sendQueueTimer = setTimeout(sendMergedMessage, interval)
