@@ -113,6 +113,7 @@ export async function mainLoop (hooks) {
     hooks.pageLoaded?.call()
 
     let userInfoResponse = await userInfoPromise
+    await hooks.userInfoResponse?.promise(userInfoResponse)
     if (userInfoResponse.code !== 0) {
       autoStartChatEventBus.emit('LOGIN_STATUS_INVALID', {
         userInfoResponse
@@ -121,7 +122,6 @@ export async function mainLoop (hooks) {
       throw new Error("LOGIN_STATUS_INVALID")
     } else {
       await storeStorage(page).catch(() => void 0)
-      await hooks.userInfoResponse?.promise(userInfoResponse)
     }
 
     // check set security question tip modal
