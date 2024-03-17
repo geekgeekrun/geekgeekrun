@@ -27,24 +27,33 @@ async function initDb() {
       JobInfo,
       JobInfoChangeLog,
       BossActiveStatusRecord,
-      UserInfo
+      UserInfo,
     ],
   });
   return appDataSource.initialize();
 }
 
 export default class SqlitePlugin {
-  initPromise: Promise<DataSource>
+  initPromise: Promise<DataSource>;
 
-  constructor () {
-    this.initPromise = initDb()
+  constructor() {
+    this.initPromise = initDb();
   }
-  apply (hooks) {
-    hooks.userInfoResponse.tapPromise(
-      'SqlitePlugin',
-      (userInfo) => new Promise((resolve, reject) => {
-        console.log(userInfo)
-      })
-    )
+  apply(hooks) {
+    hooks.userInfoResponse.tapPromise("SqlitePlugin", async (userInfoResponse) => {
+      if (userInfoResponse.code !== 0) {
+        return
+      }
+      const { zpData: userInfo } = userInfoResponse
+      console.log(userInfo);
+      const ds = await this.initPromise;
+      const userInfoRepository = ds.getRepository(UserInfo);
+
+      const user = new UserInfo();
+      user.encryptUserId = userInfo.encryptUserId
+      user.name = userInfo.name
+
+      return await userInfoRepository.save(user)
+    });
   }
 }
