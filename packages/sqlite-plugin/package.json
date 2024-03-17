@@ -2,6 +2,7 @@
   "name": "@geekgeekrun/sqlite-plugin",
   "version": "0.0.1",
   "description": "",
+  "main": "dist/index.js",
   "dependencies": {
     "reflect-metadata": "^0.2.1",
     "sqlite3": "^5.1.7",

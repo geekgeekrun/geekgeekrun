@@ -33,7 +33,18 @@ async function initDb() {
   return appDataSource.initialize();
 }
 
-(async () => {
-  const a = await initDb();
-  console.log(a);
-})();
+export default class SqlitePlugin {
+  initPromise: Promise<DataSource>
+
+  constructor () {
+    this.initPromise = initDb()
+  }
+  apply (hooks) {
+    hooks.userInfoResponse.tapPromise(
+      'SqlitePlugin',
+      (userInfo) => new Promise((resolve, reject) => {
+        console.log(userInfo)
+      })
+    )
+  }
+}

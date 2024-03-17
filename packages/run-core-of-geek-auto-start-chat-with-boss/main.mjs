@@ -14,6 +14,11 @@ import {
   AUTO_CHAT_ERROR_EXIT_CODE
 } from './enums.mjs'
 
+import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
+const {
+  default: SqlitePlugin
+} = SqlitePluginModule
+
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
@@ -32,6 +37,7 @@ const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.
 
 const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
+  new SqlitePlugin().apply(hooks)
 }
 
 const main = async () => {
@@ -43,6 +49,7 @@ const main = async () => {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
+    userInfoResponse: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
     newChatStartup: new SyncHook(['positionInfoDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
@@ -79,5 +86,7 @@ const main = async () => {
 (async () => {
   try {
     await main()
-  } catch {}
+  } catch(err) {
+    console.error(err)
+  }
 })()
