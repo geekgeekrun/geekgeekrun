@@ -8,7 +8,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import JSON5 from 'json5'
-import { readConfigFile, readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { readConfigFile, readStorageFile, getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import {
   AUTO_CHAT_ERROR_EXIT_CODE
@@ -37,7 +37,7 @@ const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.
 
 const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
-  new SqlitePlugin().apply(hooks)
+  new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
 }
 
 const main = async () => {

@@ -12,13 +12,13 @@ import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
 import { parseCompanyScale, parseSalary } from "./utils/parser";
 
-async function initDb() {
+async function initDb(dbFilePath) {
   const appDataSource = new DataSource({
     type: "sqlite",
     synchronize: true,
     logging: true,
     logger: "simple-console",
-    database: "database.sqlite",
+    database: dbFilePath,
     entities: [
       ChatStartupLog,
       BossInfo,
@@ -37,8 +37,8 @@ async function initDb() {
 export default class SqlitePlugin {
   initPromise: Promise<DataSource>;
 
-  constructor() {
-    this.initPromise = initDb();
+  constructor(dbFilePath) {
+    this.initPromise = initDb(dbFilePath);
   }
 
   userInfo = null
