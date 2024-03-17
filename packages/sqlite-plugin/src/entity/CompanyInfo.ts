@@ -1,13 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Index, PrimaryColumn } from "typeorm";
 
 @Entity()
 export class CompanyInfo {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Index("e-company-id-idx", { unique: true })
-  @Column()
-  encryptCompanyId: string;
+  @PrimaryColumn()
+  encryptedCompanyId: string;
   
   @Column()
   name: string;

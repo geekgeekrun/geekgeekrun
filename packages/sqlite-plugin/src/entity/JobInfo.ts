@@ -1,12 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, Unique, Index } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Unique, Index, PrimaryColumn } from "typeorm";
 
 @Entity()
 export class JobInfo {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Index("e-job-id-idx", { unique: true })
-  @Column()
+  @PrimaryColumn()
   encryptedJobId: string;
 
   @Column()
