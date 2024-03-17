@@ -13,6 +13,9 @@ export class BossInfo {
   encryptedCompanyId: string;
 
   @Column()
+  name: string;
+
+  @Column()
   date: Date;
 
   @Column()

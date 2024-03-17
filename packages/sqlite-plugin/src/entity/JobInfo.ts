@@ -15,25 +15,37 @@ export class JobInfo {
   @Column()
   positionName: string;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   salaryLow?: number;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   salaryHeight?: number;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   salaryMonth?: number;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   experienceYearLow?: number;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   experienceYearHigh?: number;
 
   @Column()
   publishDate: Date;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   degreeName?: string;
 
   @Column()

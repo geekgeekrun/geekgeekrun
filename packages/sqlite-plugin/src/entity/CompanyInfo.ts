@@ -15,15 +15,23 @@ export class CompanyInfo {
   @Column()
   brandName: string;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   scaleLow?: string;
   
-  @Column()
+  @Column({
+    nullable: true
+  })
   scaleHeight?: string;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   stageName?: string;
   
-  @Column()
+  @Column({
+    nullable: true
+  })
   industryName?: string;
 }
