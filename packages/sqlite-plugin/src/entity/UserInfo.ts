@@ -1,10 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Index } from "typeorm";
 
 @Entity()
 export class UserInfo {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index("e-user-id-idx", { unique: true })
   @Column()
   encryptedUserId: string;
 

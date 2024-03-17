@@ -1,10 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Index } from "typeorm";
 
 @Entity()
 export class BossInfo {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index("e-boss-id-idx", { unique: true })
   @Column()
   encryptedBossId: string;
 
