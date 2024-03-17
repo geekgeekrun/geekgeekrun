@@ -8,6 +8,8 @@ import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
 import { CompanyInfo } from "./entity/CompanyInfo";
 import { JobInfo } from "./entity/JobInfo";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
+import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
+import { UserInfo } from "./entity/UserInfo";
 
 async function initDb() {
   const appDataSource = new DataSource({
@@ -24,6 +26,8 @@ async function initDb() {
       CompanyInfoChangeLog,
       JobInfo,
       JobInfoChangeLog,
+      BossActiveStatusRecord,
+      UserInfo
     ],
   });
   return appDataSource.initialize();

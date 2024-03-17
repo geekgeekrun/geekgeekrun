@@ -1,16 +1,16 @@
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 
 @Entity()
-export class ChatStartupLog {
+export class BossActiveStatusRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  encryptedPositionId: string;
+  encryptedBossId: string;
 
   @Column()
-  encryptedCurrentUserId: string;
-
+  lastActiveStatus: string;
+  
   @Column()
-  date: Date;
+  updateDate: Date;
 }
