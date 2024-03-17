@@ -3,7 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, Index, PrimaryColumn } from "ty
 @Entity()
 export class CompanyInfo {
   @PrimaryColumn()
-  encryptedCompanyId: string;
+  encryptCompanyId: string;
   
   @Column()
   name: string;

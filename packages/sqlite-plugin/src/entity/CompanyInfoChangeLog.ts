@@ -6,7 +6,7 @@ export class CompanyInfoChangeLog {
   id: number;
 
   @Column()
-  encryptedCompanyId: string;
+  encryptCompanyId: string;
 
   @Column()
   updateTime: Date;

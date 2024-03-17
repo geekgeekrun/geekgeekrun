@@ -6,7 +6,7 @@ export class JobInfoChangeLog {
   id: number;
 
   @Column()
-  encryptedJobId: string;
+  encryptJobId: string;
 
   @Column()
   updateTime: Date;

@@ -6,7 +6,7 @@ export class BossInfoChangeLog {
   id: number;
 
   @Column()
-  encryptedBossId: string;
+  encryptBossId: string;
 
   @Column()
   updateTime: Date;

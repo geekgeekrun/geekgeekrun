@@ -6,7 +6,7 @@ export class BossActiveStatusRecord {
   id: number;
 
   @Column()
-  encryptedBossId: string;
+  encryptBossId: string;
 
   @Column()
   lastActiveStatus: string;

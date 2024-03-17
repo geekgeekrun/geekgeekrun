@@ -3,7 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, Unique, Index, PrimaryColumn } 
 @Entity()
 export class JobInfo {
   @PrimaryColumn()
-  encryptedJobId: string;
+  encryptJobId: string;
 
   @Column()
   jobName: string;
@@ -51,8 +51,8 @@ export class JobInfo {
   description: string;
 
   @Column()
-  encryptedBossId: string;
+  encryptBossId: string;
 
   @Column()
-  encryptedCompanyId: string;
+  encryptCompanyId: string;
 }

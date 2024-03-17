@@ -6,10 +6,10 @@ export class ChatStartupLog {
   id: number;
 
   @Column()
-  encryptedPositionId: string;
+  encryptPositionId: string;
 
   @Column()
-  encryptedCurrentUserId: string;
+  encryptCurrentUserId: string;
 
   @Column()
   date: Date;
