@@ -50,11 +50,7 @@ onMounted(async () => {
       ElMessage.error({
         message: `核心组件损坏，正在尝试修复`
       })
-      const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
-      if (Object.values(checkDependenciesResult).includes(false)) {
-        router.replace('/')
-        // TODO: should continue interrupted task
-      }
+      router.replace('/')
     }
     console.error(err)
   }
