@@ -192,6 +192,34 @@ export async function mainLoop (hooks) {
 
           let hasReachLastPage = false
   
+          let requestNextPagePromiseWithResolver = null
+          page.on(
+            'request',
+            function reqHandler (request) {
+              if (request.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json')) {
+                requestNextPagePromiseWithResolver = (() => {
+                  const o = {}
+                  o.promise = new Promise((resolve, reject) => {
+                    o.resolve = resolve
+                    o.reject = reject
+                  })
+                  return o
+                })()
+                page.off(reqHandler)
+
+                page.on(
+                  'response',
+                  function resHandler (response) {
+                    if (response.request() === request) {
+                      requestNextPagePromiseWithResolver?.resolve()
+                      page.off(resHandler)
+                    }
+                  }
+                )
+              }
+            }
+          )
+
           while (targetJobIndex < 0 && !hasReachLastPage) {
             // fetch new
             const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
@@ -201,19 +229,24 @@ export async function mainLoop (hooks) {
               windowInnerHeight / 2
             )
             let scrolledHeight = 0
-            const targetHeight = 3000
             const increase = 40 + Math.floor(30 * Math.random())
-            while (scrolledHeight < targetHeight) {
+
+            while (
+              !requestNextPagePromiseWithResolver &&
+              !hasReachLastPage
+            ) {
               scrolledHeight += increase
               await page.mouse.wheel({deltaY: increase});
               await sleep(1)
+              await requestNextPagePromiseWithResolver?.promise
+              hasReachLastPage = await page.evaluate(`
+                !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
+              `)
+              if (hasReachLastPage) {
+                console.log(`Arrive the terminal of the job list.`)
+              }
             }
-            hasReachLastPage = await page.evaluate(`
-              !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
-            `)
-            if (hasReachLastPage) {
-              console.log(`Arrive the terminal of the job list.`)
-            }
+            requestNextPagePromiseWithResolver = null
   
             await sleep(3000)
             jobListData = await page.evaluate(
