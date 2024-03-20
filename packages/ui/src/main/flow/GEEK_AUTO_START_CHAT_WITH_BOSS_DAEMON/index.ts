@@ -13,7 +13,7 @@ const rerunInterval = (() => {
 })()
 function runWithDaemon() {
   const subProcessOfCore = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-    stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
+    stdio: [process.stdin, process.stdout, process.stderr, 'pipe', 'ipc'],
     env: {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossMain'
