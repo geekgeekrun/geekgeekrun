@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { requireTypeorm } from "../utils/module-loader";
+const { Entity, PrimaryGeneratedColumn, Column } = requireTypeorm()
 
 @Entity()
 export class JobInfoChangeLog {

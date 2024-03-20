@@ -6,13 +6,13 @@
   "dependencies": {
     "reflect-metadata": "^0.2.1",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.20",
+    "typeorm": "0.3.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "scripts": {
     "dev": "rimraf dist && tsc --outDir dist --watch true",
     "build": "rimraf dist && tsc --outDir dist",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build || exit 0;"
   }
 }

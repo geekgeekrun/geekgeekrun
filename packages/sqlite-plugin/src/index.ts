@@ -1,5 +1,7 @@
 import "reflect-metadata";
-import { DataSource } from "typeorm";
+import { type DataSource } from "typeorm";
+import { parseCompanyScale, parseSalary } from "./utils/parser";
+import { requireTypeorm } from "./utils/module-loader";
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
@@ -10,9 +12,9 @@ import { JobInfo } from "./entity/JobInfo";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
-import { parseCompanyScale, parseSalary } from "./utils/parser";
 
-async function initDb(dbFilePath) {
+function initDb(dbFilePath) {
+  const { DataSource } = requireTypeorm()
   const appDataSource = new DataSource({
     type: "sqlite",
     synchronize: true,

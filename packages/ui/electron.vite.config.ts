@@ -9,7 +9,7 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', '@puppeteer/browsers', 'find-chrome-bin']
+        external: ['puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth', '@puppeteer/browsers', 'find-chrome-bin', 'typeorm']
       }
     },
     plugins: [
