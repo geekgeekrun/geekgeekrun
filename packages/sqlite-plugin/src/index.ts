@@ -13,6 +13,8 @@ import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
 
+import sqlite3 from 'sqlite3';
+
 function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
   const appDataSource = new DataSource({
@@ -21,6 +23,7 @@ function initDb(dbFilePath) {
     logging: true,
     logger: "simple-console",
     database: dbFilePath,
+    driver: sqlite3, // The important line
     entities: [
       ChatStartupLog,
       BossInfo,
