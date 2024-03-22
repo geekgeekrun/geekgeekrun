@@ -21,7 +21,7 @@ function runWithDaemon () {
       'main.mjs'
     )],
     {
-      stdio: [process.stdin, process.stdout, process.stderr, 'pipe', 'ipc'],
+      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
       env: {
         ...process.env,
         MAIN_BOSSGEEKGO_RERUN_INTERVAL: rerunInterval
