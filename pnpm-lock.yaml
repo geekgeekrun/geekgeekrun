@@ -70,6 +70,9 @@ importers:
 
   packages/sqlite-plugin:
     dependencies:
+      cli-highlight:
+        specifier: ^2.1.11
+        version: 2.1.11
       reflect-metadata:
         specifier: ^0.2.1
         version: 0.2.1
