@@ -12,8 +12,7 @@
     "find-chrome-bin": "^2.0.1",
     "puppeteer": "20.1.0",
     "puppeteer-extra": "3.3.6",
-    "puppeteer-extra-plugin-stealth": "2.11.2",
-    "typeorm": "0.3.11"
+    "puppeteer-extra-plugin-stealth": "2.11.2"
   },
   "packageManager": "npm"
 }

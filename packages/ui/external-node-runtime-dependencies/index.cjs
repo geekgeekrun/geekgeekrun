@@ -1,6 +1,5 @@
 Object.assign(module.exports, {
   puppeteerExtra: require('puppeteer-extra'),
   PuppeteerExtraPluginStealth: require('puppeteer-extra-plugin-stealth'),
-  puppeteerManager: require('@puppeteer/browsers'),
-  typeorm: require('typeorm')
+  puppeteerManager: require('@puppeteer/browsers')
 })
