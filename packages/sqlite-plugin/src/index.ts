@@ -15,7 +15,7 @@ import { UserInfo } from "./entity/UserInfo";
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
-void cliHighlight;
+Boolean(cliHighlight);
 
 function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
