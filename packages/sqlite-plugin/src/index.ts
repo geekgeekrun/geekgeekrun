@@ -74,7 +74,6 @@ export default class SqlitePlugin {
 
     hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo) => {
       console.log(_jobInfo);
-      debugger;
       const ds = await this.initPromise;
 
       const { bossInfo, brandComInfo, jobInfo } = _jobInfo;
