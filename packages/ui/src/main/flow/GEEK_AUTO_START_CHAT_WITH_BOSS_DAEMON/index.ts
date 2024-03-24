@@ -2,7 +2,7 @@ import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import childProcess from 'node:child_process'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
 import { app } from 'electron'
-import fs from 'node:fs'
+import fs, { WriteStream } from 'node:fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
 
@@ -20,6 +20,24 @@ function runWithDaemon() {
     env: {
       ...process.env,
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossMain'
+    }
+  })
+
+  subProcessOfCore!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
+    const data = raw
+    switch (data.type) {
+      case 'AUTO_START_CHAT_MAIN_PROCESS_STARTUP': {
+        pipeWriteRegardlessError(
+          subProcessOfCore!.stdio[3]! as WriteStream,
+          JSON.stringify({
+            type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'
+          })
+        )
+        break
+      }
+      default: {
+        return
+      }
     }
   })
 
@@ -47,7 +65,7 @@ function runWithDaemon() {
 let suicideTimer: NodeJS.Timeout | null = null
 const setSuicideTimer = () =>
   (suicideTimer = setTimeout(() => {
-    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.DAEMON_PROCESS_SUICIDE)
+    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.AUTO_START_CHAT_DAEMON_PROCESS_SUICIDE)
   }, 10000))
 const clearSuicideTimer = () => {
   if (suicideTimer) {
@@ -90,7 +108,7 @@ export function runAutoChatWithDaemon() {
   pipeWriteRegardlessError(
     pipe,
     JSON.stringify({
-      type: 'DAEMON_PROCESS_STARTUP'
+      type: 'AUTO_START_CHAT_DAEMON_PROCESS_STARTUP'
     })
   )
 }
