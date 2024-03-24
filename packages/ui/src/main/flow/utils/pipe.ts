@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import { type Stream } from 'stream'
+import { app } from 'electron'
 const pipeSet = new WeakSet<Stream>()
 
 export const pipeWriteRegardlessError = async (
@@ -10,8 +11,14 @@ export const pipeWriteRegardlessError = async (
   if (pipe && !pipeSet.has(pipe)) {
     pipeSet.add(pipe)
     pipe.on('error', (error) => {
-      console.log('pipe.write Error', error)
+      void error
     })
   }
-  return pipe?.write(chunk, option, () => {})
+  return pipe?.write(chunk, option, (error) => {
+    if (error) {
+      console.log('pipe.write Error', error)
+      app.exit(1)
+      process.exit(1)
+    }
+  })
 }
