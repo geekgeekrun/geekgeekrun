@@ -150,6 +150,9 @@ export const waitForProcessHandShakeAndRunAutoChat = () => {
   setSuicideTimer()
 
   const pipeForRead: fs.ReadStream = fs.createReadStream(null, { fd: 3 })
+  pipeForRead.on('error', () => {
+    return
+  })
   const pipeForReadWithJsonParser = pipeForRead.pipe(JSONStream.parse())
   pipeForReadWithJsonParser?.on('data', function waitForCanRun(data) {
     if (data.type === 'GEEK_AUTO_START_CHAT_CAN_BE_RUN') {
