@@ -130,7 +130,7 @@ export function createMainWindow(): void {
       env: subProcessEnv,
       stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
     })
-    console.log(subProcessOfPuppeteer)
+    // console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
         const data = raw
