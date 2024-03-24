@@ -135,7 +135,7 @@ export function createMainWindow(): void {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
         const data = raw
         switch (data.type) {
-          case 'DAEMON_PROCESS_STARTUP': {
+          case 'AUTO_START_CHAT_DAEMON_PROCESS_STARTUP': {
             subProcessOfPuppeteer!.stdio[3]!.write(
               JSON.stringify({
                 type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'

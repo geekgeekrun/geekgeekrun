@@ -3,8 +3,10 @@ const runMode = process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE
 ;(async () => {
   switch (runMode) {
     case 'geekAutoStartWithBossMain': {
-      const { runAutoChat } = await import('./flow/GEEK_AUTO_START_CHAT_WITH_BOSS_MAIN/index')
-      runAutoChat()
+      const { waitForProcessHandShakeAndRunAutoChat } = await import(
+        './flow/GEEK_AUTO_START_CHAT_WITH_BOSS_MAIN/index'
+      )
+      waitForProcessHandShakeAndRunAutoChat()
       break
     }
     case 'geekAutoStartWithBossDaemon': {
