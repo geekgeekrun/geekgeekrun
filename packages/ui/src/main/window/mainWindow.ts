@@ -135,6 +135,14 @@ export function createMainWindow(): void {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
         const data = raw
         switch (data.type) {
+          case 'DAEMON_PROCESS_STARTUP': {
+            subProcessOfPuppeteer!.stdio[3]!.write(
+              JSON.stringify({
+                type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'
+              })
+            )
+            break
+          }
           case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
             resolve(data)
             break
@@ -228,7 +236,7 @@ export function createMainWindow(): void {
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
-    subProcessOfPuppeteer?.kill('SIGINT')
+    subProcessOfPuppeteer?.kill()
   })
 
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
