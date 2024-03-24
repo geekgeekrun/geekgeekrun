@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div>愿你心想事成</div>
+    <div>愿你薪想事成</div>
     <RouterView
       :dependencies-status="checkDependenciesResult"
       :process-waitee="downloadProcessWaitee"
