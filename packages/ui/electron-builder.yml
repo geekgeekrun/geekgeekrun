@@ -2,6 +2,7 @@ appId: com.geekgeekrun.ui
 productName: GeekGeekRun
 directories:
   buildResources: build
+icon: resources/icon.png
 files:
   - '!**/.vscode/*'
   - '!src/*'
