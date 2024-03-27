@@ -5,6 +5,7 @@ import { app } from 'electron'
 import fs, { WriteStream } from 'node:fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
+import { initPowerSaveBlocker } from './power-saver-blocker'
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -88,6 +89,9 @@ export function runAutoChatWithDaemon() {
     console.error('pipe is not available')
     app.exit(1)
   }
+
+  const disposePowerSaveBlocker = initPowerSaveBlocker()
+  app.once('quit', disposePowerSaveBlocker)
 
   const pipeForRead: fs.ReadStream = fs.createReadStream(null, { fd: 3 })
   const pipeForReadWithJsonParser = pipeForRead.pipe(JSONStream.parse())
