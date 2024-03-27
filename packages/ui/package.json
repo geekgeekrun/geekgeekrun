@@ -4,6 +4,7 @@
   "description": "An Electron application with Vue and TypeScript",
   "main": "./out/main/index.js",
   "author": "geekgeekrun",
+  "productName": "GeekGeekRun",
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
