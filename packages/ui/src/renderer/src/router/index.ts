@@ -54,7 +54,7 @@ const routes: Array<RouteRecordRaw> = [
         path: '/downloadingDependencies',
         component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue'),
         meta: {
-          title: '正在下载浏览器'
+          title: '正在下载核心组件'
         },
       }
     ]

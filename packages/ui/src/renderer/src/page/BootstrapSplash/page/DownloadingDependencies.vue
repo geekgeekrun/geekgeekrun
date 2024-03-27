@@ -1,10 +1,11 @@
 <template>
-  <div v-if="!dependenciesStatus.puppeteerExecutableAvailable">
-    <div mb14px>正在下载核心组件</div>
+  <div class="flex flex-col flex-items-start flex-justify-start" v-if="!dependenciesStatus.puppeteerExecutableAvailable">
+    <div mb14px>正在下载兼容的浏览器</div>
     <el-progress
       :percentage="browserDownloadPercentage"
       :format="(n) => `${n.toFixed(1)}%`"
       :stroke-width="10"
+      class="w400px"
     />
   </div>
 </template>

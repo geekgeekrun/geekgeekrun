@@ -34,6 +34,7 @@
     "@geekgeekrun/utils": "workspace:*",
     "@puppeteer/browsers": "^2.0.0",
     "JSONStream": "^1.3.5",
+    "animate.css": "^4.1.1",
     "electron-updater": "^6.1.7",
     "element-plus": "^2.5.5",
     "find-chrome-bin": "^2.0.1",
