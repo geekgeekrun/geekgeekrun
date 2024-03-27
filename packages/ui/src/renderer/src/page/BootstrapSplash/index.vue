@@ -1,10 +1,24 @@
 <template>
-  <div>
-    <div>愿你薪想事成</div>
-    <RouterView
-      :dependencies-status="checkDependenciesResult"
-      :process-waitee="downloadProcessWaitee"
-    ></RouterView>
+  <div class="h-screen flex flex-col flex-items-center flex-justify-center">
+    <div>
+      <img
+        class="block"
+        :class="{
+          'animate__animated animate__bounce animate__repeat-3':
+            Object.values(checkDependenciesResult).includes(false)
+        }"
+        :width="256"
+        src="@renderer/../../../resources/icon.png"
+      />
+    </div>
+    <div mt24px>愿你薪想事成</div>
+    <div class="h60px mt14px">
+      <RouterView
+        class="h100%"
+        :dependencies-status="checkDependenciesResult"
+        :process-waitee="downloadProcessWaitee"
+      ></RouterView>
+    </div>
   </div>
 </template>
 

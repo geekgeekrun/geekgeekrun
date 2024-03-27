@@ -6,5 +6,6 @@ import 'normalize.css'
 import './style/public.scss'
 import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
+import 'animate.css'
 
 createApp(App).use(router).use(ElementPlus).mount('#app')
