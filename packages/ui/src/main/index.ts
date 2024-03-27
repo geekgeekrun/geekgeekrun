@@ -31,7 +31,7 @@ const runMode = process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE
       break
     }
     default: {
-      const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW')
+      const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
       openSettingWindow()
       break
     }
