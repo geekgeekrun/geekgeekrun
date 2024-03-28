@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createMainWindow } from '../../window/mainWindow'
 import './app-menu'
+import initIpc from './ipc'
 export function openSettingWindow() {
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
   if (!app.requestSingleInstanceLock()) {
@@ -25,10 +26,11 @@ export function openSettingWindow() {
       optimizer.watchWindowShortcuts(window)
     })
 
+    createMainWindow()
+
     // IPC test
     ipcMain.on('ping', () => console.log('pong'))
-
-    createMainWindow()
+    initIpc()
 
     app.on('activate', function () {
       // On macOS it's common to re-create a window in the app when the
