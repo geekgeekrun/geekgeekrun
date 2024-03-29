@@ -41,7 +41,7 @@ function runWithDaemon () {
         process.exit(exitCode)
         return
       }
-      console.log(`[Run core daemon] Child process exit with code ${exitCode}, an internal may not be caught, and will be restarted in ${rerunInterval}ms.`)
+      console.log(`[Run core daemon] Child process exit with code ${exitCode}, an internal error may not be caught, and will be restarted in ${rerunInterval}ms.`)
       await sleep(rerunInterval)
       runWithDaemon()
     }

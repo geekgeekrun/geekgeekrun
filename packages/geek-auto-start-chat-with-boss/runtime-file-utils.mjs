@@ -141,3 +141,7 @@ export const writeStorageFile = async (fileName, content) => {
     fileContent
   )
 }
+
+export const getPublicDbFilePath = () => {
+  return path.join(storageFilePath, 'public.db')
+}

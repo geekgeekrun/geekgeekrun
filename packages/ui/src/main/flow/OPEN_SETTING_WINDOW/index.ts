@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createMainWindow } from '../window/mainWindow'
-
+import { createMainWindow } from '../../window/mainWindow'
+import './app-menu'
+import initIpc from './ipc'
 export function openSettingWindow() {
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
   if (!app.requestSingleInstanceLock()) {
@@ -9,10 +10,12 @@ export function openSettingWindow() {
     app.exit(0)
   }
 
+  const whenReadyPromise = app.whenReady()
+
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  app.whenReady().then(() => {
+  whenReadyPromise.then(() => {
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.electron')
 
@@ -23,10 +26,11 @@ export function openSettingWindow() {
       optimizer.watchWindowShortcuts(window)
     })
 
+    createMainWindow()
+
     // IPC test
     ipcMain.on('ping', () => console.log('pong'))
-
-    createMainWindow()
+    initIpc()
 
     app.on('activate', function () {
       // On macOS it's common to re-create a window in the app when the
@@ -44,4 +48,16 @@ export function openSettingWindow() {
 
   // In this file you can include the rest of your app"s specific main process
   // code. You can also put them in separate files and require them here.
+
+  // short cut
+  whenReadyPromise.then(() => {
+    // Register a 'Command+Option+Shift+/' shortcut listener.
+    globalShortcut.register('Command+Option+Shift+/', () => {
+      console.log('Command+Option+Shift+/ is pressed')
+      app.exit(0)
+    })
+    app.once('quit', () => {
+      globalShortcut.unregister('Command+Option+Shift+/')
+    })
+  })
 }

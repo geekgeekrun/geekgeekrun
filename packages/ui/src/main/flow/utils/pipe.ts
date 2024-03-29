@@ -10,8 +10,12 @@ export const pipeWriteRegardlessError = async (
   if (pipe && !pipeSet.has(pipe)) {
     pipeSet.add(pipe)
     pipe.on('error', (error) => {
-      console.log('pipe.write Error', error)
+      void error
     })
   }
-  return pipe?.write(chunk, option, () => {})
+  return pipe?.write(chunk, option, (error) => {
+    if (error) {
+      console.log('pipe.write Error', error)
+    }
+  })
 }

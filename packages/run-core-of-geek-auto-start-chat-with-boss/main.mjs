@@ -8,11 +8,16 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { get__dirname } from '@geekgeekrun/utils/legacy-path.mjs';
 import JSON5 from 'json5'
-import { readConfigFile, readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { readConfigFile, readStorageFile, getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import {
   AUTO_CHAT_ERROR_EXIT_CODE
 } from './enums.mjs'
+
+import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
+const {
+  default: SqlitePlugin
+} = SqlitePluginModule
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -32,6 +37,7 @@ const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.
 
 const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
+  new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
 }
 
 const main = async () => {
@@ -43,8 +49,9 @@ const main = async () => {
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
+    userInfoResponse: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
-    newChatStartup: new SyncHook(['positionInfoDetail']),
+    newChatStartup: new AsyncSeriesHook(['positionInfoDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo'])
@@ -68,8 +75,9 @@ const main = async () => {
           break
         }
       }
+      closeBrowserWindow?.()
       console.error(err)
-      console.log(`[Run core main] An internal is caught, and browser will be restarted in ${rerunInterval}ms.`)
+      console.log(`[Run core main] An internal error is caught, and browser will be restarted in ${rerunInterval}ms.`)
       await sleep(rerunInterval)
     }
   }
@@ -78,5 +86,7 @@ const main = async () => {
 (async () => {
   try {
     await main()
-  } catch {}
+  } catch(err) {
+    console.error(err)
+  }
 })()

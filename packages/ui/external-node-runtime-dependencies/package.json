@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.cjs",
   "module": "index.mjs",
-  "scripts": {
-  },
+  "scripts": {},
   "author": "",
   "license": "ISC",
   "dependencies": {

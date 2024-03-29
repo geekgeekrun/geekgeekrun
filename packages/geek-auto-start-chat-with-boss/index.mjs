@@ -113,8 +113,7 @@ export async function mainLoop (hooks) {
     hooks.pageLoaded?.call()
 
     let userInfoResponse = await userInfoPromise
-    hooks.userInfoResponse?.call(userInfoResponse)
-
+    await hooks.userInfoResponse?.promise(userInfoResponse)
     if (userInfoResponse.code !== 0) {
       autoStartChatEventBus.emit('LOGIN_STATUS_INVALID', {
         userInfoResponse
@@ -176,68 +175,105 @@ export async function mainLoop (hooks) {
 
       try {
         const { targetJobElProxy, targetJobIndex } = await new Promise(async (resolve, reject) => {
-          // job list
-          const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
-  
-          let jobListData = await page.evaluate(
-            `
-              document.querySelector('.job-recommend-main')?.__vue__?.jobList
-            `
-          )
-          // when disable company allow list, we will believe that the first one in the list is your expect job.
-          let targetJobIndex = enableCompanyAllowList ? jobListData.findIndex(
-            it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
-          ) : jobListData.findIndex(
-            it => !blockBossNotNewChat.has(it.encryptBossId)
-          )
-
-          let hasReachLastPage = false
-  
-          while (targetJobIndex < 0 && !hasReachLastPage) {
-            // fetch new
-            const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
-            const windowInnerHeight = await page.evaluate('window.innerHeight')
-            await page.mouse.move(
-              recommendJobListElBBox.x + recommendJobListElBBox.width / 2,
-              windowInnerHeight / 2
-            )
-            let scrolledHeight = 0
-            const targetHeight = 3000
-            const increase = 40 + Math.floor(30 * Math.random())
-            while (scrolledHeight < targetHeight) {
-              scrolledHeight += increase
-              await page.mouse.wheel({deltaY: increase});
-              await sleep(1)
-            }
-            hasReachLastPage = await page.evaluate(`
-              !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
-            `)
-            if (hasReachLastPage) {
-              console.log(`Arrive the terminal of the job list.`)
-            }
-  
-            await sleep(3000)
-            jobListData = await page.evaluate(
+          try {
+            // job list
+            const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
+    
+            let jobListData = await page.evaluate(
               `
                 document.querySelector('.job-recommend-main')?.__vue__?.jobList
               `
             )
-            targetJobIndex = jobListData.findIndex(it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name)))
-          }
+            // when disable company allow list, we will believe that the first one in the list is your expect job.
+            let targetJobIndex = enableCompanyAllowList ? jobListData.findIndex(
+              it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
+            ) : jobListData.findIndex(
+              it => !blockBossNotNewChat.has(it.encryptBossId)
+            )
   
-          if (targetJobIndex < 0 && hasReachLastPage) {
-            // has reach last page and not find target job
-            reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
-            return
-          }
-          
-          const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list > li')
-          resolve(
-            {
-              targetJobElProxy: recommendJobItemList[targetJobIndex],
-              targetJobIndex
+            let hasReachLastPage = false
+    
+            let requestNextPagePromiseWithResolver = null
+            page.on(
+              'request',
+              function reqHandler (request) {
+                if (request.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json')) {
+                  requestNextPagePromiseWithResolver = (() => {
+                    const o = {}
+                    o.promise = new Promise((resolve, reject) => {
+                      o.resolve = resolve
+                      o.reject = reject
+                    })
+                    return o
+                  })()
+                  page.off(reqHandler)
+  
+                  page.on(
+                    'response',
+                    function resHandler (response) {
+                      if (response.request() === request) {
+                        requestNextPagePromiseWithResolver?.resolve()
+                        page.off(resHandler)
+                      }
+                    }
+                  )
+                }
+              }
+            )
+  
+            while (targetJobIndex < 0 && !hasReachLastPage) {
+              // fetch new
+              const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
+              const windowInnerHeight = await page.evaluate('window.innerHeight')
+              await page.mouse.move(
+                recommendJobListElBBox.x + recommendJobListElBBox.width / 2,
+                windowInnerHeight / 2
+              )
+              let scrolledHeight = 0
+              const increase = 40 + Math.floor(30 * Math.random())
+  
+              while (
+                !requestNextPagePromiseWithResolver &&
+                !hasReachLastPage
+              ) {
+                scrolledHeight += increase
+                await page.mouse.wheel({deltaY: increase});
+                await sleep(1)
+                await requestNextPagePromiseWithResolver?.promise
+                hasReachLastPage = await page.evaluate(`
+                  !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
+                `)
+                if (hasReachLastPage) {
+                  console.log(`Arrive the terminal of the job list.`)
+                }
+              }
+              requestNextPagePromiseWithResolver = null
+    
+              await sleep(3000)
+              jobListData = await page.evaluate(
+                `
+                  document.querySelector('.job-recommend-main')?.__vue__?.jobList
+                `
+              )
+              targetJobIndex = jobListData.findIndex(it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name)))
             }
-          )
+    
+            if (targetJobIndex < 0 && hasReachLastPage) {
+              // has reach last page and not find target job
+              reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
+              return
+            }
+            
+            const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list > li')
+            resolve(
+              {
+                targetJobElProxy: recommendJobItemList[targetJobIndex],
+                targetJobIndex
+              }
+            )
+          } catch(err) {
+            reject(err)
+          }
         })
         if (targetJobIndex >= 0) {
           // scroll that target element into view
@@ -297,7 +333,7 @@ export async function mainLoop (hooks) {
                 throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
               }
             } else {
-              hooks.newChatStartup?.call(jobData)
+              await hooks.newChatStartup?.promise(jobData)
               blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
               
               await storeStorage(page).catch(() => void 0)

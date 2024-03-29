@@ -14,6 +14,7 @@
   "dependencies": {
     "@geekgeekrun/dingtalk-plugin": "workspace:*",
     "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
-    "@geekgeekrun/utils": "workspace:*"
+    "@geekgeekrun/utils": "workspace:*",
+    "@geekgeekrun/sqlite-plugin": "workspace:*"
   }
 }
