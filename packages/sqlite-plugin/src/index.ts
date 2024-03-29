@@ -12,12 +12,13 @@ import { JobInfo } from "./entity/JobInfo";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
+import { VChatStartupLog } from "./entity/VChatStartupLog";
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
 Boolean(cliHighlight);
 
-function initDb(dbFilePath) {
+export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
   const appDataSource = new DataSource({
     type: "sqlite",
@@ -36,6 +37,7 @@ function initDb(dbFilePath) {
       JobInfoChangeLog,
       BossActiveStatusRecord,
       UserInfo,
+      VChatStartupLog
     ],
   });
   return appDataSource.initialize();
