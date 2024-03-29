@@ -17,6 +17,7 @@ import { getAnyAvailablePuppeteerExecutable } from '../../../flow/CHECK_AND_DOWN
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
 import { mainWindow } from '../../../window/mainWindow'
+import { getAutoStartChatRecord, initDbWorker } from '../utils/db/index'
 
 export default function initIpc () {
   ipcMain.on('open-external-link', (_, link) => {
@@ -256,5 +257,12 @@ export default function initIpc () {
   ipcMain.handle('check-boss-zhipin-cookie-file', () => {
     const cookies = readStorageFile('boss-cookies.json')
     return checkCookieListFormat(cookies)
+  })
+
+  ipcMain.handle('connect-db', async () => {
+    const worker = await initDbWorker()
+    console.log(worker)
+    const a = await getAutoStartChatRecord()
+    console.log(a)
   })
 }

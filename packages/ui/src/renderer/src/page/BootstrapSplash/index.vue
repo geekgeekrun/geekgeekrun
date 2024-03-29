@@ -52,4 +52,10 @@ onMounted(async () => {
     }
   })
 })
+
+electron.ipcRenderer.invoke('connect-db').then(() => {
+  debugger
+}, () => {
+  debugger
+})
 </script>
