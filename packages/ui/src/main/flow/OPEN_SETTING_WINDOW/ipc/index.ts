@@ -259,9 +259,7 @@ export default function initIpc () {
     return checkCookieListFormat(cookies)
   })
 
-  ipcMain.handle('connect-db', async () => {
-    const worker = await initDbWorker()
-    console.log(worker)
+  ipcMain.handle('get-auto-start-chat-record', async () => {
     const a = await getAutoStartChatRecord()
     console.log(a)
   })

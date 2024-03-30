@@ -9,11 +9,11 @@ export const initDbWorker = () => {
     worker = createDbWorker()
     workerExitCode = null
     return new Promise((resolve, reject) => {
-      worker.once('exit', (exitCode) => {
+      worker!.once('exit', (exitCode) => {
         workerExitCode = exitCode
         worker = null
       })
-      worker.on('message', function handler(data) {
+      worker!.on('message', function handler(data) {
         if (data.type === 'DB_INIT_SUCCESS') {
           resolve(worker)
           // attach more event
@@ -34,16 +34,16 @@ export const initDbWorker = () => {
 const createWorkerPromise = async (data) => {
   await initDbWorker()
   const uuid = randomUUID()
-  worker.postMessage({
+  worker!.postMessage({
     _uuid: uuid,
     ...data
   })
   return new Promise((resolve) => {
-    worker.on('message', function handler(data) {
+    worker!.on('message', function handler(data) {
       const { _uuid, ...payload } = data ?? {}
       if (_uuid === uuid) {
         resolve(payload)
-        worker!.off('message', handler)
+        worker?.off('message', handler)
       }
     })
   })

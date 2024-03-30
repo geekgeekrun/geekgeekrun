@@ -25,11 +25,11 @@ dbInitPromise.then(
 )
 
 const payloadHandler = {
-  getAutoStartChatRecord(payload, callback) {
-    callback({
+  async getAutoStartChatRecord(payload) {
+    return {
       x: 'zzzz',
       ...payload
-    })
+    }
   }
 }
 
@@ -37,17 +37,14 @@ async function attachMessageHandler() {
   if (!dataSource) {
     await dbInitPromise
   }
-  parentPort?.on('message', (event) => {
+  parentPort?.on('message', async (event) => {
     const { _uuid, ...restObj } = event
     const { type } = event
 
-    const callback = (result) => {
-      parentPort?.postMessage({
-        _uuid,
-        data: result
-      })
-    }
-
-    payloadHandler[type](restObj, callback)
+    const result = await payloadHandler[type](restObj)
+    parentPort?.postMessage({
+      _uuid,
+      data: result
+    })
   })
 }

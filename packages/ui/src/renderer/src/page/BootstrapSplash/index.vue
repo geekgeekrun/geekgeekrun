@@ -53,7 +53,7 @@ onMounted(async () => {
   })
 })
 
-electron.ipcRenderer.invoke('connect-db').then(() => {
+electron.ipcRenderer.invoke('get-auto-start-chat-record').then(() => {
   debugger
 }, () => {
   debugger
