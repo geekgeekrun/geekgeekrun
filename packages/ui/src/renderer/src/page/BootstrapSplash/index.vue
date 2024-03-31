@@ -52,10 +52,4 @@ onMounted(async () => {
     }
   })
 })
-
-electron.ipcRenderer.invoke('get-auto-start-chat-record').then(() => {
-  debugger
-}, () => {
-  debugger
-})
 </script>

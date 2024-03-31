@@ -261,6 +261,6 @@ export default function initIpc () {
 
   ipcMain.handle('get-auto-start-chat-record', async () => {
     const a = await getAutoStartChatRecord()
-    console.log(a)
+    return a
   })
 }

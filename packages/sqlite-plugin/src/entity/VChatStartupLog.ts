@@ -6,6 +6,7 @@ const { ViewEntity, ViewColumn } = requireTypeorm();
     user_info.name as userName,
     chat_startup_log.date,
     boss_info.name AS bossName,
+    boss_info.title AS bossTitle,
     company_info.name AS companyName
   FROM
     chat_startup_log
@@ -57,6 +58,9 @@ export class VChatStartupLog {
 
   @ViewColumn()
   bossName: string;
+
+  @ViewColumn()
+  bossTitle: string;
 
   @ViewColumn()
   companyName: string;

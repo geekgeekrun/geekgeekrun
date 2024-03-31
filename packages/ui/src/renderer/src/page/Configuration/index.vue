@@ -1,4 +1,16 @@
-<template><RouterView /></template>
+<template>
+  <div class="flex h100vh">
+    <div class="flex flex-col w160px pt50px pl30px bg-#e8fffb">
+      <RouterLink to="./GeekAutoStartChatWithBoss">Boss炸弹</RouterLink>
+      <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
+    </div>
+    <RouterView #default="{ Component }" class="flex-1">
+      <KeepAlive>
+        <component :is="Component" />
+      </KeepAlive>
+    </RouterView>
+  </div>
+</template>
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted } from 'vue'
