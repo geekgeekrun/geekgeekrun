@@ -30,7 +30,7 @@ export class VChatStartupLog {
   salaryLow: number | null;
 
   @ViewColumn()
-  salaryHeigh: number | null;
+  salaryHeight: number | null;
 
   @ViewColumn()
   salaryMonth: number | null;
