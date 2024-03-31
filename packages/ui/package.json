@@ -1,7 +1,7 @@
 {
   "name": "geekgeekrun-ui",
   "version": "1.0.0",
-  "description": "An Electron application with Vue and TypeScript",
+  "description": "Boss 炸弹 - 自动开聊Boss，助力每位打工人求职！",
   "main": "./out/main/index.js",
   "author": "geekgeekrun",
   "productName": "GeekGeekRun",
