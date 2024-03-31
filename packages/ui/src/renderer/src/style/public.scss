@@ -13,3 +13,11 @@ button, input, textarea {
   position: absolute;
   inset: 0;
 }
+a {
+  text-decoration: none;
+  &:link,
+  &:visited {
+    color: inherit;
+    text-decoration: none;
+  }
+}

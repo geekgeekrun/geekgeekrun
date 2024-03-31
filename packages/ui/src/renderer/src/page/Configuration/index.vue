@@ -1,6 +1,6 @@
 <template>
   <div class="flex h100vh">
-    <div class="flex flex-col w160px pt50px pl30px bg-#e8fffb">
+    <div class="flex flex-col w160px pt50px pl30px aside-nav">
       <RouterLink to="./GeekAutoStartChatWithBoss">Boss炸弹</RouterLink>
       <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
     </div>
@@ -49,3 +49,29 @@ onUnmounted(() => {
   }
 })()
 </script>
+
+<style lang="scss" scoped>
+.aside-nav {
+  background-image: linear-gradient(
+    45deg,
+    #eaf4f1,
+    #dcf6f2,
+  );
+  > a {
+    display: flex;
+    align-items: center;
+    height: 2.5em;
+    box-sizing: border-box;
+    padding-left: 2em;
+    & + a {
+      margin-top: 10px;
+    }
+    &.router-link-active {
+      background-color: #fff;
+      font-weight: 700;
+      color: #2faa9e;
+      border-radius: 9999px 0 0 9999px;
+    }
+  }
+}
+</style>
