@@ -5,6 +5,7 @@ import { type DataSource } from 'typeorm'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { VChatStartupLog } from '@geekgeekrun/sqlite-plugin/dist/entity/VChatStartupLog'
 import { measureExecutionTime } from '../../../../../../common/utils/performance'
+import { PageReq, PagedRes } from '../../../../../../common/types/pagination'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 let dataSource: DataSource | null = null
@@ -27,16 +28,28 @@ dbInitPromise.then(
 )
 
 const payloadHandler = {
-  async getAutoStartChatRecord(payload) {
-    const result = await measureExecutionTime(
-      dataSource!
-        .createQueryBuilder()
-        .select('*')
-        .from(VChatStartupLog, 'vChatStartupLog')
-        .getRawMany()
+  async getAutoStartChatRecord({ pageNo, pageSize }: Partial<PageReq> = {}): Promise<
+    PagedRes<VChatStartupLog>
+  > {
+    if (!pageNo) {
+      pageNo = 1
+    }
+    if (!pageSize) {
+      pageSize = 10
+    }
+
+    const userRepository = dataSource!.getRepository(VChatStartupLog)!
+    const [data, totalItemCount] = await measureExecutionTime(
+      userRepository.findAndCount({
+        skip: (pageNo - 1) * pageSize,
+        take: pageSize
+      })
     )
-    console.log(result)
-    return result
+    return {
+      data,
+      pageNo,
+      totalItemCount
+    }
   }
 }
 

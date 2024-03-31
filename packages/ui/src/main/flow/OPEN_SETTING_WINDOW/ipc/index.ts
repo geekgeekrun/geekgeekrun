@@ -17,9 +17,10 @@ import { getAnyAvailablePuppeteerExecutable } from '../../../flow/CHECK_AND_DOWN
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
 import { mainWindow } from '../../../window/mainWindow'
-import { getAutoStartChatRecord, initDbWorker } from '../utils/db/index'
+import { getAutoStartChatRecord } from '../utils/db/index'
+import { PageReq } from '../../../../common/types/pagination'
 
-export default function initIpc () {
+export default function initIpc() {
   ipcMain.on('open-external-link', (_, link) => {
     shell.openExternal(link, {
       activate: true
@@ -259,8 +260,8 @@ export default function initIpc () {
     return checkCookieListFormat(cookies)
   })
 
-  ipcMain.handle('get-auto-start-chat-record', async () => {
-    const a = await getAutoStartChatRecord()
+  ipcMain.handle('get-auto-start-chat-record', async (ev, payload: PageReq) => {
+    const a = await getAutoStartChatRecord(payload)
     return a
   })
 }

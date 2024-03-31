@@ -1,6 +1,7 @@
 import createDbWorker from './worker/index?nodeWorker&url'
 import { type Worker } from 'node:worker_threads'
 import { randomUUID } from 'node:crypto'
+import { PageReq } from '../../../../../common/types/pagination'
 
 let worker: Worker | null = null
 let workerExitCode: number | null = null
@@ -49,9 +50,11 @@ const createWorkerPromise = async (data) => {
   })
 }
 
-export const getAutoStartChatRecord = async () => {
+export const getAutoStartChatRecord = async ({ pageNo, pageSize }: Partial<PageReq> = {}) => {
   const res = await createWorkerPromise({
-    type: 'getAutoStartChatRecord'
+    type: 'getAutoStartChatRecord',
+    pageNo,
+    pageSize
   })
   return res
 }
