@@ -1,11 +1,13 @@
+import 'reflect-metadata'
 import { parentPort } from 'node:worker_threads'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
-import typeorm from 'typeorm'
 import { type DataSource } from 'typeorm'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { VChatStartupLog } from '@geekgeekrun/sqlite-plugin/dist/entity/VChatStartupLog'
+import { measureExecutionTime } from '../../../../../../common/utils/performance'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
-let dataSource = null
+let dataSource: DataSource | null = null
 
 dbInitPromise.then(
   (_dataSource) => {
@@ -26,21 +28,26 @@ dbInitPromise.then(
 
 const payloadHandler = {
   async getAutoStartChatRecord(payload) {
-    return {
-      x: 'zzzz',
-      ...payload
-    }
+    const result = await measureExecutionTime(
+      dataSource!
+        .createQueryBuilder()
+        .select('*')
+        .from(VChatStartupLog, 'vChatStartupLog')
+        .getRawMany()
+    )
+    console.log(result)
+    return result
   }
 }
 
 async function attachMessageHandler() {
-  if (!dataSource) {
-    await dbInitPromise
-  }
   parentPort?.on('message', async (event) => {
     const { _uuid, ...restObj } = event
     const { type } = event
 
+    if (!dataSource) {
+      await dbInitPromise
+    }
     const result = await payloadHandler[type](restObj)
     parentPort?.postMessage({
       _uuid,
