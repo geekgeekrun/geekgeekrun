@@ -5,6 +5,7 @@
   "main": "./out/main/index.js",
   "author": "geekgeekrun",
   "productName": "GeekGeekRun",
+  "homepage": "https://github.com/geekgeekrun",
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
