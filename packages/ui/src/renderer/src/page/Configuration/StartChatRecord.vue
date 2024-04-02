@@ -5,7 +5,15 @@
     </div>
     <div v-loading="isTableLoading" class="flex-1 of-hidden">
       <div ref="tableContainerEl" class="h-100% of-hidden">
-        <ElTable ref="tableRef" :data="tableData" :max-height="tableMaxHeight" :row-key="getRowKey">
+        <ElTable
+          ref="tableRef"
+          :max-height="tableMaxHeight"
+          :data="tableData"
+          :row-key="getRowKey"
+          size="small"
+          table-layout="auto"
+          highlight-current-row
+        >
           <ElTableColumn prop="companyName" label="公司" />
           <ElTableColumn prop="jobName" label="职位名称" />
           <ElTableColumn prop="positionName" label="职位分类" />
@@ -17,10 +25,32 @@
           <ElTableColumn prop="experienceName" label="工作经验" />
           <ElTableColumn
             label="薪资"
-            :formatter="(row, _col, _val) => `${row.salaryLow}-${row.salaryHeight}k`"
+            :formatter="
+              (row, _col, _val) =>
+                `${row.salaryLow}-${row.salaryHeight}k` +
+                (row.salaryMonth ? `* ${row.salaryMonth}薪` : '')
+            "
           />
           <ElTableColumn prop="bossName" label="BOSS" />
           <ElTableColumn prop="bossTitle" label="BOSS身份" />
+          <ElTableColumn label="职位信息" fixed="right">
+            <template #default="{ row }">
+              <!-- <ElButton
+                link
+                type="primary"
+                size="small"
+                @click="handleViewJobButtonClick(row.encryptJobId)"
+                >快照</ElButton
+              > -->
+              <ElButton
+                link
+                type="primary"
+                size="small"
+                @click="handleViewJobButtonClick(row.encryptJobId)"
+                >线上</ElButton
+              >
+            </template>
+          </ElTableColumn>
         </ElTable>
       </div>
     </div>
@@ -96,6 +126,13 @@ onMounted(() => {
     ro.disconnect()
   })
 })
+
+function handleViewJobButtonClick(encryptJobId: string) {
+  electron.ipcRenderer.send(
+    'open-external-link',
+    `https://www.zhipin.com/job_detail/${encryptJobId}.html`
+  )
+}
 </script>
 
 <style scoped lang="scss">
