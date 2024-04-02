@@ -73,9 +73,13 @@ const handleClickLaunchLogin = () => {
 
 <style scoped lang="scss">
 .form-wrap {
-  padding-top: 60px;
-  margin: 0 auto;
-  max-width: 640px;
+  max-height: 100vh;
+  overflow: auto;
+  :deep(.el-form) {
+    padding-top: 60px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
   .last-form-item {
     :deep(.el-form-item__content) {
       margin-top: 40px;
