@@ -35,18 +35,18 @@
           <ElTableColumn prop="bossTitle" label="BOSS身份" />
           <ElTableColumn label="职位信息" fixed="right">
             <template #default="{ row }">
-              <!-- <ElButton
-                link
-                type="primary"
-                size="small"
-                @click="handleViewJobButtonClick(row.encryptJobId)"
-                >快照</ElButton
-              > -->
               <ElButton
                 link
                 type="primary"
                 size="small"
-                @click="handleViewJobButtonClick(row.encryptJobId)"
+                @click="handleViewJobSnapshotButtonClick(row)"
+                >快照</ElButton
+              >
+              <ElButton
+                link
+                type="primary"
+                size="small"
+                @click="handleViewJobOnlineButtonClick(row.encryptJobId)"
                 >线上</ElButton
               >
             </template>
@@ -66,17 +66,23 @@
       @size-change="getAutoStartChatRecord"
       @current-change="getAutoStartChatRecord"
     />
+    <ElDrawer v-model="drawVisibleModelValue">
+      <JobInfoSnapshot
+        v-if="selectedJobInfoForViewSnapshot"
+        :job-info="selectedJobInfoForViewSnapshot"
+        @closed="selectedJobInfoForViewSnapshot = null"
+      />
+    </ElDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { ElTable, ElTableColumn, ElButton, ElPagination } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
 import dayjs from 'dayjs'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
-const router = useRouter()
+import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 
 const tableData = ref<VChatStartupLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -127,11 +133,19 @@ onMounted(() => {
   })
 })
 
-function handleViewJobButtonClick(encryptJobId: string) {
+function handleViewJobOnlineButtonClick(encryptJobId: string) {
   electron.ipcRenderer.send(
     'open-external-link',
     `https://www.zhipin.com/job_detail/${encryptJobId}.html`
   )
+}
+
+const drawVisibleModelValue = ref(false)
+const selectedJobInfoForViewSnapshot = ref<VChatStartupLog | null>(null)
+
+function handleViewJobSnapshotButtonClick(record: VChatStartupLog) {
+  selectedJobInfoForViewSnapshot.value = record
+  drawVisibleModelValue.value = true
 }
 </script>
 
