@@ -1,8 +1,5 @@
 <template>
   <div class="page-wrap flex flex-col of-hidden">
-    <div class="flex-0">
-      <el-button :loading="isTableLoading" @click="getAutoStartChatRecord">刷新</el-button>
-    </div>
     <div v-loading="isTableLoading" class="flex-1 of-hidden">
       <div ref="tableContainerEl" class="h-100% of-hidden">
         <ElTable
@@ -33,7 +30,7 @@
           />
           <ElTableColumn prop="bossName" label="BOSS" />
           <ElTableColumn prop="bossTitle" label="BOSS身份" />
-          <ElTableColumn label="职位信息" fixed="right">
+          <ElTableColumn label="职位信息" fixed="right" :width="120">
             <template #default="{ row }">
               <ElButton
                 link
@@ -54,19 +51,26 @@
         </ElTable>
       </div>
     </div>
-    <ElPagination
-      v-model:current-page="pagination.pageNo"
-      v-model:page-size="pagination.pageSize"
-      class="flex-0 flex-justify-center pt10px pb10px"
-      :page-sizes="pageSizeList"
-      small
-      :disabled="isTableLoading"
-      layout="total, sizes, prev, pager, next, jumper"
-      :total="pagination.totalItemCount"
-      @size-change="getAutoStartChatRecord"
-      @current-change="getAutoStartChatRecord"
-    />
-    <ElDrawer v-model="drawVisibleModelValue">
+    <div class="flex flex-0 flex-justify-between pt10px pb10px">
+      <div class="w100px">
+        <el-button :loading="isTableLoading" size="small" @click="getAutoStartChatRecord"
+          >刷新</el-button
+        >
+      </div>
+      <ElPagination
+        v-model:current-page="pagination.pageNo"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="pageSizeList"
+        small
+        :disabled="isTableLoading"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="pagination.totalItemCount"
+        @size-change="getAutoStartChatRecord"
+        @current-change="getAutoStartChatRecord"
+      />
+      <div class="w100px" />
+    </div>
+    <ElDrawer v-model="drawVisibleModelValue" size="400px">
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
@@ -155,5 +159,18 @@ function handleViewJobSnapshotButtonClick(record: VChatStartupLog) {
   max-width: 1000px;
   max-height: 100vh;
   overflow: hidden;
+  padding-left: 20px;
+  padding-top: 20px;
+  :deep(.el-drawer) {
+    .el-drawer__header {
+      padding: 16px 20px;
+      margin-bottom: 0;
+    }
+    .el-drawer__body {
+      padding: 0;
+      margin: 0 0 20px 20px;
+      padding-right: 20px;
+    }
+  }
 }
 </style>
