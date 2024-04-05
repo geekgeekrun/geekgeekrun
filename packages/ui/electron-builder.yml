@@ -10,6 +10,12 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!scripts/*'
+  - '!**/*.{map,ts,flow,scss,sass,less}'
+  - '!**/src/*'
+  - '!node_modules/date-fns/esm/*'
+  - '!node_modules/highlight.js/{styles,scss}/*'
+  - '!node_modules/typeorm/browser/*'
 asarUnpack:
   - 'resources/**'
 extraResources:
