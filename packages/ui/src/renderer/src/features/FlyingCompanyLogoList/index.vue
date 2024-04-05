@@ -102,7 +102,7 @@ onMounted(async () => {
     animation: fly-in var(--dot-run-duration) ease-in-out infinite;
     transform-origin: center;
     mix-blend-mode: darken;
-    width: 200px;
+    width: 100px;
   }
   .dot:nth-child(2n) {
     animation-delay: calc(-0.35 * var(--dot-run-duration));
