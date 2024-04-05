@@ -1,5 +1,6 @@
 import { BrowserWindow, shell } from 'electron'
 import path from 'path'
+import { openDevTools } from '../commands'
 export let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): void {
@@ -20,7 +21,7 @@ export function createMainWindow(): void {
     }
   })
 
-  process.env.NODE_ENV === 'development' && mainWindow.webContents.openDevTools()
+  process.env.NODE_ENV === 'development' && openDevTools(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
