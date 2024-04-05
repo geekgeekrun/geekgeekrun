@@ -24,7 +24,7 @@
             label="薪资"
             :formatter="
               (row, _col, _val) =>
-                `${row.salaryLow}-${row.salaryHeight}k` +
+                `${row.salaryLow}-${row.salaryHigh}k` +
                 (row.salaryMonth ? `* ${row.salaryMonth}薪` : '')
             "
           />

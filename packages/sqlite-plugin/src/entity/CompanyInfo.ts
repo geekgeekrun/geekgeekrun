@@ -20,7 +20,7 @@ export class CompanyInfo {
   @Column({
     nullable: true
   })
-  scaleHeight?: number;
+  scaleHigh?: number;
 
   @Column({
     nullable: true

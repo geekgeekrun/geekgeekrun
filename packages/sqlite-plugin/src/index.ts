@@ -100,7 +100,7 @@ export default class SqlitePlugin {
       company.stageName = brandComInfo.stageName;
       const companyScale = parseCompanyScale(brandComInfo.scaleName)
       company.scaleLow = companyScale[0]
-      company.scaleHeight = companyScale[1]
+      company.scaleHigh = companyScale[1]
 
       const companyInfoRepository = ds.getRepository(CompanyInfo);
       await companyInfoRepository.save(company);
@@ -119,7 +119,7 @@ export default class SqlitePlugin {
         jobName: jobInfo.jobName,
         positionName: jobInfo.positionName,
         experienceName: jobInfo.experienceName,
-        salaryHeight: jobSalary.heigh,
+        salaryHigh: jobSalary.high,
         salaryLow: jobSalary.low,
         salaryMonth: jobSalary.month,
       };

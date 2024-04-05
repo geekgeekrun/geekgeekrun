@@ -24,9 +24,9 @@ export const parseCompanyScale = (str: string): [number| null, number | null] =>
   return [null, null]
 }
 
-export const parseSalary = (str: string): { low: null | number, heigh: null | number, month: null | number } => {
+export const parseSalary = (str: string): { low: null | number, high: null | number, month: null | number } => {
   const result = {
-    heigh: null,
+    high: null,
     low: null,
     month: null
   }
@@ -44,7 +44,7 @@ export const parseSalary = (str: string): { low: null | number, heigh: null | nu
       result,
       {
         low: Number(arr[0]),
-        heigh: Number(arr[1]),
+        high: Number(arr[1]),
       }
     )
   }

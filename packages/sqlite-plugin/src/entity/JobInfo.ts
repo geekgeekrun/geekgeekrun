@@ -20,7 +20,7 @@ export class JobInfo {
   @Column({
     nullable: true
   })
-  salaryHeight?: number;
+  salaryHigh?: number;
 
   @Column({
     nullable: true

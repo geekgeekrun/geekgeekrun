@@ -8,7 +8,7 @@
     }}</el-form-item>
     <el-form-item label="工作经验">{{ jobInfo.experienceName }}</el-form-item>
     <el-form-item label="薪资">{{
-      `${jobInfo.salaryLow}-${jobInfo.salaryHeight}k` +
+      `${jobInfo.salaryLow}-${jobInfo.salaryHigh}k` +
       (jobInfo.salaryMonth ? `* ${jobInfo.salaryMonth}薪` : '')
     }}</el-form-item>
     <el-form-item label="职位描述">
