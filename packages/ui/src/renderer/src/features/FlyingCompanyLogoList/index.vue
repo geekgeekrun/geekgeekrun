@@ -11,6 +11,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { random } from 'lodash-es'
 
 const rowCount = 4
 const colCount = 6
@@ -19,7 +20,7 @@ const imageElContainer = ref<HTMLElement>()
 onMounted(async () => {
   const res = (
     await Promise.all(
-      [...Object.values(import.meta.glob('./resources/*.png', { as: 'url' }))].map((it) => it())
+      [...Object.values(import.meta.glob('./resources/*.jpg', { as: 'url' }))].map((it) => it())
     )
   ).map((url) => {
     const img = new Image()
@@ -31,7 +32,7 @@ onMounted(async () => {
         position: 'relative',
         left: (Math.random() > 0.5 ? -1 : 1) * (100 * Math.random()) + 'px',
         bottom: (Math.random() > 0.5 ? -1 : 1) * (100 * Math.random()) + 'px',
-        transform: `translateZ(${-5000}px)`
+        transform: `scale(${random(0.2, 1)}) translateZ(-5000px)`
       })
       img.replaceWith(newImg)
       img.classList.remove('dot')
@@ -80,8 +81,14 @@ onMounted(async () => {
   0% {
     opacity: 0;
   }
-  70% {
-    opacity: 0.8;
+  30% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0;
   }
   100% {
     transform: translateZ(0);
