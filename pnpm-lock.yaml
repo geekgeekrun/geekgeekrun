@@ -29,6 +29,10 @@ importers:
       tapable:
         specifier: ^2.2.1
         version: 2.2.1
+    devDependencies:
+      semver:
+        specifier: ^7.6.0
+        version: 7.6.0
 
   packages/dingtalk-plugin: {}
 
@@ -180,12 +184,12 @@ importers:
       eslint-plugin-vue:
         specifier: ^9.20.1
         version: 9.20.1(eslint@8.56.0)
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
       find-chrome-bin:
         specifier: ^2.0.1
         version: 2.0.1
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1

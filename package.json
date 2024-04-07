@@ -18,5 +18,8 @@
     "puppeteer-extra-plugin-stealth": "2.11.2",
     "rimraf": "^3.0.2",
     "tapable": "^2.2.1"
+  },
+  "devDependencies": {
+    "semver": "^7.6.0"
   }
 }
