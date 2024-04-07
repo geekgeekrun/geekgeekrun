@@ -44,4 +44,5 @@ jobs:
           sudo apt install rpm -y
           npm i pnpm -g
           cd packages/ui
+          pnpm i --force
           pnpm run build:linux
