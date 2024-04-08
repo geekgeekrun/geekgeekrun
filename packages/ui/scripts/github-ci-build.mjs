@@ -1,3 +1,2 @@
-import build from './steps/build.mjs'
-
-build()
+import buildUiOnCurrentPlatform from './steps/build-ui-on-current-platform.mjs'
+buildUiOnCurrentPlatform()

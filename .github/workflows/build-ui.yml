@@ -49,5 +49,4 @@ jobs:
 
       - name: Build
         run: |
-          cd packages/ui
           node ./scripts/github-ci-build.mjs

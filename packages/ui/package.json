@@ -13,7 +13,7 @@
     "dev:geek-auto-start-chat-with-boss-daemon-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBossDaemon pnpm run dev",
     "dev:check-and-download-dependencies-for-init-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=checkAndDownloadDependenciesForInit pnpm run dev",
     "dev:launch-bosszhipin-login-page-with-preload-extension-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=launchBossZhipinLoginPageWithPreloadExtension pnpm run dev",
-    "build": "node scripts/build.mjs && electron-vite build",
+    "build": "node scripts/run-build-sqlite-plugin.mjs && electron-vite build",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
