@@ -6,8 +6,8 @@ import semver from 'semver'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
-export const PATH_TO_PACKAGE_JSON = path.join(__dirname, '../package.json')
-export const PATH_TO_BUILD_INFO_JSON = path.join(__dirname, '../src/common/build-info.json')
+export const PATH_TO_PACKAGE_JSON = path.join(__dirname, '../../package.json')
+export const PATH_TO_BUILD_INFO_JSON = path.join(__dirname, '../../src/common/build-info.json')
 
 export const getPackageInfo = () => fs.readFileSync(PATH_TO_PACKAGE_JSON)
 export const getRuntimeConfig = () => fs.readFileSync(PATH_TO_BUILD_INFO_JSON)
