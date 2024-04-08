@@ -32,17 +32,22 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       
-      - name: Install & Build
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install rpm -y
-          npm i pnpm -g
+          npm i pnpm@^8.6.9 -g
           cd packages/ui
           pnpm i --force
-          pnpm run build:linux
+
+      - name: Build
+        run: |
+          cd packages/ui
+          node ./scripts/github-ci-build.mjs

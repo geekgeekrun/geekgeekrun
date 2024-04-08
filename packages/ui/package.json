@@ -24,7 +24,8 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
-    "install": "cd ./external-node-runtime-dependencies && cross-env PUPPETEER_SKIP_DOWNLOAD=1 npm install --omit=dev"
+    "install": "cd ./external-node-runtime-dependencies && cross-env PUPPETEER_SKIP_DOWNLOAD=1 npm install --omit=dev",
+    "release": "node ./scripts/release-new-version.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
