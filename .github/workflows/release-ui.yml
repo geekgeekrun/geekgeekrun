@@ -11,6 +11,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     runs-on: ubuntu-latest
+    permissions: write-all
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
