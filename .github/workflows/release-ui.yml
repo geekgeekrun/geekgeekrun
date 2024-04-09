@@ -44,11 +44,24 @@ jobs:
         prerelease: false
         
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+      uses: actions/github-script@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./${{ secrets.ReleaseZipName }}.zip
-        asset_name: ${{ secrets.ReleaseZipName }}.zip
-        asset_content_type: application/zip
+        script: |
+          const path = require('path');
+          const fs = require('fs');
+          const release_id = '${{ needs.create_release.outputs.id }}';
+          const path_to_dist = `./packages/ui/dist`
+          for (let file of await fs.readdirSync(path_to_dist)) {
+            if (['.exe', '.deb', '.rpm', '.zip'].includes(path.extname(file))) {
+              console.log('uploadReleaseAsset', file);
+              await github.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release_id,
+                name: file,
+                data: await fs.readFileSync(`${path_to_dist}/${file}`)
+              });
+            }
+          }
