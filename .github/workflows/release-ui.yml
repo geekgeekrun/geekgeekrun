@@ -33,7 +33,7 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "packages/ui/*.zip,packages/ui/*.exe,packages/ui/*.deb,packages/ui/*.rpm"
+        artifacts: "packages/ui/dist/*.zip,packages/ui/dist/*.exe,packages/ui/dist/*.deb,packages/ui/dist/*.rpm"
         tag: ${{ github.ref }}
         token: ${{ secrets.GITHUB_TOKEN }}
         body: TODO New Release.
