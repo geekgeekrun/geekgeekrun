@@ -39,7 +39,6 @@ dmg:
 linux:
   target:
     - deb
-    - rpm
   maintainer: GeekGeekRun
   category: Utility
 npmRebuild: false

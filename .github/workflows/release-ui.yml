@@ -21,8 +21,6 @@ jobs:
     
     - name: Install dependencies
       run: |
-        sudo apt update
-        sudo apt install rpm -y
         npm i pnpm@^8.6.9 -g
         cd packages/ui
         pnpm i --force
