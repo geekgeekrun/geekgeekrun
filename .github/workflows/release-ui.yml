@@ -29,6 +29,13 @@ jobs:
       run: |
         cd packages/ui
         node ./scripts/github-ci-build.mjs
+
+    - name: List folder
+      run: |
+        ls -ll ${{ github.workspace }}
+        ls -ll ${{ github.workspace }}/packages
+        ls -ll ${{ github.workspace }}/packages/ui
+        ls -ll ${{ github.workspace }}/packages/ui/dist
       
     - name: Create Release
       uses: ncipollo/release-action@v1
