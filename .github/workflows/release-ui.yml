@@ -7,7 +7,71 @@ on:
       - "ui-v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  build:
+  build_on_windows:
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    runs-on: windows-latest
+    permissions: write-all
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout source
+      uses: actions/checkout@v2
+    
+    - name: Install dependencies
+      run: |
+        npm i pnpm@^8.6.9 -g
+        cd packages/ui
+        pnpm i --force
+
+    - name: Build
+      run: |
+        cd packages/ui
+        node ./scripts/github-ci-build.mjs
+      
+    - name: Create Release
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        artifacts: "${{ github.workspace }}/packages/ui/dist/*.exe"
+        tag: ${{ github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        body: TODO New Release.
+
+  build_on_macos:
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    runs-on: macos-latest
+    permissions: write-all
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout source
+      uses: actions/checkout@v2
+    
+    - name: Install dependencies
+      run: |
+        npm i pnpm@^8.6.9 -g
+        cd packages/ui
+        pnpm i --force
+
+    - name: Build
+      run: |
+        cd packages/ui
+        node ./scripts/github-ci-build.mjs
+      
+    - name: Create Release
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        artifacts: "${{ github.workspace }}/packages/ui/dist/*.dmg,${{ github.workspace }}/packages/ui/dist/*.zip"
+        tag: ${{ github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        body: TODO New Release.
+
+  build_on_linux:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     runs-on: ubuntu-latest
@@ -33,7 +97,8 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "${{ github.workspace }}/packages/ui/dist/*.zip,${{ github.workspace }}/packages/ui/dist/*.exe,${{ github.workspace }}/packages/ui/dist/*.deb,${{ github.workspace }}/packages/ui/dist/*.rpm"
+        allowUpdates: true
+        artifacts: "${{ github.workspace }}/packages/ui/dist/*.deb,${{ github.workspace }}/packages/ui/dist/*.rpm"
         tag: ${{ github.ref }}
         token: ${{ secrets.GITHUB_TOKEN }}
         body: TODO New Release.
