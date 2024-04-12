@@ -30,7 +30,7 @@ jobs:
   #       cd packages/ui
   #       node ./scripts/github-ci-build.mjs
 
-  #   - name: Upload
+  #   - name: Upload artifact
   #     uses: actions/upload-artifact@v4
   #     with:
   #       name: binary-geekgeekrun-ui-windows-${{ github.sha }}
@@ -61,12 +61,11 @@ jobs:
         cd packages/ui
         node ./scripts/github-ci-build.mjs
 
-    - name: Upload
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: binary-geekgeekrun-ui-macos-${{ github.sha }}
         path: |
-          ${{ github.workspace }}/packages/ui/dist/*.zip
           ${{ github.workspace }}/packages/ui/dist/*.dmg
         overwrite: true
 
@@ -93,7 +92,7 @@ jobs:
         cd packages/ui
         node ./scripts/github-ci-build.mjs
 
-    - name: Upload Artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: binary-geekgeekrun-ui-linux-${{ github.sha }}
@@ -111,7 +110,7 @@ jobs:
       # - build_on_windows
 
     steps:
-      - name: Download Artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           path: geekgeekrun-ui@${{ github.sha }}
@@ -121,7 +120,7 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -llR geekgeekrun-ui@${{ github.sha }}
 
-      - name: Create Release
+      - name: Create release
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
