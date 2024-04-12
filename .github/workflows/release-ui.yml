@@ -29,15 +29,14 @@ jobs:
       run: |
         cd packages/ui
         node ./scripts/github-ci-build.mjs
-      
-    - name: Create Release
-      uses: ncipollo/release-action@v1
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
       with:
-        allowUpdates: true
-        artifacts: "${{ github.workspace }}/packages/ui/dist/*.exe"
-        tag: ${{ github.ref }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        body: TODO New Release.
+        name: binary-geekgeekrun-ui-windows-${{ github.sha }}
+        path: |
+          ${{ github.workspace }}/packages/ui/dist/*.exe
+        overwrite: true
 
   build_on_macos:
     env:
@@ -61,15 +60,15 @@ jobs:
       run: |
         cd packages/ui
         node ./scripts/github-ci-build.mjs
-      
-    - name: Create Release
-      uses: ncipollo/release-action@v1
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
       with:
-        allowUpdates: true
-        artifacts: "${{ github.workspace }}/packages/ui/dist/*.dmg,${{ github.workspace }}/packages/ui/dist/*.zip"
-        tag: ${{ github.ref }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        body: TODO New Release.
+        name: binary-geekgeekrun-ui-macos-${{ github.sha }}
+        path: |
+          ${{ github.workspace }}/packages/ui/dist/*.zip
+          ${{ github.workspace }}/packages/ui/dist/*.dmg
+        overwrite: true
 
   build_on_linux:
     env:
@@ -93,12 +92,40 @@ jobs:
       run: |
         cd packages/ui
         node ./scripts/github-ci-build.mjs
-      
-    - name: Create Release
-      uses: ncipollo/release-action@v1
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
       with:
-        allowUpdates: true
-        artifacts: "${{ github.workspace }}/packages/ui/dist/*.deb,${{ github.workspace }}/packages/ui/dist/*.rpm"
-        tag: ${{ github.ref }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        body: TODO New Release.
+        name: binary-geekgeekrun-ui-linux-${{ github.sha }}
+        path: |
+          ${{ github.workspace }}/packages/ui/dist/*.deb
+          ${{ github.workspace }}/packages/ui/dist/*.rpm
+        overwrite: true
+
+  release:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    needs: 
+      - build_on_linux
+      - build_on_macos
+      - build_on_windows
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: geekgeekrun-ui@${{ github.sha }}
+          pattern: binary-geekgeekrun-ui-*
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -llR geekgeekrun-ui@${{ github.sha }}
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: geekgeekrun-ui@${{ github.sha }}/*
+          tag: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: TODO New Release.
