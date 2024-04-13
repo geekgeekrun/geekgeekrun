@@ -19,16 +19,13 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v2
     
-    - name: Install dependencies
+    - name: Install pnpm
       run: |
         npm i pnpm@^8.6.9 -g
-        cd packages/ui
-        pnpm i --force
          
     - name: Patch pnpm
       uses: actions/github-script@v3
       with:
-        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         script: |
           // https://github.com/pnpm/pnpm/issues/5638
           const path = require('path')
@@ -37,6 +34,11 @@ jobs:
           let pnpmCjsFileContent = fs.readFileSync(pnpmCjsFilePath).toString()
           pnpmCjsFileContent = pnpmCjsFileContent.replace(/^(#!\/usr\/bin\/env node)/, '#!node')
           fs.writeFileSync(pnpmCjsFilePath, pnpmCjsFileContent)
+
+    - name: Install dependencies
+      run: |
+        cd packages/ui
+        pnpm i --force
 
     - name: Build
       run: |
