@@ -26,5 +26,3 @@ export default function buildUiOnCurrentPlatform() {
     process.exit(1)
   }
 }
-
-buildUiOnCurrentPlatform()
