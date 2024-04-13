@@ -30,7 +30,8 @@ jobs:
           // https://github.com/pnpm/pnpm/issues/5638
           const path = require('path')
           const fs = require('fs')
-          const npmGlobalModuleFolder = child_process.execSync('npm root -g').toString().trim()
+          const childProcess = require('child_process')
+          const npmGlobalModuleFolder = childProcess.execSync('npm root -g').toString().trim()
           const pnpmCjsFilePath = path.join(npmGlobalModuleFolder, 'pnpm/bin/pnpm.cjs')
           let pnpmCjsFileContent = fs.readFileSync(pnpmCjsFilePath).toString().replace(/^(#!\/usr\/bin\/env node)/, '#!node')
           fs.writeFileSync(pnpmCjsFilePath, pnpmCjsFileContent)
