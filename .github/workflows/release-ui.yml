@@ -7,36 +7,49 @@ on:
       - "ui-v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  # build_on_windows:
-  #   env:
-  #     PUPPETEER_SKIP_DOWNLOAD: 'true'
-  #   runs-on: windows-latest
-  #   permissions: write-all
+  build_on_windows:
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    runs-on: windows-latest
+    permissions: write-all
 
-  #   # Steps represent a sequence of tasks that will be executed as part of the job
-  #   steps:
-  #   # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-  #   - name: Checkout source
-  #     uses: actions/checkout@v2
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout source
+      uses: actions/checkout@v2
     
-  #   - name: Install dependencies
-  #     run: |
-  #       npm i pnpm@^8.6.9 -g
-  #       cd packages/ui
-  #       pnpm i --force
+    - name: Install dependencies
+      run: |
+        npm i pnpm@^8.6.9 -g
+        cd packages/ui
+        pnpm i --force
+         
+    - name: Patch pnpm
+      uses: actions/github-script@v3
+      with:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          // https://github.com/pnpm/pnpm/issues/5638
+          const path = require('path')
+          const fs = require('fs')
+          const pnpmCjsFilePath = path.join(process.env.APPDATA, 'npm/node_modules/pnpm/bin/pnpm.cjs')
+          let pnpmCjsFileContent = fs.readFileSync(pnpmCjsFilePath).toString()
+          pnpmCjsFileContent = pnpmCjsFileContent.replace(/^(#!\/usr\/bin\/env node)/, '#!node')
+          fs.writeFileSync(pnpmCjsFilePath, pnpmCjsFileContent)
 
-  #   - name: Build
-  #     run: |
-  #       cd packages/ui
-  #       node ./scripts/github-ci-build.mjs
+    - name: Build
+      run: |
+        cd packages/ui
+        node ./scripts/github-ci-build.mjs
 
-  #   - name: Upload artifact
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: binary-geekgeekrun-ui-windows-${{ github.sha }}
-  #       path: |
-  #         ${{ github.workspace }}/packages/ui/dist/*.exe
-  #       overwrite: true
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: binary-geekgeekrun-ui-windows-${{ github.sha }}
+        path: |
+          ${{ github.workspace }}/packages/ui/dist/*.exe
+        overwrite: true
 
   build_on_macos:
     env:
@@ -107,7 +120,7 @@ jobs:
     needs: 
       - build_on_linux
       - build_on_macos
-      # - build_on_windows
+      - build_on_windows
 
     steps:
       - name: Download artifact
