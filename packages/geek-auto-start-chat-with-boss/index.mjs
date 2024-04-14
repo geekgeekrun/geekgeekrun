@@ -79,8 +79,7 @@ export async function mainLoop (hooks) {
       defaultViewport: {
         width: 1440,
         height: 900 - 140,
-      },
-      devtools: true
+      }
     })
     hooks.puppeteerLaunched?.call()
   
