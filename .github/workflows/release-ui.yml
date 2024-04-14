@@ -44,7 +44,7 @@ jobs:
     - name: Build
       run: |
         cd packages/ui
-        node ./scripts/github-ci-build.mjs
+        pnpm run build:make-dist-for-current-platform
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -75,7 +75,7 @@ jobs:
     - name: Build
       run: |
         cd packages/ui
-        node ./scripts/github-ci-build.mjs
+        pnpm run build:make-dist-for-current-platform
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -106,7 +106,7 @@ jobs:
     - name: Build
       run: |
         cd packages/ui
-        node ./scripts/github-ci-build.mjs
+        pnpm run build:make-dist-for-current-platform
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
