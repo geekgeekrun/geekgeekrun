@@ -7,8 +7,8 @@
   "productName": "GeekGeekRun",
   "homepage": "https://github.com/geekgeekrun",
   "scripts": {
-    "start": "node scripts/build.mjs && electron-vite preview",
-    "dev": "node scripts/build.mjs && electron-vite dev",
+    "start": "node scripts/run-build-sqlite-plugin.mjs && electron-vite preview",
+    "dev": "node scripts/run-build-sqlite-plugin.mjs && electron-vite dev",
     "dev:geek-auto-start-chat-with-boss-main-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBossMain pnpm run dev",
     "dev:geek-auto-start-chat-with-boss-daemon-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=geekAutoStartWithBossDaemon pnpm run dev",
     "dev:check-and-download-dependencies-for-init-only": "cross-env MAIN_BOSSGEEKGO_UI_RUN_MODE=checkAndDownloadDependenciesForInit pnpm run dev",
