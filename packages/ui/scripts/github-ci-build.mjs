@@ -1,2 +1,2 @@
-import buildUiOnCurrentPlatform from './steps/build-ui-on-current-platform.mjs'
-buildUiOnCurrentPlatform()
+import makeDistForCurrentPlatform from './steps/make-dist-for-current-platform.mjs'
+makeDistForCurrentPlatform()

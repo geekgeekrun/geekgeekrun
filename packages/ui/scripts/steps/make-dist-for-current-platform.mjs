@@ -3,15 +3,15 @@ import yaml from 'js-yaml'
 import url from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
-import { buildTargetListMapByPlatform, osPlatformToBuildCommandMap } from './vars/os.mjs'
+import { buildTargetListMapByPlatform, osPlatformToBuildCommandMap } from '../vars/os.mjs'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
 const getBuilderConfig = () => {
-  return yaml.load(fs.readFileSync(path.join(__dirname, '../electron-builder.yml'), 'utf8'))
+  return yaml.load(fs.readFileSync(path.join(__dirname, '../../electron-builder.yml'), 'utf8'))
 }
 
-const main = async () => {
+export default async function makeDistForCurrentPlatform() {
   const buildTargets = buildTargetListMapByPlatform[process.platform]
   const platformKeyForBuildParameter = osPlatformToBuildCommandMap[process.platform]
   if (!buildTargets?.length || !platformKeyForBuildParameter) {
@@ -25,5 +25,3 @@ const main = async () => {
 
   return await builder.build(buildParameter)
 }
-
-main()
