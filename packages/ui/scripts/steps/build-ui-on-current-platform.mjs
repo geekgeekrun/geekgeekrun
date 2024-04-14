@@ -1,12 +1,5 @@
 import childProcess from 'node:child_process'
-import os from 'node:os'
-
-const currentOsPlatform = os.platform()
-const osPlatformToBuildCommandMap = {
-  darwin: 'mac',
-  linux: 'linux',
-  win32: 'win'
-}
+import { osPlatformToBuildCommandMap, currentOsPlatform } from '../vars/os.mjs'
 
 export default function buildUiOnCurrentPlatform() {
   try {

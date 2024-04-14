@@ -21,11 +21,6 @@ extraResources:
   - external-node-runtime-dependencies/**
 win:
   executableName: geekgeekrun
-  target:
-    - target: nsis
-      arch:
-        - x64
-        - arm64
 nsis:
   artifactName: ${name}_${version}_${arch}_setup.${ext}
   shortcutName: ${productName}
@@ -39,22 +34,12 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
-  target:
-    - target: dmg
-      arch:
-        - x64
-        - arm64
 dmg:
   artifactName: ${name}_${version}_${arch}.${ext}
 linux:
-  target:
-    - target: deb
-      arch:
-        - x64
-        - arm64
+  artifactName: ${name}_${version}_${arch}.${ext}
   maintainer: GeekGeekRun
   category: Utility
-  artifactName: ${name}_${version}_${arch}.${ext}
 npmRebuild: false
 publish:
   provider: generic
