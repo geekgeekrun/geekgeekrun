@@ -49,7 +49,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: binary-geekgeekrun-ui-windows-${{ github.sha }}
+        name: binary-geekgeekrun-ui-windows-x64-${{ github.sha }}
         path: |
           ${{ github.workspace }}/packages/ui/dist/*.exe
         overwrite: true
@@ -57,12 +57,14 @@ jobs:
   build_on_macos:
     strategy:
       matrix:
-        os:
-          - macos-13 # for x64 build
-          - macos-14 # for arm64 build
+        platform:
+          - os: macos-13 # for x64 build
+            arch: x64
+          - os: macos-14 # for arm64 build
+            arch: arm64
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform.os }}
     permissions: write-all
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -85,7 +87,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: binary-geekgeekrun-ui-macos-${{ github.sha }}
+        name: binary-geekgeekrun-ui-macos-${{ matrix.platform.arch }}-${{ github.sha }}
         path: |
           ${{ github.workspace }}/packages/ui/dist/*.dmg
         overwrite: true
@@ -116,7 +118,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: binary-geekgeekrun-ui-linux-${{ github.sha }}
+        name: binary-geekgeekrun-ui-linux-x64-${{ github.sha }}
         path: |
           ${{ github.workspace }}/packages/ui/dist/*.deb
           ${{ github.workspace }}/packages/ui/dist/*.rpm
