@@ -1,0 +1,49 @@
+import { BrowserWindow, ipcMain } from 'electron'
+import path from 'path'
+import { createFirstLaunchNoticeApproveFlag } from '../features/first-launch-notice-window'
+
+export let firstLaunchNoticeWindow: BrowserWindow | null = null
+export function createFirstLaunchNoticeWindow(
+  opt?: Electron.BrowserWindowConstructorOptions
+): BrowserWindow {
+  // Create the browser window.
+  firstLaunchNoticeWindow = new BrowserWindow({
+    width: 720,
+    height: 640,
+    resizable: false,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      sandbox: false
+    },
+    ...opt
+  })
+
+  firstLaunchNoticeWindow.on('ready-to-show', () => {
+    firstLaunchNoticeWindow!.show()
+  })
+
+  // HMR for renderer base on electron-vite cli.
+  // Load the remote URL for development or the local html file for production.
+  if (process.env.NODE_ENV === 'development' && process.env['ELECTRON_RENDERER_URL']) {
+    firstLaunchNoticeWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/first-run-readme')
+  } else {
+    firstLaunchNoticeWindow.loadFile(
+      path.join(__dirname, '../renderer/index.html') + '#/first-run-readme'
+    )
+  }
+
+  firstLaunchNoticeWindow!.once('closed', () => {
+    firstLaunchNoticeWindow = null
+  })
+
+  return firstLaunchNoticeWindow!
+}
+
+export const initIpc = () => {
+  ipcMain.handle('first-launch-notice-approve', () => {
+    createFirstLaunchNoticeApproveFlag()
+    firstLaunchNoticeWindow?.close()
+  })
+}
+initIpc()

@@ -1,13 +1,15 @@
 import { BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { openDevTools } from '../commands'
+import { createFirstLaunchNoticeWindow } from './firstLaunchNoticeWindow'
+import { isFirstLaunchNoticeApproveFlagExist } from '../features/first-launch-notice-window'
 export let mainWindow: BrowserWindow | null = null
 
-export function createMainWindow(): void {
+export function createMainWindow(): BrowserWindow {
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1024,
-    height: 640,
+    height: 720,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
@@ -26,6 +28,14 @@ export function createMainWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
+  mainWindow.on('ready-to-show', async () => {
+    !isFirstLaunchNoticeApproveFlagExist() &&
+      createFirstLaunchNoticeWindow({
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      })
+  })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -43,4 +53,5 @@ export function createMainWindow(): void {
   mainWindow!.once('closed', () => {
     mainWindow = null
   })
+  return mainWindow!
 }

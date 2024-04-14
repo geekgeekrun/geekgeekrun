@@ -3,6 +3,13 @@ import BootstrapSplash from '@renderer/page/BootstrapSplash/index.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
+    path: '/first-run-readme',
+    component: () => import('@renderer/page/FirstRunReadme/index.vue'),
+    meta: {
+      title: '初次使用必读'
+    }
+  },
+  {
     path: '/cookieAssistant',
     component: () => import('@renderer/page/CookieAssistant/index.vue'),
     meta: {
@@ -65,7 +72,7 @@ const routes: Array<RouteRecordRaw> = [
         },
       }
     ]
-  },
+  }
 ]
 
 const router = createRouter({
