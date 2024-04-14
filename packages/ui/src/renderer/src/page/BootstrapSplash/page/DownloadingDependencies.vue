@@ -75,8 +75,8 @@ const processTasks = async () => {
           processTasks()
         })
         .catch(() => {
-          // FIXME: should exit app here
           promiseList.length = 0
+          electron.ipcRenderer.invoke('exit-app-immediately')
         })
     }
   }

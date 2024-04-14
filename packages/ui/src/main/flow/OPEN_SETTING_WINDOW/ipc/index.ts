@@ -1,4 +1,4 @@
-import { ipcMain, shell } from 'electron'
+import { ipcMain, shell, app } from 'electron'
 
 import * as childProcess from 'node:child_process'
 import {
@@ -263,5 +263,9 @@ export default function initIpc() {
   ipcMain.handle('get-auto-start-chat-record', async (ev, payload: PageReq) => {
     const a = await getAutoStartChatRecord(payload)
     return a
+  })
+
+  ipcMain.handle('exit-app-immediately', () => {
+    app.exit(0)
   })
 }

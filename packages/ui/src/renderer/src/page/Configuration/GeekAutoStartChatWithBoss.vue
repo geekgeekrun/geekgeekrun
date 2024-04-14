@@ -6,7 +6,10 @@
           >编辑Cookie</el-button
         >
       </el-form-item>
-      <el-form-item label="钉钉机器人 AccessToken" prop="dingtalkRobotAccessToken">
+      <el-form-item
+        label="钉钉机器人 AccessToken（请勿使用公司内部群）"
+        prop="dingtalkRobotAccessToken"
+      >
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
       <el-form-item label="期望公司（以逗号分隔）" prop="expectCompanies">
