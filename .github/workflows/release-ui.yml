@@ -10,7 +10,7 @@ jobs:
   build_on_windows:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions: write-all
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -57,7 +57,7 @@ jobs:
   build_on_macos:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-    runs-on: macos-latest
+    runs-on: macos-14
     permissions: write-all
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -88,7 +88,7 @@ jobs:
   build_on_linux:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions: write-all
 
     # Steps represent a sequence of tasks that will be executed as part of the job
