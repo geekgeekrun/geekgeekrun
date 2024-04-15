@@ -11,7 +11,7 @@
           @change="handleReadmeItemCheckStatusListChange"
         >
           <ElCheckbox :label="0" :class="[unreadItemsAfterClickSubmit[0] ? 'unread' : '']">
-            本程序从某种程度上说属于辅助工具，是与<el-link
+            本程序从某种程度上说属于辅助工具，与<el-link
               @click="
                 electron.ipcRenderer.send(
                   'open-external-link',
@@ -19,8 +19,7 @@
                 )
               "
               >《Boss直聘用户协议》</el-link
-            >
-            相关条款相违背的；
+            >相关条款相违背；
             根据该条款，如果一些非正常用户行为被风控监测到，您需要承受包括不仅限于<b
               class="color-red"
               >账号被强制退出登录</b
@@ -40,10 +39,13 @@
             >进行求职。
           </ElCheckbox>
           <ElCheckbox :label="2" :class="[unreadItemsAfterClickSubmit[2] ? 'unread' : '']">
-            本程序原理是模拟用户在Boss直聘网页上进行点击操作；Boss直聘网站每过一段时间会发生改版，这可能会导致本程序相关脚本失效，此时您可以点击程序左下角进行反馈。
+            本程序原理是模拟用户在Boss直聘网页上进行点击操作；Boss直聘网站每过一段时间会发生改版，且有可能包含A/B实验，这将导致本程序相关脚本失效，此时您可以点击程序左下角进行反馈。
           </ElCheckbox>
           <ElCheckbox :label="3" :class="[unreadItemsAfterClickSubmit[3] ? 'unread' : '']">
-            您的雇主可能会对您的计算机终端或网络进行监听，从而审计、跟踪您的行为；建议您<b class="color-red">不要在由您雇主提供的计算机终端或网络上使用本程序</b>。
+            您的雇主可能会对您的计算机终端或网络进行监控，从而审计、跟踪您的行为；建议您<b
+              class="color-red"
+              >不要在您雇主提供的计算机终端或网络上使用本程序</b
+            >。
           </ElCheckbox>
           <ElCheckbox :label="4" :class="[unreadItemsAfterClickSubmit[4] ? 'unread' : '']">
             本程序需要存储您的登录凭据，即Cookie，来模拟您在Boss直聘上开聊Boss的行为；本程序仅会把您的Cookie存储在本地，并在您访问Boss直聘时将其传输到Boss直聘，<b
@@ -59,22 +61,23 @@
           </ElCheckbox>
           <ElCheckbox :label="6" :class="[unreadItemsAfterClickSubmit[6] ? 'unread' : '']">
             <b class="color-red">本程序不对您的求职过程与结果负责</b
-            >，为您开聊的职位均在由Boss直聘为您推送的推荐职位中出现过；请<b class="color-red"
-              >自行甄别为您开聊的公司、认真决定是否参加面试、慎重选择Offer</b
+            >，为您开聊的职位均在Boss直聘上发布；请<b class="color-red">自行甄别为您开聊的公司</b
+            >、<b class="color-red">认真决定是否参加面试</b>、<b class="color-red">慎重选择Offer</b
             >。
           </ElCheckbox>
           <ElCheckbox :label="7" :class="[unreadItemsAfterClickSubmit[7] ? 'unread' : '']">
             请在Boss直聘上自行<b class="color-red">屏蔽您不期望投递的公司</b>。
           </ElCheckbox>
           <ElCheckbox :label="8" :class="[unreadItemsAfterClickSubmit[8] ? 'unread' : '']">
-            本程序经历过了多次测试，理论上来说大部分情况下可以正常运行；如果您有顾虑，建议通过VMWare WorkStation/Fusion、VirtualBox、Hyper-V/Windows沙盒等虚拟化技术运行本程序。如发生问题，请点击程序左下角进行反馈。
+            本程序经历过了多次测试，理论上来说大部分情况下可以正常运行；如果您有顾虑，建议通过VMWare
+            WorkStation/Fusion、VirtualBox、Hyper-V/Windows沙盒等虚拟化技术运行本程序。如发生问题，请点击程序左下角进行反馈。
           </ElCheckbox>
         </ElCheckboxGroup>
       </article>
       <footer flex mt20px pb20px flex-justify-end>
         <el-button type="text" @click="handleCancel">退出程序</el-button>
         <el-button type="primary" @click="handleSubmit"
-          >我已经阅读，并接受上方所提及的相关风险</el-button
+          >我已经阅读，并接受上方所提及的相关风险，并决定继续使用本程序</el-button
         >
       </footer>
     </div>
@@ -94,7 +97,7 @@ const handleCancel = () => {
 
 const unreadItemsAfterClickSubmit = ref<Record<number, true>>({})
 const handleSubmit = () => {
-  const COUNT = 7
+  const COUNT = 9
   if (readmeItemCheckStatusList.value.length !== COUNT) {
     ElMessage.warning(
       `您还有${COUNT - readmeItemCheckStatusList.value.length}条没有读完，读完就打勾标记一下吧`
@@ -120,7 +123,8 @@ const handleReadmeItemCheckStatusListChange = (value: number[]) => {
 
 <style lang="scss" scoped>
 .first-run-readme {
-  max-width: 640px;
+  user-select: none;
+  max-width: 880px;
   margin: 0 auto;
   height: 100vh;
   box-sizing: border-box;
@@ -130,6 +134,7 @@ const handleReadmeItemCheckStatusListChange = (value: number[]) => {
     }
     .readme-desc {
       margin-top: 10px;
+      font-size: 14px;
     }
     .readme-article {
       margin-top: 10px;
