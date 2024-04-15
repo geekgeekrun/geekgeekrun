@@ -8,7 +8,7 @@ export function createFirstLaunchNoticeWindow(
 ): BrowserWindow {
   // Create the browser window.
   firstLaunchNoticeWindow = new BrowserWindow({
-    width: 720,
+    width: 960,
     height: 640,
     resizable: false,
     show: false,
@@ -28,8 +28,8 @@ export function createFirstLaunchNoticeWindow(
   if (process.env.NODE_ENV === 'development' && process.env['ELECTRON_RENDERER_URL']) {
     firstLaunchNoticeWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/first-run-readme')
   } else {
-    firstLaunchNoticeWindow.loadFile(
-      path.join(__dirname, '../renderer/index.html') + '#/first-run-readme'
+    firstLaunchNoticeWindow.loadURL(
+      'file://' + path.join(__dirname, '../renderer/index.html') + '#/first-run-readme'
     )
   }
 
