@@ -156,7 +156,7 @@ const handleReadmeItemCheckStatusListChange = (value: number[]) => {
           white-space: normal;
         }
         & + .el-checkbox {
-          margin-top: 8px;
+          margin-top: 5px;
         }
         &.is-checked .el-checkbox__label {
           color: unset;
