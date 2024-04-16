@@ -1,5 +1,5 @@
 <template>
-  <div class="first-run-readme">
+  <div class="first-run-readme" ref="componentRootEl">
     <div class="first-run-readme__inner">
       <div class="readme-title">欢迎使用GeekGeekRun！祝您求职顺利~</div>
       <div class="readme-desc">
@@ -86,7 +86,7 @@
 
 <script lang="ts" setup>
 import { ElCheckbox, ElCheckboxGroup, ElMessage } from 'element-plus'
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeMount } from 'vue';
 const electron = window.electron
 
 const readmeItemCheckStatusList = ref<number[]>([])
@@ -119,16 +119,33 @@ const handleReadmeItemCheckStatusListChange = (value: number[]) => {
     }
   })
 }
+const componentRootEl = ref<HTMLElement>()
+onMounted(() => {
+  const ro = new ResizeObserver(() => {
+    electron.ipcRenderer.send(
+      'update-window-size',
+      {
+        width: componentRootEl.value!.offsetWidth,
+        height: componentRootEl.value!.offsetHeight,
+      }
+    )
+  })
+  ro.observe(componentRootEl.value!)
+  onBeforeMount(() => {
+    ro.disconnect()
+  })
+})
 </script>
 
 <style lang="scss" scoped>
 .first-run-readme {
-  user-select: none;
-  max-width: 880px;
-  margin: 0 auto;
-  height: 100vh;
   box-sizing: border-box;
+  width: 960px;
+  height: fit-content;
+  user-select: none;
   &__inner {
+    width: 880px;
+    margin: 0 auto;
     padding-top: 30px;
     .readme-title {
     }
