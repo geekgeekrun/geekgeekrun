@@ -12,15 +12,10 @@
 各行各业，无论你是小白还是大佬，都能通过几步简单的配置，快速开始求职！
 
 ## 系统要求
-- 处理器
-    - x86_64 架构
-    - 其他架构（例如：ARM（例如：Apple Silicon）），可能支持；请自行 clone 本项目进行构建
-
-- 操作系统
-    - 对于 Windows：最低 Windows 10 1507（如果你的电脑是2016年后出厂的电脑，一般都可以使用）
-    - 对于 Linux：支持包含桌面环境的 Ubuntu 20.04、Fedora 39；暂未测试更早前的操作系统
-    - 对于 macOS：支持 Sonoma 14.0；暂未测试更早前的操作系统
-    - 对于其他操作系统，可能支持；请自行 clone 本项目进行构建；运行时需要包含桌面环境
+- 操作系统及处理器
+    - Windows（x86_64）：最低 Windows 10 1507（如果你的电脑是2016年后出厂的电脑，一般都可以使用）
+    - Linux（x86_64）：支持包含桌面环境的 Ubuntu 20.04、Fedora 39；暂未测试更早前的操作系统
+    - macOS（Apple Silicon、x86_64）：支持 Sonoma 14.0；暂未测试更早前的操作系统
 
 ## 安装方式
 - Windows
@@ -29,17 +24,19 @@
     1. 安装完成后，程序将自动启动，并引导你为初次使用进行一些配置
 
 - Linux
-    1. 打开 https://github.com/geekgeekrun/geekgeekrun/releases ，下载最新发行版安装包（文件名后缀`.deb` / `.rpm`）
+    1. 打开 https://github.com/geekgeekrun/geekgeekrun/releases ，下载最新发行版安装包（文件名后缀`.deb`）
     1. 使用 `dpkg` / `rpm` 进行配置
     1. 从桌面启动；启动后，将引导你为初次使用进行一些配置
 
-- macOS 及其他操作系统
-    1. 确保你已经安装 Git、Node.js 18+、pnpm 8.6.9+
-    1. `git clone https://github.com/geekgeekrun/geekgeekrun.git` 本项目到本地
-    1. 进入相对于项目根目录的 `./packages/ui` 目录，执行 `pnpm i`
-    1. 根据平台，执行 `pnpm run build:win` / `pnpm run build:mac` / `pnpm run build:linux`
-    1. 进入 `dist` 目录，你将可以看到构建完成的安装程序 / 程序包；根据你所使用的平台通用的程序安装方式，进行安装
-    1. 从桌面启动；启动后，将引导你为初次使用进行一些配置
+- macOS
+    1. 打开 https://github.com/geekgeekrun/geekgeekrun/releases ，根据处理器架构，下载最新发行版安装包（文件名后缀`.dmg`）
+    1. 双击以挂载dmg文件，然后将应用程序图标拽入Application文件夹
+    1. 进入Application文件夹；由于发行包无签名，因此不能直接通过双击运行（直接双击将提示`“GeekGeekRun”已损坏，无法打开。 你应该将它移到废纸篓。`），您需要在终端中依次执行如下命令以以解决此问题，详情请百度搜索
+        ```sh
+        sudospctl --master-disable
+        xattr -cr /Applications/GeekGeekRun.app
+        ```
+    1. 双击应用程序图标；启动后，将引导你为初次使用进行一些配置
 
 # CLI 版本
 ## 使用方式
