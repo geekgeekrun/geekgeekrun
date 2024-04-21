@@ -5,4 +5,6 @@ declare global {
     electron: ElectronAPI
     api: unknown
   }
+  declare const electron: Window['electron']
+  declare const api: Window['api']
 }
