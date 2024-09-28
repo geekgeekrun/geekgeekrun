@@ -68,6 +68,7 @@ const enableCompanyAllowList = Boolean(expectCompanySet.size)
 let browser, page
 
 const blockBossNotNewChat = new Set()
+const blockBossNotActive = new Set()
 
 async function toRecommendPage (hooks) {
   let userInfoPromise = page.waitForResponse((response) => {
@@ -152,25 +153,8 @@ async function toRecommendPage (hooks) {
     }
 
     try {
-      const { targetJobElProxy, targetJobIndex } = await new Promise(async (resolve, reject) => {
-        try {
-          // job list
-          const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
-  
-          let jobListData = await page.evaluate(
-            `
-              document.querySelector('.job-recommend-main')?.__vue__?.jobList
-            `
-          )
-          // when disable company allow list, we will believe that the first one in the list is your expect job.
-          let targetJobIndex = enableCompanyAllowList ? jobListData.findIndex(
-            it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
-          ) : jobListData.findIndex(
-            it => !blockBossNotNewChat.has(it.encryptBossId)
-          )
-
-          let hasReachLastPage = false
-  
+      const { targetJobIndex, targetJobData } = await new Promise(async (resolve, reject) => {
+        try {  
           let requestNextPagePromiseWithResolver = null
           page.on(
             'request',
@@ -199,133 +183,181 @@ async function toRecommendPage (hooks) {
             }
           )
 
-          while (targetJobIndex < 0 && !hasReachLastPage) {
-            // fetch new
-            const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
-            const windowInnerHeight = await page.evaluate('window.innerHeight')
-            await page.mouse.move(
-              recommendJobListElBBox.x + recommendJobListElBBox.width / 2,
-              windowInnerHeight / 2
+          // job list
+          const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
+          let jobListData = await page.evaluate(`document.querySelector('.job-recommend-main')?.__vue__?.jobList`)
+          let hasReachLastPage = false
+          let targetJobIndex = -1
+          let targetJobData
+          continueFind: while (targetJobIndex < 0 && !hasReachLastPage) {
+            // when disable company allow list, we will believe that the first one in the list is your expect job.
+            let tempTargetJobIndexToCheckDetail = enableCompanyAllowList ? jobListData.findIndex(
+              it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
+            ) : jobListData.findIndex(
+              it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId)
             )
-            let scrolledHeight = 0
-            const increase = 40 + Math.floor(30 * Math.random())
+            while (tempTargetJobIndexToCheckDetail < 0 && !hasReachLastPage) {
+              // fetch new
+              const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
+              const windowInnerHeight = await page.evaluate('window.innerHeight')
+              await page.mouse.move(
+                recommendJobListElBBox.x + recommendJobListElBBox.width / 2,
+                windowInnerHeight / 2
+              )
+              let scrolledHeight = 0
+              const increase = 40 + Math.floor(30 * Math.random())
 
-            while (
-              !requestNextPagePromiseWithResolver &&
-              !hasReachLastPage
-            ) {
-              scrolledHeight += increase
-              await page.mouse.wheel({deltaY: increase});
-              await sleep(1)
-              await requestNextPagePromiseWithResolver?.promise
-              hasReachLastPage = await page.evaluate(`
-                !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
-              `)
-              if (hasReachLastPage) {
-                console.log(`Arrive the terminal of the job list.`)
+              while (
+                !requestNextPagePromiseWithResolver &&
+                !hasReachLastPage
+              ) {
+                scrolledHeight += increase
+                await page.mouse.wheel({deltaY: increase});
+                await sleep(1)
+                await requestNextPagePromiseWithResolver?.promise
+                hasReachLastPage = await page.evaluate(`
+                  !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
+                `)
+                if (hasReachLastPage) {
+                  console.log(`Arrive the terminal of the job list.`)
+                }
               }
+              requestNextPagePromiseWithResolver = null
+    
+              await sleep(3000)
+              jobListData = await page.evaluate(
+                `
+                  document.querySelector('.job-recommend-main')?.__vue__?.jobList
+                `
+              )
+              tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name)))
             }
-            requestNextPagePromiseWithResolver = null
+    
+            if (tempTargetJobIndexToCheckDetail < 0 && hasReachLastPage) {
+              // has reach last page and not find target job
+              reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
+              return
+            }
   
-            await sleep(3000)
-            jobListData = await page.evaluate(
-              `
-                document.querySelector('.job-recommend-main')?.__vue__?.jobList
-              `
-            )
-            targetJobIndex = jobListData.findIndex(it => !blockBossNotNewChat.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name)))
-          }
+            //#region here to check detail
+            if (tempTargetJobIndexToCheckDetail >= 0) {
+              // scroll that target element into view
+              await page.evaluate(`
+                targetEl = document.querySelector("ul.rec-job-list").children[${tempTargetJobIndexToCheckDetail}]
+                targetEl.scrollIntoView({
+                  behavior: 'smooth',
+                  block: ${Math.random() > 0.5 ? '\'center\'' : '\'end\''}
+                })
+              `)
+        
+              await sleepWithRandomDelay(200)
+        
+              if (tempTargetJobIndexToCheckDetail === 0) {
+              } else {
+                const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list > li')
+                const targetJobElProxy = recommendJobItemList[tempTargetJobIndexToCheckDetail]
+                // click that element
+                await targetJobElProxy.click()
+                await page.waitForResponse(
+                  response => {
+                    if (
+                      response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')
+                    ) {
+                      return true
+                    }
+                    return false
+                  }
+                );
+                await sleepWithRandomDelay(2000)
+              }
+              targetJobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
+              // save the job detail info
+              await hooks.jobDetailIsGetFromRecommendList?.promise(targetJobData)
   
-          if (targetJobIndex < 0 && hasReachLastPage) {
-            // has reach last page and not find target job
-            reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
-            return
+              //#region
+              // null
+              // 刚刚活跃 // 今日活跃 // 昨日活跃 // 3日内活跃 // 本周活跃
+              // 2周内活跃 // 本月活跃 // 2月内活跃 // 3月内活跃 // 4月内活跃 // 5月内活跃 // 近半年活跃 // 半年前活跃
+              //#endregion
+              if ([
+                '2周内活跃',
+                '本月活跃',
+                '2月内活跃',
+                '3月内活跃',
+                '4月内活跃',
+                '5月内活跃',
+                '近半年活跃',
+                '半年前活跃',
+              ].includes(targetJobData.bossInfo.activeTimeDesc)) {
+                blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
+                continue continueFind
+              }
+              const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
+              if (startChatButtonInnerHTML !== '立即沟通') {
+                blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
+                continue continueFind
+              }
+              targetJobIndex = tempTargetJobIndexToCheckDetail
+              //#endregion
+            }
+
+            if (targetJobIndex < 0 && hasReachLastPage) {
+              // has reach last page and not find target job
+              reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
+              return
+            }
           }
           
-          const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list > li')
           resolve(
             {
-              targetJobElProxy: recommendJobItemList[targetJobIndex],
-              targetJobIndex
+              targetJobIndex,
+              targetJobData
             }
           )
         } catch(err) {
           reject(err)
         }
       })
-      if (targetJobIndex >= 0) {
-        // scroll that target element into view
-        await page.evaluate(`
-          targetEl = document.querySelector("ul.rec-job-list").children[${targetJobIndex}]
-          targetEl.scrollIntoView({
-            behavior: 'smooth',
-            block: ${Math.random() > 0.5 ? '\'center\'' : '\'end\''}
-          })
-        `)
-  
-        await sleepWithRandomDelay(200)
-  
-        if (targetJobIndex === 0) {
-        } else {
-          // click that element
-          await targetJobElProxy.click()
-          await page.waitForResponse(
-            response => {
-              if (
-                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')
-              ) {
-                return true
-              }
-              return false
-            }
-          );
-          await sleepWithRandomDelay(2000)
-        }
-        const jobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
-        // save the job detail info
-        await hooks.jobDetailIsGetFromRecommendList?.promise(jobData)
-    
-        const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
-        if (startChatButtonInnerHTML === '立即沟通') {
-          await hooks.newChatWillStartup?.promise(jobData)
-          const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
-          await startChatButtonProxy.click()
+      await sleepWithRandomDelay(200)
+      const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
 
-          const addFriendResponse = await page.waitForResponse(
-            response => {
-              if (
-                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json') && response.url().includes(`jobId=${jobData.jobInfo.encryptId}`)
-              ) {
-                return true
-              }
-              return false
-            }
-          );
-          const res = await addFriendResponse.json()
+      await hooks.newChatWillStartup?.promise(targetJobData)
+      const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
+      //#region click the chat button
+      await startChatButtonProxy.click()
 
-          if (res.code !== 0) {
-            // startup chat error, may the chance of today has used out
-            if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
-              await storeStorage(page).catch(() => void 0)
-              throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
-            } else {
-              console.error(res)
-              throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
-            }
-          } else {
-            await hooks.newChatStartup?.promise(jobData)
-            blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
-            
-            await storeStorage(page).catch(() => void 0)
-            await sleepWithRandomDelay(750)
-            const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
-            await closeDialogButtonProxy.click()
-            await sleepWithRandomDelay(1000)
+      const addFriendResponse = await page.waitForResponse(
+        response => {
+          if (
+            response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json') && response.url().includes(`jobId=${targetJobData.jobInfo.encryptId}`)
+          ) {
+            return true
           }
-        } else {
-          blockBossNotNewChat.add(jobData.jobInfo.encryptUserId)
+          return false
         }
+      );
+      const res = await addFriendResponse.json()
+
+      if (res.code !== 0) {
+        // startup chat error, may the chance of today has used out
+        if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
+          await storeStorage(page).catch(() => void 0)
+          throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
+        } else {
+          console.error(res)
+          throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
+        }
+      } else {
+        await hooks.newChatStartup?.promise(targetJobData)
+        blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
+
+        await storeStorage(page).catch(() => void 0)
+        await sleepWithRandomDelay(750)
+        const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
+        await closeDialogButtonProxy.click()
+        await sleepWithRandomDelay(1000)
       }
+      // #endregion
     } catch (err) {
       if (err instanceof Error) {
         switch (err.message) {
