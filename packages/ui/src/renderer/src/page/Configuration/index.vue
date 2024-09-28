@@ -4,6 +4,7 @@
       <div class="nav-list flex-1 of-auto">
         <RouterLink to="./GeekAutoStartChatWithBoss">Boss炸弹</RouterLink>
         <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
+        <a href="javascript:void(0)" @click="handleLaunchBossSite">手动逛Boss</a>
       </div>
       <div class="pt-16px pb-16px flex-0 font-size-12px">
         <div>当前版本: {{ buildInfo.version }}({{ buildInfo.buildVersion }})</div>
@@ -84,6 +85,10 @@ const handleFeedbackClick = () => {
 }
 const handleGotoProjectPageClick = () => {
   electron.ipcRenderer.send('open-external-link', 'https://github.com/geekgeekrun/geekgeekrun')
+}
+
+const handleLaunchBossSite = async () => {
+  await electron.ipcRenderer.invoke('open-boss-site')
 }
 </script>
 

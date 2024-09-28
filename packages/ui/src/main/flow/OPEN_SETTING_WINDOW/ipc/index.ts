@@ -265,6 +265,44 @@ export default function initIpc() {
     return a
   })
 
+  let subProcessOfOpenBossSite: ChildProcess | undefined
+  let subProcessOfOpenBossSiteLaunching = false
+  ipcMain.handle('open-boss-site', async () => {
+    if (subProcessOfOpenBossSiteLaunching) {
+      return
+    }
+    subProcessOfOpenBossSiteLaunching = true
+    const defer = Promise.withResolvers()
+    if (subProcessOfOpenBossSite) {
+      subProcessOfOpenBossSite.once('exit', defer.resolve)
+      subProcessOfOpenBossSite.once('error', console.error)
+      try {
+        process.kill(subProcessOfOpenBossSite.pid!)
+        await sleep(500)
+        process.kill(subProcessOfOpenBossSite.pid!, 'SIGKILL')
+      } catch {
+        defer.resolve(undefined)
+      }
+    } else {
+      defer.resolve(undefined)
+    }
+    defer.promise.then(() => {
+      subProcessOfOpenBossSite = undefined
+    })
+    await defer.promise
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    const subProcessEnv = {
+      ...process.env,
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossSite',
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath
+    }
+    subProcessOfOpenBossSite = childProcess.spawn(process.argv[0], process.argv.slice(1), {
+      env: subProcessEnv,
+      stdio: [null, null, null]
+    })
+    subProcessOfOpenBossSiteLaunching = false
+  })
+
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)
   })
