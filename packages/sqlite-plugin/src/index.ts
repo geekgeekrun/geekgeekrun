@@ -74,7 +74,7 @@ export default class SqlitePlugin {
       }
     );
 
-    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo) => {
+    hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async (_jobInfo) => {
       console.log(_jobInfo);
       const ds = await this.initPromise;
 
@@ -130,6 +130,31 @@ export default class SqlitePlugin {
       await jobInfoRepository.save(job);
       //#endregion
 
+      //#region save boss active status
+      // look up if the lastActiveStatus of the newest one is equal to the current one.
+      // if equal, just update the updateDate
+      // else insert a new record
+
+      const bossActiveStatusRecord = new BossActiveStatusRecord();
+      bossActiveStatusRecord.encryptBossId = boss.encryptBossId;
+      bossActiveStatusRecord.updateDate = new Date();
+      bossActiveStatusRecord.lastActiveStatus = bossInfo.activeTimeDesc;
+
+      const bossActiveStatusRecordRepository = ds.getRepository(BossActiveStatusRecord);
+      const existNewestRecordByBossId = await bossActiveStatusRecordRepository.findOne(
+        { where: { encryptBossId: boss.encryptBossId }, order: { updateDate: 'DESC'} }
+      )
+      if (existNewestRecordByBossId && existNewestRecordByBossId.lastActiveStatus === bossInfo.activeTimeDesc) {
+        bossActiveStatusRecord.id = existNewestRecordByBossId.id
+      }
+      await bossActiveStatusRecordRepository.save(bossActiveStatusRecord)
+      //#endregion
+      return
+    });
+
+    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo) => {
+      const { jobInfo } = _jobInfo;
+
       //#region chat-startup-log
       const chatStartupLog = new ChatStartupLog()
       const chatStartupLogPayload: Partial<ChatStartupLog> = {
@@ -139,6 +164,7 @@ export default class SqlitePlugin {
       }
       Object.assign(chatStartupLog, chatStartupLogPayload)
 
+      const ds = await this.initPromise;
       const chatStartupLogRepository = ds.getRepository(ChatStartupLog);
       await chatStartupLogRepository.save(chatStartupLog);
       //#endregion

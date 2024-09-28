@@ -168,7 +168,6 @@ async function toRecommendPage (hooks) {
           ) : jobListData.findIndex(
             it => !blockBossNotNewChat.has(it.encryptBossId)
           )
-          debugger
 
           let hasReachLastPage = false
   
@@ -283,6 +282,8 @@ async function toRecommendPage (hooks) {
           await sleepWithRandomDelay(2000)
         }
         const jobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
+        // save the job detail info
+        await hooks.jobDetailIsGetFromRecommendList?.promise(jobData)
     
         const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
         if (startChatButtonInnerHTML === '立即沟通') {
