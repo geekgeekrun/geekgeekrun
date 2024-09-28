@@ -12,7 +12,10 @@
       >
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
-      <el-form-item label="期望公司（以逗号分隔）" prop="expectCompanies">
+      <el-form-item
+        label="期望公司（以逗号分隔，一个也不填将看到哪个聊哪个）"
+        prop="expectCompanies"
+      >
         <el-input
           v-model="formContent.expectCompanies"
           :autosize="{ minRows: 4 }"
@@ -45,8 +48,7 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
 })
 
-const formRules = {
-}
+const formRules = {}
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {

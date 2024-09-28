@@ -57,7 +57,7 @@ export async function initPuppeteer () {
 const bossCookies = readStorageFile('boss-cookies.json')
 const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
-const targetCompanyList = readConfigFile('target-company-list.json')
+const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
@@ -168,6 +168,7 @@ async function toRecommendPage (hooks) {
           ) : jobListData.findIndex(
             it => !blockBossNotNewChat.has(it.encryptBossId)
           )
+          debugger
 
           let hasReachLastPage = false
   
