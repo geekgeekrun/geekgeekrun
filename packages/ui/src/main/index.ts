@@ -30,6 +30,11 @@ const runMode = process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE
       launchBossZhipinLoginPageWithPreloadExtension()
       break
     }
+    case 'launchBossSite': {
+      const { launchBossSite } = await import('./flow/LAUNCH_BOSS_SITE')
+      launchBossSite()
+      break
+    }
     default: {
       const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
       openSettingWindow()
