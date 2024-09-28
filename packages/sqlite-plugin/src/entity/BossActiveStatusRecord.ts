@@ -9,8 +9,10 @@ export class BossActiveStatusRecord {
   @Column()
   encryptBossId: string;
 
-  @Column()
-  lastActiveStatus: string;
+  @Column({
+    nullable: true
+  })
+  lastActiveStatus?: string;
   
   @Column()
   updateDate: Date;
