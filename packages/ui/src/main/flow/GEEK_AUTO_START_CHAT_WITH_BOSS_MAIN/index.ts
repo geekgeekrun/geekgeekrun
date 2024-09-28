@@ -83,6 +83,7 @@ const runAutoChat = async () => {
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
+    jobDetailIsGetFromRecommendList: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
     newChatStartup: new AsyncSeriesHook(['positionInfoDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
