@@ -2,12 +2,16 @@ import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index
 import extractZip from 'extract-zip'
 import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
+import { saveJobInfoFromRecommendPage } from '@geekgeekrun/sqlite-plugin/dist/handlers'
+import { initDb } from '@geekgeekrun/sqlite-plugin'
+import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import url from 'url'
 import packageJson from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/package.json' assert { type: 'json' }
+import { Target } from 'puppeteer'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -41,6 +45,32 @@ async function getEditThisCookieZipPath() {
   }
   return editThisCookieZipPath
 }
+const dbInitPromise = initDb(getPublicDbFilePath())
+
+const attachRequestsListener = async (target: Target) => {
+  const page = await target.page()
+  if (!page) {
+    return
+  }
+
+  page.on('response', async (response) => {
+    if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
+      const data = await response.json()
+
+      console.log(data)
+      if (data.code === 0) {
+        saveJobInfoFromRecommendPage(await dbInitPromise, data.zpData)
+      }
+    }
+  })
+
+  await page.waitForResponse((response) => {
+    if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
+      return true
+    }
+    return false
+  })
+}
 
 export async function launchBossSite() {
   if (!fs.existsSync(path.join(editThisCookieExtensionPath, 'manifest.json'))) {
@@ -57,7 +87,7 @@ export async function launchBossSite() {
     headless: false,
     args: [`--load-extension=${editThisCookieExtensionPath}`]
   })
-  const [page] = await browser.pages()
+  let [page] = await browser.pages()
   for (let i = 0; i < bossCookies.length; i++) {
     await page.setCookie(bossCookies[i])
   }
@@ -65,5 +95,11 @@ export async function launchBossSite() {
   const localStoragePageUrl = `https://www.zhipin.com/desktop/`
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
 
+  browser.on('targetcreated', (target) => {
+    attachRequestsListener(target)
+  })
+  const newPage = await await browser.newPage()
+  await page.close()
+  page = newPage
   await page.goto('https://www.zhipin.com/web/user/')
 }
