@@ -2,7 +2,10 @@ import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index
 import extractZip from 'extract-zip'
 import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
-import { saveJobInfoFromRecommendPage } from '@geekgeekrun/sqlite-plugin/dist/handlers'
+import {
+  saveJobInfoFromRecommendPage,
+  saveChatStartupRecord
+} from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
@@ -59,8 +62,33 @@ const attachRequestsListener = async (target: Target) => {
 
       console.log(data)
       if (data.code === 0) {
-        saveJobInfoFromRecommendPage(await dbInitPromise, data.zpData)
+        await saveJobInfoFromRecommendPage(await dbInitPromise, data.zpData)
       }
+    } else if (
+      page.url().startsWith('https://www.zhipin.com/web/geek/job-recommend') &&
+      response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json')
+    ) {
+      const request = (await response.request()).url()
+
+      const url = new URL(request)
+      const jobIdInAddFriendUrl = url.searchParams.get('jobId')
+
+      // access current page, predict if jobId of current page is equal to jobId in request
+      // in case of page changed after startup chat
+      const currentJobData = await page.evaluate(
+        'document.querySelector(".job-detail-box").__vue__.data'
+      )
+      const currentJobId = currentJobData?.jobInfo?.encryptId
+      if (jobIdInAddFriendUrl !== currentJobId) {
+        return
+      }
+
+      const currentUserInfo = await page.evaluate(
+        'document.querySelector(".job-detail-box").__vue__.$store.state.userInfo'
+      )
+      await saveChatStartupRecord(await dbInitPromise, currentJobData, {
+        encryptUserId: currentUserInfo.encryptUserId
+      })
     }
   })
 

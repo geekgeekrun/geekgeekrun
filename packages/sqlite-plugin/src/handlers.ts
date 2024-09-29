@@ -4,6 +4,7 @@ import { BossInfo } from "./entity/BossInfo";
 import { CompanyInfo } from "./entity/CompanyInfo";
 import { JobInfo } from "./entity/JobInfo";
 import { parseCompanyScale, parseSalary } from "./utils/parser";
+import { ChatStartupLog } from "./entity/ChatStartupLog";
 
 export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   const { bossInfo, brandComInfo, jobInfo } = _jobInfo;
@@ -85,4 +86,22 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   await bossActiveStatusRecordRepository.save(bossActiveStatusRecord);
   //#endregion
   return;
+}
+
+export async function saveChatStartupRecord(ds: DataSource, _jobInfo, { encryptUserId }) {
+  const { jobInfo } = _jobInfo;
+
+  //#region chat-startup-log
+  const chatStartupLog = new ChatStartupLog()
+  const chatStartupLogPayload: Partial<ChatStartupLog> = {
+    date: new Date(),
+    encryptCurrentUserId: encryptUserId,
+    encryptJobId: jobInfo.encryptId,
+  }
+  Object.assign(chatStartupLog, chatStartupLogPayload)
+
+  const chatStartupLogRepository = ds.getRepository(ChatStartupLog);
+  await chatStartupLogRepository.save(chatStartupLog);
+  //#endregion
+  return
 }
