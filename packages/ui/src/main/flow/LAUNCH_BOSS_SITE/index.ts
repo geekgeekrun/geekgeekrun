@@ -126,6 +126,16 @@ export async function launchBossSite() {
   browser.on('targetcreated', (target) => {
     attachRequestsListener(target)
   })
+  browser.on('targetdestroyed', async () => {
+    const pages = await browser.pages()
+    if (pages.length) {
+      return
+    }
+    const cp = browser.process()
+    cp.kill()
+    process.exit(0)
+  })
+
   const newPage = await await browser.newPage()
   await page.close()
   page = newPage
