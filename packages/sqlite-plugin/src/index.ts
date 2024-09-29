@@ -15,7 +15,7 @@ import { VChatStartupLog } from "./entity/VChatStartupLog";
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
-import { saveJobInfoFromRecommendPage } from "./handlers";
+import { saveChatStartupRecord, saveJobInfoFromRecommendPage } from "./handlers";
 Boolean(cliHighlight);
 
 export function initDb(dbFilePath) {
@@ -76,26 +76,12 @@ export default class SqlitePlugin {
 
     hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async (_jobInfo) => {
       const ds = await this.initPromise;
-      saveJobInfoFromRecommendPage(ds, _jobInfo);
+      await saveJobInfoFromRecommendPage(ds, _jobInfo);
     });
 
     hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo) => {
-      const { jobInfo } = _jobInfo;
-
-      //#region chat-startup-log
-      const chatStartupLog = new ChatStartupLog()
-      const chatStartupLogPayload: Partial<ChatStartupLog> = {
-        date: new Date(),
-        encryptCurrentUserId: this.userInfo.encryptUserId,
-        encryptJobId: jobInfo.encryptId,
-      }
-      Object.assign(chatStartupLog, chatStartupLogPayload)
-
       const ds = await this.initPromise;
-      const chatStartupLogRepository = ds.getRepository(ChatStartupLog);
-      await chatStartupLogRepository.save(chatStartupLog);
-      //#endregion
-      return
+      return await saveChatStartupRecord(ds, _jobInfo, this.userInfo);
     });
   }
 }
