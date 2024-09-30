@@ -5,11 +5,48 @@ import { CompanyInfo } from "./entity/CompanyInfo";
 import { JobInfo } from "./entity/JobInfo";
 import { parseCompanyScale, parseSalary } from "./utils/parser";
 import { ChatStartupLog } from "./entity/ChatStartupLog";
+import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
+
+function getBossInfoIfIsEqual (savedOne, currentOne) {
+  if (savedOne === currentOne) {
+    return true
+  }
+  if ((savedOne !== null && currentOne === null) ||
+    (savedOne === null && currentOne !== null)) {
+    return false;
+  }
+  if (
+    ['__ggr_encryptBrandId', 'brandName', 'title', 'name'].some(key => savedOne[key] !== currentOne[key])
+  ) {
+    return false
+  }
+  return true
+}
 
 export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   const { bossInfo, brandComInfo, jobInfo } = _jobInfo;
 
+  bossInfo['__ggr_encryptBrandId'] = brandComInfo.encryptBrandId
   //#region boss
+  // get origin
+  const bossInfoChangeLogRepository = ds.getRepository(BossInfoChangeLog)
+  let lastSavedBossInfo
+  try {
+    lastSavedBossInfo = JSON.parse((await bossInfoChangeLogRepository.findOne({
+      where: { encryptBossId: jobInfo.encryptUserId },
+      order: { updateTime: "DESC" },
+    })).dataAsJson);
+  } catch {
+    lastSavedBossInfo = null
+  }
+  const isBossInfoEqual = getBossInfoIfIsEqual(lastSavedBossInfo, bossInfo)
+  if (!isBossInfoEqual) {
+    const changeLog = new BossInfoChangeLog()
+    changeLog.dataAsJson = JSON.stringify(bossInfo)
+    changeLog.encryptBossId = jobInfo.encryptUserId
+    changeLog.updateTime = new Date()
+    await bossInfoChangeLogRepository.save(changeLog)
+  }
   const boss = new BossInfo();
   boss.encryptBossId = jobInfo.encryptUserId;
   boss.encryptCompanyId = brandComInfo.encryptBrandId;
