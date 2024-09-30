@@ -6,6 +6,7 @@ import { JobInfo } from "./entity/JobInfo";
 import { parseCompanyScale, parseSalary } from "./utils/parser";
 import { ChatStartupLog } from "./entity/ChatStartupLog";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
+import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -21,6 +22,28 @@ function getBossInfoIfIsEqual (savedOne, currentOne) {
     return false
   }
   return true
+}
+
+function getCompanyInfoIfIsEqual (savedOne, currentOne) {
+  if (savedOne === currentOne) {
+    return true
+  }
+  if (
+    (savedOne !== null && currentOne === null) ||
+    (savedOne === null && currentOne !== null)
+  ) {
+    return false;
+  }
+  if (['brandName', 'stage', 'scale', 'industry', 'introduce'].some(key => savedOne[key] !== currentOne[key])) {
+    return false;
+  }
+  if (
+    [...currentOne.labels ?? []].sort().join('-') !==
+    [...savedOne.labels ?? []].sort().join('-')
+  ) {
+    return false
+  }
+  return true;
 }
 
 export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
@@ -58,6 +81,26 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   //#endregion
 
   //#region company
+  // get origin
+  const companyInfoChangeLogRepository = ds.getRepository(CompanyInfoChangeLog)
+  let lastSavedCompanyInfo
+  try {
+    lastSavedCompanyInfo = JSON.parse((await companyInfoChangeLogRepository.findOne({
+      where: { encryptCompanyId: brandComInfo.encryptBrandId },
+      order: { updateTime: "DESC" },
+    })).dataAsJson);
+  } catch {
+    lastSavedCompanyInfo = null
+  }
+  const isCompanyInfoEqual = getCompanyInfoIfIsEqual(lastSavedCompanyInfo, brandComInfo)
+  if (!isCompanyInfoEqual) {
+    const changeLog = new CompanyInfoChangeLog()
+    changeLog.dataAsJson = JSON.stringify(brandComInfo)
+    changeLog.encryptCompanyId = brandComInfo.encryptBrandId
+    changeLog.updateTime = new Date()
+    await companyInfoChangeLogRepository.save(changeLog)
+  }
+
   const company = new CompanyInfo();
   company.encryptCompanyId = brandComInfo.encryptBrandId;
   company.brandName = brandComInfo.brandName;
