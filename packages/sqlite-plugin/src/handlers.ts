@@ -66,7 +66,7 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
 
   const bossActiveStatusRecord = new BossActiveStatusRecord();
   bossActiveStatusRecord.encryptBossId = boss.encryptBossId;
-  bossActiveStatusRecord.updateDate = new Date();
+  bossActiveStatusRecord.updateTime = new Date();
   bossActiveStatusRecord.lastActiveStatus = bossInfo.activeTimeDesc;
 
   const bossActiveStatusRecordRepository = ds.getRepository(
@@ -75,7 +75,7 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   const existNewestRecordByBossId =
     await bossActiveStatusRecordRepository.findOne({
       where: { encryptBossId: boss.encryptBossId },
-      order: { updateDate: "DESC" },
+      order: { updateTime: "DESC" },
     });
   if (
     existNewestRecordByBossId &&
