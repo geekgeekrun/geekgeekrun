@@ -12,6 +12,9 @@ import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
 import { VChatStartupLog } from "./entity/VChatStartupLog";
+import { VBossLibrary } from "./entity/VBossLibrary";
+import { VJobLibrary } from "./entity/VJobLibrary";
+import { VCompanyLibrary } from "./entity/VCompanyLibrary"
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
@@ -37,7 +40,10 @@ export function initDb(dbFilePath) {
       JobInfoChangeLog,
       BossActiveStatusRecord,
       UserInfo,
-      VChatStartupLog
+      VChatStartupLog,
+      VBossLibrary,
+      VJobLibrary,
+      VCompanyLibrary
     ],
   });
   return appDataSource.initialize();

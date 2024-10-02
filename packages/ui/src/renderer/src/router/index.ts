@@ -34,6 +34,27 @@ const routes: Array<RouteRecordRaw> = [
         meta: {
           title: '开聊记录'
         }
+      },
+      {
+        path: 'JobLibrary',
+        component: () => import('@renderer/page/Configuration/JobLibrary.vue'),
+        meta: {
+          title: '职位库'
+        }
+      },
+      {
+        path: 'BossLibrary',
+        component: () => import('@renderer/page/Configuration/BossLibrary.vue'),
+        meta: {
+          title: 'Boss库'
+        }
+      },
+      {
+        path: 'CompanyLibrary',
+        component: () => import('@renderer/page/Configuration/CompanyLibrary.vue'),
+        meta: {
+          title: '公司库'
+        }
       }
     ]
   },

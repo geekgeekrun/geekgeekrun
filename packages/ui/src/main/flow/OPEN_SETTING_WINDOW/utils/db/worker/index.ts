@@ -4,6 +4,9 @@ import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { type DataSource } from 'typeorm'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { VChatStartupLog } from '@geekgeekrun/sqlite-plugin/dist/entity/VChatStartupLog'
+import { VJobLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VJobLibrary'
+import { VCompanyLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VCompanyLibrary'
+import { VBossLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VBossLibrary'
 import { measureExecutionTime } from '../../../../../../common/utils/performance'
 import { PageReq, PagedRes } from '../../../../../../common/types/pagination'
 
@@ -39,6 +42,73 @@ const payloadHandler = {
     }
 
     const userRepository = dataSource!.getRepository(VChatStartupLog)!
+    const [data, totalItemCount] = await measureExecutionTime(
+      userRepository.findAndCount({
+        skip: (pageNo - 1) * pageSize,
+        take: pageSize
+      })
+    )
+    return {
+      data,
+      pageNo,
+      totalItemCount
+    }
+  },
+  async getJobLibrary({ pageNo, pageSize }: Partial<PageReq> = {}): Promise<PagedRes<VJobLibrary>> {
+    if (!pageNo) {
+      pageNo = 1
+    }
+    if (!pageSize) {
+      pageSize = 10
+    }
+
+    const userRepository = dataSource!.getRepository(VJobLibrary)!
+    const [data, totalItemCount] = await measureExecutionTime(
+      userRepository.findAndCount({
+        skip: (pageNo - 1) * pageSize,
+        take: pageSize
+      })
+    )
+    return {
+      data,
+      pageNo,
+      totalItemCount
+    }
+  },
+  async getCompanyLibrary({ pageNo, pageSize }: Partial<PageReq> = {}): Promise<
+    PagedRes<VCompanyLibrary>
+  > {
+    if (!pageNo) {
+      pageNo = 1
+    }
+    if (!pageSize) {
+      pageSize = 10
+    }
+
+    const userRepository = dataSource!.getRepository(VCompanyLibrary)!
+    const [data, totalItemCount] = await measureExecutionTime(
+      userRepository.findAndCount({
+        skip: (pageNo - 1) * pageSize,
+        take: pageSize
+      })
+    )
+    return {
+      data,
+      pageNo,
+      totalItemCount
+    }
+  },
+  async getBossLibrary({ pageNo, pageSize }: Partial<PageReq> = {}): Promise<
+    PagedRes<VBossLibrary>
+  > {
+    if (!pageNo) {
+      pageNo = 1
+    }
+    if (!pageSize) {
+      pageSize = 10
+    }
+
+    const userRepository = dataSource!.getRepository(VBossLibrary)!
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,

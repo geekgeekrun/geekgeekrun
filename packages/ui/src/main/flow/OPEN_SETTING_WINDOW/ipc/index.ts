@@ -17,7 +17,12 @@ import { getAnyAvailablePuppeteerExecutable } from '../../../flow/CHECK_AND_DOWN
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
 import { mainWindow } from '../../../window/mainWindow'
-import { getAutoStartChatRecord } from '../utils/db/index'
+import {
+  getAutoStartChatRecord,
+  getBossLibrary,
+  getCompanyLibrary,
+  getJobLibrary
+} from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
 
 export default function initIpc() {
@@ -262,6 +267,18 @@ export default function initIpc() {
 
   ipcMain.handle('get-auto-start-chat-record', async (ev, payload: PageReq) => {
     const a = await getAutoStartChatRecord(payload)
+    return a
+  })
+  ipcMain.handle('get-job-library', async (ev, payload: PageReq) => {
+    const a = await getJobLibrary(payload)
+    return a
+  })
+  ipcMain.handle('get-boss-library', async (ev, payload: PageReq) => {
+    const a = await getBossLibrary(payload)
+    return a
+  })
+  ipcMain.handle('get-company-library', async (ev, payload: PageReq) => {
+    const a = await getCompanyLibrary(payload)
     return a
   })
 

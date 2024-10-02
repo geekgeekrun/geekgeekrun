@@ -3,8 +3,11 @@
     <div class="flex flex-col w160px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
         <RouterLink to="./GeekAutoStartChatWithBoss">Boss炸弹</RouterLink>
-        <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
         <a href="javascript:void(0)" @click="handleLaunchBossSite">手动逛Boss</a>
+        <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
+        <RouterLink to="./JobLibrary">职位库</RouterLink>
+        <RouterLink to="./BossLibrary">Boss库</RouterLink>
+        <RouterLink to="./CompanyLibrary">公司库</RouterLink>
       </div>
       <div class="pt-16px pb-16px flex-0 font-size-12px">
         <div>当前版本: {{ buildInfo.version }}({{ buildInfo.buildVersion }})</div>

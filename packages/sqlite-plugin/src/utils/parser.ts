@@ -24,6 +24,19 @@ export const parseCompanyScale = (str: string): [number| null, number | null] =>
   return [null, null]
 }
 
+export function formatCompanyScale(low, high) {
+  if (low === null && high === null) {
+    return ''
+  }
+  if (low === null && high !== null) {
+    return `${high}人以下`
+  }
+  if (low !== null && high === null) {
+    return `${low}人以上`
+  }
+  return `${low}-${high}人`
+}
+
 export const parseSalary = (str: string): { low: null | number, high: null | number, month: null | number } => {
   const result = {
     high: null,

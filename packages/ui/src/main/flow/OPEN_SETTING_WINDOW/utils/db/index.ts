@@ -58,3 +58,30 @@ export const getAutoStartChatRecord = async ({ pageNo, pageSize }: Partial<PageR
   })
   return res
 }
+
+export const getBossLibrary = async ({ pageNo, pageSize }: Partial<PageReq> = {}) => {
+  const res = await createWorkerPromise({
+    type: 'getBossLibrary',
+    pageNo,
+    pageSize
+  })
+  return res
+}
+
+export const getCompanyLibrary = async ({ pageNo, pageSize }: Partial<PageReq> = {}) => {
+  const res = await createWorkerPromise({
+    type: 'getCompanyLibrary',
+    pageNo,
+    pageSize
+  })
+  return res
+}
+
+export const getJobLibrary = async ({ pageNo, pageSize }: Partial<PageReq> = {}) => {
+  const res = await createWorkerPromise({
+    type: 'getJobLibrary',
+    pageNo,
+    pageSize
+  })
+  return res
+}
