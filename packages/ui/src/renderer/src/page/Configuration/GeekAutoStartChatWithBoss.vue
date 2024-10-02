@@ -38,7 +38,9 @@
             class="color-orange"
             >组合条件太多了，少选择一些吧😅</span
           >
-          <span v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 1000" class="color-orange"
+          <span
+            v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 1000"
+            class="color-orange"
             >你咋不上天呢😅</span
           >
         </div>
@@ -62,13 +64,7 @@ const router = useRouter()
 const formContent = ref({
   dingtalkRobotAccessToken: '',
   expectCompanies: '',
-  anyCombineRecommendJobFilter: {
-    salaryList: [],
-    experienceList: [],
-    degreeList: [],
-    scaleList: [],
-    industryList: []
-  }
+  anyCombineRecommendJobFilter: {}
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -79,6 +75,14 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   console.log(res)
   formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
   formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
+  formContent.value.anyCombineRecommendJobFilter = res.config['boss.json']
+    ?.anyCombineRecommendJobFilter ?? {
+    salaryList: [],
+    experienceList: [],
+    degreeList: [],
+    scaleList: [],
+    industryList: []
+  }
 })
 
 const formRules = {}
