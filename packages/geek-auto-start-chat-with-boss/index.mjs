@@ -308,7 +308,7 @@ async function toRecommendPage (hooks) {
     
             if (tempTargetJobIndexToCheckDetail < 0 && hasReachLastPage) {
               // has reach last page and not find target job
-              reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
+              reject(new Error('CANNOT_FIND_EXCEPT_JOB_IN_THIS_JOB_EXPECTATION'))
               return
             }
   
@@ -381,7 +381,7 @@ async function toRecommendPage (hooks) {
 
             if (targetJobIndex < 0 && hasReachLastPage) {
               // has reach last page and not find target job
-              reject(new Error('CANNOT_FIND_EXCEPT_JOB'))
+              reject(new Error('CANNOT_FIND_EXCEPT_JOB_IN_THIS_JOB_EXPECTATION'))
               return
             }
           }
@@ -439,7 +439,7 @@ async function toRecommendPage (hooks) {
     } catch (err) {
       if (err instanceof Error) {
         switch (err.message) {
-          case 'CANNOT_FIND_EXCEPT_JOB': {
+          case 'CANNOT_FIND_EXCEPT_JOB_IN_THIS_JOB_EXPECTATION': {
             if (
               currentExceptJobIndex + 1 > expectJobList.length
             ) {
