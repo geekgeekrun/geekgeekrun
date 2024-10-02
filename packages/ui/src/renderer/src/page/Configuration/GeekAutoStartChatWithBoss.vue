@@ -23,6 +23,26 @@
           @blur="handleExpectCompaniesInputBlur"
         />
       </el-form-item>
+      <el-form-item
+        label="推荐职位筛选器（当前求职期望找不到职位情况下，将尝试通过更改筛选的方式查找新工作）"
+        prop="filter"
+      >
+        <BossRecommendFilterV1 v-model="formContent.recommendJobFilterV1" />
+        <div>
+          当前组合条件数：{{ currentRecommendJobFilterV1CombinationCount.toLocaleString() }}
+          <span
+            v-if="
+              currentRecommendJobFilterV1CombinationCount >= 10 &&
+              currentRecommendJobFilterV1CombinationCount < 1000
+            "
+            class="color-orange"
+            >组合条件太多了，少选择一些吧😅</span
+          >
+          <span v-if="currentRecommendJobFilterV1CombinationCount >= 1000" class="color-orange"
+            >你咋不上天呢😅</span
+          >
+        </div>
+      </el-form-item>
       <el-form-item class="last-form-item">
         <el-button @click="handleSave">仅保存配置</el-button>
         <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
@@ -32,14 +52,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
+import BossRecommendFilterV1 from '@renderer/features/BossRecommendFilterV1/index.vue'
+import { calculateTotalCombinations } from '@renderer/features/BossRecommendFilterV1/combineCalculator'
 const router = useRouter()
 
 const formContent = ref({
   dingtalkRobotAccessToken: '',
-  expectCompanies: ''
+  expectCompanies: '',
+  recommendJobFilterV1: {
+    salaryList: [],
+    experienceList: [],
+    degreeList: [],
+    scaleList: [],
+    industryList: []
+  }
+})
+
+const currentRecommendJobFilterV1CombinationCount = computed(() => {
+  return calculateTotalCombinations(formContent.value.recommendJobFilterV1)
 })
 
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {

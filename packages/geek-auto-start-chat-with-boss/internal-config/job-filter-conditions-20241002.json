@@ -1,0 +1,214 @@
+{
+  "payTypeList": [
+      {
+          "code": 0,
+          "name": "不限"
+      },
+      {
+          "code": 2501,
+          "name": "日结"
+      },
+      {
+          "code": 2502,
+          "name": "周结"
+      },
+      {
+          "code": 2503,
+          "name": "月结"
+      },
+      {
+          "code": 2504,
+          "name": "完工结"
+      }
+  ],
+  "experienceList": [
+      {
+          "code": 0,
+          "name": "不限"
+      },
+      {
+          "code": 108,
+          "name": "在校生"
+      },
+      {
+          "code": 102,
+          "name": "应届生"
+      },
+      {
+          "code": 101,
+          "name": "经验不限"
+      },
+      {
+          "code": 103,
+          "name": "1年以内"
+      },
+      {
+          "code": 104,
+          "name": "1-3年"
+      },
+      {
+          "code": 105,
+          "name": "3-5年"
+      },
+      {
+          "code": 106,
+          "name": "5-10年"
+      },
+      {
+          "code": 107,
+          "name": "10年以上"
+      }
+  ],
+  "salaryList": [
+      {
+          "code": 0,
+          "name": "不限",
+          "lowSalary": 0,
+          "highSalary": 0
+      },
+      {
+          "code": 402,
+          "name": "3K以下",
+          "lowSalary": 0,
+          "highSalary": 3
+      },
+      {
+          "code": 403,
+          "name": "3-5K",
+          "lowSalary": 3,
+          "highSalary": 5
+      },
+      {
+          "code": 404,
+          "name": "5-10K",
+          "lowSalary": 5,
+          "highSalary": 10
+      },
+      {
+          "code": 405,
+          "name": "10-20K",
+          "lowSalary": 10,
+          "highSalary": 20
+      },
+      {
+          "code": 406,
+          "name": "20-50K",
+          "lowSalary": 20,
+          "highSalary": 50
+      },
+      {
+          "code": 407,
+          "name": "50K以上",
+          "lowSalary": 50,
+          "highSalary": 0
+      }
+  ],
+  "scaleList": [
+      {
+          "code": 0,
+          "name": "不限"
+      },
+      {
+          "code": 301,
+          "name": "0-20人"
+      },
+      {
+          "code": 302,
+          "name": "20-99人"
+      },
+      {
+          "code": 303,
+          "name": "100-499人"
+      },
+      {
+          "code": 304,
+          "name": "500-999人"
+      },
+      {
+          "code": 305,
+          "name": "1000-9999人"
+      },
+      {
+          "code": 306,
+          "name": "10000人以上"
+      }
+  ],
+  "partTimeList": [
+      {
+          "code": 0,
+          "name": "不限"
+      },
+      {
+          "code": 2701,
+          "name": "周末/节假日"
+      },
+      {
+          "code": 2702,
+          "name": "寒暑假"
+      },
+      {
+          "code": 2703,
+          "name": "短期兼职"
+      },
+      {
+          "code": 2704,
+          "name": "长期兼职"
+      },
+      {
+          "code": 2705,
+          "name": "工作日"
+      },
+      {
+          "code": 2706,
+          "name": "夜班"
+      }
+  ],
+  "degreeList": [
+      {
+          "code": 0,
+          "name": "不限"
+      },
+      {
+          "code": 209,
+          "name": "初中及以下"
+      },
+      {
+          "code": 208,
+          "name": "中专/中技"
+      },
+      {
+          "code": 206,
+          "name": "高中"
+      },
+      {
+          "code": 202,
+          "name": "大专"
+      },
+      {
+          "code": 203,
+          "name": "本科"
+      },
+      {
+          "code": 204,
+          "name": "硕士"
+      },
+      {
+          "code": 205,
+          "name": "博士"
+      }
+  ],
+  "jobTypeList": [
+      {
+          "code": 0,
+          "name": "不限"
+      },
+      {
+          "code": 1901,
+          "name": "全职"
+      },
+      {
+          "code": 1903,
+          "name": "兼职"
+      }
+  ]
+}
