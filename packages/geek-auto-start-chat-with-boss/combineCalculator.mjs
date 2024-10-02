@@ -10,8 +10,7 @@ export function* combineFiltersWithConstraintsGenerator(selectedFilters) {
 
   // 使用迭代生成组合
   function combine(arr, min, max) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any[] = []
+    const result = []
     const n = arr.length
 
     // 生成长度在[min, max]范围内的所有组合
