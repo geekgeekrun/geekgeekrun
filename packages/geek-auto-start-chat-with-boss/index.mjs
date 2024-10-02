@@ -81,6 +81,63 @@ let page
 const blockBossNotNewChat = new Set()
 const blockBossNotActive = new Set()
 
+async function markJobAsNotSuitInRecommendPage () {
+  const notSuitableFeedbackButtonProxy = await page.$('.job-detail-box .job-detail-operate .not-suitable')
+  if (notSuitableFeedbackButtonProxy) {
+    await notSuitableFeedbackButtonProxy.click()
+    const rawRes = await (await page.waitForResponse(
+      response => {
+        if (
+          response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/reasons.json')
+        ) {
+          return true
+        }
+        return false
+      }
+    )).json();
+    await sleepWithRandomDelay(2000)
+    const chooseReasonDialogProxy = await(async() => {
+      const alls = await page.$$('.zp-dialog-wrap.zp-feedback-dialog.v-transfer-dom')
+      return alls?.[alls.length - 1]
+    })()
+    let isOptionChosen = false
+    if (chooseReasonDialogProxy) {
+      const bossNotActiveOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`)
+      if (bossNotActiveOptionProxy) {
+        await bossNotActiveOptionProxy.click()
+        isOptionChosen = true
+      } else {
+        const recruitStoppedOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`)
+        if (recruitStoppedOptionProxy) {
+          await recruitStoppedOptionProxy.click()
+          isOptionChosen = true
+        }
+      }
+
+      if (isOptionChosen) {
+        await sleepWithRandomDelay(1500)
+        const confirmButtonProxy = await chooseReasonDialogProxy.$(`.zp-dialog-footer .zp-btn.zp-btn-sure`)
+        await confirmButtonProxy.click()
+        await page.waitForResponse(
+          response => {
+            if (
+              response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/save.json')
+            ) {
+              return true
+            }
+            return false
+          }
+        )
+      } else {
+        const cancelButtonProxy = await chooseReasonDialogProxy.$(`.zp-close`)
+        await cancelButtonProxy.click()
+      }
+
+      await sleepWithRandomDelay(2500)
+    }
+  }
+}
+
 async function toRecommendPage (hooks) {
   let userInfoPromise = page.waitForResponse((response) => {
       if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
@@ -303,62 +360,8 @@ async function toRecommendPage (hooks) {
                 blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
                 // click prevent recommend button
                 try {
-                  const notSuitableFeedbackButtonProxy = await page.$('.job-detail-box .job-detail-operate .not-suitable')
-                  if (notSuitableFeedbackButtonProxy) {
-                    await notSuitableFeedbackButtonProxy.click()
-                    const rawRes = await (await page.waitForResponse(
-                      response => {
-                        if (
-                          response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/reasons.json')
-                        ) {
-                          return true
-                        }
-                        return false
-                      }
-                    )).json();
-                    await sleepWithRandomDelay(2000)
-                    const chooseReasonDialogProxy = await(async() => {
-                      const alls = await page.$$('.zp-dialog-wrap.zp-feedback-dialog.v-transfer-dom')
-                      return alls?.[alls.length - 1]
-                    })()
-                    let isOptionChosen = false
-                    if (chooseReasonDialogProxy) {
-                      const bossNotActiveOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`)
-                      if (bossNotActiveOptionProxy) {
-                        await bossNotActiveOptionProxy.click()
-                        isOptionChosen = true
-                      } else {
-                        const recruitStoppedOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`)
-                        if (recruitStoppedOptionProxy) {
-                          await recruitStoppedOptionProxy.click()
-                          isOptionChosen = true
-                        }
-                      }
-
-                      if (isOptionChosen) {
-                        await sleepWithRandomDelay(1500)
-                        const confirmButtonProxy = await chooseReasonDialogProxy.$(`.zp-dialog-footer .zp-btn.zp-btn-sure`)
-                        await confirmButtonProxy.click()
-                        await page.waitForResponse(
-                          response => {
-                            if (
-                              response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/save.json')
-                            ) {
-                              return true
-                            }
-                            return false
-                          }
-                        )
-                      } else {
-                        const cancelButtonProxy = await chooseReasonDialogProxy.$(`.zp-close`)
-                        await cancelButtonProxy.click()
-                      }
-
-                      await sleepWithRandomDelay(2500)
-                    }
-                  }
+                  await markJobAsNotSuitInRecommendPage()
                 } catch {
-
                 }
                 continue continueFind
               }
