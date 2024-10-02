@@ -19,7 +19,11 @@ const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
 export const autoStartChatEventBus = new EventEmitter()
 
-let puppeteer, StealthPlugin
+/**
+ * @type { import("puppeteer") }
+ */
+let puppeteer
+let StealthPlugin
 export async function initPuppeteer () {
   // production
   if (
@@ -65,7 +69,14 @@ const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
 const expectCompanySet = new Set(targetCompanyList)
 const enableCompanyAllowList = Boolean(expectCompanySet.size)
 
-let browser, page
+/**
+ * @type { import('puppeteer').Browser }
+ */
+let browser
+/**
+ * @type { import('puppeteer').Page }
+ */
+let page
 
 const blockBossNotNewChat = new Set()
 const blockBossNotActive = new Set()
