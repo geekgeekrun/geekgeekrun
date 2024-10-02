@@ -7,6 +7,7 @@ import { parseCompanyScale, parseSalary } from "./utils/parser";
 import { ChatStartupLog } from "./entity/ChatStartupLog";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
 import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
+import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -40,6 +41,55 @@ function getCompanyInfoIfIsEqual (savedOne, currentOne) {
   if (
     [...currentOne.labels ?? []].sort().join('-') !==
     [...savedOne.labels ?? []].sort().join('-')
+  ) {
+    return false
+  }
+  return true;
+}
+
+function cleanMultiLineTextForCompare (input: string) {
+  return input
+    // 去掉连续空行
+    .replace(/\n\s*\n+/g, '\n')
+    // 去掉连续的空白字符
+    .replace(/\s+/g, ' ')
+    // 去掉每行开头、结尾的空白字符
+    .replace(/^\s+|\s+$/gm, '');
+}
+function getJobInfoIfIsEqual (savedOne, currentOne) {
+  if (savedOne === currentOne) {
+    return true
+  }
+  if (
+    (savedOne !== null && currentOne === null) ||
+    (savedOne === null && currentOne !== null)
+  ) {
+    return false;
+  }
+  if ([
+    'encryptUserId',
+    'invalidStatus',
+    'jobName',
+    'positionName',
+    'locationName',
+    'experienceName',
+    'degreeName',
+    'salaryDesc',
+    'payTypeDesc',
+    'address',
+    'jobStatusDesc'
+  ].some(key => savedOne[key] !== currentOne[key])) {
+    return false;
+  }
+  if (
+    cleanMultiLineTextForCompare(savedOne.postDescription?.trim() ?? '') !== 
+    cleanMultiLineTextForCompare(currentOne.postDescription?.trim() ?? '')
+  ) {
+    return false
+  }
+  if (
+    [...currentOne.showSkills ?? []].sort().join('-') !==
+    [...savedOne.showSkills ?? []].sort().join('-')
   ) {
     return false
   }
@@ -116,6 +166,25 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   //#endregion
 
   //#region job
+  const jobInfoChangeLogRepository = ds.getRepository(JobInfoChangeLog);
+  let lastSavedJobInfo
+  try {
+    lastSavedJobInfo = JSON.parse((await jobInfoChangeLogRepository.findOne({
+      where: { encryptJobId: jobInfo.encryptId },
+      order: { updateTime: "DESC" },
+    })).dataAsJson);
+  } catch {
+    lastSavedJobInfo = null
+  }
+  const isJobInfoEqual = getJobInfoIfIsEqual(lastSavedJobInfo, jobInfo)
+  if (!isJobInfoEqual) {
+    const changeLog = new JobInfoChangeLog()
+    changeLog.dataAsJson = JSON.stringify(jobInfo)
+    changeLog.encryptJobId = jobInfo.encryptId
+    changeLog.updateTime = new Date()
+    await jobInfoChangeLogRepository.save(changeLog)
+  }
+
   const job = new JobInfo();
   const jobSalary = parseSalary(jobInfo.salaryDesc);
   const jobUpdatePayload: JobInfo = {
