@@ -15,5 +15,5 @@ export class BossActiveStatusRecord {
   lastActiveStatus?: string;
   
   @Column()
-  updateDate: Date;
+  updateTime: Date;
 }
