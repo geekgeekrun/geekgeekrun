@@ -1,2 +1,9 @@
 {
+  "anyCombineRecommendJobFilter": {
+    "salaryList": [],
+    "experienceList": [],
+    "degreeList": [],
+    "scaleList": [],
+    "industryList": []
+  }
 }
