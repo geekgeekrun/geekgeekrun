@@ -27,18 +27,18 @@
         label="推荐职位筛选器（当前求职期望找不到职位情况下，将尝试通过更改筛选的方式查找新工作）"
         prop="filter"
       >
-        <BossRecommendFilterV1 v-model="formContent.recommendJobFilterV1" />
+        <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
         <div>
-          当前组合条件数：{{ currentRecommendJobFilterV1CombinationCount.toLocaleString() }}
+          当前组合条件数：{{ currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString() }}
           <span
             v-if="
-              currentRecommendJobFilterV1CombinationCount >= 10 &&
-              currentRecommendJobFilterV1CombinationCount < 1000
+              currentAnyCombineRecommendJobFilterCombinationCount >= 10 &&
+              currentAnyCombineRecommendJobFilterCombinationCount < 1000
             "
             class="color-orange"
             >组合条件太多了，少选择一些吧😅</span
           >
-          <span v-if="currentRecommendJobFilterV1CombinationCount >= 1000" class="color-orange"
+          <span v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 1000" class="color-orange"
             >你咋不上天呢😅</span
           >
         </div>
@@ -55,14 +55,14 @@
 import { computed, ref } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import BossRecommendFilterV1 from '@renderer/features/BossRecommendFilterV1/index.vue'
-import { calculateTotalCombinations } from '@renderer/features/BossRecommendFilterV1/combineCalculator'
+import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
+import { calculateTotalCombinations } from '@renderer/features/AnyCombineBossRecommendFilter/combineCalculator'
 const router = useRouter()
 
 const formContent = ref({
   dingtalkRobotAccessToken: '',
   expectCompanies: '',
-  recommendJobFilterV1: {
+  anyCombineRecommendJobFilter: {
     salaryList: [],
     experienceList: [],
     degreeList: [],
@@ -71,8 +71,8 @@ const formContent = ref({
   }
 })
 
-const currentRecommendJobFilterV1CombinationCount = computed(() => {
-  return calculateTotalCombinations(formContent.value.recommendJobFilterV1)
+const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
+  return calculateTotalCombinations(formContent.value.anyCombineRecommendJobFilter)
 })
 
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
