@@ -58,7 +58,7 @@ import { computed, ref } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
-import { calculateTotalCombinations } from '@renderer/features/AnyCombineBossRecommendFilter/combineCalculator'
+import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 const router = useRouter()
 
 const formContent = ref({
