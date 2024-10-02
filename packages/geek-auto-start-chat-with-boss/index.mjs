@@ -450,7 +450,7 @@ async function toRecommendPage (hooks) {
 
               currentExceptJobIndex += 1
             }
-            break afterPageLoad;
+            continue afterPageLoad;
           }
           case 'STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT': {
             let nextTrySeconds = 60 * 60
