@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
 import extractZip from 'extract-zip'
 import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
@@ -101,6 +102,7 @@ const attachRequestsListener = async (target: Target) => {
 }
 
 export async function launchBossSite() {
+  app.dock?.hide()
   if (!fs.existsSync(path.join(editThisCookieExtensionPath, 'manifest.json'))) {
     await extractZip(await getEditThisCookieZipPath(), {
       dir: extensionDir
