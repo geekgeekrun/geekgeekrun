@@ -100,6 +100,7 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   const { bossInfo, brandComInfo, jobInfo } = _jobInfo;
 
   bossInfo['__ggr_encryptBrandId'] = brandComInfo.encryptBrandId
+  bossInfo['__ggr_encryptBossId'] = jobInfo.encryptUserId
   //#region boss
   // get origin
   const bossInfoChangeLogRepository = ds.getRepository(BossInfoChangeLog)
