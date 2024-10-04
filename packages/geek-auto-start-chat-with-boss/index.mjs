@@ -13,6 +13,14 @@ import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storag
 
 import { readConfigFile, writeStorageFile, ensureConfigFileExist, readStorageFile, ensureStorageFileExist } from './runtime-file-utils.mjs'
 import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } from './combineCalculator.mjs'
+import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
+const jobFilterConditionsMapByCode = {}
+Object.values(jobFilterConditions).forEach(arr => {
+  arr.forEach(option => {
+    jobFilterConditionsMapByCode[option.code] = option
+  })
+})
+
 ensureConfigFileExist()
 ensureStorageFileExist()
 
@@ -154,6 +162,13 @@ async function setFilterCondition (selectedFilters) {
   const optionKaPrefixes = ['sel-job-rec-salary-', 'sel-job-rec-exp-', 'sel-job-rec-degree-', 'sel-job-rec-scale-']
   const conditionArr = [salaryList, experienceList, degreeList, scaleList]
 
+  console.log('current filter condition----')
+  for (let i = 0; i < placeholderTexts.length; i++) {
+    const text = placeholderTexts[i]
+    const condition = conditionArr[i]
+    console.log(`${text}：`, condition.length === 0 ? '不限' : condition.map(code => jobFilterConditionsMapByCode[code]?.name ?? code).join('，') )
+  }
+  console.log('----------------------------')
   for(let i = 0; i < placeholderTexts.length; i++) {
     const placeholderText = placeholderTexts[i]
     const filterDropdownProxy = await (async () => {
@@ -168,8 +183,9 @@ async function setFilterCondition (selectedFilters) {
       continue
     }
 
+    const currentFilterConditions = conditionArr[i];
     const filterDropdownCssList = await filterDropdownProxy.evaluate(el => Array.from(el.classList));
-    if (!filterDropdownCssList.includes('is-select') && !conditionArr[i].length) {
+    if (!filterDropdownCssList.includes('is-select') && !currentFilterConditions.length) {
       continue
     } else {
       const filterDropdownElBBox = await filterDropdownProxy.boundingBox()
@@ -180,14 +196,54 @@ async function setFilterCondition (selectedFilters) {
       await sleepWithRandomDelay(500)
 
       const optionKaPrefix = optionKaPrefixes[i]
-      for(let j = 0; j < conditionArr[i].length; j++) {
-        const optionValue = conditionArr[i][j]
-        await sleepWithRandomDelay(500)
-        const optionElProxy = await page.$(`li[ka="${optionKaPrefix}${optionValue}"]`)
-        if (!optionElProxy) {
-          continue;
+      if (!currentFilterConditions.length) {
+        // select 不限 immediately
+        const buxianOptionElProxy = await page.$(`.job-recommend-main .recommend-search-more .condition-filter-select .filter-select-dropdown li[ka="${optionKaPrefix}${0}"]`)
+        await buxianOptionElProxy.click()
+      } else {
+        //#region uncheck options perviously checked but not existed in current filter.
+        const activeOptionElAtCurrentFilterProxyList = await page.$$(`.job-recommend-main .recommend-search-more .condition-filter-select .filter-select-dropdown li.active[ka^="${optionKaPrefix}"]`)
+        const activeOptionValues = (await Promise.all(
+          activeOptionElAtCurrentFilterProxyList.map(elProxy => {
+            return elProxy.evaluate((el) => {
+              return el.getAttribute('ka')
+            })
+          })
+        )).map(it => it.replace(optionKaPrefix, '')).map(Number)
+        if (placeholderText !== '薪资待遇') {
+          for(let i = 0; i < activeOptionValues.length; i++) {
+            const activeValue = activeOptionValues[i]
+            const activeOptionElProxy = activeOptionElAtCurrentFilterProxyList[i]
+            if (!currentFilterConditions.includes(activeValue)) {
+              await activeOptionElProxy.click()
+            }
+          }
         }
-        await optionElProxy.click()
+        //#endregion
+        //#region only click the one which we need check, don't change already checked.
+        const conditionToCheck = currentFilterConditions.filter(it => {
+          return !activeOptionValues.includes(it)
+        })
+        for(let j = 0; j < conditionToCheck.length; j++) {
+          const optionValue = conditionToCheck[j]
+          await sleepWithRandomDelay(500)
+          const optionElProxy = await page.$(`.job-recommend-main .recommend-search-more .condition-filter-select .filter-select-dropdown li[ka="${optionKaPrefix}${optionValue}"]`)
+          if (!optionElProxy) {
+            continue;
+          }
+          await optionElProxy.click()
+        }
+        //#endregion
+        //#region move out dropdown entry to make dropdown hidden
+        const navBarLogoElProxy = await page.$(`[ka="header-home-logo"]`)
+        if (navBarLogoElProxy) {
+          const navBarLogoElBBox = await navBarLogoElProxy.boundingBox()
+          await page.mouse.move(
+            navBarLogoElBBox.x + navBarLogoElBBox.width / 2,
+            navBarLogoElBBox.y + navBarLogoElBBox.height / 2,
+          )
+        }
+        //#endregion
       }
       await sleepWithRandomDelay(500)
     }
