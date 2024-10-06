@@ -13,7 +13,7 @@
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
       <el-form-item
-        label="期望公司（以逗号分隔，一个也不填将看到哪个聊哪个）"
+        label="期望公司（以逗号分隔，置空即顺着推荐列表依次开聊）"
         prop="expectCompanies"
       >
         <el-input
