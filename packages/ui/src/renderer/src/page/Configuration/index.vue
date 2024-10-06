@@ -3,7 +3,9 @@
     <div class="flex flex-col w160px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
         <RouterLink to="./GeekAutoStartChatWithBoss">Boss炸弹</RouterLink>
-        <a href="javascript:void(0)" @click="handleLaunchBossSite">手动逛Boss</a>
+        <a href="javascript:void(0)" @click="handleLaunchBossSite">
+          手动逛Boss<el-icon><TopRight /></el-icon>
+        </a>
         <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
         <RouterLink to="./JobLibrary">职位库</RouterLink>
         <RouterLink to="./BossLibrary">Boss库</RouterLink>
@@ -31,6 +33,8 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElIcon } from 'element-plus'
+import { TopRight } from '@element-plus/icons-vue'
 import useBuildInfo from '@renderer/hooks/useBuildInfo'
 const router = useRouter()
 const unmountedCbs: Array<InstanceType<typeof Function>> = []
@@ -105,9 +109,6 @@ const handleLaunchBossSite = async () => {
       height: 2.5em;
       box-sizing: border-box;
       padding-left: 2em;
-      & + a {
-        margin-top: 10px;
-      }
       &.router-link-active {
         background-color: #fff;
         font-weight: 700;
