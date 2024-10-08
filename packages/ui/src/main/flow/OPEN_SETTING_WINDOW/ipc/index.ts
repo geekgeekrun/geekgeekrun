@@ -24,6 +24,8 @@ import {
   getJobLibrary
 } from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
+import { pipeWriteRegardlessError } from '../../utils/pipe'
+import { WriteStream } from 'node:fs'
 
 export default function initIpc() {
   ipcMain.on('open-external-link', (_, link) => {
@@ -286,42 +288,65 @@ export default function initIpc() {
     return a
   })
 
-  let subProcessOfOpenBossSite: ChildProcess | undefined
-  let subProcessOfOpenBossSiteLaunching = false
-  ipcMain.handle('open-boss-site', async () => {
-    if (subProcessOfOpenBossSiteLaunching) {
-      return
-    }
-    subProcessOfOpenBossSiteLaunching = true
-    const defer = Promise.withResolvers()
-    if (subProcessOfOpenBossSite) {
-      subProcessOfOpenBossSite.once('exit', defer.resolve)
-      subProcessOfOpenBossSite.once('error', console.error)
-      try {
-        process.kill(subProcessOfOpenBossSite.pid!)
-        await sleep(500)
-        process.kill(subProcessOfOpenBossSite.pid!, 'SIGKILL')
-      } catch {
-        defer.resolve(undefined)
+  let subProcessOfOpenBossSiteDefer: null | PromiseWithResolvers<ChildProcess> = null
+  let subProcessOfOpenBossSite: null | ChildProcess = null
+  ipcMain.handle('open-site-with-boss-cookie', async (_, data) => {
+    const url = data.url
+    if (
+      !subProcessOfOpenBossSiteDefer ||
+      !subProcessOfOpenBossSite ||
+      subProcessOfOpenBossSite.killed
+    ) {
+      subProcessOfOpenBossSiteDefer = Promise.withResolvers()
+      const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+      const subProcessEnv = {
+        ...process.env,
+        MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossSite',
+        PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath
       }
-    } else {
-      defer.resolve(undefined)
+      subProcessOfOpenBossSite = childProcess.spawn(process.argv[0], process.argv.slice(1), {
+        env: subProcessEnv,
+        stdio: [null, null, null, 'pipe']
+      })
+      subProcessOfOpenBossSite.once('exit', () => {
+        subProcessOfOpenBossSiteDefer = null
+      })
+      subProcessOfOpenBossSite.stdio[3]!.pipe(JSONStream.parse()).on(
+        'data',
+        async function handler(data) {
+          switch (data?.type) {
+            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY': {
+              subProcessOfOpenBossSiteDefer!.resolve(subProcessOfOpenBossSite as ChildProcess)
+              break
+            }
+            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_CAN_BE_KILLED': {
+              try {
+                subProcessOfOpenBossSite &&
+                  !subProcessOfOpenBossSite.killed &&
+                  subProcessOfOpenBossSite.pid &&
+                  process.kill(subProcessOfOpenBossSite.pid)
+              } catch {
+                //
+              } finally {
+                subProcessOfOpenBossSiteDefer = null
+                subProcessOfOpenBossSite = null
+              }
+              break
+            }
+          }
+        }
+      )
     }
-    defer.promise.then(() => {
-      subProcessOfOpenBossSite = undefined
-    })
-    await defer.promise
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    const subProcessEnv = {
-      ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossSite',
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath
-    }
-    subProcessOfOpenBossSite = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-      env: subProcessEnv,
-      stdio: [null, null, null]
-    })
-    subProcessOfOpenBossSiteLaunching = false
+
+    await subProcessOfOpenBossSiteDefer.promise
+
+    pipeWriteRegardlessError(
+      subProcessOfOpenBossSite!.stdio[3]! as WriteStream,
+      JSON.stringify({
+        type: 'NEW_WINDOW',
+        url: url ?? 'about:blank'
+      })
+    )
   })
 
   ipcMain.handle('exit-app-immediately', () => {

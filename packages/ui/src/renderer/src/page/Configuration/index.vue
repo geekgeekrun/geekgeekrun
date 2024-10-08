@@ -36,6 +36,7 @@ import { useRouter } from 'vue-router'
 import { ElIcon } from 'element-plus'
 import { TopRight } from '@element-plus/icons-vue'
 import useBuildInfo from '@renderer/hooks/useBuildInfo'
+import { debounce } from 'lodash-es'
 const router = useRouter()
 const unmountedCbs: Array<InstanceType<typeof Function>> = []
 onUnmounted(() => {
@@ -94,9 +95,15 @@ const handleGotoProjectPageClick = () => {
   electron.ipcRenderer.send('open-external-link', 'https://github.com/geekgeekrun/geekgeekrun')
 }
 
-const handleLaunchBossSite = async () => {
-  await electron.ipcRenderer.invoke('open-boss-site')
-}
+const handleLaunchBossSite = debounce(
+  async () => {
+    return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
+      url: `https://www.zhipin.com/`
+    })
+  },
+  1000,
+  { leading: true, trailing: false }
+)
 </script>
 
 <style lang="scss" scoped>
