@@ -9,6 +9,7 @@ import { VCompanyLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VCompany
 import { VBossLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VBossLibrary'
 import { measureExecutionTime } from '../../../../../../common/utils/performance'
 import { PageReq, PagedRes } from '../../../../../../common/types/pagination'
+import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/dist/entity/JobInfoChangeLog'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 let dataSource: DataSource | null = null
@@ -120,6 +121,17 @@ const payloadHandler = {
       pageNo,
       totalItemCount
     }
+  },
+  async getJobHistoryByEncryptId({ encryptJobId }): Promise<JobInfoChangeLog[]> {
+    const jobInfoChangeLogRepository = dataSource!.getRepository(JobInfoChangeLog)!
+    const data = await measureExecutionTime(
+      jobInfoChangeLogRepository.find({
+        where: {
+          encryptJobId
+        }
+      })
+    )
+    return data
   }
 }
 

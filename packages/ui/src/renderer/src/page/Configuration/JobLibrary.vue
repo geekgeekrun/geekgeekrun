@@ -38,7 +38,7 @@
                 link
                 type="primary"
                 size="small"
-                @click="handleViewJobSnapshotButtonClick(row)"
+                @click="handleViewJobHistoryButtonClick(row.encryptJobId)"
                 >变更记录</ElButton
               >
               <ElButton
@@ -144,6 +144,13 @@ async function handleViewJobOnlineButtonClick(encryptJobId: string) {
   return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
     url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
   })
+}
+async function handleViewJobHistoryButtonClick(encryptJobId: string) {
+  const historyList = await electron.ipcRenderer.invoke(
+    'get-job-history-by-encrypt-id',
+    encryptJobId
+  )
+  void historyList
 }
 </script>
 
