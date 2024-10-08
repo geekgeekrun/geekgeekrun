@@ -187,7 +187,7 @@ async function handleViewJobHistoryButtonClick(record: VChatStartupLog) {
   //       return {}
   //     }
   //   })(),
-  //   __ggr_updateTime: new Date(it.updateTime)
+  //   __ggr_updateTime: it.updateTime
   // }))
   const { data: historyList } = await Promise.resolve({
     data: [
@@ -221,7 +221,7 @@ async function handleViewJobHistoryButtonClick(record: VChatStartupLog) {
           return {}
         }
       })(),
-      __ggr_updateTime: new Date(it.updateTime)
+      __ggr_updateTime: it.updateTime
     }))
   })
   historyDialogVisibleModelValue.value = true

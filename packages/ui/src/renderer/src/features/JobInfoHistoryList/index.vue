@@ -9,7 +9,10 @@
         :label="item.label"
       >
         <template #header>
-          {{ dayjs(item.value).format('YYYY-MM-DD HH:mm:ss') }}
+          <div class="diff-table-header">
+            {{ dayjs(item.value).format('YYYY-MM-DD HH:mm:ss') }}
+            <el-radio v-model="diffPivot" :label="index">作为diff基准</el-radio>
+          </div>
         </template>
         <template #default="{ row }">
           <div class="of-auto">
@@ -22,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { PropType, computed } from 'vue'
+import { PropType, computed, ref, watch } from 'vue'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
 import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
 import { ElTable, ElTableColumn } from 'element-plus'
@@ -75,6 +78,18 @@ const dataForRender = computed(() => {
   })
   return newArr
 })
+
+const diffPivot = ref(0)
+watch(
+  () => props.jobInfoHistoryList,
+  () => {
+    if (!props.jobInfoHistoryList.length) {
+      diffPivot.value = 0
+      return
+    }
+    diffPivot.value = props.jobInfoHistoryList.length - 1
+  }
+)
 </script>
 
 <style lang="scss" scoped>
@@ -82,6 +97,12 @@ const dataForRender = computed(() => {
   :deep(.el-form-item__label) {
     color: #999;
   }
+}
+.diff-table-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 </style>
 <style lang="scss"></style>
