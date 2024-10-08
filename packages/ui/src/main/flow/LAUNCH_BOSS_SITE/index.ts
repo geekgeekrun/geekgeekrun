@@ -16,6 +16,8 @@ import path from 'node:path'
 import url from 'url'
 import packageJson from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/package.json' assert { type: 'json' }
 import { Target } from 'puppeteer'
+import { pipeWriteRegardlessError } from '../utils/pipe'
+import * as JSONStream from 'JSONStream'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -125,6 +127,35 @@ export async function launchBossSite() {
   const localStoragePageUrl = `https://www.zhipin.com/desktop/`
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
 
+  //#region pipe
+  let pipeForWrite: null | fs.WriteStream = null
+  let pipeForRead: null | fs.ReadStream = null
+  try {
+    pipeForWrite = fs.createWriteStream(null, { fd: 3 })
+  } catch {
+    console.warn('pipeForWrite is not available')
+  }
+  try {
+    pipeForRead = fs.createReadStream(null, { fd: 3 })
+  } catch {
+    console.warn('pipeForRead is not available')
+  }
+  pipeForRead?.pipe(JSONStream.parse())?.on('data', async function handler(data) {
+    if (data.type !== 'NEW_WINDOW') {
+      return
+    }
+    const page = await browser.newPage()
+    await page.goto(data.url)
+  })
+
+  pipeWriteRegardlessError(
+    pipeForWrite,
+    JSON.stringify({
+      type: 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY'
+    })
+  )
+  //#endregion
+
   browser.on('targetcreated', (target) => {
     attachRequestsListener(target)
   })
@@ -135,11 +166,16 @@ export async function launchBossSite() {
     }
     const cp = browser.process()
     cp.kill()
+    pipeWriteRegardlessError(
+      pipeForWrite,
+      JSON.stringify({
+        type: 'SUB_PROCESS_OF_OPEN_BOSS_SITE_CAN_BE_KILLED'
+      })
+    )
     process.exit(0)
   })
 
-  const newPage = await await browser.newPage()
+  const tempPage = await browser.newPage()
   await page.close()
-  page = newPage
-  await page.goto('https://www.zhipin.com/web/user/')
+  page = tempPage
 }

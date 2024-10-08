@@ -137,11 +137,10 @@ onMounted(() => {
   })
 })
 
-function handleViewJobOnlineButtonClick(encryptJobId: string) {
-  electron.ipcRenderer.send(
-    'open-external-link',
-    `https://www.zhipin.com/job_detail/${encryptJobId}.html`
-  )
+async function handleViewJobOnlineButtonClick(encryptJobId: string) {
+  return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
+    url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
+  })
 }
 
 const drawVisibleModelValue = ref(false)
