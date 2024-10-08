@@ -38,7 +38,7 @@
                 link
                 type="primary"
                 size="small"
-                @click="handleViewJobHistoryButtonClick(row.encryptJobId)"
+                @click="handleViewJobHistoryButtonClick(row)"
                 >变更记录</ElButton
               >
               <ElButton
@@ -77,6 +77,27 @@
         @closed="selectedJobInfoForViewSnapshot = null"
       />
     </ElDrawer>
+    <ElDialog
+      v-model="historyDialogVisibleModelValue"
+      width="100%"
+      :style="{
+        margin: 0,
+        height: 'fit-content',
+        minHeight: '100%'
+      }"
+    >
+      <JobInfoHistoryList
+        v-if="selectedJobInfoForViewHistory"
+        :job-info="selectedJobInfoForViewHistory"
+        :job-info-history-list="selectedJobHistory ?? []"
+        @closed="
+          () => {
+            selectedJobInfoForViewHistory = null
+            selectedJobHistory = null
+          }
+        "
+      />
+    </ElDialog>
   </div>
 </template>
 
@@ -84,8 +105,10 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
+import { type JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
+import JobInfoHistoryList from '../../features/JobInfoHistoryList/index.vue'
 
 const tableData = ref<VChatStartupLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -145,12 +168,65 @@ async function handleViewJobOnlineButtonClick(encryptJobId: string) {
     url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
   })
 }
-async function handleViewJobHistoryButtonClick(encryptJobId: string) {
-  const historyList = await electron.ipcRenderer.invoke(
-    'get-job-history-by-encrypt-id',
-    encryptJobId
-  )
-  void historyList
+
+const historyDialogVisibleModelValue = ref(false)
+const selectedJobInfoForViewHistory = ref<VChatStartupLog | null>(null)
+const selectedJobHistory = ref<null | JobInfoChangeLog[]>(null)
+async function handleViewJobHistoryButtonClick(record: VChatStartupLog) {
+  // let { data: historyList } = await electron.ipcRenderer.invoke(
+  //   'get-job-history-by-encrypt-id',
+  //   record.encryptJobId
+  // )
+
+  // historyList = historyList.map((it) => ({
+  //   ...it,
+  //   ...(() => {
+  //     try {
+  //       return JSON.parse(it.dataAsJson)
+  //     } catch {
+  //       return {}
+  //     }
+  //   })(),
+  //   __ggr_updateTime: new Date(it.updateTime)
+  // }))
+  const { data: historyList } = await Promise.resolve({
+    data: [
+      {
+        id: 569,
+        encryptJobId: 'f0bf76bbd1d8dcf71Hxz2du8EFFY',
+        updateTime: '2024-10-04T00:12:20.941Z',
+        dataAsJson:
+          '{"encryptId":"f0bf76bbd1d8dcf71Hxz2du8EFFY","encryptUserId":"cf615f0b2a5db54a1Xxz2N26Fls~","invalidStatus":false,"jobName":"前端工程师","position":100901,"positionName":"前端开发工程师1","location":101010100,"locationName":"北京4","experienceName":"3-5年","degreeName":"本科","jobType":0,"proxyJob":0,"proxyType":0,"salaryDesc":"12-15K","payTypeDesc":null,"postDescription":"熟练使用HTML,CSS，JAVASCRIPT;\\n熟练使用NPM或Yarn包管理工具；\\n掌握Sass，PostCss，Less，Stylus进行CSS预处理；\\n熟练使用VITE或Webpack打包工具；\\n精通使用Vue 3.0 、element-PLUS等主流前端框架，熟练使用Vue状态管理，路由配置，vue-loader预处理，组件自定义；\\n熟练使用axios网络组件，掌握使用Cookies，以及网络请求前端加解密技术；\\n熟练掌握前端组件化开发，前端开发框架搭建；\\n掌握前端缓存技术；\\n了解前端优化技巧，并且根据实际情况进行前端框架优化；\\n了解常见前端攻击方式以及预防方法；\\n熟练掌握echarts图表组件，能够对大数据量多图表页面进行性能优化；","encryptAddressId":"6914d969b01eafe21nd409S7FVFSxIm9Wfqf","address":"北京海淀区中软大厦.","longitude":116.334251,"latitude":39.958087,"staticMapUrl":"https://img.bosszhipin.com/beijin/upload/amap_proxy/20230428/48ba41acc9cef1bf3f3c8ba446b40b7757c453bede60b22f6bb61e3b7bce0931da574d19d1d82c88.jpg","pcStaticMapUrl":"https://img.bosszhipin.com/beijin/upload/amap_proxy/20230608/48ba41acc9cef1bf03ae3ae84352bc0cfa3e4b77ee71ca986bb61e3b7bce0931da574d19d1d82c88.jpg","overseasAddressList":[],"overseasInfo":null,"showSkills":["JavaScript","Vue"],"anonymous":0,"jobStatusDesc":"最新"}'
+      },
+      {
+        id: 570,
+        encryptJobId: 'f0bf76bbd1d8dcf71Hxz2du8EFFY',
+        updateTime: '2024-10-04T00:12:21.941Z',
+        dataAsJson:
+          '{"encryptId":"f0bf76bbd1d8dcf71Hxz2du8EFFY","encryptUserId":"cf615f0b2a5db54a1Xxz2N26Fls~","invalidStatus":false,"jobName":"前端工程师","position":100901,"positionName":"前端开发工程师2","location":101010100,"locationName":"北京5","experienceName":"3-5年","degreeName":"本科","jobType":0,"proxyJob":0,"proxyType":0,"salaryDesc":"12-15K","payTypeDesc":null,"postDescription":"熟练使用HTML,CSS，JAVASCRIPT;\\n熟练使用NPM或Yarn包管理工具；\\n掌握Sass，PostCss，Less，Stylus进行CSS预处理；\\n熟练使用VITE或Webpack打包工具；\\n精通使用Vue 3.0 、element-PLUS等主流前端框架，熟练使用Vue状态管理，路由配置，vue-loader预处理，组件自定义；\\n熟练使用axios网络组件，掌握使用Cookies，以及网络请求前端加解密技术；\\n熟练掌握前端组件化开发，前端开发框架搭建；\\n掌握前端缓存技术；\\n了解前端优化技巧，并且根据实际情况进行前端框架优化；\\n了解常见前端攻击方式以及预防方法；\\n熟练掌握echarts图表组件，能够对大数据量多图表页面进行性能优化；","encryptAddressId":"6914d969b01eafe21nd409S7FVFSxIm9Wfqf","address":"北京海淀区中软大厦.","longitude":116.334251,"latitude":39.958087,"staticMapUrl":"https://img.bosszhipin.com/beijin/upload/amap_proxy/20230428/48ba41acc9cef1bf3f3c8ba446b40b7757c453bede60b22f6bb61e3b7bce0931da574d19d1d82c88.jpg","pcStaticMapUrl":"https://img.bosszhipin.com/beijin/upload/amap_proxy/20230608/48ba41acc9cef1bf03ae3ae84352bc0cfa3e4b77ee71ca986bb61e3b7bce0931da574d19d1d82c88.jpg","overseasAddressList":[],"overseasInfo":null,"showSkills":["JavaScript","Vue"],"anonymous":0,"jobStatusDesc":"最新"}'
+      },
+      {
+        id: 571,
+        encryptJobId: 'f0bf76bbd1d8dcf71Hxz2du8EFFY',
+        updateTime: '2024-10-04T00:12:22.941Z',
+        dataAsJson:
+          '{"encryptId":"f0bf76bbd1d8dcf71Hxz2du8EFFY","encryptUserId":"cf615f0b2a5db54a1Xxz2N26Fls~","invalidStatus":false,"jobName":"前端工程师","position":100901,"positionName":"前端开发工程师3","location":101010100,"locationName":"北京6","experienceName":"3-5年","degreeName":"本科","jobType":0,"proxyJob":0,"proxyType":0,"salaryDesc":"12-15K","payTypeDesc":null,"postDescription":"熟练使用HTML,CSS，JAVASCRIPT;\\n熟练使用NPM或Yarn包管理工具；\\n掌握Sass，PostCss，Less，Stylus进行CSS预处理；\\n熟练使用VITE或Webpack打包工具；\\n精通使用Vue 3.0 、element-PLUS等主流前端框架，熟练使用Vue状态管理，路由配置，vue-loader预处理，组件自定义；\\n熟练使用axios网络组件，掌握使用Cookies，以及网络请求前端加解密技术；\\n熟练掌握前端组件化开发，前端开发框架搭建；\\n掌握前端缓存技术；\\n了解前端优化技巧，并且根据实际情况进行前端框架优化；\\n了解常见前端攻击方式以及预防方法；\\n熟练掌握echarts图表组件，能够对大数据量多图表页面进行性能优化；","encryptAddressId":"6914d969b01eafe21nd409S7FVFSxIm9Wfqf","address":"北京海淀区中软大厦.","longitude":116.334251,"latitude":39.958087,"staticMapUrl":"https://img.bosszhipin.com/beijin/upload/amap_proxy/20230428/48ba41acc9cef1bf3f3c8ba446b40b7757c453bede60b22f6bb61e3b7bce0931da574d19d1d82c88.jpg","pcStaticMapUrl":"https://img.bosszhipin.com/beijin/upload/amap_proxy/20230608/48ba41acc9cef1bf03ae3ae84352bc0cfa3e4b77ee71ca986bb61e3b7bce0931da574d19d1d82c88.jpg","overseasAddressList":[],"overseasInfo":null,"showSkills":["JavaScript","Vue"],"anonymous":0,"jobStatusDesc":"最新"}'
+      }
+    ].map((it) => ({
+      ...it,
+      ...(() => {
+        try {
+          return JSON.parse(it.dataAsJson)
+        } catch {
+          return {}
+        }
+      })(),
+      __ggr_updateTime: new Date(it.updateTime)
+    }))
+  })
+  historyDialogVisibleModelValue.value = true
+  selectedJobInfoForViewHistory.value = record
+  selectedJobHistory.value = historyList
 }
 </script>
 
