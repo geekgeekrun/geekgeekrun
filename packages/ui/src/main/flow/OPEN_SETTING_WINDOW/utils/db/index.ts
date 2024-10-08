@@ -85,3 +85,11 @@ export const getJobLibrary = async ({ pageNo, pageSize }: Partial<PageReq> = {})
   })
   return res
 }
+
+export const getJobHistoryByEncryptId = async (encryptJobId) => {
+  const res = await createWorkerPromise({
+    type: 'getJobHistoryByEncryptId',
+    encryptJobId
+  })
+  return res
+}

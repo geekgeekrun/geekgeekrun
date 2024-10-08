@@ -21,7 +21,8 @@ import {
   getAutoStartChatRecord,
   getBossLibrary,
   getCompanyLibrary,
-  getJobLibrary
+  getJobLibrary,
+  getJobHistoryByEncryptId
 } from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
 import { pipeWriteRegardlessError } from '../../utils/pipe'
@@ -347,6 +348,10 @@ export default function initIpc() {
         url: url ?? 'about:blank'
       })
     )
+  })
+
+  ipcMain.handle('get-job-history-by-encrypt-id', async (_, encryptJobId) => {
+    return await getJobHistoryByEncryptId(encryptJobId)
   })
 
   ipcMain.handle('exit-app-immediately', () => {
