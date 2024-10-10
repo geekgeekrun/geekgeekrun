@@ -1,7 +1,20 @@
 <template>
   <div>
-    <el-table :data="dataForRender">
-      <el-table-column prop="title" label="" width="120px" fixed />
+    <el-form>
+      <el-row>
+        <el-col :span="6"><el-form-item label="公司">{{ jobInfo.companyName }}</el-form-item></el-col>
+        <el-col :span="6"><el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item></el-col>
+        <el-col :span="6"><el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item></el-col>
+        <el-col :span="6"><el-form-item label="Boss及其身份">{{ jobInfo.bossName }} {{ jobInfo.bossTitle }}</el-form-item></el-col>
+      </el-row>
+    </el-form>
+    <el-divider content-position="left">变更记录</el-divider>
+    <el-table
+      class="diff-table"
+      :data="dataForRender"
+      :row-style="getRowStyle"
+    >
+      <el-table-column prop="title" label="" width="150px" fixed />
       <el-table-column
         v-for="(item, index) in tableProps"
         :key="index"
@@ -11,13 +24,13 @@
         <template #header>
           <div class="diff-table-header">
             {{ dayjs(item.value).format('YYYY-MM-DD HH:mm:ss') }}
-            <el-radio v-model="diffPivot" :label="index">作为diff基准</el-radio>
+            <el-tooltip content="待对比条目少于2个" :disabled="tableProps.length > 1">
+              <el-radio v-model="diffPivot" :label="item.value" :disabled="tableProps.length <= 1">作为diff基准</el-radio>
+            </el-tooltip>
           </div>
         </template>
         <template #default="{ row }">
-          <div class="of-auto">
-            <pre>{{ row[item.value] }}</pre>
-          </div>
+          <TextDiff :a="row[diffPivot]?.trim() ?? ''" :b="row[item.value]?.trim() ?? ''" />
         </template>
       </el-table-column>
     </el-table>
@@ -28,8 +41,9 @@
 import { PropType, computed, ref, watch } from 'vue'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
 import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
-import { ElTable, ElTableColumn } from 'element-plus'
+import { ElTable, ElTableColumn, ElForm, ElFormItem, ElRow, ElCol, ElDivider } from 'element-plus'
 import dayjs from 'dayjs'
+import TextDiff from '../../components/TextDiff.vue'
 
 const props = defineProps({
   jobInfo: {
@@ -54,8 +68,8 @@ const tableProps = computed(() =>
  *  定义映射字段表(最好取全量字段)
  * */
 const mapObj = {
-  jobName: '职位名称',
-  positionName: '职位分类',
+  // jobName: '职位名称',
+  // positionName: '职位分类',
   experienceName: '工作经验',
   degreeName: '学历',
   salaryDesc: '薪资',
@@ -79,17 +93,35 @@ const dataForRender = computed(() => {
   return newArr
 })
 
-const diffPivot = ref(0)
+const diffPivot = ref('')
 watch(
-  () => props.jobInfoHistoryList,
+  [() => props.jobInfoHistoryList, () => tableProps.value],
   () => {
-    if (!props.jobInfoHistoryList.length) {
-      diffPivot.value = 0
+    if (!props.jobInfoHistoryList.length || !tableProps.value.length) {
+      diffPivot.value = ''
       return
     }
-    diffPivot.value = props.jobInfoHistoryList.length - 1
+    diffPivot.value = tableProps.value[tableProps.value.length - 1].value
+  },
+  {
+    immediate: true
   }
 )
+
+function getRowStyle ({ row }) {
+  const propsToCompare = tableProps.value.map(it => it.value)
+  for (let i = 0; i < propsToCompare.length - 1; i++) {
+    if (
+      row[propsToCompare[i]]?.trim() !==
+      row[propsToCompare[i + 1]]?.trim()
+    ) {
+      return {
+        backgroundColor: '#fffeef'
+      }
+    }
+  }
+  return {}
+}
 </script>
 
 <style lang="scss" scoped>
@@ -98,11 +130,13 @@ watch(
     color: #999;
   }
 }
-.diff-table-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.diff-table {
+  .diff-table-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
 }
 </style>
 <style lang="scss"></style>
