@@ -21,5 +21,11 @@
   },
   "devDependencies": {
     "semver": "^7.6.0"
+  },
+  "volta": {
+    "node": "20.16.0"
+  },
+  "engines": {
+    "pnpm": "=8.15.9"
   }
 }
