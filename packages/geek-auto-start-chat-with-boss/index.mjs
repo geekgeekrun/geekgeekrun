@@ -488,7 +488,7 @@ async function toRecommendPage (hooks) {
 
                   if (tempTargetJobIndexToCheckDetail === 0) {
                   } else {
-                    const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list > li')
+                    const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list li.job-card-box')
                     const targetJobElProxy = recommendJobItemList[tempTargetJobIndexToCheckDetail]
                     // click that element
                     await targetJobElProxy.click()
