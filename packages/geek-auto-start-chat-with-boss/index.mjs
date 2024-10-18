@@ -15,6 +15,8 @@ import { readConfigFile, writeStorageFile, ensureConfigFileExist, readStorageFil
 import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } from './combineCalculator.mjs'
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
+import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
+
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
   arr.forEach(option => {
@@ -388,7 +390,7 @@ async function toRecommendPage (hooks) {
 
         try {
           const { targetJobIndex, targetJobData } = await new Promise(async (resolve, reject) => {
-            try {  
+            try {
               let requestNextPagePromiseWithResolver = null
               page.on(
                 'request',
@@ -587,7 +589,7 @@ async function toRecommendPage (hooks) {
               throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
             }
           } else {
-            await hooks.newChatStartup?.promise(targetJobData)
+            await hooks.newChatStartup?.promise(targetJobData, { chatStartupFrom: ChatStartupFrom.AutoFromRecommendList })
             blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
 
             await storeStorage(page).catch(() => void 0)
@@ -701,7 +703,7 @@ async function storeStorage (page) {
   return Promise.all(
     [
       writeStorageFile('boss-cookies.json', cookies),
-      writeStorageFile('boss-local-storage.json', localStorage),      
+      writeStorageFile('boss-local-storage.json', localStorage),
     ]
   )
 }

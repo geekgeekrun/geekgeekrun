@@ -46,17 +46,19 @@ const main = async () => {
     process.exit(AUTO_CHAT_ERROR_EXIT_CODE.COOKIE_INVALID)
   }
   const hooks = {
+    daemonInitialized: new AsyncSeriesHook(),
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
-    newChatStartup: new AsyncSeriesHook(['positionInfoDetail']),
+    newChatStartup: new AsyncSeriesHook(['positionInfoDetail', 'chatRunningContext']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo'])
   }
   initPlugins(hooks)
+  await hooks.daemonInitialized.callAsync()
   while (true) {
     try {
       await mainLoop(hooks)

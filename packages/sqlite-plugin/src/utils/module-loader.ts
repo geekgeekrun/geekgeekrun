@@ -1,9 +1,9 @@
 import * as path from 'node:path';
-import type typeormType from 'typeorm'
+import type TypeormType from 'typeorm'
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
 
-export function requireTypeorm () {
+export function requireTypeorm (): typeof TypeormType {
   const importResult = require('typeorm')
   return importResult
 }

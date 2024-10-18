@@ -4,13 +4,14 @@ import { requireTypeorm } from "./utils/module-loader";
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
-import { ChatStartupLog } from './entity/ChatStartupLog';
+import { ChatStartupFrom, ChatStartupLog } from './entity/ChatStartupLog';
 import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
 import { CompanyInfo } from "./entity/CompanyInfo";
 import { JobInfo } from "./entity/JobInfo";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
+import { AutoStartChatRunRecord } from './entity/AutoStartChatRunRecord';
 import { VChatStartupLog } from "./entity/VChatStartupLog";
 import { VBossLibrary } from "./entity/VBossLibrary";
 import { VJobLibrary } from "./entity/VJobLibrary";
@@ -19,6 +20,8 @@ import { VCompanyLibrary } from "./entity/VCompanyLibrary"
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
 import { saveChatStartupRecord, saveJobInfoFromRecommendPage } from "./handlers";
+import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
+
 Boolean(cliHighlight);
 
 export function initDb(dbFilePath) {
@@ -40,17 +43,23 @@ export function initDb(dbFilePath) {
       JobInfoChangeLog,
       BossActiveStatusRecord,
       UserInfo,
+      AutoStartChatRunRecord,
       VChatStartupLog,
       VBossLibrary,
       VJobLibrary,
       VCompanyLibrary
     ],
+    migrations: [
+      UpdateChatStartupLogTable1729182577167
+    ],
+    migrationsRun: true
   });
   return appDataSource.initialize();
 }
 
 export default class SqlitePlugin {
   initPromise: Promise<DataSource>;
+  runRecordId: number;
 
   constructor(dbFilePath) {
     this.initPromise = initDb(dbFilePath);
@@ -59,6 +68,20 @@ export default class SqlitePlugin {
   userInfo = null
 
   apply(hooks) {
+    hooks.daemonInitialized.tapPromise(
+      "SqlitePlugin",
+      async () => {
+        const ds = await this.initPromise;
+
+        const autoStartChatRunRecord = new AutoStartChatRunRecord();
+        autoStartChatRunRecord.date = new Date();
+
+        const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
+        const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord);
+
+        this.runRecordId = result.id;
+      }
+    );
     hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
       async (userInfoResponse) => {
@@ -85,9 +108,12 @@ export default class SqlitePlugin {
       await saveJobInfoFromRecommendPage(ds, _jobInfo);
     });
 
-    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo) => {
+    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo, { chatStartupFrom = ChatStartupFrom.AutoFromRecommendList } = {}) => {
       const ds = await this.initPromise;
-      return await saveChatStartupRecord(ds, _jobInfo, this.userInfo);
+      return await saveChatStartupRecord(ds, _jobInfo, this.userInfo, {
+        autoStartupChatRecordId: this.runRecordId,
+        chatStartupFrom
+      });
     });
   }
 }
