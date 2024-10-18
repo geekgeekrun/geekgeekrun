@@ -238,7 +238,12 @@ export async function saveJobInfoFromRecommendPage(ds: DataSource, _jobInfo) {
   return;
 }
 
-export async function saveChatStartupRecord(ds: DataSource, _jobInfo, { encryptUserId }) {
+export async function saveChatStartupRecord(
+  ds: DataSource,
+  _jobInfo,
+  { encryptUserId },
+  { autoStartupChatRecordId = undefined, chatStartupFrom = undefined } = {}
+) {
   const { jobInfo } = _jobInfo;
 
   //#region chat-startup-log
@@ -247,6 +252,8 @@ export async function saveChatStartupRecord(ds: DataSource, _jobInfo, { encryptU
     date: new Date(),
     encryptCurrentUserId: encryptUserId,
     encryptJobId: jobInfo.encryptId,
+    autoStartupChatRecordId,
+    chatStartupFrom
   }
   Object.assign(chatStartupLog, chatStartupLogPayload)
 

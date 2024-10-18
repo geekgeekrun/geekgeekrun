@@ -18,6 +18,7 @@ import packageJson from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-
 import { Target } from 'puppeteer'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
+import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -89,9 +90,16 @@ const attachRequestsListener = async (target: Target) => {
       const currentUserInfo = await page.evaluate(
         'document.querySelector(".job-detail-box").__vue__.$store.state.userInfo'
       )
-      await saveChatStartupRecord(await dbInitPromise, currentJobData, {
-        encryptUserId: currentUserInfo.encryptUserId
-      })
+      await saveChatStartupRecord(
+        await dbInitPromise,
+        currentJobData,
+        {
+          encryptUserId: currentUserInfo.encryptUserId
+        },
+        {
+          chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList
+        }
+      )
     }
   })
 

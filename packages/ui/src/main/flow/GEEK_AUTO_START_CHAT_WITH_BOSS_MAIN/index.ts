@@ -79,18 +79,20 @@ const runAutoChat = async () => {
   }
 
   const hooks = {
+    daemonInitialized: new AsyncSeriesHook(),
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
     jobDetailIsGetFromRecommendList: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
-    newChatStartup: new AsyncSeriesHook(['positionInfoDetail']),
+    newChatStartup: new AsyncSeriesHook(['positionInfoDetail', 'chatRunningContext']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo'])
   }
   initPlugins(hooks)
+  await hooks.daemonInitialized.promise()
   pipeWriteRegardlessError(
     pipe,
     JSON.stringify({
