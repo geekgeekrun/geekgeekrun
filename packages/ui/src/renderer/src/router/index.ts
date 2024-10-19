@@ -36,6 +36,13 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'MarkAsNotSuitRecord',
+        component: () => import('@renderer/page/Configuration/MarkAsNotSuitRecord.vue'),
+        meta: {
+          title: '标记不合适记录'
+        }
+      },
+      {
         path: 'JobLibrary',
         component: () => import('@renderer/page/Configuration/JobLibrary.vue'),
         meta: {

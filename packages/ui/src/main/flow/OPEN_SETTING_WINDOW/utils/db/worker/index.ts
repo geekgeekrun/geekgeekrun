@@ -7,6 +7,7 @@ import { VChatStartupLog } from '@geekgeekrun/sqlite-plugin/dist/entity/VChatSta
 import { VJobLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VJobLibrary'
 import { VCompanyLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VCompanyLibrary'
 import { VBossLibrary } from '@geekgeekrun/sqlite-plugin/dist/entity/VBossLibrary'
+import { VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/dist/entity/VMarkAsNotSuitLog'
 import { measureExecutionTime } from '../../../../../../common/utils/performance'
 import { PageReq, PagedRes } from '../../../../../../common/types/pagination'
 import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/dist/entity/JobInfoChangeLog'
@@ -45,6 +46,28 @@ const payloadHandler = {
     const userRepository = dataSource!.getRepository(VChatStartupLog)!
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
+        skip: (pageNo - 1) * pageSize,
+        take: pageSize
+      })
+    )
+    return {
+      data,
+      pageNo,
+      totalItemCount
+    }
+  },
+  async getMarkAsNotSuitRecord({ pageNo, pageSize }: Partial<PageReq> = {}): Promise<
+    PagedRes<VMarkAsNotSuitLog>
+  > {
+    if (!pageNo) {
+      pageNo = 1
+    }
+    if (!pageSize) {
+      pageSize = 10
+    }
+    const recordRepository = dataSource!.getRepository(VMarkAsNotSuitLog)!
+    const [data, totalItemCount] = await measureExecutionTime(
+      recordRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
         take: pageSize
       })
