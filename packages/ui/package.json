@@ -1,6 +1,6 @@
 {
   "name": "geekgeekrun-ui",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Boss 炸弹 - 自动开聊Boss，助力每位打工人求职！",
   "main": "./out/main/index.js",
   "author": "geekgeekrun",
