@@ -12,10 +12,12 @@ import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { UserInfo } from "./entity/UserInfo";
 import { AutoStartChatRunRecord } from './entity/AutoStartChatRunRecord';
+import { MarkAsNotSuitLog } from "./entity/MarkAsNotSuitLog"
 import { VChatStartupLog } from "./entity/VChatStartupLog";
 import { VBossLibrary } from "./entity/VBossLibrary";
 import { VJobLibrary } from "./entity/VJobLibrary";
 import { VCompanyLibrary } from "./entity/VCompanyLibrary"
+import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
@@ -47,7 +49,9 @@ export function initDb(dbFilePath) {
       VChatStartupLog,
       VBossLibrary,
       VJobLibrary,
-      VCompanyLibrary
+      VCompanyLibrary,
+      MarkAsNotSuitLog,
+      VMarkAsNotSuitLog,
     ],
     migrations: [
       UpdateChatStartupLogTable1729182577167

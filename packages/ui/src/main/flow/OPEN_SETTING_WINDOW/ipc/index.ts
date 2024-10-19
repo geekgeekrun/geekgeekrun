@@ -22,7 +22,8 @@ import {
   getBossLibrary,
   getCompanyLibrary,
   getJobLibrary,
-  getJobHistoryByEncryptId
+  getJobHistoryByEncryptId,
+  getMarkAsNotSuitRecord
 } from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
 import { pipeWriteRegardlessError } from '../../utils/pipe'
@@ -274,6 +275,10 @@ export default function initIpc() {
 
   ipcMain.handle('get-auto-start-chat-record', async (ev, payload: PageReq) => {
     const a = await getAutoStartChatRecord(payload)
+    return a
+  })
+  ipcMain.handle('get-mark-as-not-suit-record', async (ev, payload: PageReq) => {
+    const a = await getMarkAsNotSuitRecord(payload)
     return a
   })
   ipcMain.handle('get-job-library', async (ev, payload: PageReq) => {
