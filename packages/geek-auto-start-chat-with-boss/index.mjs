@@ -263,7 +263,7 @@ export async function mainLoop (hooks) {
               return
             }
             
-            const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list > li')
+            const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list li.job-card-box')
             resolve(
               {
                 targetJobElProxy: recommendJobItemList[targetJobIndex],
