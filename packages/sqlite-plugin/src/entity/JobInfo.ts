@@ -40,8 +40,10 @@ export class JobInfo {
   })
   degreeName?: string;
 
-  @Column()
-  address: string;
+  @Column({
+    nullable: true
+  })
+  address?: string;
 
   @Column()
   description: string;

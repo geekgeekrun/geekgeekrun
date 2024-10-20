@@ -5,6 +5,7 @@ const viewNames = [
   "v_chat_startup_log",
   "v_company_library",
   "v_job_library",
+  "v_mark_as_not_suit_log"
 ];
 
 export class UpdateChatStartupLogTable1729182577167
@@ -25,6 +26,15 @@ export class UpdateChatStartupLogTable1729182577167
         'lastActiveStatus',
         new TableColumn({
           name: 'lastActiveStatus',
+          type: 'varchar',
+          isNullable: true
+        })
+      )
+      await queryRunner.changeColumn(
+        'job_info',
+        'address',
+        new TableColumn({
+          name: 'address',
           type: 'varchar',
           isNullable: true
         })
