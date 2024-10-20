@@ -8,6 +8,7 @@ import { ChatStartupLog } from "./entity/ChatStartupLog";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
 import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
+import { MarkAsNotSuitLog } from "./entity/MarkAsNotSuitLog";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -259,6 +260,33 @@ export async function saveChatStartupRecord(
 
   const chatStartupLogRepository = ds.getRepository(ChatStartupLog);
   await chatStartupLogRepository.save(chatStartupLog);
+  //#endregion
+  return
+}
+
+export async function saveMarkAsNotSuitRecord(
+  ds: DataSource,
+  _jobInfo,
+  { encryptUserId },
+  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined } = {}
+) {
+  const { jobInfo } = _jobInfo;
+
+  //#region mark-as-not-suit-log
+  const markAsNotSuitLog = new MarkAsNotSuitLog()
+  const markAsNotSuitLogPayload: Partial<MarkAsNotSuitLog> = {
+    date: new Date(),
+    encryptCurrentUserId: encryptUserId,
+    encryptJobId: jobInfo.encryptId,
+    autoStartupChatRecordId,
+    markFrom,
+    markReason,
+    extInfo: extInfo ? JSON.stringify(extInfo) : undefined
+  }
+  Object.assign(markAsNotSuitLog, markAsNotSuitLogPayload)
+
+  const markAsNotSuitLogRepository = ds.getRepository(MarkAsNotSuitLog);
+  await markAsNotSuitLogRepository.save(markAsNotSuitLog);
   //#endregion
   return
 }
