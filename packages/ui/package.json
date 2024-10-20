@@ -38,7 +38,8 @@
     "@geekgeekrun/utils": "workspace:*",
     "JSONStream": "^1.3.5",
     "diff": "^7.0.0",
-    "electron-updater": "^6.1.7"
+    "electron-updater": "^6.1.7",
+    "node-machine-id": "^1.1.12"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",

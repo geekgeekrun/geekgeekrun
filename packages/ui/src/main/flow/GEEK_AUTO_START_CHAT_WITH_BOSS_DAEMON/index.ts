@@ -6,6 +6,7 @@ import fs, { WriteStream } from 'node:fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
 import { initPowerSaveBlocker } from './power-saver-blocker'
+import gtag from '../../utils/gtag'
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -115,4 +116,6 @@ export function runAutoChatWithDaemon() {
       type: 'AUTO_START_CHAT_DAEMON_PROCESS_STARTUP'
     })
   )
+
+  gtag('run_auto_chat_with_boss_daemon_ready')
 }

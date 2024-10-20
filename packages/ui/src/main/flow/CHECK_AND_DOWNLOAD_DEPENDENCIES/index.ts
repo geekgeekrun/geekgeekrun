@@ -3,6 +3,7 @@ import { checkAndDownloadPuppeteerExecutable } from './utils/puppeteer-executabl
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import gtag from '../../utils/gtag'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {
   DOWNLOAD_ERROR = 80
@@ -83,9 +84,11 @@ export const checkAndDownloadDependenciesForInit = async () => {
       })
 
     await promiseWithResolver.promise
+    gtag('browser_download_finished')
     app.exit()
   } catch (err) {
     console.error(err)
+    gtag('browser_download_error')
     pipeWriteRegardlessError(
       pipe,
       JSON.stringify({

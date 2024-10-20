@@ -24,6 +24,7 @@ import { Target } from 'puppeteer'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
+import gtag from '../../utils/gtag'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -225,7 +226,7 @@ export async function launchBossSite() {
     })
   )
   //#endregion
-
+  gtag('launch_boss_site_ready')
   browser.on('targetcreated', (target) => {
     attachRequestsListener(target)
   })

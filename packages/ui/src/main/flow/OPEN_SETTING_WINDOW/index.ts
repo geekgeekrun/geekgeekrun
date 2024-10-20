@@ -3,6 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createMainWindow } from '../../window/mainWindow'
 import './app-menu'
 import initIpc from './ipc'
+import gtag from '../../utils/gtag'
 export function openSettingWindow() {
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
   if (!app.requestSingleInstanceLock()) {
@@ -37,6 +38,8 @@ export function openSettingWindow() {
       // dock icon is clicked and there are no other windows open.
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
     })
+
+    gtag('ui_ready')
   })
 
   // Quit when all windows are closed, except on macOS. There, it's common

@@ -14,6 +14,7 @@ import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat
 import * as JSONStream from 'JSONStream'
 
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
+import gtag from '../../utils/gtag'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 const rerunInterval = (() => {
@@ -94,6 +95,8 @@ const runAutoChat = async () => {
   }
   initPlugins(hooks)
   await hooks.daemonInitialized.promise()
+
+  gtag('run_auto_chat_with_boss_main_ready')
   pipeWriteRegardlessError(
     pipe,
     JSON.stringify({

@@ -11,6 +11,7 @@ import {
 import { getExecutableFileVersion } from '@geekgeekrun/utils/windows-only/file.mjs'
 import createCheckAndLocateExistedChromiumExecutableWorker from './worker/find-and-locate-existed-chromium-executable?nodeWorker&url'
 import { type Worker, isMainThread } from 'node:worker_threads'
+import gtag from '../../../../utils/gtag'
 
 const getPuppeteerManagerModule = async () => {
   let puppeteerManager
@@ -82,6 +83,7 @@ export const checkAndDownloadPuppeteerExecutable = async (
   const puppeteerManager = await getPuppeteerManagerModule()
   let installedBrowser: InstalledBrowser
   if (!(await checkCachedPuppeteerExecutable())) {
+    gtag('need_download_browser')
     try {
       await options.confirmContinuePromise
     } catch {
@@ -100,6 +102,7 @@ export const checkAndDownloadPuppeteerExecutable = async (
       downloadProgressCallback: options.downloadProgressCallback
     })
   } else {
+    gtag('use_installed_browser')
     installedBrowser = (
       await puppeteerManager.getInstalledBrowsers({
         cacheDir
