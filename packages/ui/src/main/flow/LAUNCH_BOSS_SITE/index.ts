@@ -1,14 +1,19 @@
 import { app } from 'electron'
 import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
 import extractZip from 'extract-zip'
-import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import {
+  readStorageFile,
+  writeStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
 import {
   saveJobInfoFromRecommendPage,
-  saveChatStartupRecord
+  saveChatStartupRecord,
+  saveMarkAsNotSuitRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/dist/enums'
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -69,10 +74,67 @@ const attachRequestsListener = async (target: Target) => {
         await saveJobInfoFromRecommendPage(await dbInitPromise, data.zpData)
       }
     } else if (
+      response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/reasons.json')
+    ) {
+      const rawReasonResData = (await response.json())?.zpData?.result ?? []
+      const reasonCodeToTextMap = await readStorageFile(
+        'job-not-suit-reason-code-to-text-cache.json'
+      )
+      for (const it of rawReasonResData) {
+        reasonCodeToTextMap[it.code] = it.text?.content ?? ''
+      }
+      await writeStorageFile('job-not-suit-reason-code-to-text-cache.json', reasonCodeToTextMap)
+    } else if (
+      page.url().startsWith('https://www.zhipin.com/web/geek/job-recommend') &&
+      response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/save.json')
+    ) {
+      const currentJobData = await page.evaluate(
+        'document.querySelector(".job-detail-box").__vue__.data'
+      )
+      const requestBody = new URLSearchParams(response.request().postData())
+
+      const securityIdInRequest = requestBody.get("securityId")
+      const currentJobSecurityId = currentJobData?.securityId
+
+      if (securityIdInRequest !== currentJobSecurityId) {
+        return
+      }
+
+      const chosenCode = Number(requestBody.get('code'))
+      const currentUserInfo = await page.evaluate(
+        'document.querySelector(".job-detail-box").__vue__.$store.state.userInfo'
+      )
+      const reasonCodeToTextMap = await readStorageFile(
+        'job-not-suit-reason-code-to-text-cache.json'
+      )
+
+      const markDetail = {
+        markFrom: ChatStartupFrom.ManuallyFromRecommendList,
+        extInfo: {
+          chosenReasonInUi: {
+            code: chosenCode,
+            text: reasonCodeToTextMap[chosenCode]
+          }
+        },
+        markReason: MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON
+      }
+      if (reasonCodeToTextMap[chosenCode]?.includes('活跃度低')) {
+        markDetail.markReason = MarkAsNotSuitReason.BOSS_INACTIVE
+        markDetail.extInfo.bossActiveTimeDesc = currentJobData?.bossInfo.activeTimeDesc
+      }
+      await saveMarkAsNotSuitRecord(
+        await dbInitPromise,
+        currentJobData,
+        {
+          encryptUserId: currentUserInfo.encryptUserId
+        },
+        markDetail
+      )
+    } else if (
       page.url().startsWith('https://www.zhipin.com/web/geek/job-recommend') &&
       response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json')
     ) {
-      const request = (await response.request()).url()
+      const request = response.request().url()
 
       const url = new URL(request)
       const jobIdInAddFriendUrl = url.searchParams.get('jobId')
