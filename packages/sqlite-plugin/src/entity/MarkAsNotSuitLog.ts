@@ -1,12 +1,7 @@
+import { MarkAsNotSuitReason } from "../enums";
 import { requireTypeorm } from "../utils/module-loader";
 import { ChatStartupFrom } from "./ChatStartupLog";
 const { Entity, Column, PrimaryGeneratedColumn } = requireTypeorm()
-
-export enum MarkAsNotSuitReason {
-  UNKNOWN = 0,
-  BOSS_INACTIVE = 1,
-  OTHER = 2
-}
 
 @Entity()
 export class MarkAsNotSuitLog {

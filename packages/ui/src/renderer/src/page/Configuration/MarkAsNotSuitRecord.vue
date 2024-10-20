@@ -19,6 +19,15 @@
             label="标记时间"
             :formatter="(_row, _col, val) => dayjs(val).format('YYYY-MM-DD HH:mm:ss')"
           />
+          <ElTableColumn prop="bossName" label="BOSS" width="64" />
+          <ElTableColumn prop="markReason" label="标记原因" width="250">
+            <template #default="{ row }">
+              <template v-if="row.markReason === MarkAsNotSuitReason.BOSS_INACTIVE">
+                <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
+                <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
+              </template>
+            </template>
+          </ElTableColumn>
           <ElTableColumn prop="experienceName" label="工作经验" />
           <ElTableColumn
             label="薪资"
@@ -28,8 +37,6 @@
                 (row.salaryMonth ? `* ${row.salaryMonth}薪` : '')
             "
           />
-          <ElTableColumn prop="bossName" label="BOSS" />
-          <ElTableColumn prop="bossTitle" label="标记原因" />
           <ElTableColumn label="职位信息" fixed="right" :width="120">
             <template #default="{ row }">
               <ElButton
@@ -81,12 +88,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, h } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
 import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/src/entity/VMarkAsNotSuitLog'
 import dayjs from 'dayjs'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
+import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/src/enums'
 
 const tableData = ref<VMarkAsNotSuitLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -149,6 +157,33 @@ const selectedJobInfoForViewSnapshot = ref<VMarkAsNotSuitLog | null>(null)
 function handleViewJobSnapshotButtonClick(record: VMarkAsNotSuitLog) {
   selectedJobInfoForViewSnapshot.value = record
   drawVisibleModelValue.value = true
+}
+
+const markReasonTopicMap = {
+  [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃'
+}
+
+function formatMarkReason(row: VMarkAsNotSuitLog) {
+  switch (row.markReason) {
+    case MarkAsNotSuitReason.BOSS_INACTIVE: {
+      const extInfo = (() => {
+        try {
+          return JSON.parse(row.extInfo)
+        } catch {
+          return null
+        }
+      })()
+      return [
+        extInfo?.bossActiveTimeDesc && `Boss活跃情况：${extInfo.bossActiveTimeDesc}`,
+        extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`
+      ]
+        .filter(Boolean)
+        .join('\n')
+    }
+    default: {
+      return ''
+    }
+  }
 }
 </script>
 
