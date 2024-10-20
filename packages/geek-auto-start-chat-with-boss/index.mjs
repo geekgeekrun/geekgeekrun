@@ -407,7 +407,7 @@ async function toRecommendPage (hooks) {
           await storeStorage(page).catch(() => void 0)
           await sleepWithRandomDelay(2000)
         }
-        await sleepWithRandomDelay(1500)
+        await sleepWithRandomDelay(3000)
         await setFilterCondition(filterCondition)
 
         try {
@@ -591,7 +591,7 @@ async function toRecommendPage (hooks) {
               reject(err)
             }
           })
-          await sleepWithRandomDelay(200)
+          await sleepWithRandomDelay(1000)
           const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
 
           await hooks.newChatWillStartup?.promise(targetJobData)
@@ -625,16 +625,17 @@ async function toRecommendPage (hooks) {
             blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
 
             await storeStorage(page).catch(() => void 0)
-            await sleepWithRandomDelay(750)
+            await sleepWithRandomDelay(1500)
             const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
             await closeDialogButtonProxy.click()
-            await sleepWithRandomDelay(1000)
+            await sleepWithRandomDelay(2000)
           }
           // #endregion
         } catch (err) {
           if (err instanceof Error) {
             switch (err.message) {
               case 'CANNOT_FIND_EXCEPT_JOB_IN_THIS_FILTER_CONDITION': {
+                await sleepWithRandomDelay(25 * 1000)
                 continue iterateFilterCondition;
               }
               case 'STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT': {
