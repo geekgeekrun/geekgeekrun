@@ -7,13 +7,13 @@
         >
       </el-form-item>
       <el-form-item
-        label="钉钉机器人 AccessToken（请勿使用公司内部群）"
+        label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
         prop="dingtalkRobotAccessToken"
       >
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
       <el-form-item
-        label="期望公司（以逗号分隔，置空即顺着推荐列表依次开聊）"
+        label="期望公司（以逗号分隔，置空即遍历推荐列表，依次开聊）"
         prop="expectCompanies"
       >
         <el-input
@@ -24,7 +24,7 @@
         />
       </el-form-item>
       <el-form-item
-        label="推荐职位筛选器（当前求职期望找不到职位情况下，将尝试通过更改筛选的方式查找新工作）"
+        label="推荐职位筛选器（当前求职期望找不到合适职位时，将尝试所有可能的筛选组合，查找新工作）"
         prop="filter"
       >
         <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
@@ -33,15 +33,15 @@
           <span
             v-if="
               currentAnyCombineRecommendJobFilterCombinationCount >= 10 &&
-              currentAnyCombineRecommendJobFilterCombinationCount < 1000
+              currentAnyCombineRecommendJobFilterCombinationCount < 100
             "
             class="color-orange"
-            >组合条件太多了，少选择一些吧😅</span
+            >组合条件太多，建议少选择一些</span
           >
           <span
-            v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 1000"
+            v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 100"
             class="color-orange"
-            >你咋不上天呢😅</span
+            >好吧，你开心就好</span
           >
         </div>
       </el-form-item>
