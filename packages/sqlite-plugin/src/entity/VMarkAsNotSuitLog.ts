@@ -49,7 +49,7 @@ export class VMarkAsNotSuitLog {
   degreeName: string;
 
   @ViewColumn()
-  address: string;
+  address?: string;
 
   @ViewColumn()
   description: string;

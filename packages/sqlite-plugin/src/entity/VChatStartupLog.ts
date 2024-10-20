@@ -45,7 +45,7 @@ export class VChatStartupLog {
   degreeName: string;
 
   @ViewColumn()
-  address: string;
+  address?: string;
 
   @ViewColumn()
   description: string;

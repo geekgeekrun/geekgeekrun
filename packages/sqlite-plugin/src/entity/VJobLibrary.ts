@@ -41,7 +41,7 @@ export class VJobLibrary {
   degreeName: string;
 
   @ViewColumn()
-  address: string;
+  address?: string;
 
   @ViewColumn()
   description: string;
