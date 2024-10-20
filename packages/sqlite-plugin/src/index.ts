@@ -21,7 +21,7 @@ import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
-import { saveChatStartupRecord, saveJobInfoFromRecommendPage } from "./handlers";
+import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord } from "./handlers";
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 
 Boolean(cliHighlight);
@@ -117,6 +117,16 @@ export default class SqlitePlugin {
       return await saveChatStartupRecord(ds, _jobInfo, this.userInfo, {
         autoStartupChatRecordId: this.runRecordId,
         chatStartupFrom
+      });
+    });
+
+    hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined } = {}) => {
+      const ds = await this.initPromise;
+      return await saveMarkAsNotSuitRecord(ds, _jobInfo, this.userInfo, {
+        autoStartupChatRecordId: this.runRecordId,
+        markFrom,
+        markReason,
+        extInfo
       });
     });
   }

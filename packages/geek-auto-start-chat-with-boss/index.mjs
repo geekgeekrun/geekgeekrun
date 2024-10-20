@@ -16,6 +16,7 @@ import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } fr
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
+import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/dist/entity/MarkAsNotSuitLog'
 
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
@@ -113,10 +114,14 @@ const blockBossNotNewChat = new Set()
 const blockBossNotActive = new Set()
 
 async function markJobAsNotSuitInRecommendPage () {
+  /**
+   * @type {{chosenReasonInUi?: { code: number, text: string}}}
+   */
+  const result = {}
   const notSuitableFeedbackButtonProxy = await page.$('.job-detail-box .job-detail-operate .not-suitable')
   if (notSuitableFeedbackButtonProxy) {
     await notSuitableFeedbackButtonProxy.click()
-    const rawRes = await (await page.waitForResponse(
+    const rawReasonResData = (await (await page.waitForResponse(
       response => {
         if (
           response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/reasons.json')
@@ -125,7 +130,12 @@ async function markJobAsNotSuitInRecommendPage () {
         }
         return false
       }
-    )).json();
+    )).json())?.zpData?.result ?? [];
+    const reasonCodeToTextMap = await readStorageFile('job-not-suit-reason-code-to-text-cache.json')
+    for(const it of rawReasonResData) {
+      reasonCodeToTextMap[it.code] = it.text?.content ?? ''
+    }
+    await writeStorageFile('job-not-suit-reason-code-to-text-cache.json', reasonCodeToTextMap)
     await sleepWithRandomDelay(2000)
     const chooseReasonDialogProxy = await(async() => {
       const alls = await page.$$('.zp-dialog-wrap.zp-feedback-dialog.v-transfer-dom')
@@ -149,7 +159,7 @@ async function markJobAsNotSuitInRecommendPage () {
         await sleepWithRandomDelay(1500)
         const confirmButtonProxy = await chooseReasonDialogProxy.$(`.zp-dialog-footer .zp-btn.zp-btn-sure`)
         await confirmButtonProxy.click()
-        await page.waitForResponse(
+        const response = await page.waitForResponse(
           response => {
             if (
               response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/save.json')
@@ -159,6 +169,17 @@ async function markJobAsNotSuitInRecommendPage () {
             return false
           }
         )
+        /**
+         * scene=4&code=41&feedbackReason=&securityId=
+         */
+        const requestBody = response.request().postData()
+        const chosenCode = Number(new URLSearchParams(requestBody).get('code'))
+        if (chosenCode) {
+          result.chosenReasonInUi = {
+            code: chosenCode,
+            text: reasonCodeToTextMap[chosenCode]
+          }
+        }
       } else {
         const cancelButtonProxy = await chooseReasonDialogProxy.$(`.zp-close`)
         await cancelButtonProxy.click()
@@ -167,6 +188,7 @@ async function markJobAsNotSuitInRecommendPage () {
       await sleepWithRandomDelay(2500)
     }
   }
+  return result
 }
 
 async function setFilterCondition (selectedFilters) {
@@ -528,7 +550,18 @@ async function toRecommendPage (hooks) {
                     blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
                     // click prevent recommend button
                     try {
-                      await markJobAsNotSuitInRecommendPage()
+                      const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage()
+                      await hooks.jobMarkedAsNotSuit.promise(
+                        targetJobData,
+                        {
+                          markFrom: ChatStartupFrom.AutoFromRecommendList,
+                          markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
+                          extInfo: {
+                            bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
+                            chosenReasonInUi
+                          }
+                        }
+                      )
                     } catch {
                     }
                     continue continueFind

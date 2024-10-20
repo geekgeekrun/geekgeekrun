@@ -9,6 +9,7 @@ import defaultTargetCompanyListConf from './default-config-file/target-company-l
 
 import defaultBossCookieStorage from './default-storage-file/boss-cookies.json' assert { type: 'json' }
 import defaultBossLocalStorageStorage from './default-storage-file/boss-local-storage.json' assert { type: 'json' }
+import defaultJobNotSuitReasonCodeToTextCacheStorage from './default-storage-file/job-not-suit-reason-code-to-text-cache.json' assert { type: 'json' }
 export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json']
 
 const defaultConfigFileContentMap = {
@@ -88,11 +89,12 @@ export const storageFilePath = path.join(
   runtimeFolderPath,
   'storage'
 )
-export const storageFileNameList = ['boss-cookies.json', 'boss-local-storage.json']
+export const storageFileNameList = ['boss-cookies.json', 'boss-local-storage.json', 'job-not-suit-reason-code-to-text-cache.json']
 
 const defaultStorageFileContentMap = {
   'boss-cookies.json': JSON.stringify(defaultBossCookieStorage),
-  'boss-local-storage.json': JSON.stringify(defaultBossLocalStorageStorage)
+  'boss-local-storage.json': JSON.stringify(defaultBossLocalStorageStorage),
+  'job-not-suit-reason-code-to-text-cache.json': JSON.stringify(defaultJobNotSuitReasonCodeToTextCacheStorage)
 }
 export const ensureStorageFileExist = () => {
   ensureRuntimeFolderPathExist()

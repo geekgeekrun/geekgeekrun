@@ -87,6 +87,7 @@ const runAutoChat = async () => {
     jobDetailIsGetFromRecommendList: new AsyncSeriesHook(['userInfo']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
     newChatStartup: new AsyncSeriesHook(['positionInfoDetail', 'chatRunningContext']),
+    jobMarkedAsNotSuit: new AsyncSeriesHook(['positionInfoDetail', 'markDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo'])
