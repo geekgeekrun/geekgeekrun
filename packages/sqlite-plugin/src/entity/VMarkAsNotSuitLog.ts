@@ -1,12 +1,16 @@
 import { requireTypeorm } from "../utils/module-loader";
+import { ChatStartupFrom } from "./ChatStartupLog";
+import { MarkAsNotSuitReason } from "../enums";
 const { ViewEntity, ViewColumn } = requireTypeorm();
 @ViewEntity({
   expression: `SELECT
     job_info.*,
     user_info.name as userName,
     mark_as_not_suit_log.date,
+    mark_as_not_suit_log.markFrom,
+    mark_as_not_suit_log.markReason,
+    mark_as_not_suit_log.extInfo,
     boss_info.name AS bossName,
-    boss_info.title AS bossTitle,
     company_info.name AS companyName
   FROM
     mark_as_not_suit_log
@@ -60,7 +64,13 @@ export class VMarkAsNotSuitLog {
   bossName: string;
 
   @ViewColumn()
-  bossTitle: string;
+  markFrom: ChatStartupFrom;
+
+  @ViewColumn()
+  markReason: MarkAsNotSuitReason;
+
+  @ViewColumn()
+  extInfo: string;
 
   @ViewColumn()
   companyName: string;
