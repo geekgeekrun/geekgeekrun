@@ -122,7 +122,7 @@ const handleClickLaunchLogin = () => {
   padding-left: 20px;
   padding-right: 20px;
   :deep(.el-form) {
-    padding-top: 60px;
+    padding-top: 40px;
   }
   .last-form-item {
     :deep(.el-form-item__content) {
