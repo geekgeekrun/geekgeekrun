@@ -1,5 +1,5 @@
 export enum MarkAsNotSuitReason {
   UNKNOWN = 0,
   BOSS_INACTIVE = 1,
-  OTHER = 2
+  USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON = 2
 }

@@ -22,7 +22,14 @@
           <ElTableColumn prop="bossName" label="BOSS" width="64" />
           <ElTableColumn prop="markReason" label="标记原因" width="250">
             <template #default="{ row }">
-              <template v-if="row.markReason === MarkAsNotSuitReason.BOSS_INACTIVE">
+              <template
+                v-if="
+                  [
+                    MarkAsNotSuitReason.BOSS_INACTIVE,
+                    MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON
+                  ].includes(row.markReason)
+                "
+              >
                 <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
                 <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
               </template>
@@ -160,7 +167,8 @@ function handleViewJobSnapshotButtonClick(record: VMarkAsNotSuitLog) {
 }
 
 const markReasonTopicMap = {
-  [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃'
+  [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃',
+  [MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON]: '手动标记不合适'
 }
 
 function formatMarkReason(row: VMarkAsNotSuitLog) {
@@ -177,6 +185,18 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
         extInfo?.bossActiveTimeDesc && `Boss活跃情况：${extInfo.bossActiveTimeDesc}`,
         extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`
       ]
+        .filter(Boolean)
+        .join('\n')
+    }
+    case MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON: {
+      const extInfo = (() => {
+        try {
+          return JSON.parse(row.extInfo)
+        } catch {
+          return null
+        }
+      })()
+      return [extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`]
         .filter(Boolean)
         .join('\n')
     }
