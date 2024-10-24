@@ -6,6 +6,7 @@
         <a href="javascript:void(0)" @click="handleLaunchBossSite">
           手动逛Boss<el-icon><TopRight /></el-icon>
         </a>
+        <hr />
         <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
         <RouterLink to="./MarkAsNotSuitRecord">标记不合适记录</RouterLink>
         <RouterLink to="./JobLibrary">职位库</RouterLink>
@@ -123,6 +124,15 @@ const handleLaunchBossSite = debounce(
         color: #2faa9e;
         border-radius: 9999px 0 0 9999px;
       }
+    }
+    > hr {
+      border: 0 solid;
+      height: 1px;
+      background-color: #b3c8c3;
+      margin-top: 0;
+      margin-bottom: 0;
+      width: 140px;
+      margin-right: 0;
     }
   }
   .feedback-area {
