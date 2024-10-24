@@ -7,6 +7,9 @@ import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
 import { initPowerSaveBlocker } from './power-saver-blocker'
 import gtag from '../../utils/gtag'
+import { initDb } from '@geekgeekrun/sqlite-plugin'
+import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/AutoStartChatRunRecord'
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -16,14 +19,18 @@ const rerunInterval = (() => {
 
   return v
 })()
-function runWithDaemon() {
-  const subProcessOfCore = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-    stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
-    env: {
-      ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossMain'
+function runWithDaemon({ runRecordId }) {
+  const subProcessOfCore = childProcess.spawn(
+    process.argv[0],
+    [...process.argv.slice(1), `--run-record-id=${runRecordId}`],
+    {
+      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
+      env: {
+        ...process.env,
+        MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossMain'
+      }
     }
-  })
+  )
 
   subProcessOfCore!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
     const data = raw
@@ -59,7 +66,7 @@ function runWithDaemon() {
       `[Run core daemon] Child process exit with code ${exitCode}, an internal error may not be caught, and will be restarted in ${rerunInterval}ms.`
     )
     await sleep(rerunInterval)
-    runWithDaemon()
+    runWithDaemon({ runRecordId })
   })
 }
 
@@ -96,11 +103,19 @@ export function runAutoChatWithDaemon() {
 
   const pipeForRead: fs.ReadStream = fs.createReadStream(null, { fd: 3 })
   const pipeForReadWithJsonParser = pipeForRead.pipe(JSONStream.parse())
-  pipeForReadWithJsonParser?.on('data', function waitForCanRun(data) {
+  pipeForReadWithJsonParser?.on('data', async function waitForCanRun(data) {
     if (data.type === 'GEEK_AUTO_START_CHAT_CAN_BE_RUN') {
+      const ds = await initDb(getPublicDbFilePath())
+
+      const autoStartChatRunRecord = new AutoStartChatRunRecord()
+      autoStartChatRunRecord.date = new Date()
+
+      const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
+      const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
+
       pipeForReadWithJsonParser.off('data', waitForCanRun)
       clearSuicideTimer()
-      runWithDaemon()
+      runWithDaemon({ runRecordId: result.id })
 
       // if don't call close, when kill child process, child process will ANR.
       pipeForRead.close()

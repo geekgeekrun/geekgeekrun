@@ -80,7 +80,6 @@ const runAutoChat = async () => {
   }
 
   const hooks = {
-    daemonInitialized: new AsyncSeriesHook(),
     puppeteerLaunched: new SyncHook(),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
@@ -94,7 +93,6 @@ const runAutoChat = async () => {
     errorEncounter: new SyncHook(['errorInfo'])
   }
   initPlugins(hooks)
-  await hooks.daemonInitialized.promise()
 
   gtag('run_auto_chat_with_boss_main_ready')
   pipeWriteRegardlessError(

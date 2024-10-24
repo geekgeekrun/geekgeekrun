@@ -23,6 +23,7 @@ import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
 import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord } from "./handlers";
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
+import minimist from 'minimist'
 
 Boolean(cliHighlight);
 
@@ -67,25 +68,12 @@ export default class SqlitePlugin {
 
   constructor(dbFilePath) {
     this.initPromise = initDb(dbFilePath);
+    this.runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? 0
   }
 
   userInfo = null
 
   apply(hooks) {
-    hooks.daemonInitialized.tapPromise(
-      "SqlitePlugin",
-      async () => {
-        const ds = await this.initPromise;
-
-        const autoStartChatRunRecord = new AutoStartChatRunRecord();
-        autoStartChatRunRecord.date = new Date();
-
-        const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
-        const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord);
-
-        this.runRecordId = result.id;
-      }
-    );
     hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
       async (userInfoResponse) => {

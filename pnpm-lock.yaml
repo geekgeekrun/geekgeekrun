@@ -14,6 +14,9 @@ importers:
       json5:
         specifier: ^2.2.3
         version: 2.2.3
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
       puppeteer:
         specifier: 20.1.0
         version: 20.1.0
@@ -4437,7 +4440,6 @@ packages:
 
   /minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
-    dev: true
 
   /minipass-collect@1.0.2:
     resolution: {integrity: sha512-6T6lH0H8OG9kITm/Jm6tdooIbogG9e0tLgpY6mphXSm/A9u8Nq1ryBG+Qspiub9LjWlBPsPS3tWQ/Botq4FdxA==}
