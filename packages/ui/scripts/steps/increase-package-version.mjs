@@ -15,7 +15,7 @@ export const getRuntimeConfig = () => fs.readFileSync(PATH_TO_BUILD_INFO_JSON)
 /**
  * @param {semver.ReleaseType} releaseType
  */
-export default async function increasePackageVersion(releaseType = 'patch') {
+export default async function increasePackageVersion(releaseType = 'prerelease') {
   const runtimeConfig = JSON.parse(getRuntimeConfig().toString('utf-8'))
   const packageInfo = JSON.parse(getPackageInfo().toString('utf-8'))
   packageInfo.version = semver.inc(packageInfo.version, releaseType)
