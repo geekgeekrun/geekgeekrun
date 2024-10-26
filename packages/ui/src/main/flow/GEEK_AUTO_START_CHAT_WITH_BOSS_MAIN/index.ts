@@ -15,6 +15,7 @@ import * as JSONStream from 'JSONStream'
 
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
+import GtagPlugin from '../../utils/gtag/GtagPlugin'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 const rerunInterval = (() => {
@@ -31,6 +32,7 @@ const { groupRobotAccessToken: dingTalkAccessToken } = readConfigFile('dingtalk.
 const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
   new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
+  new GtagPlugin().apply(hooks)
 }
 
 let isParentProcessDisconnect = false
