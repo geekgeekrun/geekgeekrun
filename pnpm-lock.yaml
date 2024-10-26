@@ -19,7 +19,7 @@ importers:
         version: 1.2.8
       puppeteer:
         specifier: 20.1.0
-        version: 20.1.0
+        version: 20.1.0(typescript@5.3.3)
       puppeteer-extra:
         specifier: 3.3.6
         version: 3.3.6(puppeteer@20.1.0)
@@ -135,6 +135,12 @@ importers:
       node-machine-id:
         specifier: ^1.1.12
         version: 1.1.12
+      puppeteer:
+        specifier: 20.1.0
+        version: 20.1.0(typescript@5.3.3)
+      puppeteer-extra-plugin-stealth:
+        specifier: 2.11.2
+        version: 2.11.2(puppeteer-extra@3.3.6)
     devDependencies:
       '@electron-toolkit/eslint-config':
         specifier: ^1.0.2
@@ -1193,7 +1199,7 @@ packages:
     resolution: {integrity: sha512-2LuNTFBIO0m7kKIQvvPHN6UE63VjpmL9rnEEaOOaiSPbZK+zUOYIzBAWcED+3XYzhYsd/0mD57VdxAEqqV52CQ==}
     dev: true
 
-  /@puppeteer/browsers@1.0.0:
+  /@puppeteer/browsers@1.0.0(typescript@5.3.3):
     resolution: {integrity: sha512-YKecOIlwH0UsiM9zkKy31DYg11iD8NhOoQ7SQ4oCpwDSd1Ud31WYRoAldbVlVBj9b4hLJIXxn7XSnkH1ta1tpA==}
     engines: {node: '>=16.0.0'}
     hasBin: true
@@ -1209,6 +1215,7 @@ packages:
       progress: 2.0.3
       proxy-from-env: 1.1.0
       tar-fs: 2.1.1
+      typescript: 5.3.3
       unbzip2-stream: 1.4.3
       yargs: 17.7.1
     transitivePeerDependencies:
@@ -4998,7 +5005,7 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /puppeteer-core@20.1.0:
+  /puppeteer-core@20.1.0(typescript@5.3.3):
     resolution: {integrity: sha512-/xTvabzAN4mnnuYkJCuWNnnEhOb3JrBTa3sY6qVi1wybuIEk5ODRg8Z5PPiKUGiKC9iG7GWOJ5CjF3iuMuxZSA==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
@@ -5007,7 +5014,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@puppeteer/browsers': 1.0.0
+      '@puppeteer/browsers': 1.0.0(typescript@5.3.3)
       chromium-bidi: 0.4.7(devtools-protocol@0.0.1120988)
       cross-fetch: 3.1.5
       debug: 4.3.4
@@ -5016,6 +5023,7 @@ packages:
       https-proxy-agent: 5.0.1
       proxy-from-env: 1.1.0
       tar-fs: 2.1.1
+      typescript: 5.3.3
       unbzip2-stream: 1.4.3
       ws: 8.13.0
     transitivePeerDependencies:
@@ -5125,22 +5133,22 @@ packages:
       '@types/debug': 4.1.12
       debug: 4.3.4
       deepmerge: 4.3.1
-      puppeteer: 20.1.0
+      puppeteer: 20.1.0(typescript@5.3.3)
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /puppeteer@20.1.0:
+  /puppeteer@20.1.0(typescript@5.3.3):
     resolution: {integrity: sha512-kZp1eYScK1IpHxkgnDaFSGKKCzt27iZfsxO6Xlv/cklzYrhobxTK9/PxzCacPCrYnxNQwKwHzHLPOCuSyjw1jg==}
-    deprecated: < 21.5.0 is no longer supported
+    deprecated: < 21.9.0 is no longer supported
     requiresBuild: true
     dependencies:
-      '@puppeteer/browsers': 1.0.0
+      '@puppeteer/browsers': 1.0.0(typescript@5.3.3)
       cosmiconfig: 8.1.3
       https-proxy-agent: 5.0.1
       progress: 2.0.3
       proxy-from-env: 1.1.0
-      puppeteer-core: 20.1.0
+      puppeteer-core: 20.1.0(typescript@5.3.3)
     transitivePeerDependencies:
       - bufferutil
       - encoding

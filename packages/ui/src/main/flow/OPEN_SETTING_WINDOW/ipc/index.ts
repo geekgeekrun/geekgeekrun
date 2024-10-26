@@ -312,7 +312,7 @@ export default function initIpc() {
       }
       subProcessOfOpenBossSite = childProcess.spawn(process.argv[0], process.argv.slice(1), {
         env: subProcessEnv,
-        stdio: [null, null, null, 'pipe']
+        stdio: ['inherit', 'inherit', 'inherit', 'pipe']
       })
       subProcessOfOpenBossSite.once('exit', () => {
         subProcessOfOpenBossSiteDefer = null

@@ -40,7 +40,9 @@
     "diff": "^7.0.0",
     "electron-updater": "^6.1.7",
     "minimist": "^1.2.8",
-    "node-machine-id": "^1.1.12"
+    "node-machine-id": "^1.1.12",
+    "puppeteer": "20.1.0",
+    "puppeteer-extra-plugin-stealth": "2.11.2"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
