@@ -39,7 +39,7 @@
 <!-- 
 # CLI 版本
 ## 使用方式
-1. 确保你已经安装 Node.js 18+、pnpm 8.6.9+
+1. 确保你已经安装 Node.js 18+、pnpm 8.15.9
 1. `pnpm i` 安装依赖
 1. 打开 Chrome / Edge，安装 EditThisCookie 扩展程序
 1. 打开 [Boss直聘](https://www.zhipin.com) 网站，在浏览器右上角找到 EditThisCookie 扩展程序图标，并点击
