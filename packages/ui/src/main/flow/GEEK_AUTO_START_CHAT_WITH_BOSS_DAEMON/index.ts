@@ -105,20 +105,17 @@ export function runAutoChatWithDaemon() {
   const pipeForReadWithJsonParser = pipeForRead.pipe(JSONStream.parse())
   pipeForReadWithJsonParser?.on('data', async function waitForCanRun(data) {
     if (data.type === 'GEEK_AUTO_START_CHAT_CAN_BE_RUN') {
-      const ds = await initDb(getPublicDbFilePath())
-
-      const autoStartChatRunRecord = new AutoStartChatRunRecord()
-      autoStartChatRunRecord.date = new Date()
-
-      const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
-      const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
-
       pipeForReadWithJsonParser.off('data', waitForCanRun)
       clearSuicideTimer()
-      runWithDaemon({ runRecordId: result.id })
-
       // if don't call close, when kill child process, child process will ANR.
       pipeForRead.close()
+
+      const ds = await initDb(getPublicDbFilePath())
+      const autoStartChatRunRecord = new AutoStartChatRunRecord()
+      autoStartChatRunRecord.date = new Date()
+      const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
+      const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
+      runWithDaemon({ runRecordId: result.id })
     }
   })
   process.on('SIGINT', () => {
