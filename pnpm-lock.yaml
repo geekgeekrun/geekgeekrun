@@ -217,9 +217,6 @@ importers:
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
-      minimist:
-        specifier: ^1.2.8
-        version: 1.2.8
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
