@@ -55,8 +55,8 @@
             >。
           </ElCheckbox>
           <ElCheckbox :label="5" :class="[unreadItemsAfterClickSubmit[5] ? 'unread' : '']">
-            本程序不包含任何用于统计用户行为、上报程序错误的组件，<b class="color-red"
-              >不会上报您的隐私（诸如求职期望、开聊记录等），也不会向您的雇主报告您的求职行为</b
+            本程序<b class="color-red"
+              >不会上报您的隐私（诸如能够识别出您身份的信息），不会向您的雇主报告您的求职行为</b
             >；如果您在使用过程中遇上程序错误，您可以点击程序左下角进行反馈。
           </ElCheckbox>
           <ElCheckbox :label="6" :class="[unreadItemsAfterClickSubmit[6] ? 'unread' : '']">
