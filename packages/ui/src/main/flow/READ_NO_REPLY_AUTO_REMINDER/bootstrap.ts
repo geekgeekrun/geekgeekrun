@@ -39,7 +39,6 @@ export async function launchBoss(browser: Browser) {
     pageMapByName['boss'] = null
     const cp = browser.process()
     cp?.kill()
-    process.exit(0)
   })
   return page
 }
