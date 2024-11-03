@@ -14,7 +14,8 @@ let browser: null | Browser = null
 const mainLoop = async () => {
   if (browser) {
     try {
-      await browser?.close()
+      const cp = browser.process()
+      cp?.kill('SIGKILL')
     } catch {
       //
     } finally {
@@ -187,9 +188,14 @@ export async function runEntry() {
     try {
       await mainLoop()
     } catch (err) {
-      await browser?.close()
+      console.error(err)
+      try {
+        await pageMapByName['boss']?.close()
+      } catch {
+        //
+      }
     } finally {
-      browser = null
+      pageMapByName['boss'] = null
       await sleep(rerunInterval)
     }
   }
@@ -198,3 +204,12 @@ export async function runEntry() {
 }
 
 attachListenerForKillSelfOnParentExited()
+
+process.once('uncaughtException', (error) => {
+  console.error('uncaughtException', error)
+  process.exit(1)
+})
+process.once('unhandledRejection', (error) => {
+  console.log('unhandledRejection', error)
+  process.exit(1)
+})
