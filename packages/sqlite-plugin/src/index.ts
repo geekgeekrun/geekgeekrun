@@ -18,6 +18,7 @@ import { VBossLibrary } from "./entity/VBossLibrary";
 import { VJobLibrary } from "./entity/VJobLibrary";
 import { VCompanyLibrary } from "./entity/VCompanyLibrary"
 import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
+import { ChatMessageRecord } from './entity/ChatMessageRecord'
 
 import sqlite3 from 'sqlite3';
 import * as cliHighlight from 'cli-highlight';
@@ -53,6 +54,7 @@ export function initDb(dbFilePath) {
       VCompanyLibrary,
       MarkAsNotSuitLog,
       VMarkAsNotSuitLog,
+      ChatMessageRecord,
     ],
     migrations: [
       UpdateChatStartupLogTable1729182577167

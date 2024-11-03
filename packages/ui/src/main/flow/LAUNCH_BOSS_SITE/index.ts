@@ -9,7 +9,8 @@ import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storag
 import {
   saveJobInfoFromRecommendPage,
   saveChatStartupRecord,
-  saveMarkAsNotSuitRecord
+  saveMarkAsNotSuitRecord,
+  saveChatMessageRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
@@ -26,6 +27,7 @@ import * as JSONStream from 'JSONStream'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
 import gtag from '../../utils/gtag'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
+import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/src/entity/ChatMessageRecord'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -166,6 +168,49 @@ const attachRequestsListener = async (target: Target) => {
           chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList
         }
       )
+    } else if (
+      page.url().startsWith('https://www.zhipin.com/web/geek/chat') &&
+      response.url().startsWith('https://www.zhipin.com/wapi/zpchat/geek/historyMsg')
+    ) {
+      const currentUserInfo = await page.evaluate(
+        'document.querySelector(".main-wrap").__vue__.$store.state.userInfo'
+      )
+      const request = response.request().url()
+
+      const url = new URL(request)
+      const encryptBossIdInAddFriendUrl = url.searchParams.get('bossId')
+
+      const bossInfo = await page.evaluate(
+        'document.querySelector(".chat-conversation").__vue__.bossInfo$'
+      )
+      if (encryptBossIdInAddFriendUrl !== bossInfo.encryptBossId) {
+        return
+      }
+      const rawChatRecordList =
+        (
+          await page.evaluate(
+            'document.querySelector(".message-content .chat-record").__vue__.records$'
+          )
+        )?.filter((msg) => ['received', 'sent'].includes(msg.style)) ?? []
+
+      const chatRecordList = rawChatRecordList.map(it => {
+        const mappedItem = {} as InstanceType<typeof ChatMessageRecord>
+        mappedItem.mid = it.mid
+        mappedItem.encryptFromUserId = it.style === 'sent' ? currentUserInfo.encryptUserId : it.style === 'received' ? bossInfo.encryptBossId : ''
+        mappedItem.encryptToUserId = it.style === 'sent' ? bossInfo.encryptBossId: it.style === 'received' ? currentUserInfo.encryptUserId : ''
+        mappedItem.style = it.style
+        mappedItem.type = it.type
+        mappedItem.time = it.time ? new Date(it.time) : null
+        mappedItem.text = it.text
+        if (it.type === 'image') {
+          mappedItem.imageUrl = it.image?.originImage?.url
+          mappedItem.imageHeight = it.image?.originImage?.url?.height
+          mappedItem.imageWidth = it.image?.originImage?.url?.width
+        }
+
+        return mappedItem
+      })
+      await saveChatMessageRecord(await dbInitPromise, chatRecordList)
     }
   })
 

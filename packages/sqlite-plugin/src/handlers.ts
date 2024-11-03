@@ -9,6 +9,7 @@ import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
 import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { MarkAsNotSuitLog } from "./entity/MarkAsNotSuitLog";
+import { ChatMessageRecord } from "./entity/ChatMessageRecord";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -287,6 +288,22 @@ export async function saveMarkAsNotSuitRecord(
 
   const markAsNotSuitLogRepository = ds.getRepository(MarkAsNotSuitLog);
   await markAsNotSuitLogRepository.save(markAsNotSuitLog);
+  //#endregion
+  return
+}
+
+export async function saveChatMessageRecord(
+  ds: DataSource,
+  records: ChatMessageRecord[]
+) {
+  //#region mark-as-not-suit-log
+  const chatMessageRecordList = records.map(it => {
+    const o = new ChatMessageRecord()
+    Object.assign(o, it)
+    return o
+  })
+  const chatMessageRecordRepository = ds.getRepository(ChatMessageRecord);
+  await chatMessageRecordRepository.save(chatMessageRecordList);
   //#endregion
   return
 }
