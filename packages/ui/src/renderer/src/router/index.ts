@@ -29,6 +29,13 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'ReadNoReplyReminder',
+        component: () => import('@renderer/page/Configuration/ReadNoReplyReminder.vue'),
+        meta: {
+          title: '已读不回提醒器'
+        }
+      },
+      {
         path: 'StartChatRecord',
         component: () => import('@renderer/page/Configuration/StartChatRecord.vue'),
         meta: {
@@ -81,6 +88,16 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@renderer/page/GeekAutoStartChatWithBoss/RunningStatus.vue'),
         meta: {
           title: 'BOSS炸弹 正在为你开聊BOSS'
+        }
+      },
+      {
+        path: 'runningStatusForReadNoReplyReminder',
+        component: () =>
+          import(
+            '@renderer/page/GeekAutoStartChatWithBoss/RunningStatusForReadNoReplyReminder.vue'
+          ),
+        meta: {
+          title: '已读不回提醒器 正在为你开聊BOSS'
         }
       }
     ]

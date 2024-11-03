@@ -3,6 +3,8 @@
     <div class="flex flex-col w160px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
         <RouterLink to="./GeekAutoStartChatWithBoss">Boss炸弹</RouterLink>
+        <RouterLink to="./ReadNoReplyReminder">已读不回提醒器</RouterLink>
+        <hr />
         <a href="javascript:void(0)" @click="handleLaunchBossSite">
           手动逛Boss<el-icon><TopRight /></el-icon>
         </a>

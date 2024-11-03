@@ -35,6 +35,11 @@ const runMode = process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE
       launchBossSite()
       break
     }
+    case 'readNoReplyAutoReminder': {
+      const { runEntry } = await import('./flow/READ_NO_REPLY_AUTO_REMINDER/index')
+      runEntry()
+      break
+    }
     default: {
       const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
       openSettingWindow()

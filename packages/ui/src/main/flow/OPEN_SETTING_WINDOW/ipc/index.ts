@@ -149,6 +149,66 @@ export default function initIpc() {
     // TODO:
   })
 
+  ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
+    if (subProcessOfPuppeteer) {
+      return
+    }
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+    }
+    const subProcessEnv = {
+      ...process.env,
+      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'readNoReplyAutoReminder',
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
+    }
+    subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
+      env: subProcessEnv,
+      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+    })
+    // console.log(subProcessOfPuppeteer)
+    return new Promise((resolve, reject) => {
+      // subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
+      //   const data = raw
+      //   switch (data.type) {
+      //     case 'AUTO_START_CHAT_DAEMON_PROCESS_STARTUP': {
+      //       subProcessOfPuppeteer!.stdio[3]!.write(
+      //         JSON.stringify({
+      //           type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'
+      //         })
+      //       )
+      //       break
+      //     }
+      //     case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
+      //       resolve(data)
+      //       break
+      //     }
+      //     case 'LOGIN_STATUS_INVALID': {
+      //       await sleep(500)
+      //       mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
+      //       return
+      //     }
+      //     default: {
+      //       return
+      //     }
+      //   }
+      // })
+
+      subProcessOfPuppeteer!.once('exit', (exitCode) => {
+        subProcessOfPuppeteer = null
+        if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
+          // means cannot find downloaded puppeteer
+          reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+        } else {
+          mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
+        }
+      })
+
+      resolve(undefined)
+    })
+    // TODO:
+  })
+
   ipcMain.handle('check-dependencies', async () => {
     const [anyAvailablePuppeteerExecutable] = await Promise.all([
       getAnyAvailablePuppeteerExecutable()

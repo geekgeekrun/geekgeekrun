@@ -3,8 +3,9 @@
 <script lang="ts" setup>
 import { ElMessage } from 'element-plus'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
+const route = useRoute()
 
 const currentStatus = ref('')
 onMounted(() => {
@@ -22,7 +23,23 @@ onMounted(() => {
 
   promise
     .then(() => {
-      router.replace('/geekAutoStartChatWithBoss/runningStatus')
+      switch (route.query.flow) {
+        case 'geek-auto-start-chat-with-boss': {
+          router.replace({
+            path: '/geekAutoStartChatWithBoss/runningStatus'
+          })
+          break
+        }
+        case 'read-no-reply-reminder': {
+          router.replace({
+            path: '/geekAutoStartChatWithBoss/runningStatusForReadNoReplyReminder'
+          })
+          break
+        }
+        default: {
+          router.replace('/')
+        }
+      }
     })
     .catch(async (err) => {
       if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {

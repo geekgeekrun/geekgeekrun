@@ -92,7 +92,10 @@ const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
 
-  router.replace('/geekAutoStartChatWithBoss/prepareRun')
+  router.replace({
+    path: '/geekAutoStartChatWithBoss/prepareRun',
+    query: { flow: 'geek-auto-start-chat-with-boss' }
+  })
 }
 const handleSave = async () => {
   await formRef.value!.validate()
