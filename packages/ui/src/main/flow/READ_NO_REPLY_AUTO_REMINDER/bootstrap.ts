@@ -27,7 +27,7 @@ export async function bootstrap() {
 }
 
 export async function launchBoss(browser: Browser) {
-  const page = await browser.newPage()
+  const page = (await browser.pages())[0]
   //set cookies
   for (let i = 0; i < bossCookies.length; i++) {
     await page.setCookie(bossCookies[i])
@@ -35,6 +35,11 @@ export async function launchBoss(browser: Browser) {
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
   await Promise.all([page.goto(bossChatUiUrl, { timeout: 0 }), page.waitForNavigation()])
   pageMapByName['boss'] = page
-  page.once('close', () => (pageMapByName['boss'] = null))
+  page.once('close', () => {
+    pageMapByName['boss'] = null
+    const cp = browser.process()
+    cp?.kill()
+    process.exit(0)
+  })
   return page
 }

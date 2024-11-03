@@ -275,6 +275,13 @@ export default function initIpc() {
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
     subProcessOfPuppeteer?.kill()
+    setTimeout(() => {
+      try {
+        subProcessOfPuppeteer?.kill('SIGKILL')
+      } catch {
+        //
+      }
+    }, 1000)
   })
 
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
