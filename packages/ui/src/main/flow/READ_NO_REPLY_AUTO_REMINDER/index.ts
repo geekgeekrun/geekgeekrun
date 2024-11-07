@@ -5,10 +5,60 @@ import { sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { app } from 'electron'
+import { initDb } from '@geekgeekrun/sqlite-plugin'
+import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord'
+import { saveChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/handlers'
+
+const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
   boss?: Page | null
 } = {}
+
+async function saveCurrentChatRecord(page) {
+  const userInfo = await page.evaluate(
+    'document.querySelector(".main-wrap").__vue__.$store.state.userInfo'
+  )
+  const bossInfo = await page.evaluate(
+    'document.querySelector(".chat-conversation").__vue__.bossInfo$'
+  )
+  const rawChatRecordList =
+    (
+      await page.evaluate(
+        'document.querySelector(".message-content .chat-record").__vue__.records$'
+      )
+    )?.filter((msg) => ['received', 'sent'].includes(msg.style)) ?? []
+  const chatRecordList = rawChatRecordList.map(it => {
+    const mappedItem = {} as InstanceType<typeof ChatMessageRecord>
+    mappedItem.mid = it.mid
+    mappedItem.encryptFromUserId =
+      it.style === 'sent'
+        ? userInfo.encryptUserId
+        : it.style === 'received'
+          ? bossInfo.encryptBossId
+          : ''
+    mappedItem.encryptToUserId =
+      it.style === 'sent'
+        ? bossInfo.encryptBossId
+        : it.style === 'received'
+          ? userInfo.encryptUserId
+          : ''
+    mappedItem.style = it.style
+    mappedItem.type = it.type
+    mappedItem.time = it.time ? new Date(it.time) : null
+    mappedItem.text = it.text
+    if (it.type === 'image') {
+      mappedItem.imageUrl = it.image?.originImage?.url
+      mappedItem.imageHeight = it.image?.originImage?.url?.height
+      mappedItem.imageWidth = it.image?.originImage?.url?.width
+    }
+
+    return mappedItem
+  })
+
+  await saveChatMessageRecord(await dbInitPromise, chatRecordList)
+}
 
 let browser: null | Browser = null
 const mainLoop = async () => {
@@ -162,6 +212,8 @@ const mainLoop = async () => {
     } else {
       cursorToContinueFind += 1
     }
+    await sleep(1000)
+    await saveCurrentChatRecord(pageMapByName.boss!)
     await sleep(3000)
   }
 }
