@@ -33,7 +33,14 @@ export async function launchBoss(browser: Browser) {
     await page.setCookie(bossCookies[i])
   }
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
-  await Promise.all([page.goto(bossChatUiUrl, { timeout: 0 }), page.waitForNavigation()])
+  try {
+    await Promise.all([page.goto(bossChatUiUrl, { timeout: 0 }), page.waitForNavigation()])
+  } catch (error) {
+    if (error?.message?.startsWith('net::ERR_INTERNET_DISCONNECTED')) {
+      throw new Error('ERR_INTERNET_DISCONNECTED')
+    }
+    throw error
+  }
   pageMapByName['boss'] = page
   page.once('close', () => {
     pageMapByName['boss'] = null

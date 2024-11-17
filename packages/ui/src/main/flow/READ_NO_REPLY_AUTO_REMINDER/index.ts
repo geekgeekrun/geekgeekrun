@@ -9,6 +9,9 @@ import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord'
 import { saveChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/handlers'
+import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import * as fs from 'fs'
+import { pipeWriteRegardlessError } from '../utils/pipe'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
@@ -29,7 +32,7 @@ async function saveCurrentChatRecord(page) {
         'document.querySelector(".message-content .chat-record").__vue__.records$'
       )
     )?.filter((msg) => ['received', 'sent'].includes(msg.style)) ?? []
-  const chatRecordList = rawChatRecordList.map(it => {
+  const chatRecordList = rawChatRecordList.map((it) => {
     const mappedItem = {} as InstanceType<typeof ChatMessageRecord>
     mappedItem.mid = it.mid
     mappedItem.encryptFromUserId =
@@ -86,6 +89,42 @@ const mainLoop = async () => {
   pageMapByName.boss!.bringToFront()
   await sleep(2000)
 
+  const currentPageUrl = pageMapByName.boss!.url() ?? ''
+  // #region
+  if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
+    writeStorageFile('boss-cookies.json', [])
+    throw new Error('LOGIN_STATUS_INVALID')
+  }
+  if (
+    currentPageUrl.startsWith('https://www.zhipin.com/web/common/403.html') ||
+    currentPageUrl.startsWith('https://www.zhipin.com/web/common/error.html')
+  ) {
+    throw new Error('ACCESS_IS_DENIED')
+  }
+  if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/safe/verify-slider')) {
+    const validateRes: any = await pageMapByName
+      .boss!.waitForResponse(
+        (response) => {
+          if (
+            response.url().startsWith('https://www.zhipin.com/wapi/zpAntispam/v2/geetest/validate')
+          ) {
+            return true
+          }
+          return false
+        },
+        {
+          timeout: 0
+        }
+      )
+      .then((res) => {
+        return res.json()
+      })
+    if (validateRes.code === 0) {
+      await storeStorage(pageMapByName.boss)
+      throw new Error('CAPTCHA_PASSED_AND_NEED_RESTART')
+    }
+  }
+  // #endregion
   // check set security question tip modal
   let setSecurityQuestionTipModelProxy = await pageMapByName.boss!.$(
     '.dialog-wrap.dialog-account-safe'
@@ -230,6 +269,13 @@ const rerunInterval = (() => {
 
   return v
 })()
+
+let pipe
+try {
+  pipe = fs.createWriteStream(null, { fd: 3 })
+} catch {
+  console.warn('pipe is not available')
+}
 export async function runEntry() {
   process.on('disconnect', () => {
     app.exit()
@@ -245,6 +291,21 @@ export async function runEntry() {
         await pageMapByName['boss']?.close()
       } catch {
         //
+      }
+      // handle error
+      if (
+        err instanceof Error &&
+        ['LOGIN_STATUS_INVALID', 'ACCESS_IS_DENIED', 'ERR_INTERNET_DISCONNECTED'].includes(
+          err.message
+        )
+      ) {
+        pipeWriteRegardlessError(
+          pipe,
+          JSON.stringify({
+            type: err.message
+          }) + '\r\n'
+        )
+        process.exit(1)
       }
     } finally {
       pageMapByName['boss'] = null
@@ -265,3 +326,18 @@ process.once('unhandledRejection', (error) => {
   console.log('unhandledRejection', error)
   process.exit(1)
 })
+
+async function storeStorage(page) {
+  const [cookies, localStorage] = await Promise.all([
+    page.cookies(),
+    page
+      .evaluate(() => {
+        return JSON.stringify(window.localStorage)
+      })
+      .then((res) => JSON.parse(res))
+  ])
+  return Promise.all([
+    writeStorageFile('boss-cookies.json', cookies),
+    writeStorageFile('boss-local-storage.json', localStorage)
+  ])
+}

@@ -168,31 +168,26 @@ export default function initIpc() {
     })
     // console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
-      // subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
-      //   const data = raw
-      //   switch (data.type) {
-      //     case 'AUTO_START_CHAT_DAEMON_PROCESS_STARTUP': {
-      //       subProcessOfPuppeteer!.stdio[3]!.write(
-      //         JSON.stringify({
-      //           type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'
-      //         })
-      //       )
-      //       break
-      //     }
-      //     case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
-      //       resolve(data)
-      //       break
-      //     }
-      //     case 'LOGIN_STATUS_INVALID': {
-      //       await sleep(500)
-      //       mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-      //       return
-      //     }
-      //     default: {
-      //       return
-      //     }
-      //   }
-      // })
+      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
+        const data = raw
+        switch (data.type) {
+          case 'LOGIN_STATUS_INVALID': {
+            await sleep(500)
+            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
+            return
+          }
+          case 'ERR_INTERNET_DISCONNECTED': {
+            mainWindow?.webContents.send('toast-message', {
+              type: 'error',
+              message: '联网失败，请检查网络连接'
+            })
+            return
+          }
+          default: {
+            return
+          }
+        }
+      })
 
       subProcessOfPuppeteer!.once('exit', (exitCode) => {
         subProcessOfPuppeteer = null
@@ -204,7 +199,7 @@ export default function initIpc() {
         }
       })
 
-      resolve(undefined)
+      resolve(true)
     })
     // TODO:
   })
