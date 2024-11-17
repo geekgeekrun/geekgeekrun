@@ -104,10 +104,14 @@ export default function initIpc() {
       MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossDaemon',
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
-    subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-      env: subProcessEnv,
-      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
-    })
+    subProcessOfPuppeteer = childProcess.spawn(
+      process.argv[0],
+      [...process.argv.slice(1), '--mode-to-daemon=geekAutoStartWithBossMain'],
+      {
+        env: subProcessEnv,
+        stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+      }
+    )
     // console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {

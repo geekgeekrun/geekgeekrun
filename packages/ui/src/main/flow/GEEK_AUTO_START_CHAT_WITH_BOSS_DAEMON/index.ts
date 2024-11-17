@@ -1,7 +1,7 @@
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import childProcess from 'node:child_process'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import fs, { WriteStream } from 'node:fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
@@ -10,6 +10,7 @@ import gtag from '../../utils/gtag'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/AutoStartChatRunRecord'
+import minimist from 'minimist'
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -19,7 +20,7 @@ const rerunInterval = (() => {
 
   return v
 })()
-function runWithDaemon({ runRecordId }) {
+function runWithDaemon({ runRecordId, runMode }) {
   const subProcessOfCore = childProcess.spawn(
     process.argv[0],
     [...process.argv.slice(1), `--run-record-id=${runRecordId}`],
@@ -27,7 +28,7 @@ function runWithDaemon({ runRecordId }) {
       stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
       env: {
         ...process.env,
-        MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossMain'
+        MAIN_BOSSGEEKGO_UI_RUN_MODE: runMode
       }
     }
   )
@@ -66,7 +67,7 @@ function runWithDaemon({ runRecordId }) {
       `[Run core daemon] Child process exit with code ${exitCode}, an internal error may not be caught, and will be restarted in ${rerunInterval}ms.`
     )
     await sleep(rerunInterval)
-    runWithDaemon({ runRecordId })
+    runWithDaemon({ runRecordId, runMode })
   })
 }
 
@@ -83,7 +84,21 @@ const clearSuicideTimer = () => {
   suicideTimer = null
 }
 
-export function runAutoChatWithDaemon() {
+export async function runAutoChatWithDaemon() {
+  const commandlineArgs = minimist(process.argv.slice(2))
+  if (!['geekAutoStartWithBossMain'].includes(commandlineArgs['mode-to-daemon'])) {
+    await new Promise((resolve) => {
+      app.once('ready', () => resolve(undefined))
+    })
+
+    dialog.showMessageBoxSync({
+      type: 'error',
+      message: `守护进程不支持 ${commandlineArgs['mode-to-daemon'] ?? '（默认）'} 模式`
+    })
+    app.exit()
+    return
+  }
+
   app.dock?.hide()
   process.on('disconnect', () => {
     app.exit()
@@ -115,7 +130,7 @@ export function runAutoChatWithDaemon() {
       autoStartChatRunRecord.date = new Date()
       const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
       const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
-      runWithDaemon({ runRecordId: result.id })
+      runWithDaemon({ runRecordId: result.id, runMode })
     }
   })
   process.on('SIGINT', () => {
