@@ -11,7 +11,7 @@ import { pipeWriteRegardlessError } from '../utils/pipe'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
-import * as JSONStream from 'JSONStream'
+import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
@@ -140,38 +140,8 @@ const runAutoChat = async () => {
     }
   }
 }
-// suicide timer for parent and child process don't have any communication after child process spawned.
-let suicideTimer: NodeJS.Timeout | null = null
-const setSuicideTimer = () =>
-  (suicideTimer = setTimeout(() => {
-    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.AUTO_START_CHAT_MAIN_PROCESS_SUICIDE)
-  }, 10000))
-const clearSuicideTimer = () => {
-  if (suicideTimer) {
-    clearTimeout(suicideTimer)
-  }
-  suicideTimer = null
-}
 
 export const waitForProcessHandShakeAndRunAutoChat = () => {
-  setSuicideTimer()
-
-  const pipeForRead: fs.ReadStream = fs.createReadStream(null, { fd: 3 })
-  pipeForRead.on('error', () => {
-    return
-  })
-  const pipeForReadWithJsonParser = pipeForRead.pipe(JSONStream.parse())
-  pipeForReadWithJsonParser?.on('data', function waitForCanRun(data) {
-    if (data.type === 'GEEK_AUTO_START_CHAT_CAN_BE_RUN') {
-      pipeForReadWithJsonParser.off('data', waitForCanRun)
-      clearSuicideTimer()
-      runAutoChat()
-
-      // if don't call close, when kill child process, child process will ANR.
-      pipeForRead.close()
-    }
-  })
-
   let pipe: null | fs.WriteStream = null
   try {
     pipe = fs.createWriteStream(null, { fd: 3 })
@@ -179,10 +149,7 @@ export const waitForProcessHandShakeAndRunAutoChat = () => {
     console.error('pipe is not available')
     app.exit(1)
   }
-  pipeWriteRegardlessError(
-    pipe,
-    JSON.stringify({
-      type: 'AUTO_START_CHAT_MAIN_PROCESS_STARTUP'
-    })
-  )
+  runAutoChat()
 }
+
+attachListenerForKillSelfOnParentExited()

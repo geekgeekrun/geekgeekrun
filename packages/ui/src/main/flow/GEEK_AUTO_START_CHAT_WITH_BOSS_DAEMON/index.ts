@@ -11,6 +11,7 @@ import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/AutoStartChatRunRecord'
 import minimist from 'minimist'
+import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -20,7 +21,7 @@ const rerunInterval = (() => {
 
   return v
 })()
-function runWithDaemon({ runRecordId, runMode }) {
+function runWithDaemon({ runRecordId, runMode, parentProcessPipe }) {
   const subProcessOfCore = childProcess.spawn(
     process.argv[0],
     [...process.argv.slice(1), `--run-record-id=${runRecordId}`],
@@ -36,11 +37,11 @@ function runWithDaemon({ runRecordId, runMode }) {
   subProcessOfCore!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
     const data = raw
     switch (data.type) {
-      case 'AUTO_START_CHAT_MAIN_PROCESS_STARTUP': {
+      case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
         pipeWriteRegardlessError(
-          subProcessOfCore!.stdio[3]! as WriteStream,
+          parentProcessPipe as WriteStream,
           JSON.stringify({
-            type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'
+            type: data.type
           })
         )
         break
@@ -67,21 +68,8 @@ function runWithDaemon({ runRecordId, runMode }) {
       `[Run core daemon] Child process exit with code ${exitCode}, an internal error may not be caught, and will be restarted in ${rerunInterval}ms.`
     )
     await sleep(rerunInterval)
-    runWithDaemon({ runRecordId, runMode })
+    runWithDaemon({ runRecordId, runMode, parentProcessPipe })
   })
-}
-
-// suicide timer for parent and child process don't have any communication after child process spawned.
-let suicideTimer: NodeJS.Timeout | null = null
-const setSuicideTimer = () =>
-  (suicideTimer = setTimeout(() => {
-    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.AUTO_START_CHAT_DAEMON_PROCESS_SUICIDE)
-  }, 10000))
-const clearSuicideTimer = () => {
-  if (suicideTimer) {
-    clearTimeout(suicideTimer)
-  }
-  suicideTimer = null
 }
 
 export async function runAutoChatWithDaemon() {
@@ -103,7 +91,6 @@ export async function runAutoChatWithDaemon() {
   process.on('disconnect', () => {
     app.exit()
   })
-  setSuicideTimer()
 
   let pipe: null | fs.WriteStream = null
   try {
@@ -116,25 +103,19 @@ export async function runAutoChatWithDaemon() {
   const disposePowerSaveBlocker = initPowerSaveBlocker()
   app.once('quit', disposePowerSaveBlocker)
 
-  const pipeForRead: fs.ReadStream = fs.createReadStream(null, { fd: 3 })
-  const pipeForReadWithJsonParser = pipeForRead.pipe(JSONStream.parse())
-  pipeForReadWithJsonParser?.on('data', async function waitForCanRun(data) {
-    if (data.type === 'GEEK_AUTO_START_CHAT_CAN_BE_RUN') {
-      pipeForReadWithJsonParser.off('data', waitForCanRun)
-      clearSuicideTimer()
-      // if don't call close, when kill child process, child process will ANR.
-      pipeForRead.close()
-
-      const ds = await initDb(getPublicDbFilePath())
-      const autoStartChatRunRecord = new AutoStartChatRunRecord()
-      autoStartChatRunRecord.date = new Date()
-      const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
-      const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
-      runWithDaemon({ runRecordId: result.id, runMode })
-    }
-  })
   process.on('SIGINT', () => {
     process.exit()
+  })
+
+  const ds = await initDb(getPublicDbFilePath())
+  const autoStartChatRunRecord = new AutoStartChatRunRecord()
+  autoStartChatRunRecord.date = new Date()
+  const autoStartChatRunRecordRepository = ds.getRepository(AutoStartChatRunRecord)
+  const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
+  runWithDaemon({
+    runRecordId: result.id,
+    runMode: commandlineArgs['mode-to-daemon'],
+    parentProcessPipe: pipe
   })
 
   pipeWriteRegardlessError(
@@ -146,3 +127,5 @@ export async function runAutoChatWithDaemon() {
 
   gtag('run_auto_chat_with_boss_daemon_ready')
 }
+
+attachListenerForKillSelfOnParentExited()

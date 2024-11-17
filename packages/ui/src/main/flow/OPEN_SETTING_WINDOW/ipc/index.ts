@@ -117,14 +117,6 @@ export default function initIpc() {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
         const data = raw
         switch (data.type) {
-          case 'AUTO_START_CHAT_DAEMON_PROCESS_STARTUP': {
-            subProcessOfPuppeteer!.stdio[3]!.write(
-              JSON.stringify({
-                type: 'GEEK_AUTO_START_CHAT_CAN_BE_RUN'
-              })
-            )
-            break
-          }
           case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
             resolve(data)
             break
