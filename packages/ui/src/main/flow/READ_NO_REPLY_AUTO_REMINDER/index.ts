@@ -12,6 +12,7 @@ import { saveChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
+import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
@@ -26,6 +27,24 @@ async function saveCurrentChatRecord(page) {
   const bossInfo = await page.evaluate(
     'document.querySelector(".chat-conversation").__vue__.bossInfo$'
   )
+
+  const ds = await dbInitPromise
+  // save boss info
+  const bossInfoRepository = ds.getRepository(BossInfo)
+  let targetBossInfo = await bossInfoRepository.findOneBy({
+    encryptBossId: bossInfo.encryptBossId
+  })
+  if (!targetBossInfo) {
+    targetBossInfo = new BossInfo()
+    Object.assign(targetBossInfo, {
+      encryptBossId: bossInfo.encryptBossId,
+      name: bossInfo.name,
+      title: bossInfo.title,
+      date: new Date()
+    })
+    await bossInfoRepository.save(targetBossInfo)
+  }
+
   const rawChatRecordList =
     (
       await page.evaluate(
@@ -60,7 +79,7 @@ async function saveCurrentChatRecord(page) {
     return mappedItem
   })
 
-  await saveChatMessageRecord(await dbInitPromise, chatRecordList)
+  await saveChatMessageRecord(ds, chatRecordList)
 }
 
 let browser: null | Browser = null

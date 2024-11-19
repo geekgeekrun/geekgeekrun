@@ -28,6 +28,7 @@ import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStar
 import gtag from '../../utils/gtag'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/src/entity/ChatMessageRecord'
+import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -180,9 +181,25 @@ const attachRequestsListener = async (target: Target) => {
       const url = new URL(request)
       const encryptBossIdInAddFriendUrl = url.searchParams.get('bossId')
 
-      const bossInfo = await page.evaluate(
+      const bossInfo: any = await page.evaluate(
         'document.querySelector(".chat-conversation").__vue__.bossInfo$'
       )
+      const ds = await dbInitPromise
+      // save boss info
+      const bossInfoRepository = ds.getRepository(BossInfo)
+      let targetBossInfo = await bossInfoRepository.findOneBy({
+        encryptBossId: bossInfo.encryptBossId
+      })
+      if (!targetBossInfo) {
+        targetBossInfo = new BossInfo()
+        Object.assign(targetBossInfo, {
+          encryptBossId: bossInfo.encryptBossId,
+          name: bossInfo.name,
+          title: bossInfo.title,
+          date: new Date()
+        })
+        await bossInfoRepository.save(targetBossInfo)
+      }
       if (encryptBossIdInAddFriendUrl !== bossInfo.encryptBossId) {
         return
       }
@@ -210,7 +227,7 @@ const attachRequestsListener = async (target: Target) => {
 
         return mappedItem
       })
-      await saveChatMessageRecord(await dbInitPromise, chatRecordList)
+      await saveChatMessageRecord(ds, chatRecordList)
     }
   })
 
