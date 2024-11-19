@@ -6,7 +6,9 @@ export class BossInfo {
   @PrimaryColumn()
   encryptBossId: string;
 
-  @Column()
+  @Column({
+    nullable: true
+  })
   encryptCompanyId: string;
 
   @Column()
