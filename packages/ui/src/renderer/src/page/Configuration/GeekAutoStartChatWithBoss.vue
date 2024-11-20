@@ -41,9 +41,12 @@
           <span
             v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 100"
             class="color-orange"
-            >好吧，你开心就好</span
+            >你开心就好</span
           >
         </div>
+      </el-form-item>
+      <el-form-item label="标记不合适机制" class="color-orange">
+        如果发现某个职位活跃时间为“本月活跃”或更往前的时间，则把职位标记为不合适
       </el-form-item>
       <el-form-item class="last-form-item">
         <el-button @click="handleSave">仅保存配置</el-button>

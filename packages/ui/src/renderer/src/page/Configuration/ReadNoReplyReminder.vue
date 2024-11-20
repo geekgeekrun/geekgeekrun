@@ -6,6 +6,12 @@
           >编辑Cookie</el-button
         >
       </el-form-item>
+      <el-form-item label="复聊话术" class="color-orange">
+        当发现已读不回的Boss时，将向Boss发出“[盼回复]”表情
+      </el-form-item>
+      <el-form-item label="复聊间隔" class="color-orange">
+        8小时内不向同一Boss多次复聊
+      </el-form-item>
       <el-form-item class="last-form-item">
         <el-button type="primary" @click="handleSubmit">开始提醒</el-button>
       </el-form-item>

@@ -125,7 +125,7 @@ export async function runAutoChatWithDaemon() {
     })
   )
 
-  gtag('run_auto_chat_with_boss_daemon_ready')
+  gtag('daemon_ready', { mode: commandlineArgs['mode-to-daemon'] ?? '' })
 }
 
 attachListenerForKillSelfOnParentExited()
