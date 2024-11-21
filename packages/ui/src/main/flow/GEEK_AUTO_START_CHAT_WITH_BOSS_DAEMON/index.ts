@@ -12,7 +12,7 @@ import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss
 import { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/AutoStartChatRunRecord'
 import minimist from 'minimist'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
-
+const isUiDev = process.env.NODE_ENV === 'development'
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
@@ -24,7 +24,9 @@ const rerunInterval = (() => {
 function runWithDaemon({ runRecordId, runMode, parentProcessPipe }) {
   const subProcessOfCore = childProcess.spawn(
     process.argv[0],
-    [...process.argv.slice(1), `--run-record-id=${runRecordId}`],
+    isUiDev
+      ? [...process.argv.slice(1), `--run-record-id=${runRecordId}`]
+      : [`--run-record-id=${runRecordId}`],
     {
       stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
       env: {
@@ -73,7 +75,7 @@ function runWithDaemon({ runRecordId, runMode, parentProcessPipe }) {
 }
 
 export async function runAutoChatWithDaemon() {
-  const commandlineArgs = minimist(process.argv.slice(2))
+  const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
   if (!['geekAutoStartWithBossMain'].includes(commandlineArgs['mode-to-daemon'])) {
     await new Promise((resolve) => {
       app.once('ready', () => resolve(undefined))

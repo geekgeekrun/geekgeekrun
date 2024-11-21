@@ -1,18 +1,18 @@
 import { Browser } from 'puppeteer'
-import puppeteer from 'puppeteer-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
 import { pageMapByName } from './index'
 
 import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
+
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const bossChatUiUrl = `https://www.zhipin.com/web/geek/chat`
 const bossCookies = readStorageFile('boss-cookies.json')
 const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
-puppeteer.use(StealthPlugin())
-
 export async function bootstrap() {
+  const { puppeteer } = await initPuppeteer()
+
   const browser = await puppeteer.launch({
     headless: false,
     ignoreHTTPSErrors: true,
