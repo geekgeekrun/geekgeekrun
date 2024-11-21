@@ -20,7 +20,7 @@ export async function bootstrap() {
       width: 1440,
       height: 800
     },
-    devtools: true
+    devtools: process.env.NODE_ENV === 'development'
   })
 
   return browser
