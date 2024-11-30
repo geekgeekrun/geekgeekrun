@@ -9,8 +9,6 @@ import {
   removeLastUsedAndAvailableBrowserPath
 } from '../browser-history'
 import { getExecutableFileVersion } from '@geekgeekrun/utils/windows-only/file.mjs'
-import createCheckAndLocateExistedChromiumExecutableWorker from './worker/find-and-locate-existed-chromium-executable?nodeWorker&url'
-import { type Worker, isMainThread } from 'node:worker_threads'
 import gtag from '../../../../utils/gtag'
 
 const getPuppeteerManagerModule = async () => {
@@ -107,7 +105,7 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   }
   // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
   try {
-    const existedOne = await findAndLocateUserInstalledChromiumExecutable()
+    const existedOne = await findAndLocateUserInstalledChromiumExecutableSync()
     await saveLastUsedAndAvailableBrowserInfo(existedOne)
     // save its path
     return existedOne
@@ -167,25 +165,4 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
     executablePath: targetBrowser.executablePath,
     browser: targetBrowser.browser
   }
-}
-
-export async function findAndLocateUserInstalledChromiumExecutable(): Promise<BrowserInfo> {
-  return new Promise((resolve, reject) => {
-    const worker: Worker = createCheckAndLocateExistedChromiumExecutableWorker({
-      env: {
-        ...process.env,
-        RESOURCES_PATH: process.resourcesPath
-      }
-    })
-    worker.once('message', (data) => {
-      if (data.type === 'RESULT') {
-        resolve(data.data)
-      }
-    })
-    worker.once('message', (data) => {
-      if (data.type === 'ERROR') {
-        reject(data.error)
-      }
-    })
-  })
 }
