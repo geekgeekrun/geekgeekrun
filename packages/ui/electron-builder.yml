@@ -17,8 +17,6 @@ files:
   - '!node_modules/typeorm/browser/*'
 asarUnpack:
   - 'resources/**'
-extraResources:
-  - external-node-runtime-dependencies/**
 win:
   executableName: geekgeekrun
 nsis:

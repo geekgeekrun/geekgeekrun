@@ -191,7 +191,7 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       electron:
-        specifier: ^28.2.0
+        specifier: 28.2.0
         version: 28.2.0
       electron-builder:
         specifier: ^24.9.1
@@ -1662,6 +1662,7 @@ packages:
     resolution: {integrity: sha512-oZFKlC8l5YtzGQNT4zC2PiSSKzQVZ8bAwwd+EYdPLtyk0nSEq6O16SkK+rkkT2eflDAbormJgEF3QnH3oDrTSw==}
     dependencies:
       undici-types: 5.26.5
+    dev: true
 
   /@types/plist@3.0.5:
     resolution: {integrity: sha512-E6OCaRmAe4WDmWNsL/9RMqdkkzDCY1etutkflWk4c+AcjDU07Pcz1fQwTX0TQz+Pxqn9i4L1TU3UFpjnrcDgxA==}
@@ -2571,6 +2572,7 @@ packages:
 
   /boolean@3.2.0:
     resolution: {integrity: sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
     requiresBuild: true
     optional: true
 
@@ -3275,7 +3277,7 @@ packages:
     requiresBuild: true
     dependencies:
       '@electron/get': 2.0.3
-      '@types/node': 18.19.9
+      '@types/node': 18.19.15
       extract-zip: 2.0.1
     transitivePeerDependencies:
       - supports-color
@@ -4912,6 +4914,7 @@ packages:
 
   /npmlog@5.0.1:
     resolution: {integrity: sha512-AqZtDUWOMKs1G/8lwylVjrdYgqA4d9nu8hc+0gzRxlDb1I10+FHBGMXs6aiQHFdCUUlqH99MUMuLfzWDNDtfxw==}
+    deprecated: This package is no longer supported.
     dependencies:
       are-we-there-yet: 2.0.0
       console-control-strings: 1.1.0
@@ -4922,6 +4925,7 @@ packages:
   /npmlog@6.0.2:
     resolution: {integrity: sha512-/vBvz5Jfr9dT/aFWd0FIRf+T/Q2WBsLENygUaFUqstqsycmZAP/t5BvFJTK0viFmSUxiUKTUplWy5vt+rvKIxg==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
+    deprecated: This package is no longer supported.
     requiresBuild: true
     dependencies:
       are-we-there-yet: 3.0.1

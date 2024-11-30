@@ -25,7 +25,6 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "build:make-dist-for-current-platform": "npm run build && node ./scripts/make-dist-for-current-platform.mjs",
-    "install": "cd ./external-node-runtime-dependencies && cross-env PUPPETEER_SKIP_DOWNLOAD=1 npm install --omit=dev",
     "release": "node ./scripts/release-new-version.mjs"
   },
   "dependencies": {
@@ -61,7 +60,7 @@
     "@vue/eslint-config-typescript": "^12.0.0",
     "animate.css": "^4.1.1",
     "cross-env": "^7.0.3",
-    "electron": "^28.2.0",
+    "electron": "28.2.0",
     "electron-builder": "^24.9.1",
     "electron-vite": "^2.0.0",
     "element-plus": "^2.5.5",

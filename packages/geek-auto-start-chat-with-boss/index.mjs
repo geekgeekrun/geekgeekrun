@@ -56,30 +56,14 @@ let puppeteer
 let StealthPlugin
 export async function initPuppeteer () {
   // production
-  if (
-    isRunFromUi && !isUiDev
-  ) {
-    const electron = await import('electron')
-    const runtimeDependencies = await import(
-      'file://' + 
-      path.resolve(
-        electron.app.getAppPath(),
-        '..',
-        'external-node-runtime-dependencies/index.mjs'
-      )
-    )
-    puppeteer = runtimeDependencies.puppeteerExtra.default
-    StealthPlugin = runtimeDependencies.PuppeteerExtraPluginStealth.default
-  } else {
-    const importResult = await Promise.all(
-      [
-        import('puppeteer-extra'),
-        import('puppeteer-extra-plugin-stealth')
-      ]
-    )
-    puppeteer = importResult[0].default
-    StealthPlugin = importResult[1].default
-  }
+  const importResult = await Promise.all(
+    [
+      import('puppeteer-extra'),
+      import('puppeteer-extra-plugin-stealth')
+    ]
+  )
+  puppeteer = importResult[0].default
+  StealthPlugin = importResult[1].default
   puppeteer.use(StealthPlugin())
 
   return {

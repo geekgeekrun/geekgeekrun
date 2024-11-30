@@ -21,13 +21,10 @@ import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
 import { ChatMessageRecord } from './entity/ChatMessageRecord'
 
 import sqlite3 from 'sqlite3';
-import * as cliHighlight from 'cli-highlight';
 import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord } from "./handlers";
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
-
-Boolean(cliHighlight);
 
 export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()

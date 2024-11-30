@@ -15,28 +15,7 @@ import gtag from '../../../../utils/gtag'
 
 const getPuppeteerManagerModule = async () => {
   let puppeteerManager
-  if (process.env.NODE_ENV === 'development') {
-    puppeteerManager = await import('@puppeteer/browsers')
-  } else if (isMainThread) {
-    const electron = await import('electron')
-    puppeteerManager = (
-      await import(
-        'file://' +
-          path.resolve(
-            electron.app.getAppPath(),
-            '..',
-            'external-node-runtime-dependencies/index.mjs'
-          )
-      )
-    ).puppeteerManager
-  } else {
-    puppeteerManager = (
-      await import(
-        'file://' +
-          path.join(__dirname, '../../..', '/external-node-runtime-dependencies/index.mjs')
-      )
-    ).puppeteerManager
-  }
+  puppeteerManager = await import('@puppeteer/browsers')
 
   return puppeteerManager
 }
@@ -177,28 +156,7 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
 
   // For other, use findChrome
   let findChrome: typeof import('find-chrome-bin').findChrome
-  if (process.env.NODE_ENV === 'development') {
-    findChrome = (await import('find-chrome-bin')).findChrome
-  } else if (isMainThread) {
-    const electron = await import('electron')
-    findChrome = (
-      await import(
-        'file://' +
-          path.resolve(
-            electron.app.getAppPath(),
-            '..',
-            'external-node-runtime-dependencies/index.mjs'
-          )
-      )
-    ).findChromeBin.findChrome
-  } else {
-    findChrome = (
-      await import(
-        'file://' +
-          path.join(__dirname, '../../..', '/external-node-runtime-dependencies/index.mjs')
-      )
-    ).findChromeBin.findChrome
-  }
+  findChrome = (await import('find-chrome-bin')).findChrome
   const targetBrowser = await findChrome({
     min: exceptChromiumMainVersion
   })
