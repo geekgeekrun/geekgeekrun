@@ -33,6 +33,9 @@
                 <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
                 <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
               </template>
+              <template v-else-if="row.markReason === MarkAsNotSuitReason.JOB_NOT_SUIT">
+                <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
+              </template>
             </template>
           </ElTableColumn>
           <ElTableColumn prop="experienceName" label="工作经验" />
@@ -168,7 +171,8 @@ function handleViewJobSnapshotButtonClick(record: VMarkAsNotSuitLog) {
 
 const markReasonTopicMap = {
   [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃',
-  [MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON]: '手动标记不合适'
+  [MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON]: '手动标记不合适',
+  [MarkAsNotSuitReason.JOB_NOT_SUIT]: '职位不合适'
 }
 
 function formatMarkReason(row: VMarkAsNotSuitLog) {

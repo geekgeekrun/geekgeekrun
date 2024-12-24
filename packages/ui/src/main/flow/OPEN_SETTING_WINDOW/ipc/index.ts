@@ -60,11 +60,12 @@ export default function initIpc() {
 
     const bossConfig = readConfigFile('boss.json')
     bossConfig.anyCombineRecommendJobFilter = payload.anyCombineRecommendJobFilter
+    bossConfig.expectJobRegExpStr = payload.expectJobRegExpStr
 
     return await Promise.all([
       writeConfigFile('dingtalk.json', dingtalkConfig),
       writeConfigFile('target-company-list.json', payload.expectCompanies.split(',')),
-      writeConfigFile('boss.json', bossConfig),
+      writeConfigFile('boss.json', bossConfig)
     ])
   })
 

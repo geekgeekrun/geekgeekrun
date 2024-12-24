@@ -78,6 +78,7 @@ const bossLocalStorage = readStorageFile('boss-local-storage.json')
 const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
+const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
@@ -96,8 +97,9 @@ let page
 
 const blockBossNotNewChat = new Set()
 const blockBossNotActive = new Set()
+const blockJobNotSuit = new Set()
 
-async function markJobAsNotSuitInRecommendPage () {
+async function markJobAsNotSuitInRecommendPage (reasonCode) {
   /**
    * @type {{chosenReasonInUi?: { code: number, text: string}}}
    */
@@ -127,15 +129,29 @@ async function markJobAsNotSuitInRecommendPage () {
     })()
     let isOptionChosen = false
     if (chooseReasonDialogProxy) {
-      const bossNotActiveOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`)
-      if (bossNotActiveOptionProxy) {
-        await bossNotActiveOptionProxy.click()
-        isOptionChosen = true
-      } else {
-        const recruitStoppedOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`)
-        if (recruitStoppedOptionProxy) {
-          await recruitStoppedOptionProxy.click()
-          isOptionChosen = true
+      switch (reasonCode) {
+        case MarkAsNotSuitReason.BOSS_INACTIVE: {
+          const bossNotActiveOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`)
+          if (bossNotActiveOptionProxy) {
+            await bossNotActiveOptionProxy.click()
+            isOptionChosen = true
+          } else {
+            const recruitStoppedOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`)
+            if (recruitStoppedOptionProxy) {
+              await recruitStoppedOptionProxy.click()
+              isOptionChosen = true
+            }
+          }
+          break
+        }
+        case MarkAsNotSuitReason.JOB_NOT_SUIT:
+        default: {
+          const jobNotSuitOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`)
+          if (jobNotSuitOptionProxy) {
+            await jobNotSuitOptionProxy.click()
+            isOptionChosen = true
+          }
+          break
         }
       }
 
@@ -173,6 +189,24 @@ async function markJobAsNotSuitInRecommendPage () {
     }
   }
   return result
+}
+
+export function testIfJobTitleOrDescriptionSuit (jobInfo, regExpStr) {
+  if (!regExpStr) {
+    return true
+  }
+  try {
+    const regExp = new RegExp(regExpStr, 'i')
+    if (
+      !regExp.test(jobInfo.jobName)
+      && !regExp.test(jobInfo.positionName)
+      && !regExp.test(jobInfo.postDescription)
+    ) {
+      return false
+    }
+  } catch {
+  }
+  return true
 }
 
 async function setFilterCondition (selectedFilters) {
@@ -434,9 +468,14 @@ async function toRecommendPage (hooks) {
               continueFind: while (targetJobIndex < 0 && !hasReachLastPage) {
                 // when disable company allow list, we will believe that the first one in the list is your expect job.
                 let tempTargetJobIndexToCheckDetail = enableCompanyAllowList ? jobListData.findIndex(
-                  it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name))
+                  it => !blockBossNotNewChat.has(it.encryptBossId) 
+                    && !blockBossNotActive.has(it.encryptBossId)
+                    && [...expectCompanySet].find(
+                      name => it.brandName.includes(name)
+                    )
+                    && !blockJobNotSuit.has(it.encryptJobId)
                 ) : jobListData.findIndex(
-                  it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId)
+                  it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId) && !blockJobNotSuit.has(it.encryptJobId)
                 )
                 while (tempTargetJobIndexToCheckDetail < 0 && !hasReachLastPage) {
                   // fetch new
@@ -472,7 +511,11 @@ async function toRecommendPage (hooks) {
                       document.querySelector('.job-recommend-main')?.__vue__?.jobList
                     `
                   )
-                  tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId) && [...expectCompanySet].find(name => it.brandName.includes(name)))
+                  tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => 
+                    !blockBossNotNewChat.has(it.encryptBossId) &&
+                    !blockBossNotActive.has(it.encryptBossId) &&
+                    [...expectCompanySet].find(name => it.brandName.includes(name))) &&
+                    !blockJobNotSuit.has(it.encryptJobId)
                 }
 
                 if (tempTargetJobIndexToCheckDetail < 0 && hasReachLastPage) {
@@ -533,7 +576,7 @@ async function toRecommendPage (hooks) {
                     blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
                     // click prevent recommend button
                     try {
-                      const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage()
+                      const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
                       await hooks.jobMarkedAsNotSuit.promise(
                         targetJobData,
                         {
@@ -547,6 +590,28 @@ async function toRecommendPage (hooks) {
                       )
                     } catch {
                     }
+                    continue continueFind
+                  }
+                  if (
+                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo, expectJobRegExpStr)
+                  ) {
+                    blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                    try {
+                      const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
+                      await hooks.jobMarkedAsNotSuit.promise(
+                        targetJobData,
+                        {
+                          markFrom: ChatStartupFrom.AutoFromRecommendList,
+                          markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                          extInfo: {
+                            bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
+                            chosenReasonInUi
+                          }
+                        }
+                      )
+                    } catch {
+                    }
+                    debugger
                     continue continueFind
                   }
                   const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')

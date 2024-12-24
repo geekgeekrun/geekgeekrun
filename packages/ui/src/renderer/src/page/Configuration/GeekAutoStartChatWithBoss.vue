@@ -13,6 +13,12 @@
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
       <el-form-item
+        label="期望职位正则（按照职位名称+职位描述筛选职位，非目标职位直接标注不合适；为空时将不筛选）"
+        prop="expectJobRegExpStr"
+      >
+        <el-input v-model="formContent.expectJobRegExpStr" />
+      </el-form-item>
+      <el-form-item
         label="期望公司（以逗号分隔，置空即遍历推荐列表，依次开聊）"
         prop="expectCompanies"
       >
@@ -67,7 +73,8 @@ const router = useRouter()
 const formContent = ref({
   dingtalkRobotAccessToken: '',
   expectCompanies: '',
-  anyCombineRecommendJobFilter: {}
+  anyCombineRecommendJobFilter: {},
+  expectJobRegExpStr: ''
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -86,12 +93,14 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     scaleList: [],
     industryList: []
   }
+  formContent.value.expectJobRegExpStr = res.config['boss.json']?.expectJobRegExpStr ?? ''
 })
 
 const formRules = {}
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
+  formContent.value.expectJobRegExpStr = (formContent.value.expectJobRegExpStr || '').trim()
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
 
