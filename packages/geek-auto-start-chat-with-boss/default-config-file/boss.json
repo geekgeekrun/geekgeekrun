@@ -6,5 +6,8 @@
     "scaleList": [],
     "industryList": []
   },
-  "expectJobRegExpStr": ""
+  "expectJobRegExpStr": "",
+  "autoReminder": {
+    "throttleIntervalMinutes": 10
+  }
 }

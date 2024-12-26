@@ -28,6 +28,8 @@ import {
 import { PageReq } from '../../../../common/types/pagination'
 import { pipeWriteRegardlessError } from '../../utils/pipe'
 import { WriteStream } from 'node:fs'
+// eslint-disable-next-line vue/prefer-import-from-vue
+import { hasOwn } from '@vue/shared'
 
 export default function initIpc() {
   ipcMain.on('open-external-link', (_, link) => {
@@ -55,18 +57,33 @@ export default function initIpc() {
     payload = JSON.parse(payload)
     ensureConfigFileExist()
 
+    const promiseArr: Array<Promise<unknown>> = []
+
     const dingtalkConfig = readConfigFile('dingtalk.json')
-    dingtalkConfig.groupRobotAccessToken = payload.dingtalkRobotAccessToken
+    if (hasOwn(payload, 'dingtalkRobotAccessToken')) {
+      dingtalkConfig.groupRobotAccessToken = payload.dingtalkRobotAccessToken
+    }
+    promiseArr.push(writeConfigFile('dingtalk.json', dingtalkConfig))
 
     const bossConfig = readConfigFile('boss.json')
-    bossConfig.anyCombineRecommendJobFilter = payload.anyCombineRecommendJobFilter
-    bossConfig.expectJobRegExpStr = payload.expectJobRegExpStr
+    if (hasOwn(payload, 'anyCombineRecommendJobFilter')) {
+      bossConfig.anyCombineRecommendJobFilter = payload.anyCombineRecommendJobFilter
+    }
+    if (hasOwn(payload, 'expectJobRegExpStr')) {
+      bossConfig.expectJobRegExpStr = payload.expectJobRegExpStr
+    }
+    if (hasOwn(payload, 'autoReminder')) {
+      bossConfig.autoReminder = payload.autoReminder
+    }
+    promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
-    return await Promise.all([
-      writeConfigFile('dingtalk.json', dingtalkConfig),
-      writeConfigFile('target-company-list.json', payload.expectCompanies.split(',')),
-      writeConfigFile('boss.json', bossConfig)
-    ])
+    if (hasOwn(payload, 'expectCompanies')) {
+      promiseArr.push(
+        writeConfigFile('target-company-list.json', payload.expectCompanies?.split(',') ?? [])
+      )
+    }
+
+    return await Promise.all(promiseArr)
   })
 
   ipcMain.handle('read-storage-file', async (ev, payload) => {

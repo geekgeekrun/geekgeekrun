@@ -6,7 +6,10 @@ import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { app } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
-import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import {
+  getPublicDbFilePath,
+  readConfigFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord'
 import { saveChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
@@ -14,6 +17,8 @@ import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 
+const throttleIntervalMinutes =
+  readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
@@ -263,7 +268,8 @@ const mainLoop = async () => {
       (!bossInfo.bothTalked ||
         !historyMessageList.filter((it) => it.style === 'received').length) &&
       // don't disturb too much
-      Date.now() - lastGeekMessageSendTime >= 8 * 60 * 60 * 1000
+      Date.now() - lastGeekMessageSendTime >=
+        (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
     ) {
       await sleepWithRandomDelay(3250)
       await sendLookForwardReplyEmotion(pageMapByName.boss!)

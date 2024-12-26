@@ -1,6 +1,11 @@
 <template>
   <div class="form-wrap">
-    <el-form ref="formRef" label-position="top" :rules="formRules">
+    <el-form
+      ref="formRef"
+      :rules="formRules"
+      :model="formContent.autoReminder"
+      label-position="top"
+    >
       <el-form-item label="BOSS直聘 Cookie">
         <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
           >编辑Cookie</el-button
@@ -9,8 +14,13 @@
       <el-form-item label="复聊话术" class="color-orange">
         当发现已读不回的Boss时，将向Boss发出“[盼回复]”表情
       </el-form-item>
-      <el-form-item label="复聊间隔" class="color-orange">
-        8小时内不向同一Boss多次复聊
+      <el-form-item label="复聊间隔" prop="throttleIntervalMinutes">
+        <el-input
+          v-model="formContent.autoReminder.throttleIntervalMinutes"
+          class="w-100px"
+          min="3"
+          @blur="handleThrottleIntervalMinutesBlur"
+        />&nbsp;分钟内不向同一Boss多次复聊
       </el-form-item>
       <el-form-item class="last-form-item">
         <el-button type="primary" @click="handleSubmit">开始提醒</el-button>
@@ -25,17 +35,47 @@ import { ElForm } from 'element-plus'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 
-electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {})
+const formContent = ref({
+  autoReminder: {
+    throttleIntervalMinutes: 10
+  }
+})
 
-const formRules = {}
+electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+  formContent.value.autoReminder = res.config['boss.json']?.autoReminder ?? {
+    throttleIntervalMinutes: 10
+  }
+})
+
+const formRules = {
+  throttleIntervalMinutes: {
+    trigger: 'blur',
+    validator (_, value, cb) {
+      if (/[^0-9.]/.test(String(value)) || isNaN(parseFloat(value)) || isNaN(Number(value))) {
+        cb(new Error(`请输入数字！`))
+      } else {
+        cb()
+      }
+    }
+  }
+}
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
   await formRef.value!.validate()
+  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'read-no-reply-reminder' }
   })
+}
+function handleThrottleIntervalMinutesBlur () {
+  if (formContent.value.autoReminder.throttleIntervalMinutes < 3) {
+    formContent.value.autoReminder.throttleIntervalMinutes = 3
+  }
+  formContent.value.autoReminder.throttleIntervalMinutes = Number(
+    formContent.value.autoReminder.throttleIntervalMinutes
+  )
 }
 
 const handleClickLaunchLogin = () => {
