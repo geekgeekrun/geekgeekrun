@@ -72,6 +72,7 @@
     "normalize.css": "^8.0.1",
     "prettier": "^3.2.4",
     "sass": "^1.70.0",
+    "terser": "^5.37.0",
     "typescript": "^5.3.3",
     "unocss": "^0.58.5",
     "unplugin-auto-import": "^0.17.5",

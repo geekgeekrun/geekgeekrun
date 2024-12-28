@@ -12,7 +12,8 @@ export default defineConfig({
     build: {
       rollupOptions: {
         external: []
-      }
+      },
+      minify: 'terser'
     },
     plugins: [
       externalizeDepsPlugin({
@@ -36,7 +37,10 @@ export default defineConfig({
     ]
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      minify: 'terser'
+    }
   },
   renderer: {
     resolve: {
@@ -51,5 +55,8 @@ export default defineConfig({
         transformers: [transformerDirective()],
       })
     ],
+    build: {
+      minify: 'terser'
+    }
   }
 })
