@@ -93,7 +93,22 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.expectJobRegExpStr = res.config['boss.json']?.expectJobRegExpStr ?? ''
 })
 
-const formRules = {}
+const formRules = {
+  expectJobRegExpStr: {
+    validator(_, value, cb) {
+      if (!value) {
+        cb()
+        return
+      }
+      try {
+        new RegExp(value, 'ig')
+        cb()
+      } catch (err) {
+        cb(new Error(`正则无效：${err.message}`))
+      }
+    }
+  }
+}
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
