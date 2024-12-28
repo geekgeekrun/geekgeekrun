@@ -514,8 +514,9 @@ async function toRecommendPage (hooks) {
                   tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => 
                     !blockBossNotNewChat.has(it.encryptBossId) &&
                     !blockBossNotActive.has(it.encryptBossId) &&
-                    [...expectCompanySet].find(name => it.brandName.includes(name))) &&
+                    [...expectCompanySet].find(name => it.brandName.includes(name)) &&
                     !blockJobNotSuit.has(it.encryptJobId)
+                  )
                 }
 
                 if (tempTargetJobIndexToCheckDetail < 0 && hasReachLastPage) {
