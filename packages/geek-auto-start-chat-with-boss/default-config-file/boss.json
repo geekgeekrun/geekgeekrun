@@ -8,6 +8,7 @@
   },
   "expectJobRegExpStr": "",
   "autoReminder": {
-    "throttleIntervalMinutes": 10
+    "throttleIntervalMinutes": 10,
+    "rechatLimitDay": 21
   }
 }

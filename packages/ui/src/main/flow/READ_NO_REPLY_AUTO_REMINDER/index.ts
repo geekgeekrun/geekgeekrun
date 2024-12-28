@@ -19,6 +19,7 @@ import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
+const rechatLimitDay = readConfigFile('boss.json').autoReminder?.rechatLimitDay ?? 21
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
@@ -176,13 +177,17 @@ const mainLoop = async () => {
         document.querySelector('.main-wrap .chat-user')?.__vue__?.list
       `
     )) as Array<ChatListItem>
-    const toCheckItemAtIndex = friendListData.findIndex(
-      (it, index) =>
+    const toCheckItemAtIndex = friendListData.findIndex((it, index) => {
+      return (
         index >= cursorToContinueFind &&
+        (rechatLimitDay && it.updateTime
+          ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
+          : true) &&
         ((it.lastIsSelf && it.lastMsgStatus === MsgStatus.HAS_READ) ||
           canNotConfirmIfHasReadMsgTemplateList.some((regExp) => regExp.test(it.lastText))) &&
         !it.unreadCount
-    )
+      )
+    })
 
     if (toCheckItemAtIndex < 0) {
       const isFinished = await pageMapByName.boss!.evaluate(
