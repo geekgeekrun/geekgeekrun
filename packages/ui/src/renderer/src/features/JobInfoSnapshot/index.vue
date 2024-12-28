@@ -4,7 +4,7 @@
     <el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item>
     <el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item>
     <el-form-item label="开聊时间">{{
-      dayjs(jobInfo.date).format('YYYY-MM-DD HH:mm:ss')
+      transformUtcDateToLocalDate(jobInfo.date).format('YYYY-MM-DD HH:mm:ss')
     }}</el-form-item>
     <el-form-item label="工作经验">{{ jobInfo.experienceName }}</el-form-item>
     <el-form-item label="薪资">{{
@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { PropType } from 'vue'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import dayjs from 'dayjs'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 
 const props = defineProps({
   jobInfo: {

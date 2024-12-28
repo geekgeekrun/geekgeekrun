@@ -17,7 +17,9 @@
           <ElTableColumn
             prop="date"
             label="标记时间"
-            :formatter="(_row, _col, val) => dayjs(val).format('YYYY-MM-DD HH:mm:ss')"
+            :formatter="
+              (_row, _col, val) => transformUtcDateToLocalDate(val).format('YYYY-MM-DD HH:mm:ss')
+            "
           />
           <ElTableColumn prop="bossName" label="BOSS" width="64" />
           <ElTableColumn prop="markReason" label="标记原因" width="250">
@@ -101,10 +103,10 @@
 import { ref, onMounted, onBeforeUnmount, h } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
 import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/src/entity/VMarkAsNotSuitLog'
-import dayjs from 'dayjs'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/src/enums'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 
 const tableData = ref<VMarkAsNotSuitLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])

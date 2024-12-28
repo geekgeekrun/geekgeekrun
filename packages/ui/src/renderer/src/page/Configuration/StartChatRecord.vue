@@ -17,7 +17,9 @@
           <ElTableColumn
             prop="date"
             label="开聊时间"
-            :formatter="(_row, _col, val) => dayjs(val).format('YYYY-MM-DD HH:mm:ss')"
+            :formatter="
+              (_row, _col, val) => transformUtcDateToLocalDate(val).format('YYYY-MM-DD HH:mm:ss')
+            "
           />
           <ElTableColumn prop="experienceName" label="工作经验" />
           <ElTableColumn
@@ -84,7 +86,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import dayjs from 'dayjs'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 

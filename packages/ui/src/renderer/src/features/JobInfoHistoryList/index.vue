@@ -23,7 +23,7 @@
       >
         <template #header>
           <div class="diff-table-header">
-            {{ dayjs(item.value).format('YYYY-MM-DD HH:mm:ss') }}
+            {{ transformUtcDateToLocalDate(item.value).format('YYYY-MM-DD HH:mm:ss') }}
             <el-tooltip content="待对比条目少于2个" :disabled="tableProps.length > 1">
               <el-radio v-model="diffPivot" :label="item.value" :disabled="tableProps.length <= 1">作为diff基准</el-radio>
             </el-tooltip>
@@ -42,8 +42,8 @@ import { PropType, computed, ref, watch } from 'vue'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
 import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
 import { ElTable, ElTableColumn, ElForm, ElFormItem, ElRow, ElCol, ElDivider } from 'element-plus'
-import dayjs from 'dayjs'
 import TextDiff from '../../components/TextDiff.vue'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 
 const props = defineProps({
   jobInfo: {
