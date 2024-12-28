@@ -13,15 +13,12 @@
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
       <el-form-item
-        label="期望职位正则（按照职位名称+职位描述筛选职位，非目标职位直接标注不合适；为空时将不筛选）"
+        label="期望职位白名单正则（按照职位名称+职位描述筛选职位，非目标职位直接标注不合适；为空时将不筛选）"
         prop="expectJobRegExpStr"
       >
         <el-input v-model="formContent.expectJobRegExpStr" />
       </el-form-item>
-      <el-form-item
-        label="期望公司（以逗号分隔，置空即遍历推荐列表，依次开聊）"
-        prop="expectCompanies"
-      >
+      <el-form-item label="期望公司（以逗号分隔，为空时将不筛选）" prop="expectCompanies">
         <el-input
           v-model="formContent.expectCompanies"
           :autosize="{ minRows: 4 }"
