@@ -104,7 +104,8 @@ const mainLoop = async () => {
     '你与该职位竞争者PK情况',
     '简历诊断提醒',
     '附件简历还没准备好',
-    '开场问题，期待你的回答'
+    '开场问题，期待你的回答',
+    '设置合适的期望薪资范围'
   ].map((it) => new RegExp(it))
   browser = await bootstrap()
   await Promise.all([launchBoss(browser)])
