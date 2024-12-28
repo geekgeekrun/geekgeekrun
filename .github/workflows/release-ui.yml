@@ -10,6 +10,8 @@ jobs:
   build_on_windows:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
+      VITE_APP_GTAG_API_SECRET: ${{ secrets.VITE_APP_GTAG_API_SECRET }}
+      VITE_APP_GTAG_MEASUREMENT_ID: ${{ secrets.VITE_APP_GTAG_MEASUREMENT_ID }}
     runs-on: windows-2022
     permissions: write-all
 
@@ -64,6 +66,8 @@ jobs:
             arch: arm64
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
+      VITE_APP_GTAG_API_SECRET: ${{ secrets.VITE_APP_GTAG_API_SECRET }}
+      VITE_APP_GTAG_MEASUREMENT_ID: ${{ secrets.VITE_APP_GTAG_MEASUREMENT_ID }}
     runs-on: ${{ matrix.platform.os }}
     permissions: write-all
 
@@ -95,6 +99,8 @@ jobs:
   build_on_linux:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
+      VITE_APP_GTAG_API_SECRET: ${{ secrets.VITE_APP_GTAG_API_SECRET }}
+      VITE_APP_GTAG_MEASUREMENT_ID: ${{ secrets.VITE_APP_GTAG_MEASUREMENT_ID }}
     runs-on: ubuntu-22.04
     permissions: write-all
 
