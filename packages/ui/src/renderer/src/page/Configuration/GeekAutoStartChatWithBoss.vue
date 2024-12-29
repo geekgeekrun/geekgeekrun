@@ -13,12 +13,12 @@
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item>
       <el-form-item
-        label="期望职位白名单正则（按照职位名称+职位描述筛选职位，非目标职位直接标注不合适；为空时将不筛选）"
+        label="期望职位白名单正则（按照职位名称+职位描述筛选职位，为空时将不按此条件筛选）"
         prop="expectJobRegExpStr"
       >
         <el-input v-model="formContent.expectJobRegExpStr" />
       </el-form-item>
-      <el-form-item label="期望公司（以逗号分隔，为空时将不筛选）" prop="expectCompanies">
+      <el-form-item label="期望公司（以逗号分隔，为空时将不按此条件筛选）" prop="expectCompanies">
         <el-input
           v-model="formContent.expectCompanies"
           :autosize="{ minRows: 4 }"
@@ -49,7 +49,8 @@
         </div>
       </el-form-item>
       <el-form-item label="标记不合适机制" class="color-orange">
-        如果发现某个职位活跃时间为“本月活跃”或更往前的时间，则把职位标记为不合适
+        1. 如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适<br />
+        2. 如果查找到的职位，职位名称、职位类型、职位描述与期望职位白名单正则不匹配，则这个职位将被标记为不合适
       </el-form-item>
       <el-form-item class="last-form-item">
         <el-button @click="handleSave">仅保存配置</el-button>
@@ -149,11 +150,11 @@ const handleClickLaunchLogin = () => {
   padding-left: 20px;
   padding-right: 20px;
   :deep(.el-form) {
-    padding-top: 40px;
+    padding-top: 8px;
   }
   .last-form-item {
     :deep(.el-form-item__content) {
-      margin-top: 40px;
+      margin-top: 0px;
       justify-content: flex-end;
     }
   }
