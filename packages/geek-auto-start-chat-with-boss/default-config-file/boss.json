@@ -9,6 +9,8 @@
   "expectJobRegExpStr": "",
   "autoReminder": {
     "throttleIntervalMinutes": 10,
-    "rechatLimitDay": 21
+    "rechatLimitDay": 21,
+    "geminiApiKey": "",
+    "rechatContentSource": 1
   }
 }

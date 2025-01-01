@@ -11,8 +11,34 @@
           >编辑Cookie</el-button
         >
       </el-form-item>
-      <el-form-item label="跟进话术" class="color-orange">
-        当发现已读不回的Boss时，将向Boss发出“[盼回复]”表情
+      <el-form-item
+        label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出："
+        class="color-orange"
+      >
+        <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
+          <div>
+            <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
+              “[盼回复]” 表情
+            </el-radio>
+            <br />
+            <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
+              由 AI（根据你的简历及和当前Boss聊天的上下文）生成的内容
+            </el-radio>
+          </div>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item
+        v-if="
+          formContent.autoReminder.rechatContentSource ===
+          RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
+        "
+        label="Gemini API 密钥"
+        prop="geminiApiKey"
+      >
+        <el-button type="text" @click.prevent="goToGeminiNanoApiKeyPage">
+          没有密钥？点击此处申请一个吧
+        </el-button>
+        <el-input v-model="formContent.autoReminder.geminiApiKey" />
       </el-form-item>
       <el-form-item label="跟进间隔（分钟）" prop="throttleIntervalMinutes">
         <el-input-number
@@ -52,12 +78,14 @@
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { dayjs, ElForm } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { RECHAT_CONTENT_SOURCE } from '../../../../common/enums/auto-start-chat'
 const router = useRouter()
-
 const formContent = ref({
   autoReminder: {
     throttleIntervalMinutes: 10,
-    rechatLimitDay: 21
+    rechatLimitDay: 21,
+    geminiApiKey: '',
+    rechatContentSource: 1
   }
 })
 
@@ -78,6 +106,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   const conf = res.config['boss.json']?.autoReminder || {}
   conf.throttleIntervalMinutes = conf.throttleIntervalMinutes ?? 10
   conf.rechatLimitDay = conf.rechatLimitDay ?? 21
+  conf.geminiApiKey = conf.geminiApiKey ?? ''
+  conf.rechatContentSource = conf.rechatContentSource ?? 1
 
   formContent.value.autoReminder = conf
 })
@@ -100,6 +130,10 @@ const formRules = {
         cb()
       }
     }
+  },
+  geminiApiKey: {
+    required: true,
+    message: '请输入 Gemini API Key'
   }
 }
 
@@ -153,6 +187,10 @@ const rechatLimitDateString = computed(() => {
     +currentStamp.value - formContent.value.autoReminder.rechatLimitDay * 24 * 60 * 60 * 1000
   ).format('YYYY-MM-DD HH:mm:ss')
 })
+
+const goToGeminiNanoApiKeyPage = () => {
+  electron.ipcRenderer.send('open-external-link', 'https://aistudio.google.com/app/apikey')
+}
 </script>
 
 <style scoped lang="scss">
