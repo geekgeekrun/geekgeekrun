@@ -6,40 +6,59 @@
       :model="formContent.autoReminder"
       label-position="top"
     >
-      <el-form-item label="BOSS直聘 Cookie">
-        <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
-          >编辑Cookie</el-button
+      <el-form-item>
+        <div>
+          <div>BOSS直聘 Cookie</div>
+          <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
+            >编辑Cookie</el-button
+          >
+        </div>
+      </el-form-item>
+      <el-form-item class="mb-0">
+        <div>
+          <div>跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：</div>
+          <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
+            <div>
+              <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
+                “[盼回复]” 表情
+              </el-radio>
+              <br />
+              <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
+                由 AI（根据你的简历及和当前Boss聊天的上下文）生成的内容
+              </el-radio>
+            </div>
+          </el-radio-group>
+        </div>
+      </el-form-item>
+      <div class="ml-30px">
+        <el-form-item
+          v-if="
+            formContent.autoReminder.rechatContentSource ===
+            RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
+          "
+          prop="geminiApiKey"
         >
-      </el-form-item>
-      <el-form-item
-        label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出："
-        class="color-orange"
-      >
-        <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
-          <div>
-            <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
-              “[盼回复]” 表情
-            </el-radio>
-            <br />
-            <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
-              由 AI（根据你的简历及和当前Boss聊天的上下文）生成的内容
-            </el-radio>
+          <div class="flex">
+            Gemini API 密钥&nbsp;<el-button type="text" @click.prevent="goToGeminiNanoApiKeyPage">
+            没有密钥？点击此处申请一个
+            </el-button>
           </div>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item
-        v-if="
-          formContent.autoReminder.rechatContentSource ===
-          RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
-        "
-        label="Gemini API 密钥"
-        prop="geminiApiKey"
-      >
-        <el-button type="text" @click.prevent="goToGeminiNanoApiKeyPage">
-          没有密钥？点击此处申请一个吧
-        </el-button>
-        <el-input v-model="formContent.autoReminder.geminiApiKey" />
-      </el-form-item>
+          <el-input v-model="formContent.autoReminder.geminiApiKey" />
+        </el-form-item>
+        <el-form-item
+          v-if="
+            formContent.autoReminder.rechatContentSource ===
+            RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
+          "
+          prop="resumeAbstract"
+        >
+          <div class="w-full">
+            <div class="flex">简历、求职期望摘要&nbsp;<el-button type="text">例子</el-button></div>
+            <el-input type="textarea" v-model="formContent.autoReminder.resumeAbstract" />
+          </div>
+          <el-button class="mt-8px">预览Prompt</el-button>
+        </el-form-item>
+      </div>
       <el-form-item label="跟进间隔（分钟）" prop="throttleIntervalMinutes">
         <el-input-number
           v-model="formContent.autoReminder.throttleIntervalMinutes"
@@ -85,7 +104,8 @@ const formContent = ref({
     throttleIntervalMinutes: 10,
     rechatLimitDay: 21,
     geminiApiKey: '',
-    rechatContentSource: 1
+    rechatContentSource: 1,
+    resumeAbstract: ''
   }
 })
 
@@ -108,6 +128,7 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   conf.rechatLimitDay = conf.rechatLimitDay ?? 21
   conf.geminiApiKey = conf.geminiApiKey ?? ''
   conf.rechatContentSource = conf.rechatContentSource ?? 1
+  conf.resumeAbstract = conf.resumeAbstract ?? ''
 
   formContent.value.autoReminder = conf
 })
