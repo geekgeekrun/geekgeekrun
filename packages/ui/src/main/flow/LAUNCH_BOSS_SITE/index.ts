@@ -181,9 +181,14 @@ const attachRequestsListener = async (target: Target) => {
       const url = new URL(request)
       const encryptBossIdInAddFriendUrl = url.searchParams.get('bossId')
 
-      const bossInfo: any = await page.evaluate(
-        'document.querySelector(".chat-conversation").__vue__.bossInfo$'
-      )
+      const bossInfo =
+        (await page.evaluate(
+          'document.querySelector(".chat-conversation .chat-record")?.__vue__?.boss'
+        )) ?? null
+      if (!bossInfo) {
+        console.warn('cannot find boss info on page.')
+        return
+      }
       const ds = await dbInitPromise
       // save boss info
       const bossInfoRepository = ds.getRepository(BossInfo)
@@ -206,15 +211,24 @@ const attachRequestsListener = async (target: Target) => {
       const rawChatRecordList =
         (
           await page.evaluate(
-            'document.querySelector(".message-content .chat-record").__vue__.records$'
+            'document.querySelector(".message-content .chat-record").__vue__.list$'
           )
-        )?.filter((msg) => ['received', 'sent'].includes(msg.style)) ?? []
+        )?.filter((it) => {
+          return (
+            it.status !== 3 && // filter system notification out
+            it.templateId === 1 && // filter system notification out
+            (
+              (['text', 'sticker', 'image', 'sound', 'comDesc'].includes(it.messageType) && !it.extend?.greetingQuestionAnswer) // include those message, filter out auto ask
+              || (it.messageType === 'dialog' && [0, 1, 2, 8, 11, 12, 14, 17, 33].includes(it?.dialog?.type))  // include message like resume, phone, map, etc., filter out auto ask
+            )
+          )
+        }) ?? []
 
       const chatRecordList = rawChatRecordList.map(it => {
         const mappedItem = {} as InstanceType<typeof ChatMessageRecord>
         mappedItem.mid = it.mid
-        mappedItem.encryptFromUserId = it.style === 'sent' ? currentUserInfo.encryptUserId : it.style === 'received' ? bossInfo.encryptBossId : ''
-        mappedItem.encryptToUserId = it.style === 'sent' ? bossInfo.encryptBossId: it.style === 'received' ? currentUserInfo.encryptUserId : ''
+        mappedItem.encryptFromUserId = it.isSelf ? currentUserInfo.encryptUserId : bossInfo.encryptBossId
+        mappedItem.encryptToUserId = it.isSelf ? bossInfo.encryptBossId : currentUserInfo.encryptUserId
         mappedItem.style = it.style
         mappedItem.type = it.type
         mappedItem.time = it.time ? new Date(it.time) : null

@@ -31,7 +31,7 @@ async function saveCurrentChatRecord(page) {
     'document.querySelector(".main-wrap").__vue__.$store.state.userInfo'
   )
   const bossInfo = await page.evaluate(
-    'document.querySelector(".chat-conversation").__vue__.bossInfo$'
+    'document.querySelector(".chat-conversation .chat-record")?.__vue__?.boss'
   )
 
   const ds = await dbInitPromise
@@ -252,27 +252,34 @@ const mainLoop = async () => {
       })
     }
     await sleepWithRandomDelay(1500)
-    const bossInfo = await pageMapByName.boss?.evaluate(() => {
-      return document.querySelector('.chat-conversation')?.__vue__['bossInfo$']
-    })
+    const bossInfo = await pageMapByName.boss?.evaluate(
+      'document.querySelector(".chat-conversation .chat-record")?.__vue__?.boss'
+    )
 
     const historyMessageList =
       (
         await pageMapByName.boss?.evaluate(() => {
-          return (
-            document.querySelector('.main-wrap .chat-conversation .chat-record')?.__vue__
-              ?.records$ ?? []
-          )
+          return document.querySelector('.message-content .chat-record')?.__vue__?.list$ ?? []
         })
-      )?.filter((msg) => ['received', 'sent'].includes(msg.style)) ?? []
+      )?.filter((it) => {
+        return (
+          it.status !== 3 && // filter system notification out
+          it.templateId === 1 && // filter system notification out
+          ((['text', 'sticker', 'image', 'sound', 'comDesc'].includes(it.messageType) &&
+            !it.extend?.greetingQuestionAnswer) || // include those message, filter out auto ask
+            (it.messageType === 'dialog' &&
+              [0, 1, 2, 8, 11, 12, 14, 17, 33].includes(it?.dialog?.type))) // include message like resume, phone, map, etc., filter out auto ask
+        )
+      }) ?? []
 
-    const lastGeekMessageSendTime =
-      historyMessageList.findLast((it) => it.style === 'sent')?.time ?? 0
+    const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
     if (
-      historyMessageList[historyMessageList.length - 1].style === 'sent' &&
+      historyMessageList[historyMessageList.length - 1].isSelf &&
       historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&
-      (!bossInfo.bothTalked ||
-        !historyMessageList.filter((it) => it.style === 'received').length) &&
+      ((bossInfo && !bossInfo.bothTalked) ||
+        !historyMessageList.filter(
+          (it) => !it.isSelf // not sent by me
+        ).length) &&
       // don't disturb too much
       Date.now() - lastGeekMessageSendTime >=
         (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
