@@ -29,6 +29,7 @@ import gtag from '../../utils/gtag'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/src/entity/ChatMessageRecord'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
+import { messageForSaveFilter } from '../../../common/utils/chat-list'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -213,16 +214,7 @@ const attachRequestsListener = async (target: Target) => {
           await page.evaluate(
             'document.querySelector(".message-content .chat-record").__vue__.list$'
           )
-        )?.filter((it) => {
-          return (
-            it.status !== 3 && // filter system notification out
-            it.templateId === 1 && // filter system notification out
-            (
-              (['text', 'sticker', 'image', 'sound', 'comDesc'].includes(it.messageType) && !it.extend?.greetingQuestionAnswer) // include those message, filter out auto ask
-              || (it.messageType === 'dialog' && [0, 1, 2, 8, 11, 12, 14, 17, 33].includes(it?.dialog?.type))  // include message like resume, phone, map, etc., filter out auto ask
-            )
-          )
-        }) ?? []
+        )?.filter(messageForSaveFilter) ?? []
 
       const chatRecordList = rawChatRecordList.map(it => {
         const mappedItem = {} as InstanceType<typeof ChatMessageRecord>

@@ -16,6 +16,7 @@ import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/ru
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
+import { messageForSaveFilter } from '../../../common/utils/chat-list'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -261,16 +262,7 @@ const mainLoop = async () => {
         await pageMapByName.boss?.evaluate(() => {
           return document.querySelector('.message-content .chat-record')?.__vue__?.list$ ?? []
         })
-      )?.filter((it) => {
-        return (
-          it.status !== 3 && // filter system notification out
-          it.templateId === 1 && // filter system notification out
-          ((['text', 'sticker', 'image', 'sound', 'comDesc'].includes(it.messageType) &&
-            !it.extend?.greetingQuestionAnswer) || // include those message, filter out auto ask
-            (it.messageType === 'dialog' &&
-              [0, 1, 2, 8, 11, 12, 14, 17, 33].includes(it?.dialog?.type))) // include message like resume, phone, map, etc., filter out auto ask
-        )
-      }) ?? []
+      )?.filter(messageForSaveFilter) ?? []
 
     const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
     if (
