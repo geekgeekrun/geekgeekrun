@@ -181,7 +181,7 @@ const handleEditThisCookieExtensionStoreLinkClick = () => {
 }
 
 const handleCancel = () => {
-  router.replace('/configuration')
+  router.replace('/main-layout')
 }
 const handleSubmit = async () => {
   await formRef.value!.validate()
@@ -190,7 +190,7 @@ const handleSubmit = async () => {
     data: formContent.value.collectedCookies
   })
   ElMessage.success('Boss直聘 Cookie 保存成功')
-  router.replace('/configuration')
+  router.replace('/main-layout')
 }
 
 const handleBossZhipinLoginPageClosed = () => {

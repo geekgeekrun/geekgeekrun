@@ -48,7 +48,7 @@ onMounted(async () => {
       router.replace('/cookieAssistant')
     } else {
       await sleep(1000)
-      router.replace('/configuration')
+      router.replace('/main-layout')
     }
   })
 })

@@ -17,55 +17,55 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/configuration',
-    component: () => import('@renderer/page/Configuration/index.vue'),
-    redirect: '/configuration/GeekAutoStartChatWithBoss',
+    path: '/main-layout',
+    component: () => import('@renderer/page/MainLayout/index.vue'),
+    redirect: '/main-layout/GeekAutoStartChatWithBoss',
     children: [
       {
         path: 'GeekAutoStartChatWithBoss',
-        component: () => import('@renderer/page/Configuration/GeekAutoStartChatWithBoss.vue'),
+        component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss.vue'),
         meta: {
           title: 'BOSS炸弹'
         }
       },
       {
         path: 'ReadNoReplyReminder',
-        component: () => import('@renderer/page/Configuration/ReadNoReplyReminder.vue'),
+        component: () => import('@renderer/page/MainLayout/ReadNoReplyReminder.vue'),
         meta: {
           title: '已读不回提醒器'
         }
       },
       {
         path: 'StartChatRecord',
-        component: () => import('@renderer/page/Configuration/StartChatRecord.vue'),
+        component: () => import('@renderer/page/MainLayout/StartChatRecord.vue'),
         meta: {
           title: '开聊记录'
         }
       },
       {
         path: 'MarkAsNotSuitRecord',
-        component: () => import('@renderer/page/Configuration/MarkAsNotSuitRecord.vue'),
+        component: () => import('@renderer/page/MainLayout/MarkAsNotSuitRecord.vue'),
         meta: {
           title: '标记不合适记录'
         }
       },
       {
         path: 'JobLibrary',
-        component: () => import('@renderer/page/Configuration/JobLibrary.vue'),
+        component: () => import('@renderer/page/MainLayout/JobLibrary.vue'),
         meta: {
           title: '职位库'
         }
       },
       {
         path: 'BossLibrary',
-        component: () => import('@renderer/page/Configuration/BossLibrary.vue'),
+        component: () => import('@renderer/page/MainLayout/BossLibrary.vue'),
         meta: {
           title: 'Boss库'
         }
       },
       {
         path: 'CompanyLibrary',
-        component: () => import('@renderer/page/Configuration/CompanyLibrary.vue'),
+        component: () => import('@renderer/page/MainLayout/CompanyLibrary.vue'),
         meta: {
           title: '公司库'
         }

@@ -33,7 +33,7 @@ const handleStopping = () => {
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopping', handleStopping)
 
 const handleStopped = () => {
-  router.replace('/configuration/GeekAutoStartChatWithBoss')
+  router.replace('/main-layout/GeekAutoStartChatWithBoss')
 }
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', handleStopped)
 

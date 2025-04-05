@@ -31,7 +31,7 @@ const handleStopping = () => {
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopping', handleStopping)
 
 const handleStopped = () => {
-  router.replace('/configuration/ReadNoReplyReminder')
+  router.replace('/main-layout/ReadNoReplyReminder')
 }
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', handleStopped)
 
