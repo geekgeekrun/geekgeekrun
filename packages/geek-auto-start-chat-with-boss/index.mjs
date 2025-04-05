@@ -146,7 +146,7 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         }
         case MarkAsNotSuitReason.JOB_NOT_SUIT:
         default: {
-          const jobNotSuitOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`)
+          const jobNotSuitOptionProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`)) ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
           if (jobNotSuitOptionProxy) {
             await jobNotSuitOptionProxy.click()
             isOptionChosen = true

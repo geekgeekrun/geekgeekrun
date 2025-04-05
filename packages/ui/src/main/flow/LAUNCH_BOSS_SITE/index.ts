@@ -29,6 +29,7 @@ import gtag from '../../utils/gtag'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/src/entity/ChatMessageRecord'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
+import { messageForSaveFilter } from '../../../common/utils/chat-list'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
@@ -181,9 +182,14 @@ const attachRequestsListener = async (target: Target) => {
       const url = new URL(request)
       const encryptBossIdInAddFriendUrl = url.searchParams.get('bossId')
 
-      const bossInfo: any = await page.evaluate(
-        'document.querySelector(".chat-conversation").__vue__.bossInfo$'
-      )
+      const bossInfo =
+        (await page.evaluate(
+          'document.querySelector(".chat-conversation .chat-record")?.__vue__?.boss'
+        )) ?? null
+      if (!bossInfo) {
+        console.warn('cannot find boss info on page.')
+        return
+      }
       const ds = await dbInitPromise
       // save boss info
       const bossInfoRepository = ds.getRepository(BossInfo)
@@ -206,15 +212,15 @@ const attachRequestsListener = async (target: Target) => {
       const rawChatRecordList =
         (
           await page.evaluate(
-            'document.querySelector(".message-content .chat-record").__vue__.records$'
+            'document.querySelector(".message-content .chat-record").__vue__.list$'
           )
-        )?.filter((msg) => ['received', 'sent'].includes(msg.style)) ?? []
+        )?.filter(messageForSaveFilter) ?? []
 
       const chatRecordList = rawChatRecordList.map(it => {
         const mappedItem = {} as InstanceType<typeof ChatMessageRecord>
         mappedItem.mid = it.mid
-        mappedItem.encryptFromUserId = it.style === 'sent' ? currentUserInfo.encryptUserId : it.style === 'received' ? bossInfo.encryptBossId : ''
-        mappedItem.encryptToUserId = it.style === 'sent' ? bossInfo.encryptBossId: it.style === 'received' ? currentUserInfo.encryptUserId : ''
+        mappedItem.encryptFromUserId = it.isSelf ? currentUserInfo.encryptUserId : bossInfo.encryptBossId
+        mappedItem.encryptToUserId = it.isSelf ? bossInfo.encryptBossId : currentUserInfo.encryptUserId
         mappedItem.style = it.style
         mappedItem.type = it.type
         mappedItem.time = it.time ? new Date(it.time) : null
