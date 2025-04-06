@@ -23,7 +23,7 @@
           v-model="formContent.expectCompanies"
           :autosize="{ minRows: 4 }"
           type="textarea"
-          @blur="handleExpectCompaniesInputBlur"
+          @blur="normalizeExpectCompanies"
         />
       </el-form-item>
       <el-form-item
@@ -123,13 +123,14 @@ const handleSubmit = async () => {
   })
 }
 const handleSave = async () => {
+  normalizeExpectCompanies()
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
   ElMessage.success('Configuration saved.')
 }
 
-const handleExpectCompaniesInputBlur = (event) => {
-  event.target.value = (event.target?.value ?? '')
+const normalizeExpectCompanies = () => {
+  formContent.value.expectCompanies = formContent.value.expectCompanies
     .split(/,|，/)
     .map((it) => it.trim())
     .filter(Boolean)

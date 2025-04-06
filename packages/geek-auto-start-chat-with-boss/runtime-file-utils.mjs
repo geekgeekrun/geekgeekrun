@@ -6,16 +6,18 @@ import os from 'node:os'
 import defaultDingtalkConf from './default-config-file/dingtalk.json' assert {type: 'json'}
 import defaultBossConf from './default-config-file/boss.json' assert {type: 'json'}
 import defaultTargetCompanyListConf from './default-config-file/target-company-list.json' assert {type: 'json'}
+import defaultLlmConf from './default-config-file/llm.json' assert { type: 'json' }
 
 import defaultBossCookieStorage from './default-storage-file/boss-cookies.json' assert { type: 'json' }
 import defaultBossLocalStorageStorage from './default-storage-file/boss-local-storage.json' assert { type: 'json' }
 import defaultJobNotSuitReasonCodeToTextCacheStorage from './default-storage-file/job-not-suit-reason-code-to-text-cache.json' assert { type: 'json' }
-export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json']
+export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json', 'llm.json']
 
 const defaultConfigFileContentMap = {
   'boss.json': JSON.stringify(defaultBossConf),
   'dingtalk.json': JSON.stringify(defaultDingtalkConf),
-  'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf)
+  'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf),
+  'llm.json': JSON.stringify(defaultLlmConf)
 }
 
 const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')

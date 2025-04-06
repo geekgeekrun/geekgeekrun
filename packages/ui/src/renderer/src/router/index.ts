@@ -17,6 +17,13 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/llmConfig',
+    component: () => import('@renderer/page/LlmConfig/index.vue'),
+    meta: {
+      title: '大语言模型设置'
+    }
+  },
+  {
     path: '/main-layout',
     component: () => import('@renderer/page/MainLayout/index.vue'),
     redirect: '/main-layout/GeekAutoStartChatWithBoss',

@@ -9,7 +9,7 @@
       <el-form-item>
         <div>
           <div>BOSS直聘 Cookie</div>
-          <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
+          <el-button size="small" type="primary" @click="handleClickLaunchLogin"
             >编辑Cookie</el-button
           >
         </div>
@@ -24,14 +24,37 @@
               </el-radio>
               <br />
               <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
-                由 AI（根据你的简历及和当前Boss聊天的上下文）生成的内容
+                由大语言模型（根据简历及当前聊天上下文）生成的内容
               </el-radio>
             </div>
           </el-radio-group>
         </div>
       </el-form-item>
       <div class="ml-30px">
-        <el-form-item
+        <template
+          v-if="
+            formContent.autoReminder.rechatContentSource ===
+            RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
+          "
+        >
+          <el-form-item prop="geminiApiKey">
+            <div class="flex flex-items-center">
+              <el-button size="small" type="primary" @click="handleClickConfigLlm">
+                配置大语言模型
+              </el-button>
+              <div class="ml1em">
+                支持
+                <span
+                  class="pl10px pr10px color-white border-rd-full"
+                  style="background-color: #3c4efd"
+                  >DeepSeek-V3</span
+                >
+                模型
+              </div>
+            </div>
+          </el-form-item>
+        </template>
+        <!-- <el-form-item
           v-if="
             formContent.autoReminder.rechatContentSource ===
             RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
@@ -57,7 +80,7 @@
             <el-input type="textarea" v-model="formContent.autoReminder.resumeAbstract" />
           </div>
           <el-button class="mt-8px">预览Prompt</el-button>
-        </el-form-item>
+        </el-form-item> -->
       </div>
       <el-form-item label="跟进间隔（分钟）" prop="throttleIntervalMinutes">
         <el-input-number
@@ -81,7 +104,8 @@
             :disabled="!enableRechatLimit"
           />&nbsp;天<br />
           <div v-if="enableRechatLimit">
-            不再跟进&nbsp;（<span class="text-orange">{{ rechatLimitDateString }}</span>）之前列表中没有进展的聊天
+            不再跟进&nbsp;（<span class="text-orange">{{ rechatLimitDateString }}</span
+            >）之前列表中没有进展的聊天
           </div>
           <div v-else>这将会跟进列表中所有聊天（<span class="text-orange">不建议</span>）</div>
         </div>
@@ -209,8 +233,12 @@ const rechatLimitDateString = computed(() => {
   ).format('YYYY-MM-DD HH:mm:ss')
 })
 
-const goToGeminiNanoApiKeyPage = () => {
-  electron.ipcRenderer.send('open-external-link', 'https://aistudio.google.com/app/apikey')
+const handleClickConfigLlm = async () => {
+  try {
+    await electron.ipcRenderer.invoke('llm-config')
+  } catch (err) {
+    console.log(err)
+  }
 }
 </script>
 

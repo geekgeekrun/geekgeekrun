@@ -30,6 +30,7 @@ import { pipeWriteRegardlessError } from '../../utils/pipe'
 import { WriteStream } from 'node:fs'
 // eslint-disable-next-line vue/prefer-import-from-vue
 import { hasOwn } from '@vue/shared'
+import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 
 export default function initIpc() {
   ipcMain.on('open-external-link', (_, link) => {
@@ -434,6 +435,32 @@ export default function initIpc() {
   ipcMain.handle('get-job-history-by-encrypt-id', async (_, encryptJobId) => {
     return await getJobHistoryByEncryptId(encryptJobId)
   })
+
+  ipcMain.handle('llm-config', async () => {
+    createLlmConfigWindow({
+      parent: mainWindow!,
+      modal: true,
+      show: true
+    })
+    const defer = Promise.withResolvers()
+    async function saveLlmConfigHandler(_, configToSave) {
+      const configToPatch = await readConfigFile('llm.json')
+      for (const k of Object.keys(configToSave)) {
+        configToPatch[k] = configToSave[k]
+      }
+      await writeConfigFile('llm.json', configToPatch)
+      defer.resolve()
+      ipcMain.removeHandler('save-llm-config')
+      llmConfigWindow?.close()
+    }
+    ipcMain.handle('save-llm-config', saveLlmConfigHandler)
+    llmConfigWindow?.once('closed', () => {
+      ipcMain.removeHandler('save-llm-config')
+      defer.reject(new Error('cancel'))
+    })
+    return defer.promise
+  })
+  ipcMain.on('close-llm-config', () => llmConfigWindow?.close())
 
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)
