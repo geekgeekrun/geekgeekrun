@@ -143,6 +143,17 @@
                       <el-input v-model="exp.positionName" />
                     </el-form-item>
                   </div>
+                  <el-form-item label="工作描述" style="margin-bottom: 18px">
+                    <el-input
+                      v-model="exp.workDescription"
+                      type="textarea"
+                      :autosize="{
+                        minRows: 6,
+                        maxRows: 8
+                      }"
+                      font-size-12px
+                    />
+                  </el-form-item>
                   <el-form-item label="工作业绩">
                     <el-input
                       v-model="exp.performance"
@@ -248,6 +259,17 @@
                       </div>
                     </el-form-item>
                   </div>
+                  <el-form-item label="项目描述" style="margin-bottom: 18px">
+                    <el-input
+                      v-model="proj.projectDescription"
+                      type="textarea"
+                      :autosize="{
+                        minRows: 6,
+                        maxRows: 8
+                      }"
+                      font-size-12px
+                    />
+                  </el-form-item>
                   <el-form-item label="项目业绩">
                     <el-input
                       v-model="proj.performance"
@@ -302,6 +324,7 @@ interface ResumeContent {
     startYearMon: string | null
     endYearMon: string | null
     performance: string
+    workDescription: string
   }>
   geekProjExpList: Array<{
     name: string
@@ -372,7 +395,8 @@ function getNewWorkExpItem() {
     endYearMon: '',
     positionName: '',
     startYearMon: '',
-    performance: ''
+    performance: '',
+    workDescription: ''
   }
 }
 function addWorkExp() {
