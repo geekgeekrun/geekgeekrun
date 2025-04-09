@@ -31,6 +31,7 @@ import { WriteStream } from 'node:fs'
 // eslint-disable-next-line vue/prefer-import-from-vue
 import { hasOwn } from '@vue/shared'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
+import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
 
 export default function initIpc() {
   ipcMain.on('open-external-link', (_, link) => {
@@ -461,6 +462,39 @@ export default function initIpc() {
     return defer.promise
   })
   ipcMain.on('close-llm-config', () => llmConfigWindow?.close())
+
+  ipcMain.handle('resume-edit', async () => {
+    createResumeEditorWindow({
+      parent: mainWindow!,
+      modal: true,
+      show: true
+    })
+    const defer = Promise.withResolvers()
+    async function saveResumeHandler(_, resumeContent) {
+      await writeConfigFile('resumes.json', [
+        {
+          name: '默认简历',
+          updateTime: Number(new Date()),
+          content: resumeContent
+        }
+      ])
+      defer.resolve()
+      resumeEditorWindow?.close()
+    }
+    ipcMain.handle('save-resume-content', saveResumeHandler)
+    resumeEditorWindow?.once('closed', () => {
+      ipcMain.removeHandler('save-resume-content')
+      ipcMain.removeHandler('fetch-resume-content')
+      defer.reject(new Error('cancel'))
+    })
+
+    ipcMain.handle('fetch-resume-content', async () => {
+      const res = (await readConfigFile('resumes.json'))?.[0]
+      return res?.content ?? null
+    })
+    return defer.promise
+  })
+  ipcMain.on('close-resume-editor', () => resumeEditorWindow?.close())
 
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)

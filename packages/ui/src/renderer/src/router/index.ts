@@ -24,6 +24,13 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/resumeEditor',
+    component: () => import('@renderer/page/ResumeEditor/index.vue'),
+    meta: {
+      title: '简历编辑'
+    }
+  },
+  {
     path: '/main-layout',
     component: () => import('@renderer/page/MainLayout/index.vue'),
     redirect: '/main-layout/GeekAutoStartChatWithBoss',

@@ -53,6 +53,13 @@
               </div>
             </div>
           </el-form-item>
+          <el-form-item>
+            <div class="flex flex-items-center">
+              <el-button size="small" type="primary" @click="handleClickEditResume">
+                编辑简历
+              </el-button>
+            </div>
+          </el-form-item>
           <el-form-item prop="recentMessageQuantityForLlm">
             <div>
               携带最近
@@ -223,6 +230,14 @@ const rechatLimitDateString = computed(() => {
 const handleClickConfigLlm = async () => {
   try {
     await electron.ipcRenderer.invoke('llm-config')
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+const handleClickEditResume = async () => {
+  try {
+    await electron.ipcRenderer.invoke('resume-edit')
   } catch (err) {
     console.log(err)
   }

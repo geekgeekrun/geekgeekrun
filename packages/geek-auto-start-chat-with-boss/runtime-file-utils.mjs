@@ -71,8 +71,12 @@ export const readConfigFile = (fileName) => {
     )
   } catch {
     fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
-    ensureConfigFileExist()
-    o = JSON.parse(defaultConfigFileContentMap[fileName])
+    if (defaultConfigFileContentMap[fileName]) {
+      ensureConfigFileExist()
+      o = JSON.parse(defaultConfigFileContentMap[fileName])
+    } else {
+      o = null
+    }
   }
 
   return o
