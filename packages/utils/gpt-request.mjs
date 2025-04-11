@@ -1,19 +1,24 @@
 import OpenAI from "openai";
 
-
-const GPT_API_KEY = `sk-40fdef46fee24402bc05311304fce7a1`
-export async function completes(messages) {
+export async function completes(
+  {
+    baseURL,
+    apiKey,
+    model
+  },
+  messages
+) {
   const openai = new OpenAI({
-    baseURL: 'https://api.deepseek.com',
-    apiKey: GPT_API_KEY
+    baseURL,
+    apiKey,
   });
 
   const completion = await openai.chat.completions.create({
     messages,
-    model: "deepseek-chat",
+    model,
     frequency_penalty: 0,
     max_tokens: 100,
-    temperature: 0.2
+    temperature: 0.1
   });
 
   console.log(completion.choices[0].message.content);

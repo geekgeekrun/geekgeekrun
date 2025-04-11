@@ -115,20 +115,21 @@ const llmPresetList: {
       providerCompleteApiUrl: 'https://api.deepseek.com'
     }
   },
-  {
-    name: '通过 Ollama 部署的 DeepSeek-R1（14B）模型',
-    config: {
-      model: 'deepseek-r1:14b',
-      providerApiSecret: 'ollama',
-      providerCompleteApiUrl: 'http://127.0.0.1:11434'
-    }
-  },
+  // TODO:
+  // {
+  //   name: '通过 Ollama 部署的 DeepSeek-R1（14B）模型',
+  //   config: {
+  //     model: 'deepseek-r1:14b',
+  //     providerApiSecret: 'ollama',
+  //     providerCompleteApiUrl: 'http://127.0.0.1:11434/v1'
+  //   }
+  // },
   {
     name: '通过 Ollama 部署的 Qwen2.5（7B）模型',
     config: {
       model: 'qwen2.5:7b',
       providerApiSecret: 'ollama',
-      providerCompleteApiUrl: 'http://127.0.0.1:11434'
+      providerCompleteApiUrl: 'http://127.0.0.1:11434/v1'
     }
   }
 ]

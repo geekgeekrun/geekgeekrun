@@ -37,7 +37,7 @@
             RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
           "
         >
-          <el-form-item prop="geminiApiKey">
+          <el-form-item>
             <div class="flex flex-items-center">
               <el-button size="small" type="primary" @click="handleClickConfigLlm">
                 配置大语言模型
@@ -53,34 +53,21 @@
               </div>
             </div>
           </el-form-item>
+          <el-form-item prop="recentMessageQuantityForLlm">
+            <div>
+              携带最近
+              <el-input-number
+                v-model="formContent.autoReminder.recentMessageQuantityForLlm"
+                class="w-120px"
+                :min="8"
+                :max="20"
+                :precision="0"
+                :step="1"
+              ></el-input-number>
+              次聊天内容作为上下文生成新消息
+            </div>
+          </el-form-item>
         </template>
-        <!-- <el-form-item
-          v-if="
-            formContent.autoReminder.rechatContentSource ===
-            RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
-          "
-          prop="geminiApiKey"
-        >
-          <div class="flex">
-            Gemini API 密钥&nbsp;<el-button type="text" @click.prevent="goToGeminiNanoApiKeyPage">
-            没有密钥？点击此处申请一个
-            </el-button>
-          </div>
-          <el-input v-model="formContent.autoReminder.geminiApiKey" />
-        </el-form-item>
-        <el-form-item
-          v-if="
-            formContent.autoReminder.rechatContentSource ===
-            RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
-          "
-          prop="resumeAbstract"
-        >
-          <div class="w-full">
-            <div class="flex">简历、求职期望摘要&nbsp;<el-button type="text">例子</el-button></div>
-            <el-input type="textarea" v-model="formContent.autoReminder.resumeAbstract" />
-          </div>
-          <el-button class="mt-8px">预览Prompt</el-button>
-        </el-form-item> -->
       </div>
       <el-form-item label="跟进间隔（分钟）" prop="throttleIntervalMinutes">
         <el-input-number
@@ -127,9 +114,8 @@ const formContent = ref({
   autoReminder: {
     throttleIntervalMinutes: 10,
     rechatLimitDay: 21,
-    geminiApiKey: '',
     rechatContentSource: 1,
-    resumeAbstract: ''
+    recentMessageQuantityForLlm: 8
   }
 })
 
@@ -150,10 +136,15 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   const conf = res.config['boss.json']?.autoReminder || {}
   conf.throttleIntervalMinutes = conf.throttleIntervalMinutes ?? 10
   conf.rechatLimitDay = conf.rechatLimitDay ?? 21
-  conf.geminiApiKey = conf.geminiApiKey ?? ''
   conf.rechatContentSource = conf.rechatContentSource ?? 1
-  conf.resumeAbstract = conf.resumeAbstract ?? ''
-
+  conf.recentMessageQuantityForLlm =
+    typeof conf.recentMessageQuantityForLlm === 'number'
+      ? conf.recentMessageQuantityForLlm > 20
+        ? 20
+        : conf.recentMessageQuantityForLlm < 8
+          ? 8
+          : parseInt(conf.recentMessageQuantityForLlm)
+      : 8
   formContent.value.autoReminder = conf
 })
 
@@ -175,10 +166,6 @@ const formRules = {
         cb()
       }
     }
-  },
-  geminiApiKey: {
-    required: true,
-    message: '请输入 Gemini API Key'
   }
 }
 

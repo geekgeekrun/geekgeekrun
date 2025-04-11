@@ -11,6 +11,7 @@
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,
     "geminiApiKey": "",
-    "rechatContentSource": 1
+    "rechatContentSource": 1,
+    "recentMessageQuantityForLlm": 8
   }
 }

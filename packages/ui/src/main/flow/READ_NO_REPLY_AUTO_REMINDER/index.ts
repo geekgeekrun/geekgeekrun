@@ -21,6 +21,9 @@ import { messageForSaveFilter } from '../../../common/utils/chat-list'
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
 const rechatLimitDay = readConfigFile('boss.json').autoReminder?.rechatLimitDay ?? 21
+const recentMessageQuantityForLlm =
+  readConfigFile('boss.json').autoReminder?.recentMessageQuantityForLlm ?? 8
+
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
@@ -281,10 +284,10 @@ const mainLoop = async () => {
       // eslint-disable-next-line no-constant-condition
       if (1 + 1 === 2) {
         try {
-          const messageListForGpt = historyMessageList.filter(it => it.bizType !== 101 && it.isSelf)
-          debugger
+          const messageListForGpt = historyMessageList.filter(it => it.bizType !== 101 && it.isSelf).slice(-recentMessageQuantityForLlm)
           await sendGptContent(pageMapByName.boss!, messageListForGpt)
         } catch (err) {
+          console.log(err)
           await sendLookForwardReplyEmotion(pageMapByName.boss!)
         }
       } else {
