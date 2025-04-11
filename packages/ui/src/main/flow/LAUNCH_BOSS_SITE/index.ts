@@ -1,6 +1,5 @@
 import { app } from 'electron'
 import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
-import extractZip from 'extract-zip'
 import {
   readStorageFile,
   writeStorageFile
@@ -17,10 +16,6 @@ import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss
 import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/dist/enums'
 
 import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
-import url from 'url'
-import packageJson from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/package.json' assert { type: 'json' }
 import { Target } from 'puppeteer'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
@@ -31,38 +26,11 @@ import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/src/entity/Ch
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
-const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
+import {
+  ensureEditThisCookie,
+  editThisCookieExtensionPath
+} from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/utils.mjs'
 
-const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
-const extensionDir = path.join(runtimeFolderPath, 'chrome-extensions')
-if (!fs.existsSync(runtimeFolderPath)) {
-  fs.mkdirSync(runtimeFolderPath)
-}
-if (!fs.existsSync(extensionDir)) {
-  fs.mkdirSync(extensionDir)
-}
-const editThisCookieExtensionPath = path.join(extensionDir, 'EditThisCookie')
-
-let editThisCookieZipPath
-async function getEditThisCookieZipPath() {
-  if (editThisCookieZipPath) {
-    return editThisCookieZipPath
-  }
-  if (isRunFromUi) {
-    const { app } = await import('electron')
-    editThisCookieZipPath = path.join(
-      app.getAppPath(),
-      './node_modules',
-      packageJson.name,
-      'extensions',
-      'EditThisCookie.zip'
-    )
-  } else {
-    editThisCookieZipPath = path.join(__dirname, 'extensions', 'EditThisCookie.zip')
-  }
-  return editThisCookieZipPath
-}
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 const attachRequestsListener = async (target: Target) => {
@@ -247,12 +215,7 @@ const attachRequestsListener = async (target: Target) => {
 
 export async function launchBossSite() {
   app.dock?.hide()
-  if (!fs.existsSync(path.join(editThisCookieExtensionPath, 'manifest.json'))) {
-    await extractZip(await getEditThisCookieZipPath(), {
-      dir: extensionDir
-    })
-  }
-
+  await ensureEditThisCookie()
   const bossCookies = readStorageFile('boss-cookies.json')
   const bossLocalStorage = readStorageFile('boss-local-storage.json')
 

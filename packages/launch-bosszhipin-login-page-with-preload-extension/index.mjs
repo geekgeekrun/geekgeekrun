@@ -6,68 +6,28 @@ import {
   sleep,
   sleepWithRandomDelay
 } from '@geekgeekrun/utils/sleep.mjs'
-import extractZip from 'extract-zip'
 import { blockNavigation } from '@geekgeekrun/utils/puppeteer/block-navigation.mjs'
 import {
   writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
-import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path';
 import JSON5 from 'json5'
 import url from 'url';
-import packageJson from './package.json' assert {type: 'json'}
+import {
+  runtimeFolderPath,
+  ensureEditThisCookie,
+  editThisCookieExtensionPath,
+  isRunFromUi,
+} from './utils.mjs'
 
 import { EventEmitter } from 'node:events'
 
 export const loginEventBus = new EventEmitter()
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
-const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
-const isUiDev = process.env.NODE_ENV === 'development'
-
-const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
-const extensionDir = path.join(
-  runtimeFolderPath,
-  'chrome-extensions'
-)
-if (!fs.existsSync(
-  runtimeFolderPath
-)) {
-  fs.mkdirSync(runtimeFolderPath)
-}
-if (!fs.existsSync(extensionDir)) {
-  fs.mkdirSync(extensionDir)
-}
-const editThisCookieExtensionPath = path.join(extensionDir, 'EditThisCookie')
-
-let editThisCookieZipPath
-async function getEditThisCookieZipPath () {
-  if (editThisCookieZipPath) {
-    return editThisCookieZipPath
-  }
-  if (isRunFromUi) {
-    const { app } = await import('electron')
-    editThisCookieZipPath = path.join(app.getAppPath(), './node_modules', packageJson.name, 'extensions', 'EditThisCookie.zip')
-  } else {
-    editThisCookieZipPath = path.join(__dirname, 'extensions', 'EditThisCookie.zip')
-  }
-  return editThisCookieZipPath
-}
 
 export async function main() {
-  if (!fs.existsSync(
-    path.join(editThisCookieExtensionPath, 'manifest.json')
-  )) {
-    await extractZip(
-      await getEditThisCookieZipPath(),
-      {
-        dir: extensionDir
-      }
-    )
-  }
-
+  await ensureEditThisCookie()
   const { puppeteer } = await initPuppeteer()
   const browser = await puppeteer.launch({
     headless: false,
