@@ -2,6 +2,7 @@ import { Page } from 'puppeteer'
 import { sleepWithRandomDelay, sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { completes } from '@geekgeekrun/utils/gpt-request.mjs'
 import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { formatResumeJsonToMarkdown } from '../../../common/utils/format-resume-json-to-markdown'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {
   const emotionEntryButtonProxy = await page.$('.chat-conversation .message-controls .btn-emotion')
@@ -18,10 +19,11 @@ export const sendLookForwardReplyEmotion = async (page: Page) => {
   await lookForwardReplyEmojiProxy!.click()
 }
 
-const resumeContent = ``
 // let _index = 0
 
 export const sendGptContent = async (page: Page, chatRecords) => {
+  const resumeObject = (await readConfigFile('resumes.json'))?.[0]
+  const resumeContent = formatResumeJsonToMarkdown(resumeObject)
   const chatList = [
     {
       role: 'system',
@@ -32,12 +34,12 @@ export const sendGptContent = async (page: Page, chatRecords) => {
    - √ 包含1个核心技能 + 1个成果量化
    - √ 使用不同句式模板（至少准备5种）
    - √ 谦虚一些，头衔、工作年限等在历史记录信息中出现一次就好
-   - ✗ 禁止与最近发送的几条相似或雷同
-   - ✗ 禁止使用专业术语堆砌
+   - ✗ 严禁与最近发送的几条相似或雷同
    - ✗ 严禁出现简历之外的词语
+   - ✗ 严禁包含最近8条已经发过的内容（包括但不限于职位名称）
 
 **简历分析层：**
-请从以下简历内容中提取关键要素：\n${resumeContent}\n
+请从以下简历内容中提取关键要素：\n\`\`\`markdown\n${resumeContent}\n\`\`\`\n
 
 ---
 要求提取：
@@ -53,7 +55,7 @@ export const sendGptContent = async (page: Page, chatRecords) => {
 每次生成前执行：
 1. 检查历史记录
 2. 确保技能/成果组合未重复
-3. 所生成的新消息，严禁包含最近8条已经发过的内容（包括但不限于职位名称）
+3. 确保所生成的新消息不包含最近8条已经发过的内容（包括但不限于职位名称）
 4. 字数严格控制在10-40字
 5. 避免感叹号等激进符号
 6. 减少头衔“资深”、“高级”出现的频率，严禁出现“专家”、“老兵”；减少工作年限“x年”出现的频率

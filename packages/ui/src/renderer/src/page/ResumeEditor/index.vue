@@ -5,6 +5,14 @@
         <div class="mt1em mb1em flex flex-items-center flex-justify-between">
           <span>简历编辑器</span>
         </div>
+        <el-alert type="info" :closable="false" mb20px line-height-1.25em>
+          <ul pl16px>
+            <li>
+              此简历将作为提示词的一部分提交给语言大模型，仅在匹配职位、生成已读不回提醒消息时使用；大部分信息非必填，但在不填写的情况下，可能会匹配到不准确的职位或生成预料之外的已读不回提醒消息
+            </li>
+            <li>期望薪资仅作匹配职位使用，不会用作生成已读不回提醒消息</li>
+          </ul>
+        </el-alert>
         <el-form
           ref="formRef"
           :model="formContent"
@@ -15,39 +23,33 @@
           <div
             :style="{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateColumns: '1fr 1fr',
               gap: '10px'
             }"
           >
-            <el-form-item prop="providerCompleteApiUrl" label="姓名">
+            <el-form-item label="姓名">
               <el-input v-model="formContent.name" font-size-12px></el-input>
             </el-form-item>
-            <el-form-item prop="providerCompleteApiUrl" label="性别">
-              <el-input v-model="formContent.gender" font-size-12px></el-input>
-            </el-form-item>
-            <el-form-item prop="providerCompleteApiUrl" label="年龄">
-              <el-input-number
-                v-model="formContent.age"
-                w-full
-                font-size-12px
-                :min="0"
-                :max="200"
-                :precision="0"
-                :step="1"
-              ></el-input-number>
-            </el-form-item>
-            <el-form-item prop="providerCompleteApiUrl" label="学历">
-              <el-input v-model="formContent.degree" font-size-12px></el-input>
-            </el-form-item>
-            <el-form-item prop="providerCompleteApiUrl" label="工作年限">
+            <el-form-item label="工作年限">
               <el-input v-model="formContent.workYearDesc" font-size-12px></el-input>
             </el-form-item>
-            <el-form-item prop="providerCompleteApiUrl" label="期望职位">
+            <el-form-item label="期望职位">
               <el-input v-model="formContent.expectJob" font-size-12px></el-input>
+            </el-form-item>
+            <el-form-item label="期望薪资（k）">
+              <div
+                :style="{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr'
+                }"
+              >
+                <el-input v-model="formContent.expectSalary[0]" placeholder="下限" />
+                <el-input v-model="formContent.expectSalary[1]" placeholder="上限" />
+              </div>
             </el-form-item>
           </div>
 
-          <el-form-item prop="providerCompleteApiUrl" label="个人优势">
+          <el-form-item label="个人优势">
             <el-input
               v-model="formContent.userDescription"
               type="textarea"
@@ -293,28 +295,27 @@
         </el-form>
       </main>
     </div>
-    <footer flex pt10px pb10px pr20px flex-justify-between>
-      <div>
-        <!-- <el-button type="text" @click="handleTestAvailability">测试可用性</el-button> -->
-      </div>
-      <div>
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+    <footer pt10px pb10px flex flex-justify-center>
+      <div w768px flex flex-justify-between>
+        <div>
+          <!-- <el-button type="text" @click="handleTestAvailability">测试可用性</el-button> -->
+        </div>
+        <div>
+          <el-button @click="handleCancel">取消</el-button>
+          <el-button type="primary" @click="handleSubmit">确定</el-button>
+        </div>
       </div>
     </footer>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ElForm, ElButton } from 'element-plus'
+import { ElForm, ElButton, ElAlert } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 
 interface ResumeContent {
   name: string
-  gender: string
-  age: string
-  degree: string
   workYearDesc: string
   expectJob: string
   userDescription: string
@@ -334,19 +335,18 @@ interface ResumeContent {
     projectDescription: string
     performance: string
   }>
+  expectSalary: [string, string]
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 
 const getEmptyFormContent = () => {
   const o: any = {
-    age: '',
-    degree: '',
     expectJob: '',
-    gender: '',
     name: '',
     userDescription: '',
     workYearDesc: '',
+    expectSalary: ['', ''],
     geekWorkExpList: [],
     geekProjExpList: []
   }
@@ -374,6 +374,15 @@ onMounted(async () => {
     }
     for (const k of Object.keys(formContent.value)) {
       formContent.value[k] = savedFileContent[k]
+    }
+    if (!formContent.value.expectSalary) {
+      formContent.value.expectSalary = ['', '']
+    }
+    if (!formContent.value.expectSalary?.[0] || /\D/.test(formContent.value.expectSalary?.[0])) {
+      formContent.value.expectSalary[0] = ''
+    }
+    if (!formContent.value.expectSalary?.[1] || /\D/.test(formContent.value.expectSalary?.[1])) {
+      formContent.value.expectSalary[1] = ''
     }
     if (!formContent.value.geekProjExpList?.length) {
       formContent.value.geekProjExpList = [getNewProjExpItem()]
