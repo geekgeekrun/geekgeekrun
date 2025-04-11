@@ -112,7 +112,7 @@ const llmPresetList: {
     config: {
       model: 'deepseek-chat',
       providerApiSecret: '',
-      providerCompleteApiUrl: 'https://api.deepseek.com'
+      providerCompleteApiUrl: 'https://api.deepseek.com/v1'
     }
   },
   // TODO:
