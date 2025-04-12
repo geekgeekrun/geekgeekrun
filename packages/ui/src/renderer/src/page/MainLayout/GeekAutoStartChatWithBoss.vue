@@ -2,7 +2,7 @@
   <div class="form-wrap">
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
       <el-form-item label="BOSS直聘 Cookie">
-        <el-button size="small" type="primary" font-size-inherit @click="handleClickLaunchLogin"
+        <el-button size="small" type="primary" @click="handleClickLaunchLogin"
           >编辑Cookie</el-button
         >
       </el-form-item>

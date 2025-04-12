@@ -6,29 +6,23 @@
       :model="formContent.autoReminder"
       label-position="top"
     >
-      <el-form-item>
-        <div>
-          <div>BOSS直聘 Cookie</div>
-          <el-button size="small" type="primary" @click="handleClickLaunchLogin"
-            >编辑Cookie</el-button
-          >
-        </div>
+      <el-form-item label="BOSS直聘 Cookie">
+        <el-button size="small" type="primary" @click="handleClickLaunchLogin"
+          >编辑Cookie</el-button
+        >
       </el-form-item>
-      <el-form-item class="mb0">
-        <div>
-          <div>跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：</div>
-          <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
-            <div>
-              <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
-                “[盼回复]” 表情
-              </el-radio>
-              <br />
-              <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
-                由大语言模型（根据简历及当前聊天上下文）生成的内容
-              </el-radio>
-            </div>
-          </el-radio-group>
-        </div>
+      <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：">
+        <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
+          <div>
+            <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
+              “[盼回复]” 表情
+            </el-radio>
+            <br />
+            <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
+              由大语言模型（根据简历及当前聊天上下文）生成的内容
+            </el-radio>
+          </div>
+        </el-radio-group>
       </el-form-item>
       <div class="ml-30px">
         <template
@@ -338,11 +332,11 @@ const openIntroOfCompletion = () => {
   padding-left: 20px;
   padding-right: 20px;
   :deep(.el-form) {
-    padding-top: 40px;
+    padding-top: 8px;
   }
   .last-form-item {
     :deep(.el-form-item__content) {
-      margin-top: 40px;
+      margin-top: 0px;
       justify-content: flex-end;
     }
   }
