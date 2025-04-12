@@ -1,7 +1,7 @@
 import { bootstrap, launchBoss } from './bootstrap'
 import { MsgStatus, type ChatListItem } from './types'
 import { Browser, Page } from 'puppeteer'
-import { sendLookForwardReplyEmotion } from './boss-operation'
+import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { app } from 'electron'
@@ -277,7 +277,19 @@ const mainLoop = async () => {
         (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
     ) {
       await sleepWithRandomDelay(3250)
-      await sendLookForwardReplyEmotion(pageMapByName.boss!)
+      // execute reply
+      // eslint-disable-next-line no-constant-condition
+      if (1 + 1 === 2) {
+        try {
+          const messageListForGpt = historyMessageList.filter(it => it.bizType !== 101 && it.isSelf)
+          debugger
+          await sendGptContent(pageMapByName.boss!, messageListForGpt)
+        } catch (err) {
+          await sendLookForwardReplyEmotion(pageMapByName.boss!)
+        }
+      } else {
+        await sendLookForwardReplyEmotion(pageMapByName.boss!)
+      }
     } else {
       cursorToContinueFind += 1
     }

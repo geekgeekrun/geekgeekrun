@@ -3,9 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "description": "utils",
-  "scripts": {
-  },
+  "scripts": {},
   "author": "geekgeekrun",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "openai": "^4.91.1"
+  }
 }
