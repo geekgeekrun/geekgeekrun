@@ -1,19 +1,7 @@
 <template>
   <div class="llm-config-page">
-    <div class="mt1em mb1em flex flex-items-center flex-justify-between">
+    <div class="mt1em mb1em">
       <span>大语言模型设置</span>
-      <el-dropdown @command="(item) => handlePresetClick(item)">
-        <el-button size="small"
-          >配置模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
-        ></el-button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item v-for="item in llmPresetList" :key="item.name" :command="item">{{
-              item.name
-            }}</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
     </div>
     <el-form
       ref="formRef"
@@ -22,36 +10,98 @@
       label-position="top"
       class="llm-config-form"
     >
-      <el-form-item prop="providerCompleteApiUrl" label="服务提供商 Base Url">
-        <el-input
-          v-model="formContent.providerCompleteApiUrl"
-          :autosize="{
-            minRows: 10,
-            maxRows: 10
-          }"
-          font-size-12px
-        ></el-input>
-      </el-form-item>
-      <el-form-item prop="providerCompleteApiUrl" label="要使用的模型">
-        <el-input
-          v-model="formContent.model"
-          :autosize="{
-            minRows: 10,
-            maxRows: 10
-          }"
-          font-size-12px
-        ></el-input>
-      </el-form-item>
-      <el-form-item prop="providerApiSecret" label="从服务提供商处获取的 API Secret">
-        <el-input
-          v-model="formContent.providerApiSecret"
-          :autosize="{
-            minRows: 10,
-            maxRows: 10
-          }"
-          font-size-12px
-        ></el-input>
-      </el-form-item>
+      <div v-for="(conf, index) in formContent" :key="index">
+        <div>
+          <el-form-item prop="providerCompleteApiUrl">
+            <div
+              class="el-form-item__label flex-items-center flex-justify-between w-full pr0px"
+              :style="{ display: 'flex' }"
+            >
+              <div>服务提供商 Base Url</div>
+              <el-dropdown @command="(item) => handlePresetClick(item, index)">
+                <el-button size="small"
+                  >配置模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
+                ></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="item in llmPresetList"
+                      :key="item.name"
+                      :command="item"
+                      >{{ item.name }}</el-dropdown-item
+                    >
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
+            <el-input
+              v-model="conf.providerCompleteApiUrl"
+              :autosize="{
+                minRows: 10,
+                maxRows: 10
+              }"
+              font-size-12px
+            ></el-input>
+          </el-form-item>
+          <el-form-item prop="model" label="要使用的模型">
+            <el-input
+              v-model="conf.model"
+              :autosize="{
+                minRows: 10,
+                maxRows: 10
+              }"
+              font-size-12px
+            ></el-input>
+          </el-form-item>
+          <el-form-item prop="providerApiSecret" label="从服务提供商处获取的 API Secret">
+            <el-input
+              v-model="conf.providerApiSecret"
+              :autosize="{
+                minRows: 10,
+                maxRows: 10
+              }"
+              font-size-12px
+            ></el-input>
+          </el-form-item>
+          <div class="serve-weight-config">
+            <div class="flex">
+              <el-form-item prop="enabled">
+                <div class="el-form-item__label">启用</div>
+                <el-checkbox
+                  v-model="conf.enabled"
+                  :autosize="{
+                    minRows: 10,
+                    maxRows: 10
+                  }"
+                  font-size-12px
+                ></el-checkbox>
+              </el-form-item>
+              <el-form-item prop="serveWeight" class="ml40px">
+                <div class="el-form-item__label">权重</div>
+                <el-input-number
+                  v-model="conf.serveWeight"
+                  :autosize="{
+                    minRows: 10,
+                    maxRows: 10
+                  }"
+                  :min="0"
+                  :max="100"
+                  :step="1"
+                  step-strictly
+                  :precision="0"
+                  font-size-12px
+                  placeholder="0 ~ 100"
+                ></el-input-number>
+              </el-form-item>
+            </div>
+            <div class="flex">
+              <!-- <el-form-item class="ml20px">
+                <el-button type="text">测试设置</el-button>
+              </el-form-item> -->
+            </div>
+          </div>
+        </div>
+      </div>
     </el-form>
     <footer flex mt20px pb20px flex-justify-between>
       <div>
@@ -74,14 +124,20 @@ interface LlmConfigItem {
   providerCompleteApiUrl: string
   providerApiSecret: string
   model: string
+  serveWeight: number
+  enabled: true
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
-const formContent = ref<LlmConfigItem>({
-  providerCompleteApiUrl: '',
-  providerApiSecret: '',
-  model: ''
-})
+const formContent = ref<LlmConfigItem[]>([
+  {
+    providerCompleteApiUrl: '',
+    providerApiSecret: '',
+    model: '',
+    serveWeight: 10,
+    enabled: true
+  }
+])
 
 const formRules = {}
 
@@ -112,7 +168,9 @@ const llmPresetList: {
     config: {
       model: 'deepseek-chat',
       providerApiSecret: '',
-      providerCompleteApiUrl: 'https://api.deepseek.com/v1'
+      providerCompleteApiUrl: 'https://api.deepseek.com/v1',
+      serveWeight: 100,
+      enabled: true
     }
   },
   // TODO:
@@ -121,7 +179,9 @@ const llmPresetList: {
   //   config: {
   //     model: 'deepseek-r1:14b',
   //     providerApiSecret: 'ollama',
-  //     providerCompleteApiUrl: 'http://127.0.0.1:11434/v1'
+  //     providerCompleteApiUrl: 'http://127.0.0.1:11434/v1',
+  //     serveWeight: 10,
+  //     enabled: true
   //   }
   // },
   {
@@ -129,18 +189,20 @@ const llmPresetList: {
     config: {
       model: 'qwen2.5:7b',
       providerApiSecret: 'ollama',
-      providerCompleteApiUrl: 'http://127.0.0.1:11434/v1'
+      providerCompleteApiUrl: 'http://127.0.0.1:11434/v1',
+      serveWeight: 10,
+      enabled: true
     }
   }
 ]
 
-function handlePresetClick(selected: (typeof llmPresetList)[number]) {
-  for (const k of Object.keys(formContent.value)) {
-    formContent.value[k] = selected.config[k]
+function handlePresetClick(selected: (typeof llmPresetList)[number], index) {
+  for (const k of Object.keys(formContent.value[index])) {
+    formContent.value[index][k] = selected.config[k]
   }
 }
 
-function handleTestAvailability() {}
+// function handleTestAvailability() {}
 </script>
 
 <style lang="scss" scoped>
@@ -152,12 +214,20 @@ function handleTestAvailability() {}
 
 <style lang="scss">
 .llm-config-form.el-form {
-  .el-form-item__label {
-    width: 20em;
-  }
   .el-form-item__error--inline {
     margin-left: 0;
     margin-top: 10px;
+  }
+  .serve-weight-config {
+    display: flex;
+    justify-content: space-between;
+    .el-form-item__label {
+      margin-bottom: 0;
+    }
+    .el-form-item__content {
+      display: flex;
+      flex-wrap: nowrap;
+    }
   }
 }
 </style>
