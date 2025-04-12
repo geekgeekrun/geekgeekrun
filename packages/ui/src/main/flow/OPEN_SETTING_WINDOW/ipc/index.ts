@@ -1,5 +1,5 @@
 import { ipcMain, shell, app } from 'electron'
-
+import path from 'path'
 import * as childProcess from 'node:child_process'
 import {
   ensureConfigFileExist,
@@ -8,7 +8,8 @@ import {
   readConfigFile,
   writeConfigFile,
   readStorageFile,
-  writeStorageFile
+  writeStorageFile,
+  storageFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
@@ -32,6 +33,11 @@ import { WriteStream } from 'node:fs'
 import { hasOwn } from '@vue/shared'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
+import { getValidTemplate } from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+import {
+  autoReminderPromptTemplateFileName,
+  writeDefaultAutoRemindPrompt
+} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
 
 export default function initIpc() {
   ipcMain.on('open-external-link', (_, link) => {
@@ -490,7 +496,21 @@ export default function initIpc() {
     })
     return defer.promise
   })
+  ipcMain.on('no-reply-reminder-prompt-edit', async () => {
+    const template = await readStorageFile(autoReminderPromptTemplateFileName, { isJson: false })
+    if (!template) {
+      await writeDefaultAutoRemindPrompt()
+    }
+    const filePath = path.join(storageFilePath, autoReminderPromptTemplateFileName)
+    shell.openPath(filePath)
+  })
   ipcMain.on('close-resume-editor', () => resumeEditorWindow?.close())
+  ipcMain.handle('check-if-auto-remind-prompt-valid', async () => {
+    await getValidTemplate()
+  })
+  ipcMain.handle('overwrite-auto-remind-prompt-with-default', async () => {
+    await writeDefaultAutoRemindPrompt()
+  })
 
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)

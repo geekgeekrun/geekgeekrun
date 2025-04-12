@@ -14,7 +14,7 @@
           >
         </div>
       </el-form-item>
-      <el-form-item class="mb-0">
+      <el-form-item class="mb0">
         <div>
           <div>跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：</div>
           <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
@@ -37,7 +37,7 @@
             RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
           "
         >
-          <el-form-item>
+          <el-form-item class="mb4px">
             <div>
               <el-button size="small" type="primary" @click="handleClickConfigLlm">
                 配置大语言模型
@@ -59,17 +59,42 @@
                   style="background-color: #462ac4"
                   >Qwen2.5</span
                 >
-                模型；支持多个服务商提供的多个模型组合使用
+                模型，通过<a
+                  class="font-size-12px pt0 pb0"
+                  :style="{
+                    color: 'var(--el-color-primary)',
+                  }"
+                  type="text"
+                  href="javascript:void(0)"
+                  @click.prevent="openIntroOfCompletion"
+                  >对话补全</a
+                >接口实现消息生成；支持多个“服务商-模型”组合按权重搭配使用
               </div>
             </div>
           </el-form-item>
-          <el-form-item>
+          <el-form-item class="mb4px">
             <div>
               <el-button size="small" type="primary" @click="handleClickEditResume">
                 编辑简历
               </el-button>
               <div class="font-size-12px color-#666">
                 简历内容将提交给大语言模型，以用于生成已读不回提醒消息；提交内容及生成消息中不会包含期望薪资
+              </div>
+            </div>
+          </el-form-item>
+          <el-form-item class="mb4px">
+            <div>
+              <div>
+                <el-button size="small" type="primary" @click="handleClickEditPrompt">
+                  使用外部编辑器编辑 Prompt 模板
+                </el-button>
+                <el-button size="small" type="primary" @click="restoreDefaultTemplate">
+                  还原默认 Prompt 模板
+                </el-button>
+              </div>
+              <div class="font-size-12px color-#666">
+                对生成效果不够满意？可在此查看、编辑 Prompt 模板。请在模板中需要插入简历的位置插入
+                __REPLACE_REAL_RESUME_HERE__
               </div>
             </div>
           </el-form-item>
@@ -126,7 +151,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { dayjs, ElForm } from 'element-plus'
+import { dayjs, ElForm, ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { RECHAT_CONTENT_SOURCE } from '../../../../common/enums/auto-start-chat'
 const router = useRouter()
@@ -205,6 +230,34 @@ watch(
 const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  try {
+    await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
+  } catch (err) {
+    if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
+      console.log(`Prompt 模板无效`, err)
+      ElMessageBox.confirm(
+        'Prompt 模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的 Prompt 模板？',
+        '',
+        {
+          confirmButtonText: '是',
+          cancelButtonText: '否',
+          type: 'warning',
+          closeOnClickModal: false,
+          dangerouslyUseHTMLString: true
+        }
+      )
+        .then(async () => {
+          await restoreDefaultTemplate()
+        })
+        .catch(() => {})
+    } else {
+      ElMessage({
+        type: 'error',
+        message: '用于生成自动提醒消息的 Prompt 检查未通过，请重试'
+      })
+    }
+    return
+  }
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'read-no-reply-reminder' }
@@ -217,6 +270,14 @@ function handleThrottleIntervalMinutesBlur() {
   formContent.value.autoReminder.throttleIntervalMinutes = Number(
     formContent.value.autoReminder.throttleIntervalMinutes
   )
+}
+
+const restoreDefaultTemplate = async () => {
+  await electron.ipcRenderer.invoke('overwrite-auto-remind-prompt-with-default')
+  ElMessage({
+    type: 'success',
+    message: '模板还原成功'
+  })
 }
 
 const handleClickLaunchLogin = () => {
@@ -254,6 +315,17 @@ const handleClickEditResume = async () => {
   } catch (err) {
     console.log(err)
   }
+}
+
+const handleClickEditPrompt = async () => {
+  await electron.ipcRenderer.send('no-reply-reminder-prompt-edit')
+}
+
+const openIntroOfCompletion = () => {
+  electron.ipcRenderer.send(
+    'open-external-link',
+    'https://api-docs.deepseek.com/zh-cn/api/create-chat-completion'
+  )
 }
 </script>
 

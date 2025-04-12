@@ -1,7 +1,11 @@
 import { Page } from 'puppeteer'
 import { sleepWithRandomDelay, sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { completes } from '@geekgeekrun/utils/gpt-request.mjs'
-import { readConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import {
+  readConfigFile,
+  readStorageFile,
+  writeStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { formatResumeJsonToMarkdown } from '../../../common/utils/format-resume-json-to-markdown'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {
@@ -38,14 +42,8 @@ const pickLlmConfigFromList = (llmConfigList) => {
 
 // let _index = 0
 
-export const sendGptContent = async (page: Page, chatRecords) => {
-  const resumeObject = (await readConfigFile('resumes.json'))?.[0]
-  const resumeContent = formatResumeJsonToMarkdown(resumeObject)
-  const chatList = [
-    {
-      role: 'system',
-      content: `
-**核心指令：**
+const RESUME_PLACEHOLDER = `__REPLACE_REAL_RESUME_HERE__`
+const defaultPrompt = `**核心指令：**
 你是一个智能求职助手，需要根据用户简历生成30字左右的提醒消息，满足以下要求：
 1. 每次生成需满足：
    - √ 包含1个核心技能 + 1个成果量化
@@ -56,7 +54,7 @@ export const sendGptContent = async (page: Page, chatRecords) => {
    - ✗ 严禁包含最近8条已经发过的内容（包括但不限于职位名称）
 
 **简历分析层：**
-请从以下简历内容中提取关键要素：\n\`\`\`markdown\n${resumeContent}\n\`\`\`\n
+请从以下简历内容中提取关键要素：\n\`\`\`markdown\n${RESUME_PLACEHOLDER}\n\`\`\`\n
 
 ---
 要求提取：
@@ -79,6 +77,34 @@ export const sendGptContent = async (page: Page, chatRecords) => {
 
 **输出格式：**
 请确保仅回复一句话，以JSON响应，不要包含其他解释或内容；数据结构参考：\`{"response": "这里是将会发送给招聘者的内容"}\``
+
+export const autoReminderPromptTemplateFileName = 'auto-reminder-resume-system-message-template.md'
+export const getValidTemplate = async () => {
+  let template = await readStorageFile(autoReminderPromptTemplateFileName, { isJson: false })
+  if (!template) {
+    await writeDefaultAutoRemindPrompt()
+    template = defaultPrompt
+  }
+  if (!template.includes(RESUME_PLACEHOLDER)) {
+    const e = new Error(`简历内容占位符字符串不存在。占位字符串是 ${RESUME_PLACEHOLDER}`)
+    e.name = `RESUME_PLACEHOLDER_NOT_EXIST`
+    throw e
+  }
+  return template
+}
+
+export const writeDefaultAutoRemindPrompt = async () => {
+  await writeStorageFile(autoReminderPromptTemplateFileName, defaultPrompt, { isJson: false })
+}
+
+export const sendGptContent = async (page: Page, chatRecords) => {
+  const template = await getValidTemplate()
+  const resumeObject = (await readConfigFile('resumes.json'))?.[0]
+  const resumeContent = formatResumeJsonToMarkdown(resumeObject)
+  const chatList = [
+    {
+      role: 'system',
+      content: template.replace(RESUME_PLACEHOLDER, resumeContent)
     }
   ]
   chatList.push({

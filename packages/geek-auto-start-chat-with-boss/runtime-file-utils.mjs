@@ -118,7 +118,8 @@ export const ensureStorageFileExist = () => {
   )
 }
 
-export const readStorageFile = (fileName) => {
+export const readStorageFile = (fileName, { isJson } = {}) => {
+  isJson = isJson ?? true
   const joinedPath = path.join(storageFilePath, fileName)
 
   if (!fs.existsSync(
@@ -129,21 +130,36 @@ export const readStorageFile = (fileName) => {
 
   let o
   try {
-    o = JSON.parse(
-      fs.readFileSync(joinedPath)
-    )
+    const content = fs.readFileSync(joinedPath)
+    if (isJson) {
+      o = JSON.parse(content)
+    }
+    else {
+      o = content.toString()
+    }
   } catch {
     fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
     ensureStorageFileExist()
-    o = JSON.parse(defaultStorageFileContentMap[fileName])
+    if (isJson) {
+      o = JSON.parse(defaultStorageFileContentMap[fileName] ?? 'null')
+    }
+    else {
+      o = defaultStorageFileContentMap[fileName] ?? null
+    }
   }
 
   return o
 }
 
-export const writeStorageFile = async (fileName, content) => {
+export const writeStorageFile = async (fileName, content, { isJson } = {}) => {
+  isJson = isJson ?? true
   const filePath = path.join(storageFilePath, fileName)
-  const fileContent = JSON.stringify(content)
+  let fileContent
+  if (isJson) {
+    fileContent = JSON.stringify(content)
+  } else {
+    fileContent = content
+  }
   return fsPromise.writeFile(
     filePath,
     fileContent
