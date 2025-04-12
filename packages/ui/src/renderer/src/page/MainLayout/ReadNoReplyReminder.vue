@@ -38,26 +38,39 @@
           "
         >
           <el-form-item>
-            <div class="flex flex-items-center">
+            <div>
               <el-button size="small" type="primary" @click="handleClickConfigLlm">
                 配置大语言模型
               </el-button>
-              <div class="ml1em">
+              <div class="font-size-12px color-#666">
                 支持
                 <span
-                  class="pl10px pr10px color-white border-rd-full"
+                  class="pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
                   style="background-color: #3c4efd"
                   >DeepSeek-V3</span
                 >
-                模型
+                <span
+                  class="ml4px pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
+                  style="background-color: #000000"
+                  >GPT-4o mini</span
+                >
+                <span
+                  class="ml4px pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
+                  style="background-color: #462ac4"
+                  >Qwen2.5</span
+                >
+                模型；支持多个服务商提供的多个模型组合使用
               </div>
             </div>
           </el-form-item>
           <el-form-item>
-            <div class="flex flex-items-center">
+            <div>
               <el-button size="small" type="primary" @click="handleClickEditResume">
                 编辑简历
               </el-button>
+              <div class="font-size-12px color-#666">
+                简历内容将提交给大语言模型，以用于生成已读不回提醒消息；提交内容及生成消息中不会包含期望薪资
+              </div>
             </div>
           </el-form-item>
           <el-form-item prop="recentMessageQuantityForLlm">
