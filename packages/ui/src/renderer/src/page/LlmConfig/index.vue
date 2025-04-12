@@ -1,124 +1,181 @@
 <template>
   <div class="llm-config-page">
-    <div class="mt1em mb1em">
-      <span>大语言模型设置</span>
-    </div>
-    <el-form
-      ref="formRef"
-      :model="formContent"
-      :rules="formRules"
-      label-position="top"
-      class="llm-config-form"
-    >
-      <div v-for="(conf, index) in formContent" :key="index">
-        <div>
-          <el-form-item prop="providerCompleteApiUrl">
+    <div class="main-wrapper">
+      <main>
+        <div class="mt1em mb1em">
+          <span>大语言模型设置</span>
+        </div>
+        <el-form
+          ref="formRef"
+          :model="formContent"
+          :rules="formRules"
+          label-position="top"
+          class="llm-config-form"
+        >
+          <div v-for="(conf, index) in formContent" :key="index" class="flex gap12px">
             <div
-              class="el-form-item__label flex-items-center flex-justify-between w-full pr0px"
-              :style="{ display: 'flex' }"
+              v-if="formContent.length > 1"
+              :style="{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                height: 'fit-content',
+                marginTop: '10px'
+              }"
             >
-              <div>服务提供商 Base Url</div>
-              <el-dropdown @command="(item) => handlePresetClick(item, index)">
-                <el-button size="small"
-                  >配置模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
-                ></el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item
-                      v-for="item in llmPresetList"
-                      :key="item.name"
-                      :command="item"
-                      >{{ item.name }}</el-dropdown-item
-                    >
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
+              <el-button
+                :disabled="index <= 0"
+                style="margin: 0"
+                circle
+                size="small"
+                :icon="ArrowUp"
+                @click="moveConfigUp(index)"
+              />
+              <el-button
+                :disabled="index >= formContent.length - 1"
+                style="margin: 0"
+                circle
+                size="small"
+                :icon="ArrowDown"
+                @click="moveConfigDown(index)"
+              />
+              <el-button
+                :disabled="1 >= formContent.length"
+                style="margin: 0"
+                circle
+                size="small"
+                :icon="Delete"
+                @click="removeConfig(index)"
+              />
             </div>
-            <el-input
-              v-model="conf.providerCompleteApiUrl"
-              :autosize="{
-                minRows: 10,
-                maxRows: 10
-              }"
-              font-size-12px
-            ></el-input>
-          </el-form-item>
-          <el-form-item prop="model" label="要使用的模型">
-            <el-input
-              v-model="conf.model"
-              :autosize="{
-                minRows: 10,
-                maxRows: 10
-              }"
-              font-size-12px
-            ></el-input>
-          </el-form-item>
-          <el-form-item prop="providerApiSecret" label="从服务提供商处获取的 API Secret">
-            <el-input
-              v-model="conf.providerApiSecret"
-              :autosize="{
-                minRows: 10,
-                maxRows: 10
-              }"
-              font-size-12px
-            ></el-input>
-          </el-form-item>
-          <div class="serve-weight-config">
-            <div class="flex">
-              <el-form-item prop="enabled">
-                <div class="el-form-item__label">启用</div>
-                <el-checkbox
-                  v-model="conf.enabled"
+            <div class="w-full">
+              <el-form-item prop="providerCompleteApiUrl">
+                <div
+                  class="el-form-item__label flex-items-center flex-justify-between w-full pr0px"
+                  :style="{ display: 'flex' }"
+                >
+                  <div>服务提供商 Base Url</div>
+                  <el-dropdown @command="(item) => handlePresetClick(item, index)">
+                    <el-button size="small"
+                      >配置模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
+                    ></el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item
+                          v-for="item in llmPresetList"
+                          :key="item.name"
+                          :command="item"
+                          >{{ item.name }}</el-dropdown-item
+                        >
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </div>
+                <el-input
+                  ref="firstInputRefList"
+                  v-model="conf.providerCompleteApiUrl"
                   :autosize="{
                     minRows: 10,
                     maxRows: 10
                   }"
                   font-size-12px
-                ></el-checkbox>
+                ></el-input>
               </el-form-item>
-              <el-form-item prop="serveWeight" class="ml40px">
-                <div class="el-form-item__label">权重</div>
-                <el-input-number
-                  v-model="conf.serveWeight"
+              <el-form-item prop="model" label="要使用的模型">
+                <el-input
+                  v-model="conf.model"
                   :autosize="{
                     minRows: 10,
                     maxRows: 10
                   }"
-                  :min="0"
-                  :max="100"
-                  :step="1"
-                  step-strictly
-                  :precision="0"
                   font-size-12px
-                  placeholder="0 ~ 100"
-                ></el-input-number>
+                ></el-input>
               </el-form-item>
-            </div>
-            <div class="flex">
-              <!-- <el-form-item class="ml20px">
-                <el-button type="text">测试设置</el-button>
-              </el-form-item> -->
+              <el-form-item prop="providerApiSecret" label="从服务提供商处获取的 API Secret">
+                <el-input
+                  v-model="conf.providerApiSecret"
+                  :autosize="{
+                    minRows: 10,
+                    maxRows: 10
+                  }"
+                  font-size-12px
+                ></el-input>
+              </el-form-item>
+              <div v-if="formContent.length > 1" class="serve-weight-config">
+                <div class="flex">
+                  <el-form-item prop="enabled">
+                    <div class="el-form-item__label">启用</div>
+                    <el-checkbox
+                      v-model="conf.enabled"
+                      :autosize="{
+                        minRows: 10,
+                        maxRows: 10
+                      }"
+                      font-size-12px
+                    ></el-checkbox>
+                  </el-form-item>
+                  <el-form-item prop="serveWeight" class="ml40px">
+                    <div class="el-form-item__label">权重</div>
+                    <el-input-number
+                      v-model="conf.serveWeight"
+                      :autosize="{
+                        minRows: 10,
+                        maxRows: 10
+                      }"
+                      :min="0"
+                      :max="100"
+                      :step="1"
+                      step-strictly
+                      :precision="0"
+                      font-size-12px
+                      placeholder="0 ~ 100"
+                    ></el-input-number>
+                  </el-form-item>
+                </div>
+                <div class="flex">
+                  <!-- <el-form-item class="ml20px">
+                    <el-button type="text">测试设置</el-button>
+                  </el-form-item> -->
+                </div>
+              </div>
+              <div
+                v-if="index !== formContent.length - 1"
+                class="mt6px mb20px h1px"
+                style="background-color: #dcdcdc"
+              />
             </div>
           </div>
+        </el-form>
+      </main>
+    </div>
+    <footer pt10px pb10px flex flex-justify-center>
+      <div w480px flex flex-justify-between>
+        <div>
+          <el-button type="text" @click="addConfig">添加其它服务</el-button>
         </div>
-      </div>
-    </el-form>
-    <footer flex mt20px pb20px flex-justify-between>
-      <div>
-        <!-- <el-button type="text" @click="handleTestAvailability">测试可用性</el-button> -->
-      </div>
-      <div>
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <div>
+          <el-button @click="handleCancel">取消</el-button>
+          <el-button type="primary" @click="handleSubmit">确定</el-button>
+        </div>
       </div>
     </footer>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ElForm, ElDropdown, ElDropdownMenu, ElDropdownItem, ElIcon, ElButton } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
-import { ref, onMounted } from 'vue'
+import {
+  ElForm,
+  ElDropdown,
+  ElDropdownMenu,
+  ElDropdownItem,
+  ElIcon,
+  ElButton,
+  ElInput
+} from 'element-plus'
+import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 
 interface LlmConfigItem {
   providerCompleteApiUrl: string
@@ -128,16 +185,17 @@ interface LlmConfigItem {
   enabled: true
 }
 
-const formRef = ref<InstanceType<typeof ElForm>>()
-const formContent = ref<LlmConfigItem[]>([
-  {
+function getNewConfigItem(): LlmConfigItem {
+  return {
     providerCompleteApiUrl: '',
     providerApiSecret: '',
     model: '',
     serveWeight: 10,
     enabled: true
   }
-])
+}
+const formRef = ref<InstanceType<typeof ElForm>>()
+const formContent = ref<LlmConfigItem[]>([getNewConfigItem()])
 
 const formRules = {}
 
@@ -151,12 +209,17 @@ const handleSubmit = async () => {
 onMounted(async () => {
   const savedFileContent = (await electron.ipcRenderer.invoke('fetch-config-file-content'))
     ?.config?.['llm.json']
-  if (!savedFileContent) {
+  if (!savedFileContent?.length) {
     return
   }
-  for (const k of Object.keys(formContent.value)) {
-    formContent.value[k] = savedFileContent[k]
-  }
+  const keyOfItem = Object.keys(getNewConfigItem())
+  formContent.value = savedFileContent.map((it) => {
+    const conf = {}
+    for (const k of keyOfItem) {
+      conf[k] = it[k]
+    }
+    return conf
+  })
 })
 
 const llmPresetList: {
@@ -202,13 +265,71 @@ function handlePresetClick(selected: (typeof llmPresetList)[number], index) {
   }
 }
 
+const firstInputRefList = ref<InstanceType<typeof ElInput>[]>([])
+function addConfig() {
+  formContent.value.push(getNewConfigItem())
+  nextTick(() => {
+    firstInputRefList.value[firstInputRefList.value.length - 1]?.focus()
+  })
+}
+function moveConfigUp(index) {
+  ;[formContent.value[index], formContent.value[index - 1]] = [
+    formContent.value[index - 1],
+    formContent.value[index]
+  ]
+}
+
+function moveConfigDown(index) {
+  ;[formContent.value[index], formContent.value[index + 1]] = [
+    formContent.value[index + 1],
+    formContent.value[index]
+  ]
+}
+
+function removeConfig(index) {
+  formContent.value.splice(index, 1)
+}
+
+watch(
+  () => formContent.value.length,
+  (nVal) => {
+    if (nVal <= 1) {
+      electron.ipcRenderer.send('update-window-size', {
+        width: window.innerWidth,
+        height: 360
+      })
+    } else {
+      electron.ipcRenderer.send('update-window-size', {
+        width: window.innerWidth,
+        height: 730
+      })
+    }
+  },
+  {
+    immediate: true
+  }
+)
+
 // function handleTestAvailability() {}
 </script>
 
 <style lang="scss" scoped>
 .llm-config-page {
   margin: 0 auto;
-  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  .main-wrapper {
+    flex: 1;
+    overflow: auto;
+    main {
+      margin: 0 auto;
+      max-width: 480px;
+    }
+  }
+  footer {
+    background-color: #f0f0f0;
+  }
 }
 </style>
 

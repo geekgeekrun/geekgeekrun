@@ -167,13 +167,13 @@
                       font-size-12px
                     />
                   </el-form-item>
+                  <div
+                    v-if="index !== formContent.geekWorkExpList.length - 1"
+                    class="mt20px mb20px h1px"
+                    style="background-color: #dcdcdc"
+                  />
                 </div>
               </div>
-              <div
-                v-if="index !== formContent.geekWorkExpList.length - 1"
-                class="mt20px mb20px h1px"
-                style="background-color: #dcdcdc"
-              />
             </div>
           </el-form-item>
           <el-form-item>
@@ -283,13 +283,13 @@
                       font-size-12px
                     />
                   </el-form-item>
+                  <div
+                    v-if="index !== formContent.geekProjExpList.length - 1"
+                    class="mt20px mb20px h1px"
+                    style="background-color: #dcdcdc"
+                  />
                 </div>
               </div>
-              <div
-                v-if="index !== formContent.geekProjExpList.length - 1"
-                class="mt20px mb20px h1px"
-                style="background-color: #dcdcdc"
-              />
             </div>
           </el-form-item>
         </el-form>

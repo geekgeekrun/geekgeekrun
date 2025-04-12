@@ -11,7 +11,7 @@ export function createLlmConfigWindow(
   }
   llmConfigWindow = new BrowserWindow({
     width: 576,
-    height: 800,
+    height: 410,
     resizable: false,
     show: false,
     autoHideMenuBar: true,

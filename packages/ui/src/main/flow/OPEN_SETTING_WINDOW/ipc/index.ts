@@ -445,11 +445,7 @@ export default function initIpc() {
     })
     const defer = Promise.withResolvers()
     async function saveLlmConfigHandler(_, configToSave) {
-      const configToPatch = await readConfigFile('llm.json')
-      for (const k of Object.keys(configToSave)) {
-        configToPatch[k] = configToSave[k]
-      }
-      await writeConfigFile('llm.json', configToPatch)
+      await writeConfigFile('llm.json', configToSave)
       defer.resolve()
       ipcMain.removeHandler('save-llm-config')
       llmConfigWindow?.close()
