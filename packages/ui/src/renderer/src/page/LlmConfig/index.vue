@@ -227,7 +227,7 @@ const llmPresetList: {
   config: LlmConfigItem
 }[] = [
   {
-    name: '由 DeepSeek 提供 DeepSeek-V3 模型',
+    name: '由 DeepSeek 提供的 DeepSeek-V3 模型',
     config: {
       model: 'deepseek-chat',
       providerApiSecret: '',
@@ -247,6 +247,16 @@ const llmPresetList: {
   //     enabled: true
   //   }
   // },
+  {
+    name: '由 free.v36.cm 提供的 GPT-4o mini 模型',
+    config: {
+      model: 'gpt-4o-mini',
+      providerApiSecret: 'sk-P3kvkV6UZ9WMy6AH792480Fc5e1c4dAb8aE17b20FcAc4eC3',
+      providerCompleteApiUrl: 'https://free.v36.cm/v1',
+      serveWeight: 20,
+      enabled: true
+    }
+  },
   {
     name: '通过 Ollama 部署的 Qwen2.5（7B）模型',
     config: {
