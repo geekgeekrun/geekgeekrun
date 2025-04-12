@@ -19,6 +19,23 @@ export const sendLookForwardReplyEmotion = async (page: Page) => {
   await lookForwardReplyEmojiProxy!.click()
 }
 
+const pickLlmConfigFromList = (llmConfigList) => {
+  if (llmConfigList.length === 1) {
+    return llmConfigList[0]
+  }
+  llmConfigList = llmConfigList.filter((it) => it.enabled)
+  const pool: number[] = []
+  for (let i = 0; i < llmConfigList.length; i++) {
+    for (let j = 0; j < Math.floor(llmConfigList[i].serveWeight); j++) {
+      pool.push(i)
+    }
+  }
+  const index = Math.floor(pool.length * Math.random())
+  return llmConfigList[
+    pool[index]
+  ]
+}
+
 // let _index = 0
 
 export const sendGptContent = async (page: Page, chatRecords) => {
@@ -86,7 +103,9 @@ export const sendGptContent = async (page: Page, chatRecords) => {
     })
   }
   console.log(chatList)
-  const llmConfig = await readConfigFile('llm.json')
+  const llmConfigList = await readConfigFile('llm.json')
+  const llmConfig = pickLlmConfigFromList(llmConfigList)
+  console.log(llmConfig.providerCompleteApiUrl)
   const res = await completes(
     {
       baseURL: llmConfig.providerCompleteApiUrl,
