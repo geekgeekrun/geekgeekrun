@@ -15,10 +15,11 @@
         </el-alert>
         <el-form
           ref="formRef"
-          :model="formContent"
-          :rules="formRules"
+          :model="formContentForElForm"
+          :rules="formRulesForElForm"
           label-position="top"
           class="resume-editor-form"
+          :validate-on-rule-change="false"
         >
           <div
             :style="{
@@ -117,7 +118,11 @@
                       width: '100%'
                     }"
                   >
-                    <el-form-item label="公司名称" style="margin-bottom: 18px">
+                    <el-form-item
+                      label="公司名称"
+                      style="margin-bottom: 18px"
+                      :prop="`geekWorkExpList_${index}_company`"
+                    >
                       <el-input v-model="exp.company" />
                     </el-form-item>
                     <el-form-item label="任职时间" style="margin-bottom: 18px">
@@ -233,7 +238,11 @@
                       width: '100%'
                     }"
                   >
-                    <el-form-item label="项目名称" style="margin-bottom: 18px">
+                    <el-form-item
+                      label="项目名称"
+                      style="margin-bottom: 18px"
+                      :prop="`geekProjExpList_${index}_name`"
+                    >
                       <el-input v-model="proj.name" />
                     </el-form-item>
                     <el-form-item label="项目角色" style="margin-bottom: 18px">
@@ -311,7 +320,7 @@
 
 <script lang="ts" setup>
 import { ElForm, ElButton, ElAlert, ElMessageBox } from 'element-plus'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { type ResumeContent, resumeContentEnoughDetect } from '../../../../common/utils/resume'
@@ -335,14 +344,63 @@ const getEmptyFormContent = () => {
 }
 const formContent = ref<ResumeContent>(getEmptyFormContent())
 
-const formRules = {}
-
+const formContentForElForm = computed(() => {
+  const valueMap = {}
+  formContent.value.geekWorkExpList?.forEach((item, i) => {
+    valueMap[`geekWorkExpList_${i}_company`] = item.company
+  })
+  formContent.value.geekProjExpList?.forEach((item, i) => {
+    valueMap[`geekProjExpList_${i}_name`] = item.name
+  })
+  return valueMap
+})
+const formRulesForElForm = computed(() => {
+  const valueMap = {}
+  formContent.value.geekWorkExpList.forEach((_, i) => {
+    valueMap[`geekWorkExpList_${i}_company`] = [
+      {
+        required: true,
+        message: '请输入公司名称'
+      },
+      {
+        trigger: 'blur',
+        validator(_, value, cb) {
+          if (!value.trim()) {
+            cb(`请输入公司名称`)
+          } else {
+            cb()
+          }
+        }
+      }
+    ]
+  })
+  formContent.value.geekProjExpList.forEach((_, i) => {
+    valueMap[`geekProjExpList_${i}_name`] = [
+      {
+        required: true,
+        message: '请输入项目名称'
+      },
+      {
+        trigger: 'blur',
+        validator(_, value, cb) {
+          if (!value.trim()) {
+            cb(`请输入项目名称`)
+          } else {
+            cb()
+          }
+        }
+      }
+    ]
+  })
+  return valueMap
+})
 const handleCancel = () => {
   gtagRenderer('cancel_clicked')
   electron.ipcRenderer.send('close-resume-editor')
   gtagRenderer('cancel_done')
 }
 const handleSubmit = async () => {
+  await formRef.value?.validate()
   gtagRenderer('submit_clicked')
   if (
     !resumeContentEnoughDetect({
