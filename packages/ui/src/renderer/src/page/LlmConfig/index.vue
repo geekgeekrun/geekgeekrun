@@ -16,7 +16,7 @@
               "
             >
               <el-button size="small"
-                >申请 API Secret <el-icon class="el-icon--right"><arrow-down /></el-icon
+                >获取 API Secret <el-icon class="el-icon--right"><arrow-down /></el-icon
               ></el-button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -63,17 +63,18 @@
             <li><b class="color-red">暂不支持推理模型</b>（例如 DeepSeek-R1）</li>
             <li>
               请自行确保您所接入的服务商能够保护您的隐私。<b class="color-red"
-                >此处所列举“服务商-模型”由第三方提供，仅供配置参考，不能保证它们能够合法使用您的数据，不表示本程序认可相关模型</b
+                >此处所列举“服务商-模型”由第三方提供，仅供配置参考，本程序不能保证它们能够合法使用您的数据，不表示本程序认可相关模型</b
               >
             </li>
           </ul>
         </el-alert>
         <el-form
           ref="formRef"
-          :model="formContent"
-          :rules="formRules"
+          :model="formContentForElForm"
+          :rules="formRulesForElForm"
           label-position="top"
           class="llm-config-form"
+          :validate-on-rule-change="false"
         >
           <div v-for="(conf, index) in formContent" :key="index" class="flex gap12px">
             <div
@@ -114,12 +115,12 @@
               />
             </div>
             <div class="w-full">
-              <el-form-item prop="providerCompleteApiUrl">
+              <el-form-item :prop="`${index}_providerCompleteApiUrl`">
                 <div
                   class="el-form-item__label flex-items-center flex-justify-between w-full pr0px"
                   :style="{ display: 'flex' }"
                 >
-                  <div>服务提供商 Base Url</div>
+                  <div>服务提供商 Base URL</div>
                   <el-dropdown @command="(item) => handlePresetClick(item, index)">
                     <el-button size="small"
                       >配置模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
@@ -166,16 +167,13 @@
                   font-size-12px
                 ></el-input>
               </el-form-item>
-              <div v-if="formContent.length > 1" class="serve-weight-config">
+              <div class="serve-weight-config">
                 <div class="flex">
                   <el-form-item prop="enabled">
                     <div class="el-form-item__label">启用</div>
                     <el-checkbox
+                      v-if="formContent.length > 1"
                       v-model="conf.enabled"
-                      :autosize="{
-                        minRows: 10,
-                        maxRows: 10
-                      }"
                       font-size-12px
                       @click="
                         nextTick(() =>
@@ -183,15 +181,13 @@
                         )
                       "
                     ></el-checkbox>
+                    <el-checkbox v-else :model-value="true" font-size-12px disabled />
                   </el-form-item>
                   <el-form-item prop="serveWeight" class="ml40px">
                     <div class="el-form-item__label">权重</div>
                     <el-input-number
+                      v-if="formContent.length > 1"
                       v-model="conf.serveWeight"
-                      :autosize="{
-                        minRows: 10,
-                        maxRows: 10
-                      }"
                       :min="0"
                       :max="100"
                       :step="1"
@@ -205,6 +201,12 @@
                         }
                       "
                     ></el-input-number>
+                    <el-input-number
+                      v-else
+                      font-size-12px
+                      :model-value="SINGLE_ITEM_DEFAULT_SERVE_WEIGHT"
+                      disabled
+                    />
                   </el-form-item>
                 </div>
                 <div class="flex">
@@ -247,11 +249,13 @@ import {
   ElDropdownItem,
   ElIcon,
   ElButton,
-  ElInput
+  ElInput,
+  ElMessage
 } from 'element-plus'
 import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
+import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../../common/constant'
 
 interface LlmConfigItem {
   providerCompleteApiUrl: string
@@ -273,15 +277,69 @@ function getNewConfigItem(): LlmConfigItem {
 const formRef = ref<InstanceType<typeof ElForm>>()
 const formContent = ref<LlmConfigItem[]>([getNewConfigItem()])
 
-const formRules = {}
+const formContentForElForm = computed(() => {
+  const valueMap = {}
+  formContent.value.forEach((configItem, i) => {
+    valueMap[`${i}_providerCompleteApiUrl`] = configItem.providerCompleteApiUrl
+  })
+  return valueMap
+})
+const formRulesForElForm = computed(() => {
+  const valueMap = {}
+  formContent.value.forEach((_, i) => {
+    valueMap[`${i}_providerCompleteApiUrl`] = [
+      {
+        required: true,
+        message: '请输入服务提供商 Base URL'
+      },
+      {
+        trigger: 'blur',
+        validator(_, value, cb) {
+          try {
+            new URL(value?.trim())
+          } catch (err) {
+            cb(`URL 格式无效，请重新输入`)
+          }
+          if (/^http(s)?:\/\//.test(value)) {
+            cb()
+            return
+          }
+          cb(`服务提供商 Base URL 无效，请重新输入`)
+        }
+      }
+    ]
+  })
+  return valueMap
+})
 
 const handleCancel = () => {
   gtagRenderer('cancel_clicked')
   electron.ipcRenderer.send('close-llm-config')
   gtagRenderer('cancel_done')
 }
+
 const handleSubmit = async () => {
   gtagRenderer('submit_clicked', { llm_config_length: formContent.value.length })
+  await formRef.value?.validate()
+  if (!formContent.value.length) {
+    gtagRenderer('empty_model_list')
+    ElMessage.warning({
+      message: '可选模型列表为空，请出现填写'
+    })
+    formContent.value = [getNewConfigItem()]
+    return
+  } else if (formContent.value.length > 1) {
+    const firstEnabledModel = formContent.value.find(it => it.enabled)
+    if (!firstEnabledModel) {
+      gtagRenderer('no_enabled_model_find_in_model_list')
+      ElMessage.warning({
+        dangerouslyUseHTMLString: true,
+        grouping: true,
+        message: '<div style="white-space: nowrap">所有模型均被禁用；请至少启用一个模型</div>'
+      })
+      return
+    }
+  }
   electron.ipcRenderer.invoke('save-llm-config', JSON.parse(JSON.stringify(formContent.value)))
   gtagRenderer('submit_done')
 }
@@ -403,11 +461,11 @@ function handlePresetClick(selected: (typeof llmPresetList)[number], index) {
 
 const firstInputRefList = ref<InstanceType<typeof ElInput>[]>([])
 function addConfig() {
+  gtagRenderer('new_config_item_added', { config_list_length_before_add: formContent.value.length })
   formContent.value.push(getNewConfigItem())
   nextTick(() => {
     firstInputRefList.value[firstInputRefList.value.length - 1]?.focus()
   })
-  gtagRenderer('new_config_item_added')
 }
 function moveConfigUp(index) {
   ;[formContent.value[index], formContent.value[index - 1]] = [
@@ -436,7 +494,7 @@ watch(
     if (nVal <= 1) {
       electron.ipcRenderer.send('update-window-size', {
         width: window.innerWidth,
-        height: 510
+        height: 550
       })
     } else {
       electron.ipcRenderer.send('update-window-size', {

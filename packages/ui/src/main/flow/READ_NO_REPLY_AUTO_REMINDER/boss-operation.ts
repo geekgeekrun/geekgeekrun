@@ -7,6 +7,7 @@ import {
   writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { formatResumeJsonToMarkdown } from '../../../common/utils/format-resume-json-to-markdown'
+import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../common/constant'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {
   const emotionEntryButtonProxy = await page.$('.chat-conversation .message-controls .btn-emotion')
@@ -25,6 +26,8 @@ export const sendLookForwardReplyEmotion = async (page: Page) => {
 
 const pickLlmConfigFromList = (llmConfigList) => {
   if (llmConfigList.length === 1) {
+    llmConfigList[0].enabled = true
+    llmConfigList[0].serveWeight = SINGLE_ITEM_DEFAULT_SERVE_WEIGHT
     return llmConfigList[0]
   }
   llmConfigList = llmConfigList.filter((it) => it.enabled)
@@ -33,6 +36,9 @@ const pickLlmConfigFromList = (llmConfigList) => {
     for (let j = 0; j < Math.floor(llmConfigList[i].serveWeight); j++) {
       pool.push(i)
     }
+  }
+  if (!pool.length) {
+    throw new Error(`cannot find a usable model`)
   }
   const index = Math.floor(pool.length * Math.random())
   return llmConfigList[
