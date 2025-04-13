@@ -25,6 +25,7 @@ import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitR
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
+import { ChangeJobLibraryView1744467048874 } from "./migrations/1744467048874-ChangeJobLibraryView";
 
 export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
@@ -56,7 +57,8 @@ export function initDb(dbFilePath) {
     ],
     migrations: [
       UpdateChatStartupLogTable1729182577167,
-      UpdateBossInfoTable1732032381304
+      UpdateBossInfoTable1732032381304,
+      ChangeJobLibraryView1744467048874
     ],
     migrationsRun: true
   });

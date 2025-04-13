@@ -38,6 +38,7 @@
                 link
                 type="primary"
                 size="small"
+                :disabled="!row.latestLogDate"
                 @click="handleViewJobHistoryButtonClick(row)"
                 >变更记录</ElButton
               >
@@ -74,6 +75,7 @@
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
+        scene="jobLibrary"
         @closed="selectedJobInfoForViewSnapshot = null"
       />
     </ElDrawer>
