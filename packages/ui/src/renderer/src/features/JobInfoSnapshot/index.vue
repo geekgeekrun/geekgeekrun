@@ -3,13 +3,6 @@
     <el-form-item label="公司">{{ jobInfo.companyName }}</el-form-item>
     <el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item>
     <el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item>
-    <el-form-item v-if="scene === 'jobLibrary'" label="最近抓取时间">
-      {{
-        jobInfo.latestLogDate
-          ? transformUtcDateToLocalDate(jobInfo.latestLogDate).format('YYYY-MM-DD HH:mm:ss')
-          : '无记录，数据可能来自旧版本'
-      }}
-    </el-form-item>
     <el-form-item v-if="scene !== 'jobLibrary'" label="开聊时间">
       {{
         jobInfo.date

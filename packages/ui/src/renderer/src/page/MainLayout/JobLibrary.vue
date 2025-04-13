@@ -38,7 +38,6 @@
                 link
                 type="primary"
                 size="small"
-                :disabled="!row.latestLogDate"
                 @click="handleViewJobHistoryButtonClick(row)"
                 >变更记录</ElButton
               >
