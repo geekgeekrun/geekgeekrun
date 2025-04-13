@@ -84,6 +84,7 @@
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
+        scene="startChatRecord"
         @closed="
           () => {
             gtagRenderer('start_chat_record_closed')

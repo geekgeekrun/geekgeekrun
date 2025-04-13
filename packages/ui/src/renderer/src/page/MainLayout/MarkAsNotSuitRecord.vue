@@ -101,6 +101,7 @@
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
+        scene="markAsNotSuitRecord"
         @closed="
           () => {
             gtagRenderer('mark_as_not_suit_record_closed')

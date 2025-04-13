@@ -3,7 +3,14 @@
     <el-form-item label="公司">{{ jobInfo.companyName }}</el-form-item>
     <el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item>
     <el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item>
-    <el-form-item v-if="scene !== 'jobLibrary'" label="开聊时间">
+    <el-form-item v-if="scene === 'startChatRecord'" label="开聊时间">
+      {{
+        jobInfo.date
+          ? transformUtcDateToLocalDate(jobInfo.date).format('YYYY-MM-DD HH:mm:ss')
+          : '无记录'
+      }}
+    </el-form-item>
+    <el-form-item v-if="scene === 'markAsNotSuitRecord'" label="标记时间">
       {{
         jobInfo.date
           ? transformUtcDateToLocalDate(jobInfo.date).format('YYYY-MM-DD HH:mm:ss')
@@ -18,19 +25,22 @@
     <el-form-item label="职位描述">
       <pre class="of-auto">{{ jobInfo.description }}</pre>
     </el-form-item>
-    <el-form-item label="BOSS">{{ jobInfo.bossName }} - {{ jobInfo.bossTitle }}</el-form-item>
+    <el-form-item label="BOSS"
+      >{{ jobInfo.bossName
+      }}<template v-if="jobInfo.bossTitle"> - {{ jobInfo.bossTitle }}</template></el-form-item
+    >
   </el-form>
 </template>
 
 <script setup lang="ts">
 import { PropType } from 'vue'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { type VJobLibrary } from '@geekgeekrun/sqlite-plugin/src/entity/VJobLibrary'
+import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/src/entity/VMarkAsNotSuitLog'
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 
 defineProps({
   jobInfo: {
-    type: Object as PropType<VChatStartupLog | VJobLibrary>,
+    type: Object as PropType<VChatStartupLog | VMarkAsNotSuitLog>,
     required: true
   },
   scene: {
