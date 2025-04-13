@@ -6,7 +6,7 @@ import {
   readStorageFile,
   writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { formatResumeJsonToMarkdown } from '../../../common/utils/format-resume-json-to-markdown'
+import { formatResumeJsonToMarkdown } from '../../../common/utils/resume'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../common/constant'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {

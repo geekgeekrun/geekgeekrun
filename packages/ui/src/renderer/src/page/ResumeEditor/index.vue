@@ -310,34 +310,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ElForm, ElButton, ElAlert } from 'element-plus'
+import { ElForm, ElButton, ElAlert, ElMessageBox } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
-
-interface ResumeContent {
-  name: string
-  workYearDesc: string
-  expectJob: string
-  userDescription: string
-  geekWorkExpList: Array<{
-    company: string
-    positionName: string
-    startYearMon: string | null
-    endYearMon: string | null
-    performance: string
-    workDescription: string
-  }>
-  geekProjExpList: Array<{
-    name: string
-    startYearMon: string
-    endYearMon: string
-    roleName: string
-    projectDescription: string
-    performance: string
-  }>
-  expectSalary: [string, string]
-}
+import { type ResumeContent, resumeContentEnoughDetect } from '../../../../common/utils/resume'
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 
@@ -367,6 +344,25 @@ const handleCancel = () => {
 }
 const handleSubmit = async () => {
   gtagRenderer('submit_clicked')
+  if (
+    !resumeContentEnoughDetect({
+      content: formContent.value
+    })
+  ) {
+    try {
+      gtagRenderer('resume_content_not_enough_dialog_show')
+      await ElMessageBox.confirm(
+        `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不够随机<br /><br />要继续保存吗？`,
+        {
+          cancelButtonText: '不，我再改改',
+          confirmButtonText: '是的，继续保存',
+          dangerouslyUseHTMLString: true
+        }
+      )
+    } catch {
+      return
+    }
+  }
   electron.ipcRenderer.invoke('save-resume-content', JSON.parse(JSON.stringify(formContent.value)))
   gtagRenderer('submit_done')
 }

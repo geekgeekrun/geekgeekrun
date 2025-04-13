@@ -1,3 +1,27 @@
+export interface ResumeContent {
+  name: string
+  workYearDesc: string
+  expectJob: string
+  userDescription: string
+  geekWorkExpList: Array<{
+    company: string
+    positionName: string
+    startYearMon: string | null
+    endYearMon: string | null
+    performance: string
+    workDescription: string
+  }>
+  geekProjExpList: Array<{
+    name: string
+    startYearMon: string
+    endYearMon: string
+    roleName: string
+    projectDescription: string
+    performance: string
+  }>
+  expectSalary: [string, string]
+}
+
 export function formatResumeJsonToMarkdown(resume) {
   const basicInfoText = [
     ['# 姓名', resume.content.name],
@@ -52,4 +76,8 @@ export function formatResumeJsonToMarkdown(resume) {
   const result = `${basicInfoText}\n\n${formattedWorkExpText}\n\n${formattedProjWorkExpText}`
 
   return result
+}
+
+export function resumeContentEnoughDetect(resumeItem: { content: ResumeContent }) {
+  return formatResumeJsonToMarkdown(resumeItem)?.length > 800
 }

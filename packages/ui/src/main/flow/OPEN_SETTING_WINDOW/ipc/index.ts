@@ -38,6 +38,7 @@ import {
   autoReminderPromptTemplateFileName,
   writeDefaultAutoRemindPrompt
 } from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+import { resumeContentEnoughDetect } from '../../../../common/utils/resume'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -501,6 +502,10 @@ export default function initIpc() {
   ipcMain.on('close-resume-editor', () => resumeEditorWindow?.close())
   ipcMain.handle('check-if-auto-remind-prompt-valid', async () => {
     await getValidTemplate()
+  })
+  ipcMain.handle('resume-content-enough-detect', async () => {
+    const res = (await readConfigFile('resumes.json'))?.[0]
+    return resumeContentEnoughDetect(res)
   })
   ipcMain.handle('overwrite-auto-remind-prompt-with-default', async () => {
     await writeDefaultAutoRemindPrompt()
