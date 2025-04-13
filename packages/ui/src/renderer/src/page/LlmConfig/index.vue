@@ -5,7 +5,16 @@
         <div class="mt1em mb1em">
           <div class="flex flex-items-center flex-justify-between">
             <div>大语言模型设置</div>
-            <el-dropdown @command="(item) => openExternalLink(item.url)">
+            <el-dropdown
+              @command="
+                (item) => {
+                  gtagRenderer('provider_url_for_secret_clicked', {
+                    name: item.name
+                  })
+                  openExternalLink(item.url)
+                }
+              "
+            >
               <el-button size="small"
                 >申请 API Secret <el-icon class="el-icon--right"><arrow-down /></el-icon
               ></el-button>
@@ -28,7 +37,12 @@
                 }"
                 href="javascript:void(0)"
                 @click.prevent="
-                  openExternalLink('https://api-docs.deepseek.com/zh-cn/api/create-chat-completion')
+                  () => {
+                    gtagRenderer('chat_completion_intro_doc_link_clicked')
+                    openExternalLink(
+                      'https://api-docs.deepseek.com/zh-cn/api/create-chat-completion'
+                    )
+                  }
                 "
                 >对话补全</a
               >且兼容
@@ -37,7 +51,12 @@
                   color: 'var(--el-color-primary)'
                 }"
                 href="javascript:void(0)"
-                @click.prevent="openExternalLink('https://www.npmjs.com/package/openai')"
+                @click.prevent="
+                  () => {
+                    gtagRenderer('openai_sdk_intro_doc_link_clicked')
+                    openExternalLink('https://www.npmjs.com/package/openai')
+                  }
+                "
                 >OpenAI SDK</a
               >
             </li>
@@ -158,6 +177,11 @@
                         maxRows: 10
                       }"
                       font-size-12px
+                      @click="
+                        nextTick(() =>
+                          gtagRenderer('model_enable_status_changed', { enabled: conf.enabled })
+                        )
+                      "
                     ></el-checkbox>
                   </el-form-item>
                   <el-form-item prop="serveWeight" class="ml40px">
@@ -175,6 +199,11 @@
                       :precision="0"
                       font-size-12px
                       placeholder="0 ~ 100"
+                      @change="
+                        (new_val, old_val) => {
+                          gtagRenderer('serve_weight_changed', { new_val, old_val })
+                        }
+                      "
                     ></el-input-number>
                   </el-form-item>
                 </div>
@@ -222,6 +251,7 @@ import {
 } from 'element-plus'
 import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ref, onMounted, watch, nextTick } from 'vue'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 interface LlmConfigItem {
   providerCompleteApiUrl: string
@@ -246,10 +276,14 @@ const formContent = ref<LlmConfigItem[]>([getNewConfigItem()])
 const formRules = {}
 
 const handleCancel = () => {
+  gtagRenderer('cancel_clicked')
   electron.ipcRenderer.send('close-llm-config')
+  gtagRenderer('cancel_done')
 }
 const handleSubmit = async () => {
+  gtagRenderer('submit_clicked', { llm_config_length: formContent.value.length })
   electron.ipcRenderer.invoke('save-llm-config', JSON.parse(JSON.stringify(formContent.value)))
+  gtagRenderer('submit_done')
 }
 
 onMounted(async () => {
@@ -359,6 +393,9 @@ const providerList: Array<{ name: string; url: string }> = [
 ]
 
 function handlePresetClick(selected: (typeof llmPresetList)[number], index) {
+  gtagRenderer('model_preset_clicked', {
+    name: selected.name
+  })
   for (const k of Object.keys(formContent.value[index])) {
     formContent.value[index][k] = selected.config[k]
   }
@@ -370,12 +407,14 @@ function addConfig() {
   nextTick(() => {
     firstInputRefList.value[firstInputRefList.value.length - 1]?.focus()
   })
+  gtagRenderer('new_config_item_added')
 }
 function moveConfigUp(index) {
   ;[formContent.value[index], formContent.value[index - 1]] = [
     formContent.value[index - 1],
     formContent.value[index]
   ]
+  gtagRenderer('config_item_moved_up')
 }
 
 function moveConfigDown(index) {
@@ -383,10 +422,12 @@ function moveConfigDown(index) {
     formContent.value[index + 1],
     formContent.value[index]
   ]
+  gtagRenderer('config_item_moved_down')
 }
 
 function removeConfig(index) {
   formContent.value.splice(index, 1)
+  gtagRenderer('config_item_removed')
 }
 
 watch(

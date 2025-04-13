@@ -41,6 +41,7 @@ import { ElIcon } from 'element-plus'
 import { TopRight } from '@element-plus/icons-vue'
 import useBuildInfo from '@renderer/hooks/useBuildInfo'
 import { debounce } from 'lodash-es'
+import { gtagRenderer } from '@renderer/utils/gtag'
 const router = useRouter()
 const unmountedCbs: Array<InstanceType<typeof Function>> = []
 onUnmounted(() => {
@@ -76,31 +77,18 @@ onUnmounted(() => {
 })()
 
 const { buildInfo } = useBuildInfo()
-const getIssueUrlWithBody = (issueBody: string = '') => {
-  const baseUrl = `https://github.com/geekgeekrun/geekgeekrun/issues/new`
-  issueBody = issueBody || ''
-  if (!issueBody || !issueBody.trim()) {
-    return baseUrl
-  }
-  const urlObj = new URL(baseUrl)
-  urlObj.searchParams.append('body', issueBody)
-
-  return urlObj.toString()
-}
 const handleFeedbackClick = () => {
-  electron.ipcRenderer.send(
-    'open-external-link',
-    getIssueUrlWithBody(`\n\n\n-----
-版本号：${buildInfo.value.version}(${buildInfo.value.buildVersion})
-提交：${buildInfo.value.buildHash.substring(0, 6)}`)
-  )
+  gtagRenderer('goto_feedback_clicked')
+  electron.ipcRenderer.send('send-feed-back-to-github-issue')
 }
 const handleGotoProjectPageClick = () => {
+  gtagRenderer('goto_project_github_clicked')
   electron.ipcRenderer.send('open-external-link', 'https://github.com/geekgeekrun/geekgeekrun')
 }
 
 const handleLaunchBossSite = debounce(
   async () => {
+    gtagRenderer('launch-boss-site-clicked')
     return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
       url: `https://www.zhipin.com/`
     })

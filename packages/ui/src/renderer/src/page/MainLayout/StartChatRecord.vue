@@ -55,7 +55,15 @@
     </div>
     <div class="flex flex-0 flex-justify-between pt10px pb10px">
       <div class="w100px">
-        <el-button :loading="isTableLoading" size="small" @click="getAutoStartChatRecord"
+        <el-button
+          :loading="isTableLoading"
+          size="small"
+          @click="
+            () => {
+              gtagRenderer('start_chat_record_refresh_clicked')
+              getAutoStartChatRecord()
+            }
+          "
           >刷新</el-button
         >
       </div>
@@ -76,7 +84,12 @@
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
-        @closed="selectedJobInfoForViewSnapshot = null"
+        @closed="
+          () => {
+            gtagRenderer('start_chat_record_closed')
+            selectedJobInfoForViewSnapshot = null
+          }
+        "
       />
     </ElDrawer>
   </div>
@@ -89,6 +102,7 @@ import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VCha
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const tableData = ref<VChatStartupLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -104,6 +118,10 @@ const tableRef = ref<InstanceType<typeof ElTable>>()
 const isTableLoading = ref(false)
 async function getAutoStartChatRecord() {
   try {
+    gtagRenderer('start_chat_record_request_sent', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     isTableLoading.value = true
     const { data: res } = (await electron.ipcRenderer.invoke('get-auto-start-chat-record', {
       pageNo: pagination.value.pageNo,
@@ -115,7 +133,16 @@ async function getAutoStartChatRecord() {
       pageNo: res.pageNo,
       pageSize: pagination.value.pageSize
     }
+    gtagRenderer('start_chat_record_request_success', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
   } catch (err) {
+    gtagRenderer('start_chat_record_request_error', {
+      err,
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     console.log(err)
     tableData.value = []
   } finally {

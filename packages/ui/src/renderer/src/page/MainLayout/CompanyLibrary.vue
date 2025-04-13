@@ -23,7 +23,15 @@
     </div>
     <div class="flex flex-0 flex-justify-between pt10px pb10px">
       <div class="w100px">
-        <el-button :loading="isTableLoading" size="small" @click="getCompanyLibrary"
+        <el-button
+          :loading="isTableLoading"
+          size="small"
+          @click="
+            () => {
+              gtagRenderer('company_library_refresh_clicked')
+              getCompanyLibrary()
+            }
+          "
           >刷新</el-button
         >
       </div>
@@ -49,6 +57,7 @@ import { ElTable, ElTableColumn, ElButton, ElPagination } from 'element-plus'
 import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import { formatCompanyScale } from '@geekgeekrun/sqlite-plugin/src/utils/parser'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const tableData = ref<VChatStartupLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -64,6 +73,10 @@ const tableRef = ref<InstanceType<typeof ElTable>>()
 const isTableLoading = ref(false)
 async function getCompanyLibrary() {
   try {
+    gtagRenderer('company_library_request_sent', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     isTableLoading.value = true
     const { data: res } = (await electron.ipcRenderer.invoke('get-company-library', {
       pageNo: pagination.value.pageNo,
@@ -75,7 +88,16 @@ async function getCompanyLibrary() {
       pageNo: res.pageNo,
       pageSize: pagination.value.pageSize
     }
+    gtagRenderer('company_library_request_success', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
   } catch (err) {
+    gtagRenderer('company_library_request_error', {
+      err,
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     console.log(err)
     tableData.value = []
   } finally {

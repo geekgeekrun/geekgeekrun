@@ -72,7 +72,15 @@
     </div>
     <div class="flex flex-0 flex-justify-between pt10px pb10px">
       <div class="w100px">
-        <el-button :loading="isTableLoading" size="small" @click="getMarkAsNotSuitRecord"
+        <el-button
+          :loading="isTableLoading"
+          size="small"
+          @click="
+            () => {
+              gtagRenderer('mark_as_not_suit_record_refresh_clicked')
+              getMarkAsNotSuitRecord()
+            }
+          "
           >刷新</el-button
         >
       </div>
@@ -93,7 +101,12 @@
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
-        @closed="selectedJobInfoForViewSnapshot = null"
+        @closed="
+          () => {
+            gtagRenderer('mark_as_not_suit_record_closed')
+            selectedJobInfoForViewSnapshot = null
+          }
+        "
       />
     </ElDrawer>
   </div>
@@ -107,6 +120,7 @@ import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/src/enums'
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const tableData = ref<VMarkAsNotSuitLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -122,6 +136,10 @@ const tableRef = ref<InstanceType<typeof ElTable>>()
 const isTableLoading = ref(false)
 async function getMarkAsNotSuitRecord() {
   try {
+    gtagRenderer('mark_as_not_suit_record_request_sent', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     isTableLoading.value = true
     const { data: res } = (await electron.ipcRenderer.invoke('get-mark-as-not-suit-record', {
       pageNo: pagination.value.pageNo,
@@ -133,7 +151,16 @@ async function getMarkAsNotSuitRecord() {
       pageNo: res.pageNo,
       pageSize: pagination.value.pageSize
     }
+    gtagRenderer('mark_as_not_suit_record_request_success', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
   } catch (err) {
+    gtagRenderer('mark_as_not_suit_record_request_error', {
+      err,
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     console.log(err)
     tableData.value = []
   } finally {
@@ -158,6 +185,7 @@ onMounted(() => {
 })
 
 async function handleViewJobOnlineButtonClick(encryptJobId: string) {
+  gtagRenderer('view_job_online_button_clicked')
   return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
     url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
   })
@@ -167,6 +195,7 @@ const drawVisibleModelValue = ref(false)
 const selectedJobInfoForViewSnapshot = ref<VMarkAsNotSuitLog | null>(null)
 
 function handleViewJobSnapshotButtonClick(record: VMarkAsNotSuitLog) {
+  gtagRenderer('view_job_snapshot_button_clicked')
   selectedJobInfoForViewSnapshot.value = record
   drawVisibleModelValue.value = true
 }

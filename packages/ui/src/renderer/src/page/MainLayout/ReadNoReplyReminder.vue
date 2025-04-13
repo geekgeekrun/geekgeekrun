@@ -73,7 +73,16 @@
                 <el-button size="small" type="primary" @click="handleClickEditPrompt">
                   使用外部编辑器编辑提示词模板
                 </el-button>
-                <el-button size="small" type="primary" @click="restoreDefaultTemplate">
+                <el-button
+                  size="small"
+                  type="primary"
+                  @click="
+                    () => {
+                      gtagRenderer('reset_template_clicked_in_main_form')
+                      restoreDefaultTemplate()
+                    }
+                  "
+                >
                   还原默认提示词模板
                 </el-button>
               </div>
@@ -139,6 +148,8 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { dayjs, ElForm, ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { RECHAT_CONTENT_SOURCE } from '../../../../common/enums/auto-start-chat'
+import { gtagRenderer } from '@renderer/utils/gtag'
+
 const router = useRouter()
 const formContent = ref({
   autoReminder: {
@@ -155,8 +166,10 @@ const enableRechatLimit = computed({
   },
   set(val) {
     if (!val) {
+      gtagRenderer('rechat_limit_disabled')
       formContent.value.autoReminder.rechatLimitDay = 0
     } else {
+      gtagRenderer('rechat_limit_enabled')
       formContent.value.autoReminder.rechatLimitDay = 21
     }
   }
@@ -213,12 +226,17 @@ watch(
 )
 
 const handleSubmit = async () => {
+  gtagRenderer('save_config_clicked', {
+    ...formContent.value?.autoReminder
+  })
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  gtagRenderer('config_saved')
   try {
     await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
   } catch (err) {
     if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
+      gtagRenderer('cannot_launch_due_to_resume_placeholder_not_exist')
       console.log(`提示词模板无效`, err)
       ElMessageBox.confirm(
         '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
@@ -232,10 +250,14 @@ const handleSubmit = async () => {
         }
       )
         .then(async () => {
+          gtagRenderer('reset_template_clicked_in_invalid_tip_dialog')
           await restoreDefaultTemplate()
         })
-        .catch(() => {})
+        .catch(() => {
+          gtagRenderer('close_invalid_tip_dialog')
+        })
     } else {
+      gtagRenderer('cannot_launch_due_to_unknown_error', { err })
       ElMessage({
         type: 'error',
         message: '用于生成自动提醒消息的提示词检查未通过，请重试'
@@ -243,6 +265,7 @@ const handleSubmit = async () => {
     }
     return
   }
+  gtagRenderer('reminder_launched')
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'read-no-reply-reminder' }
@@ -287,6 +310,7 @@ const rechatLimitDateString = computed(() => {
 })
 
 const handleClickConfigLlm = async () => {
+  gtagRenderer('config_llm_clicked')
   try {
     await electron.ipcRenderer.invoke('llm-config')
   } catch (err) {
@@ -295,6 +319,7 @@ const handleClickConfigLlm = async () => {
 }
 
 const handleClickEditResume = async () => {
+  gtagRenderer('edit_resume_clicked')
   try {
     await electron.ipcRenderer.invoke('resume-edit')
   } catch (err) {
@@ -303,6 +328,7 @@ const handleClickEditResume = async () => {
 }
 
 const handleClickEditPrompt = async () => {
+  gtagRenderer('edit_prompt_clicked')
   await electron.ipcRenderer.send('no-reply-reminder-prompt-edit')
 }
 </script>

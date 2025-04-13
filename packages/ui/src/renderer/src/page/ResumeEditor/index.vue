@@ -313,6 +313,7 @@
 import { ElForm, ElButton, ElAlert } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 interface ResumeContent {
   name: string
@@ -360,10 +361,14 @@ const formContent = ref<ResumeContent>(getEmptyFormContent())
 const formRules = {}
 
 const handleCancel = () => {
+  gtagRenderer('cancel_clicked')
   electron.ipcRenderer.send('close-resume-editor')
+  gtagRenderer('cancel_done')
 }
 const handleSubmit = async () => {
+  gtagRenderer('submit_clicked')
   electron.ipcRenderer.invoke('save-resume-content', JSON.parse(JSON.stringify(formContent.value)))
+  gtagRenderer('submit_done')
 }
 
 onMounted(async () => {
@@ -410,12 +415,14 @@ function getNewWorkExpItem() {
 }
 function addWorkExp() {
   formContent.value.geekWorkExpList.push(getNewWorkExpItem())
+  gtagRenderer('resume_work_exp_added')
 }
 function moveWorkExpUp(index) {
   ;[formContent.value.geekWorkExpList[index], formContent.value.geekWorkExpList[index - 1]] = [
     formContent.value.geekWorkExpList[index - 1],
     formContent.value.geekWorkExpList[index]
   ]
+  gtagRenderer('resume_work_exp_moved_up')
 }
 
 function moveWorkExpDown(index) {
@@ -423,10 +430,12 @@ function moveWorkExpDown(index) {
     formContent.value.geekWorkExpList[index + 1],
     formContent.value.geekWorkExpList[index]
   ]
+  gtagRenderer('resume_work_exp_moved_down')
 }
 
 function removeWorkExp(index) {
   formContent.value.geekWorkExpList.splice(index, 1)
+  gtagRenderer('resume_work_exp_removed')
 }
 // #endregion
 
@@ -443,12 +452,14 @@ function getNewProjExpItem() {
 }
 function addProjExp() {
   formContent.value.geekProjExpList.push(getNewProjExpItem())
+  gtagRenderer('resume_proj_exp_added')
 }
 function moveProjExpUp(index) {
   ;[formContent.value.geekProjExpList[index], formContent.value.geekProjExpList[index - 1]] = [
     formContent.value.geekProjExpList[index - 1],
     formContent.value.geekProjExpList[index]
   ]
+  gtagRenderer('resume_proj_exp_moved_up')
 }
 
 function moveProjExpDown(index) {
@@ -456,12 +467,18 @@ function moveProjExpDown(index) {
     formContent.value.geekProjExpList[index + 1],
     formContent.value.geekProjExpList[index]
   ]
+  gtagRenderer('resume_proj_exp_moved_down')
 }
 
 function removeProjExp(index) {
   formContent.value.geekProjExpList.splice(index, 1)
+  gtagRenderer('resume_proj_exp_removed')
 }
 // #endregion
+
+onMounted(() => {
+  gtagRenderer('resume_editor_mounted')
+})
 </script>
 
 <style lang="scss" scoped>

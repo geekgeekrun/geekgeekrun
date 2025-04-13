@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import BootstrapSplash from '@renderer/page/BootstrapSplash/index.vue'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -128,7 +129,7 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue'),
         meta: {
           title: '正在下载核心组件'
-        },
+        }
       }
     ]
   }
@@ -139,12 +140,16 @@ const router = createRouter({
   routes
 })
 
-router.afterEach((to) => {
+router.afterEach((to, from) => {
   if (to.meta?.title) {
     document.title = `${to.meta.title} - GeekGeekRun`
   } else {
     document.title = `GeekGeekRun`
   }
+  gtagRenderer('router_path_changed', {
+    from_path: from.fullPath,
+    to_path: to.fullPath
+  })
 })
 
 export default router

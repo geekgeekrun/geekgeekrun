@@ -66,6 +66,7 @@ import { ElForm, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
+import { gtagRenderer } from '@renderer/utils/gtag'
 const router = useRouter()
 
 const formContent = ref({
@@ -99,13 +100,16 @@ const formRules = {
     validator(_, value, cb) {
       if (!value) {
         cb()
+        gtagRenderer('empty_reg_exp_for_expect_job')
         return
       }
       try {
         new RegExp(value, 'ig')
+        gtagRenderer('valid_reg_exp_for_expect_job')
         cb()
       } catch (err) {
-        cb(new Error(`正则无效：${err.message}`))
+        cb(new Error(`正则无效：${err?.message}`))
+        gtagRenderer('invalid_reg_exp_for_expect_job')
       }
     }
   }
@@ -113,20 +117,29 @@ const formRules = {
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
+  gtagRenderer('save_config_and_launch_clicked', {
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+  })
   formContent.value.expectJobRegExpStr = (formContent.value.expectJobRegExpStr || '').trim()
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
-
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'geek-auto-start-chat-with-boss' }
   })
+  gtagRenderer('config_saved_and_will_launch_auto_start_chat', {
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+  })
 }
 const handleSave = async () => {
+  gtagRenderer('save_config_clicked', {
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+  })
   normalizeExpectCompanies()
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
-  ElMessage.success('Configuration saved.')
+  ElMessage.success('配置保存成功')
+  gtagRenderer('config_saved')
 }
 
 const normalizeExpectCompanies = () => {
@@ -138,6 +151,7 @@ const normalizeExpectCompanies = () => {
 }
 
 const handleClickLaunchLogin = () => {
+  gtagRenderer('launch_login_clicked')
   router.replace('/cookieAssistant')
 }
 </script>
