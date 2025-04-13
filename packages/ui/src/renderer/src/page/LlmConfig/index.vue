@@ -20,7 +20,7 @@
           </div>
         </div>
         <el-alert type="info" :closable="false" mb20px line-height-1.25em>
-          <ul pl16px>
+          <ul pl16px m0>
             <li>
               请确保当前服务商提供的模型支持<a
                 :style="{
@@ -395,7 +395,7 @@ watch(
     if (nVal <= 1) {
       electron.ipcRenderer.send('update-window-size', {
         width: window.innerWidth,
-        height: 500
+        height: 510
       })
     } else {
       electron.ipcRenderer.send('update-window-size', {

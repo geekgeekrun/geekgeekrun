@@ -6,7 +6,7 @@
           <span>简历编辑器</span>
         </div>
         <el-alert type="info" :closable="false" mb20px line-height-1.25em>
-          <ul pl16px>
+          <ul pl16px m0>
             <li>
               此简历将作为提示词的一部分提交给语言大模型，仅在匹配职位、生成已读不回提醒消息时使用；大部分信息非必填，但在不填写的情况下，可能会匹配到不准确的职位或生成预料之外的已读不回提醒消息
             </li>
