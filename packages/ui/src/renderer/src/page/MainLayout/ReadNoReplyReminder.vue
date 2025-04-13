@@ -53,16 +53,7 @@
                   style="background-color: #462ac4"
                   >Qwen2.5</span
                 >
-                模型，通过<a
-                  class="font-size-12px pt0 pb0"
-                  :style="{
-                    color: 'var(--el-color-primary)',
-                  }"
-                  type="text"
-                  href="javascript:void(0)"
-                  @click.prevent="openIntroOfCompletion"
-                  >对话补全</a
-                >接口实现消息生成；支持多个“服务商-模型”组合按权重搭配使用
+                模型；支持多个“服务商-模型”组合按权重搭配使用
               </div>
             </div>
           </el-form-item>
@@ -80,14 +71,14 @@
             <div>
               <div>
                 <el-button size="small" type="primary" @click="handleClickEditPrompt">
-                  使用外部编辑器编辑 Prompt 模板
+                  使用外部编辑器编辑提示词模板
                 </el-button>
                 <el-button size="small" type="primary" @click="restoreDefaultTemplate">
-                  还原默认 Prompt 模板
+                  还原默认提示词模板
                 </el-button>
               </div>
               <div class="font-size-12px color-#666">
-                对生成效果不够满意？可在此查看、编辑 Prompt 模板。请在模板中需要插入简历的位置插入
+                对生成效果不够满意？可在此查看、编辑提示词模板。请在模板中需要插入简历的位置插入
                 __REPLACE_REAL_RESUME_HERE__
               </div>
             </div>
@@ -228,9 +219,9 @@ const handleSubmit = async () => {
     await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
   } catch (err) {
     if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
-      console.log(`Prompt 模板无效`, err)
+      console.log(`提示词模板无效`, err)
       ElMessageBox.confirm(
-        'Prompt 模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的 Prompt 模板？',
+        '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
         '',
         {
           confirmButtonText: '是',
@@ -247,7 +238,7 @@ const handleSubmit = async () => {
     } else {
       ElMessage({
         type: 'error',
-        message: '用于生成自动提醒消息的 Prompt 检查未通过，请重试'
+        message: '用于生成自动提醒消息的提示词检查未通过，请重试'
       })
     }
     return
@@ -313,13 +304,6 @@ const handleClickEditResume = async () => {
 
 const handleClickEditPrompt = async () => {
   await electron.ipcRenderer.send('no-reply-reminder-prompt-edit')
-}
-
-const openIntroOfCompletion = () => {
-  electron.ipcRenderer.send(
-    'open-external-link',
-    'https://api-docs.deepseek.com/zh-cn/api/create-chat-completion'
-  )
 }
 </script>
 

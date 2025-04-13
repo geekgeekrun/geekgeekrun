@@ -3,8 +3,52 @@
     <div class="main-wrapper">
       <main>
         <div class="mt1em mb1em">
-          <span>大语言模型设置</span>
+          <div class="flex flex-items-center flex-justify-between">
+            <div>大语言模型设置</div>
+            <el-dropdown @command="(item) => openExternalLink(item.url)">
+              <el-button size="small"
+                >申请 API Secret <el-icon class="el-icon--right"><arrow-down /></el-icon
+              ></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item v-for="item in providerList" :key="item.name" :command="item">{{
+                    item.name
+                  }}</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
+        <el-alert type="info" :closable="false" mb20px line-height-1.25em>
+          <ul pl16px>
+            <li>
+              请确保当前服务商提供的模型支持<a
+                :style="{
+                  color: 'var(--el-color-primary)'
+                }"
+                href="javascript:void(0)"
+                @click.prevent="
+                  openExternalLink('https://api-docs.deepseek.com/zh-cn/api/create-chat-completion')
+                "
+                >对话补全</a
+              >且兼容
+              <a
+                :style="{
+                  color: 'var(--el-color-primary)'
+                }"
+                href="javascript:void(0)"
+                @click.prevent="openExternalLink('https://www.npmjs.com/package/openai')"
+                >OpenAI SDK</a
+              >
+            </li>
+            <li><b class="color-red">暂不支持推理模型</b>（例如 DeepSeek-R1）</li>
+            <li>
+              请自行确保您所接入的服务商能够保护您的隐私。<b class="color-red"
+                >此处所列举“服务商-模型”由第三方提供，仅供配置参考，不能保证它们能够合法使用您的数据，不表示本程序认可相关模型</b
+              >
+            </li>
+          </ul>
+        </el-alert>
         <el-form
           ref="formRef"
           :model="formContent"
@@ -83,7 +127,7 @@
                   font-size-12px
                 ></el-input>
               </el-form-item>
-              <el-form-item prop="model" label="要使用的模型">
+              <el-form-item prop="model" label="要使用的模型（model参数）">
                 <el-input
                   v-model="conf.model"
                   :autosize="{
@@ -153,7 +197,9 @@
     <footer pt10px pb10px flex flex-justify-center>
       <div w480px flex flex-justify-between>
         <div>
-          <el-button type="text" @click="addConfig">添加其它服务</el-button>
+          <el-button font-size-12px type="text" @click="addConfig"
+            >添加其它模型<span v-if="formContent.length <= 1">，以生成更随机的内容</span></el-button
+          >
         </div>
         <div>
           <el-button @click="handleCancel">取消</el-button>
@@ -236,6 +282,26 @@ const llmPresetList: {
       enabled: true
     }
   },
+  {
+    name: '由 火山引擎 提供的 DeepSeek-V3 模型',
+    config: {
+      model: 'deepseek-v3-250324',
+      providerApiSecret: '',
+      providerCompleteApiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+      serveWeight: 100,
+      enabled: true
+    }
+  },
+  {
+    name: '由 阿里云百炼 提供的 DeepSeek-V3 模型',
+    config: {
+      model: 'deepseek-v3',
+      providerApiSecret: '',
+      providerCompleteApiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      serveWeight: 100,
+      enabled: true
+    }
+  },
   // TODO:
   // {
   //   name: '通过 Ollama 部署的 DeepSeek-R1（14B）模型',
@@ -266,6 +332,29 @@ const llmPresetList: {
       serveWeight: 10,
       enabled: true
     }
+  }
+]
+
+const providerList: Array<{ name: string; url: string }> = [
+  {
+    name: 'DeepSeek',
+    url: 'https://platform.deepseek.com/'
+  },
+  {
+    name: '火山引擎 - 火山方舟',
+    url: 'https://console.volcengine.com/ark'
+  },
+  {
+    name: '阿里云百炼',
+    url: 'https://bailian.console.aliyun.com/?tab=model#/api-key'
+  },
+  {
+    name: 'OpenAI (国内可能不可用)',
+    url: 'https://platform.openai.com/api-keys'
+  },
+  {
+    name: 'FREE-CHATGPT-API (免费)',
+    url: 'https://github.com/popjane/free_chatgpt_api'
   }
 ]
 
@@ -306,7 +395,7 @@ watch(
     if (nVal <= 1) {
       electron.ipcRenderer.send('update-window-size', {
         width: window.innerWidth,
-        height: 360
+        height: 500
       })
     } else {
       electron.ipcRenderer.send('update-window-size', {
@@ -319,6 +408,9 @@ watch(
     immediate: true
   }
 )
+const openExternalLink = (url) => {
+  electron.ipcRenderer.send('open-external-link', url)
+}
 
 // function handleTestAvailability() {}
 </script>

@@ -40,12 +40,6 @@ import {
 } from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
 
 export default function initIpc() {
-  ipcMain.on('open-external-link', (_, link) => {
-    shell.openExternal(link, {
-      activate: true
-    })
-  })
-
   ipcMain.handle('fetch-config-file-content', async () => {
     const configFileContentList = configFileNameList.map((fileName) => {
       return readConfigFile(fileName)

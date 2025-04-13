@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain, shell } from 'electron'
 
 export default function initPublicIpc() {
   ipcMain.on(
@@ -18,4 +18,9 @@ export default function initPublicIpc() {
       win.setSize(size.width, size.height, size.animate)
     }
   )
+  ipcMain.on('open-external-link', (_, link) => {
+    shell.openExternal(link, {
+      activate: true
+    })
+  })
 }
