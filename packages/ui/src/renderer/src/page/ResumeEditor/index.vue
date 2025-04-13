@@ -410,7 +410,7 @@ const handleSubmit = async () => {
     try {
       gtagRenderer('resume_content_not_enough_dialog_show')
       await ElMessageBox.confirm(
-        `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不够随机<br /><br />要继续保存吗？`,
+        `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不符合预期（例如相同内容重复生成、生成预期之外的内容）<br /><br />要继续保存吗？`,
         {
           cancelButtonText: '不，我再改改',
           confirmButtonText: '是的，继续保存',

@@ -268,11 +268,15 @@ const handleSubmit = async () => {
     }
     return
   }
-  if (!(await electron.ipcRenderer.invoke('resume-content-enough-detect'))) {
+  if (
+    formContent.value.autoReminder?.rechatContentSource ===
+      RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT &&
+    !(await electron.ipcRenderer.invoke('resume-content-enough-detect'))
+  ) {
     gtagRenderer('resume_content_not_enough_dialog_show')
     try {
       await ElMessageBox.confirm(
-        `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不够随机<br /><br />要继续运行吗？`,
+        `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不符合预期（例如相同内容重复生成、生成预期之外的内容）<br /><br />要继续运行吗？`,
         {
           cancelButtonText: '不，我再看看',
           confirmButtonText: '是的，继续运行',
