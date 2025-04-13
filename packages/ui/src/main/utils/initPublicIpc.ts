@@ -29,7 +29,7 @@ export default function initPublicIpc() {
   ipcMain.on('gtag', (ev, { name, params } = {}) => {
     gtag(name, {
       ...params,
-      electronLogSource: 'renderer'
+      electron_log_source: 'renderer'
     })
   })
   ipcMain.on('send-feed-back-to-github-issue', (ev, payload) => {
