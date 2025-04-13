@@ -226,8 +226,11 @@ watch(
 )
 
 const handleSubmit = async () => {
-  gtagRenderer('save_config_clicked', {
-    ...formContent.value?.autoReminder
+  gtagRenderer('run_read_no_reply_reminder_clicked', {
+    throttle_interval_minutes: formContent.value.autoReminder.throttleIntervalMinutes,
+    rechat_limit_day: formContent.value.autoReminder.rechatLimitDay,
+    rechat_content_source: formContent.value.autoReminder.rechatContentSource,
+    recent_message_quantity_for_llm: formContent.value.autoReminder.recentMessageQuantityForLlm
   })
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
@@ -289,6 +292,7 @@ const restoreDefaultTemplate = async () => {
 }
 
 const handleClickLaunchLogin = () => {
+  gtagRenderer('launch_login_clicked')
   router.replace('/cookieAssistant')
 }
 
