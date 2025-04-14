@@ -12,6 +12,7 @@
     "rechatLimitDay": 21,
     "geminiApiKey": "",
     "rechatContentSource": 1,
-    "recentMessageQuantityForLlm": 8
+    "recentMessageQuantityForLlm": 8,
+    "rechatLlmFallback": 1
   }
 }

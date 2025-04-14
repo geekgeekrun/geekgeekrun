@@ -106,6 +106,23 @@
               次聊天内容作为上下文生成新消息
             </div>
           </el-form-item>
+          <el-form-item prop="recentMessageQuantityForLlm">
+            <div class="flex flex-items-center">
+              <span class="whitespace-nowrap">当所有模型均不可使用时&nbsp;</span>
+              <el-select
+                v-model="formContent.autoReminder.rechatLlmFallback"
+                class="w200px"
+                label="name"
+              >
+                <el-option
+                  v-for="option in rechatLlmFallbackOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :label="option.name"
+                />
+              </el-select>
+            </div>
+          </el-form-item>
         </template>
       </div>
       <el-form-item label="跟进间隔（分钟）" prop="throttleIntervalMinutes">
@@ -145,9 +162,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { dayjs, ElForm, ElMessage, ElMessageBox } from 'element-plus'
+import { dayjs, ElForm, ElMessage, ElMessageBox, ElSelect, ElOption } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { RECHAT_CONTENT_SOURCE } from '../../../../common/enums/auto-start-chat'
+import {
+  RECHAT_CONTENT_SOURCE,
+  RECHAT_LLM_FALLBACK
+} from '../../../../common/enums/auto-start-chat'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
 const router = useRouter()
@@ -156,7 +176,8 @@ const formContent = ref({
     throttleIntervalMinutes: 10,
     rechatLimitDay: 21,
     rechatContentSource: 1,
-    recentMessageQuantityForLlm: 8
+    recentMessageQuantityForLlm: 8,
+    rechatLlmFallback: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
   }
 })
 
@@ -354,6 +375,17 @@ const handleClickEditPrompt = async () => {
   gtagRenderer('edit_prompt_clicked')
   await electron.ipcRenderer.send('no-reply-reminder-prompt-edit')
 }
+
+const rechatLlmFallbackOptions = [
+  {
+    name: '发送“[盼回复]”表情',
+    value: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
+  },
+  {
+    name: '退出已读不回提醒器',
+    value: RECHAT_LLM_FALLBACK.EXIT_REMINDER_PROGRAM
+  }
+]
 </script>
 
 <style scoped lang="scss">

@@ -4,7 +4,7 @@ import { Browser, Page } from 'puppeteer'
 import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import {
   getPublicDbFilePath,
@@ -17,7 +17,8 @@ import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
-import { RECHAT_CONTENT_SOURCE } from '../../../common/enums/auto-start-chat'
+import { RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
+import gtag from '../../utils/gtag'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -27,6 +28,9 @@ const recentMessageQuantityForLlm =
 const rechatContentSource =
   readConfigFile('boss.json').autoReminder?.rechatContentSource ??
   RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION
+const rechatLlmFallback =
+  readConfigFile('boss.json').autoReminder?.rechatLlmFallback ??
+  RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
@@ -286,11 +290,17 @@ const mainLoop = async () => {
       await sleepWithRandomDelay(3250)
       if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
         try {
-          const messageListForGpt = historyMessageList.filter(it => it.bizType !== 101 && it.isSelf).slice(-recentMessageQuantityForLlm)
+          const messageListForGpt = historyMessageList
+            .filter((it) => it.bizType !== 101 && it.isSelf)
+            .slice(-recentMessageQuantityForLlm)
           await sendGptContent(pageMapByName.boss!, messageListForGpt)
         } catch (err) {
           console.log(err)
-          await sendLookForwardReplyEmotion(pageMapByName.boss!)
+          if (rechatLlmFallback === RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION) {
+            await sendLookForwardReplyEmotion(pageMapByName.boss!)
+          } else {
+            throw err
+          }
         }
       } else {
         await sendLookForwardReplyEmotion(pageMapByName.boss!)
@@ -353,6 +363,17 @@ export async function runEntry() {
           }) + '\r\n'
         )
         process.exit(1)
+      }
+      if (err instanceof Error && err.message === 'CANNOT_FIND_A_USABLE_MODEL') {
+        gtag('cannot_find_a_usable_model')
+        await dialog.showMessageBox({
+          type: 'error',
+          message:
+            '未找到可以使用的模型，请确定您所配置的模型均可使用。重启本程序或许可以解决这个问题',
+          buttons: ['退出']
+        })
+        process.exit(0)
+        break;
       }
     } finally {
       pageMapByName['boss'] = null
