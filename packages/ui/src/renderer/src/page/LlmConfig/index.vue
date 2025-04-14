@@ -76,7 +76,7 @@
           class="llm-config-form"
           :validate-on-rule-change="false"
         >
-          <div v-for="(conf, index) in formContent" :key="index" class="flex gap12px">
+          <div v-for="(conf, index) in formContent" :key="conf.id" class="flex gap12px">
             <div
               v-if="formContent.length > 1"
               :style="{
@@ -229,7 +229,7 @@
       <div w480px flex flex-justify-between>
         <div>
           <el-button font-size-12px type="text" @click="addConfig"
-            >添加其它模型<span v-if="formContent.length <= 1">，以生成更随机的内容</span></el-button
+            >添加备用模型<span v-if="formContent.length <= 1">，以生成更随机的内容</span></el-button
           >
         </div>
         <div>
@@ -256,8 +256,9 @@ import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../../common/constant'
-
+import { v4 as uuid } from 'uuid'
 interface LlmConfigItem {
+  id: string
   providerCompleteApiUrl: string
   providerApiSecret: string
   model: string
@@ -267,6 +268,7 @@ interface LlmConfigItem {
 
 function getNewConfigItem(): LlmConfigItem {
   return {
+    id: uuid(),
     providerCompleteApiUrl: '',
     providerApiSecret: '',
     model: '',
@@ -352,9 +354,12 @@ onMounted(async () => {
   }
   const keyOfItem = Object.keys(getNewConfigItem())
   formContent.value = savedFileContent.map((it) => {
-    const conf = {}
+    const conf: any = {}
     for (const k of keyOfItem) {
       conf[k] = it[k]
+    }
+    if (!it.id) {
+      conf.id = uuid()
     }
     return conf
   })
@@ -362,7 +367,7 @@ onMounted(async () => {
 
 const llmPresetList: {
   name: string
-  config: LlmConfigItem
+  config: Omit<LlmConfigItem, 'id'>
 }[] = [
   {
     name: '由 DeepSeek 提供的 DeepSeek-V3 模型',
@@ -456,6 +461,9 @@ function handlePresetClick(selected: (typeof llmPresetList)[number], index) {
   })
   for (const k of Object.keys(formContent.value[index])) {
     formContent.value[index][k] = selected.config[k]
+  }
+  if (!formContent.value[index].id) {
+    formContent.value[index].id = uuid()
   }
 }
 

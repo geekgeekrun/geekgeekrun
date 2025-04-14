@@ -24,26 +24,27 @@ export const sendLookForwardReplyEmotion = async (page: Page) => {
   await lookForwardReplyEmojiProxy!.click()
 }
 
+const blockModelSet = new Set()
 const pickLlmConfigFromList = (llmConfigList) => {
   if (llmConfigList.length === 1) {
     llmConfigList[0].enabled = true
     llmConfigList[0].serveWeight = SINGLE_ITEM_DEFAULT_SERVE_WEIGHT
-    return llmConfigList[0]
   }
-  llmConfigList = llmConfigList.filter((it) => it.enabled)
+  llmConfigList = llmConfigList.filter((it) => it.enabled && !blockModelSet.has(it.id))
+  if (!llmConfigList.length) {
+    return null
+  }
   const pool: number[] = []
   for (let i = 0; i < llmConfigList.length; i++) {
     for (let j = 0; j < Math.floor(llmConfigList[i].serveWeight); j++) {
-      pool.push(i)
+      pool.push(llmConfigList[i].id)
     }
   }
   if (!pool.length) {
-    throw new Error(`cannot find a usable model`)
+    return null
   }
   const index = Math.floor(pool.length * Math.random())
-  return llmConfigList[
-    pool[index]
-  ]
+  return llmConfigList.find(it => it.id === pool[index]) ?? null
 }
 
 // let _index = 0
@@ -135,17 +136,28 @@ export const sendGptContent = async (page: Page, chatRecords) => {
     })
   }
   console.log(chatList)
-  const llmConfigList = await readConfigFile('llm.json')
-  const llmConfig = pickLlmConfigFromList(llmConfigList)
-  console.log(llmConfig.providerCompleteApiUrl)
-  const res = await completes(
-    {
-      baseURL: llmConfig.providerCompleteApiUrl,
-      apiKey: llmConfig.providerApiSecret,
-      model: llmConfig.model
-    },
-    chatList
-  )
+  let res
+  while (!res) {
+    const llmConfigList = await readConfigFile('llm.json')
+    const llmConfig = pickLlmConfigFromList(llmConfigList)
+    if (!llmConfig) {
+      throw new Error(`CANNOT_FIND_A_USABLE_MODEL`);
+    }
+    console.log(llmConfig.providerCompleteApiUrl)
+    try {
+      res = await completes(
+        {
+          baseURL: llmConfig.providerCompleteApiUrl,
+          apiKey: llmConfig.providerApiSecret,
+          model: llmConfig.model
+        },
+        chatList
+      )
+    } catch (err) {
+      console.log('request failed', err)
+      blockModelSet.add(llmConfig.id)
+    }
+  }
   console.log(res)
   // _index++
   let textToSend
