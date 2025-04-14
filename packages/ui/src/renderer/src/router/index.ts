@@ -142,9 +142,9 @@ const router = createRouter({
 
 router.afterEach((to, from) => {
   if (to.meta?.title) {
-    document.title = `${to.meta.title} - GeekGeekRun`
+    document.title = `${to.meta.title} - GeekGeekRun 牛人快跑`
   } else {
-    document.title = `GeekGeekRun`
+    document.title = `GeekGeekRun 牛人快跑`
   }
   gtagRenderer('router_path_changed', {
     from_path: from.fullPath,

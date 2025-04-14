@@ -17,12 +17,16 @@ import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
+import { RECHAT_CONTENT_SOURCE } from '../../../common/enums/auto-start-chat'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
 const rechatLimitDay = readConfigFile('boss.json').autoReminder?.rechatLimitDay ?? 21
 const recentMessageQuantityForLlm =
   readConfigFile('boss.json').autoReminder?.recentMessageQuantityForLlm ?? 8
+const rechatContentSource =
+  readConfigFile('boss.json').autoReminder?.rechatContentSource ??
+  RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
@@ -280,9 +284,7 @@ const mainLoop = async () => {
         (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
     ) {
       await sleepWithRandomDelay(3250)
-      // execute reply
-      // eslint-disable-next-line no-constant-condition
-      if (1 + 1 === 2) {
+      if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
         try {
           const messageListForGpt = historyMessageList.filter(it => it.bizType !== 101 && it.isSelf).slice(-recentMessageQuantityForLlm)
           await sendGptContent(pageMapByName.boss!, messageListForGpt)
