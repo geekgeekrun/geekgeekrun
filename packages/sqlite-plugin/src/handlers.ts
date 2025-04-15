@@ -10,6 +10,7 @@ import { CompanyInfoChangeLog } from "./entity/CompanyInfoChangeLog";
 import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { MarkAsNotSuitLog } from "./entity/MarkAsNotSuitLog";
 import { ChatMessageRecord } from "./entity/ChatMessageRecord";
+import { LlmModelUsageRecord } from "./entity/LlmModelUsageRecord";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -304,6 +305,24 @@ export async function saveChatMessageRecord(
   })
   const chatMessageRecordRepository = ds.getRepository(ChatMessageRecord);
   await chatMessageRecordRepository.save(chatMessageRecordList);
+  //#endregion
+  return
+}
+
+export async function saveGptCompletionRequestRecord(
+  ds: DataSource,
+  records: LlmModelUsageRecord[]
+) {
+  //#region mark-as-not-suit-log
+  const list = records.map(it => {
+    const o = new LlmModelUsageRecord()
+    for (const k of Object.keys(it)) {
+      o[k] = it[k]
+    }
+    return o
+  })
+  const chatMessageRecordRepository = ds.getRepository(LlmModelUsageRecord);
+  await chatMessageRecordRepository.save(list);
   //#endregion
   return
 }

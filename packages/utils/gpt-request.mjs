@@ -22,5 +22,5 @@ export async function completes(
   });
 
   console.log(completion.choices[0].message.content);
-  return completion.choices?.[0] ?? null;
+  return completion;
 }

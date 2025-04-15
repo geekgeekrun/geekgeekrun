@@ -19,6 +19,7 @@ import { VJobLibrary } from "./entity/VJobLibrary";
 import { VCompanyLibrary } from "./entity/VCompanyLibrary"
 import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
 import { ChatMessageRecord } from './entity/ChatMessageRecord'
+import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
 
 import sqlite3 from 'sqlite3';
 import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord } from "./handlers";
@@ -53,6 +54,7 @@ export function initDb(dbFilePath) {
       MarkAsNotSuitLog,
       VMarkAsNotSuitLog,
       ChatMessageRecord,
+      LlmModelUsageRecord,
     ],
     migrations: [
       UpdateChatStartupLogTable1729182577167,

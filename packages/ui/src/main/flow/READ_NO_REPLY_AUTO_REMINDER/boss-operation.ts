@@ -1,6 +1,7 @@
 import { Page } from 'puppeteer'
 import { sleepWithRandomDelay, sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { completes } from '@geekgeekrun/utils/gpt-request.mjs'
+import { recordGptCompletionRequest, RequestSceneEnum } from '../../features/llm-request-log'
 import {
   readConfigFile,
   readStorageFile,
@@ -8,6 +9,7 @@ import {
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { formatResumeJsonToMarkdown } from '../../../common/utils/resume'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../common/constant'
+import { LlmModelUsageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/LlmModelUsageRecord'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {
   const emotionEntryButtonProxy = await page.$('.chat-conversation .message-controls .btn-emotion')
@@ -52,7 +54,7 @@ const pickLlmConfigFromList = (llmConfigList) => {
     return null
   }
   const index = Math.floor(pool.length * Math.random())
-  return llmConfigList.find(it => it.id === pool[index]) ?? null
+  return llmConfigList.find((it) => it.id === pool[index]) ?? null
 }
 
 // let _index = 0
@@ -149,11 +151,22 @@ export const sendGptContent = async (page: Page, chatRecords) => {
     const llmConfigList = await readConfigFile('llm.json')
     const llmConfig = pickLlmConfigFromList(llmConfigList)
     if (!llmConfig) {
-      throw new Error(`CANNOT_FIND_A_USABLE_MODEL`);
+      throw new Error(`CANNOT_FIND_A_USABLE_MODEL`)
     }
     console.log(llmConfig.providerCompleteApiUrl)
+    const llmRequestRecord: Omit<LlmModelUsageRecord, 'id' | 'providerApiSecretMd5'> & {
+      providerApiSecret: string
+    } = {
+      providerCompleteApiUrl: llmConfig.providerCompleteApiUrl,
+      model: llmConfig.model,
+      providerApiSecret: llmConfig.providerApiSecret,
+      requestStartTime: new Date(),
+      hasError: false,
+      errorMessage: '',
+      requestScene: RequestSceneEnum.readNoReplyAutoReminder
+    }
     try {
-      res = await completes(
+      const completion = await completes(
         {
           baseURL: llmConfig.providerCompleteApiUrl,
           apiKey: llmConfig.providerApiSecret,
@@ -161,9 +174,28 @@ export const sendGptContent = async (page: Page, chatRecords) => {
         },
         chatList
       )
+      res = completion?.choices?.[0] ?? null
+      Object.assign(llmRequestRecord, {
+        completionTokens: completion.usage?.completion_token ?? null,
+        promptCacheHitTokens: completion.usage?.prompt_cache_hit_tokens ?? null,
+        promptCacheMissTokens: completion.usage?.prompt_cache_miss_tokens ?? null,
+        promptTokens: completion.usage?.prompt_tokens ?? null,
+        totalTokens: completion.usage?.total_tokens ?? null
+      } as LlmModelUsageRecord)
     } catch (err) {
       console.log('request failed', err)
       blockModelSet.add(llmConfig.id)
+      Object.assign(llmRequestRecord, {
+        hasError: true,
+        errorMessage: err?.message ?? ''
+      })
+    } finally {
+      llmRequestRecord.requestEndTime = new Date()
+      try {
+        await recordGptCompletionRequest(llmRequestRecord)
+      } catch (err) {
+        console.log('CANNOT_SAVE_LLM_COMPLETION_LOG', err)
+      }
     }
   }
   console.log(res)
