@@ -188,13 +188,13 @@
                     <el-input-number
                       v-if="formContent.length > 1"
                       v-model="conf.serveWeight"
-                      :min="0"
+                      :min="1"
                       :max="100"
                       :step="1"
                       step-strictly
                       :precision="0"
                       font-size-12px
-                      placeholder="0 ~ 100"
+                      placeholder="1 ~ 100"
                       @change="
                         (new_val, old_val) => {
                           gtagRenderer('serve_weight_changed', { new_val, old_val })

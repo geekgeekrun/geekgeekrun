@@ -34,6 +34,14 @@ const pickLlmConfigFromList = (llmConfigList) => {
   if (!llmConfigList.length) {
     return null
   }
+  llmConfigList.forEach((conf) => {
+    if (!Number(conf.serveWeight) || conf.serveWeight < 1) {
+      conf.serveWeight = 1
+    }
+    if (conf.serveWeight > 100) {
+      conf.serveWeight = 100
+    }
+  })
   const pool: number[] = []
   for (let i = 0; i < llmConfigList.length; i++) {
     for (let j = 0; j < Math.floor(llmConfigList[i].serveWeight); j++) {
