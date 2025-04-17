@@ -72,8 +72,15 @@ export default function initIpc() {
     if (hasOwn(payload, 'anyCombineRecommendJobFilter')) {
       bossConfig.anyCombineRecommendJobFilter = payload.anyCombineRecommendJobFilter
     }
-    if (hasOwn(payload, 'expectJobRegExpStr')) {
-      bossConfig.expectJobRegExpStr = payload.expectJobRegExpStr
+    delete bossConfig.expectJobRegExpStr
+    if (hasOwn(payload, 'expectJobNameRegExpStr')) {
+      bossConfig.expectJobNameRegExpStr = payload.expectJobNameRegExpStr
+    }
+    if (hasOwn(payload, 'expectJobTypeRegExpStr')) {
+      bossConfig.expectJobTypeRegExpStr = payload.expectJobTypeRegExpStr
+    }
+    if (hasOwn(payload, 'expectJobDescRegExpStr')) {
+      bossConfig.expectJobDescRegExpStr = payload.expectJobDescRegExpStr
     }
     if (hasOwn(payload, 'autoReminder')) {
       bossConfig.autoReminder = payload.autoReminder

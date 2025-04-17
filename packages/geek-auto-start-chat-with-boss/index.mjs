@@ -79,6 +79,21 @@ const targetCompanyList = readConfigFile('target-company-list.json').filter(it =
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
+let {
+  expectJobNameRegExpStr,
+  expectJobTypeRegExpStr,
+  expectJobDescRegExpStr,
+} = readConfigFile('boss.json')
+if (
+  expectJobRegExpStr &&
+  !expectJobNameRegExpStr &&
+  !expectJobTypeRegExpStr &&
+  !expectJobDescRegExpStr
+) {
+  expectJobNameRegExpStr = expectJobRegExpStr
+  expectJobTypeRegExpStr = expectJobRegExpStr
+  expectJobDescRegExpStr = expectJobRegExpStr
+}
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
@@ -191,22 +206,32 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
   return result
 }
 
-export function testIfJobTitleOrDescriptionSuit (jobInfo, regExpStr) {
-  if (!regExpStr) {
-    return true
-  }
+export function testIfJobTitleOrDescriptionSuit (jobInfo) {
+  let isJobNameSuit = true
   try {
-    const regExp = new RegExp(regExpStr, 'i')
-    if (
-      !regExp.test(jobInfo.jobName)
-      && !regExp.test(jobInfo.positionName)
-      && !regExp.test(jobInfo.postDescription)
-    ) {
-      return false
+    if (expectJobNameRegExpStr.trim()) {
+      const regExp = new RegExp(expectJobNameRegExpStr, 'i')
+      isJobNameSuit = regExp.test(jobInfo.jobName)
     }
   } catch {
   }
-  return true
+  let isJobTypeSuit = true
+  try {
+    if (expectJobTypeRegExpStr.trim()) {
+      const regExp = new RegExp(expectJobTypeRegExpStr, 'i')
+      isJobTypeSuit = regExp.test(jobInfo.positionName)
+    }
+  } catch {
+  }
+  let isJobDescSuit = true
+  try {
+    if (expectJobDescRegExpStr.trim()) {
+      const regExp = new RegExp(expectJobDescRegExpStr, 'i')
+      isJobDescSuit = regExp.test(jobInfo.postDescription)
+    }
+  } catch {
+  }
+  return isJobNameSuit && isJobTypeSuit && isJobDescSuit
 }
 
 async function setFilterCondition (selectedFilters) {
@@ -594,7 +619,7 @@ async function toRecommendPage (hooks) {
                     continue continueFind
                   }
                   if (
-                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo, expectJobRegExpStr)
+                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo)
                   ) {
                     blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
                     try {
@@ -612,7 +637,6 @@ async function toRecommendPage (hooks) {
                       )
                     } catch {
                     }
-                    debugger
                     continue continueFind
                   }
                   const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
