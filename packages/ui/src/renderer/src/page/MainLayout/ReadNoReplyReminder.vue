@@ -14,9 +14,14 @@
       <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：">
         <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
           <div>
-            <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
-              “[盼回复]” 表情
-            </el-radio>
+            <el-tooltip effect="light" placement="right" :enterable="false">
+              <template #content>
+                <img block h-100px src="./resources/look-forward-reply-emotion.gif" />
+              </template>
+              <el-radio :label="RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION">
+                “[盼回复]” 表情
+              </el-radio>
+            </el-tooltip>
             <br />
             <el-radio :label="RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT">
               由大语言模型（根据简历及当前聊天上下文）生成的内容

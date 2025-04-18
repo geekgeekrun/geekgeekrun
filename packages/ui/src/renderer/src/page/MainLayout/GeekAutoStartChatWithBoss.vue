@@ -14,46 +14,69 @@
       </el-form-item> -->
       <div>
         <el-form-item mb0>
-          是否查看职位详情的条件
-          <span font-size-12px>（以下条件为空表示不筛选）</span>
-          <el-tooltip effect="light" placement="bottom-start" :enterable="false">
-            <template #content>
-              <img block h-270px src="./resources/intro-of-job-entry.png" />
-            </template>
-            <div>
-              <el-button type="text" font-size-12px ml4px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span>期望公司信息位置图示</el-button
-              >
-            </div>
-          </el-tooltip>
+          <div>
+            是否查看职位详情的条件
+            <span font-size-12px>（以下条件为空表示不筛选）</span>
+          </div>
         </el-form-item>
         <el-form-item prop="expectCompanies" mb10px>
-          <div font-size-12px>期望公司（以逗号分隔）</div>
+          <div font-size-12px>
+            期望公司（以逗号分隔）<el-tooltip effect="light" placement="bottom-start">
+              <template #content>
+                <img block h-270px src="./resources/intro-of-job-entry.png" />
+              </template>
+              <el-button type="text" font-size-12px
+                ><span><QuestionFilled w-1em h-1em mr2px /></span>期望公司信息位置图示</el-button
+              >
+            </el-tooltip>
+          </div>
           <el-input
             v-model="formContent.expectCompanies"
             :autosize="{ minRows: 4 }"
-            max-h-6lh
+            max-h-8lh
             type="textarea"
             @blur="normalizeExpectCompanies"
           />
         </el-form-item>
       </div>
-      <div mb36px>
+      <div mb42px>
         <el-form-item mb0>
           查看职位详情后，是发起投递还是标记不合适的条件
           <span font-size-12px>（以下条件为空表示不筛选）</span>
-          <el-tooltip effect="light" placement="bottom-start" :enterable="false">
+        </el-form-item>
+        <div>
+          <el-tooltip effect="light" placement="bottom">
             <template #content>
               <img block h-270px src="./resources/intro-of-job-info.png" />
             </template>
-            <div>
-              <el-button type="text" font-size-12px ml4px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span
-                >职位名称/职位类型/职位描述信息位置图示</el-button
-              >
-            </div>
+            <el-button type="text" font-size-12px
+              ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
+            >
           </el-tooltip>
-        </el-form-item>
+          <el-tooltip effect="light" placement="bottom-start">
+            <template #content>
+              <ol m0 line-height-1.5em w-400px pl2em>
+                <li>
+                  如果查找到的职位，职位名称、职位类型、职位描述与如下正则不匹配，则这个职位将被标记为不合适
+                </li>
+                <li>
+                  如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适
+                </li>
+                <li>
+                  如有错误标记，请在左侧“<a
+                    href="javascript:void(0)"
+                    style="color: var(--el-color-primary)"
+                    @click.prevent="$router.push('/main-layout/MarkAsNotSuitRecord')"
+                    >标记不合适</a
+                  >”记录中找到相关记录，手动对这些职位发起会话
+                </li>
+              </ol>
+            </template>
+            <el-button type="text" font-size-12px
+              ><span><QuestionFilled w-1em h-1em mr2px /></span>标记不合适机制</el-button
+            >
+          </el-tooltip>
+        </div>
         <div
           :style="{
             display: 'grid',
@@ -97,25 +120,6 @@
           </el-form-item>
         </div>
       </div>
-      <el-form-item pt10px mb10px>
-        <div style="--font-size: 12px; font-size: var(--font-size)" line-height-1.5em>
-          <div class="color-orange mb4px">标记不合适机制</div>
-          <ol m0 line-height-1.5em>
-            <li>
-              如果查找到的职位，职位名称、职位类型、职位描述与如上正则不匹配，则这个职位将被标记为不合适
-            </li>
-            <li>如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适</li>
-            <li>
-              如有错误标记，请在左侧“<a
-                href="javascript:void(0)"
-                style="color: var(--el-color-primary)"
-                @click.prevent="$router.push('/main-layout/MarkAsNotSuitRecord')"
-                >标记不合适</a
-              >”记录中找到相关记录，手动对这些职位发起会话
-            </li>
-          </ol>
-        </div>
-      </el-form-item>
       <el-form-item
         label="职位备选筛选条件（当前求职期望无合适职位时，自动更改Boss筛选条件，查找新工作）"
         prop="filter"
@@ -250,7 +254,16 @@ const handleSubmit = async () => {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
   })
   formContent.value.expectJobRegExpStr = undefined
-  await formRef.value!.validate()
+  try {
+    await formRef.value!.validate()
+  } catch (err) {
+    ElMessage.error({
+      message: '表单校验失败，请检查有误的内容',
+      grouping: true
+    })
+    console.log(err)
+    return
+  }
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
@@ -265,7 +278,16 @@ const handleSave = async () => {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
   })
   normalizeExpectCompanies()
-  await formRef.value!.validate()
+  try {
+    await formRef.value!.validate()
+  } catch (err) {
+    ElMessage.error({
+      message: '表单校验失败，请检查有误的内容',
+      grouping: true
+    })
+    console.log(err)
+    return
+  }
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
   ElMessage.success('配置保存成功')
   gtagRenderer('config_saved')
