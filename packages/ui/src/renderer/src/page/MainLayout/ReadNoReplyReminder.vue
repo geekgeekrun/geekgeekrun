@@ -351,7 +351,7 @@ const handleSubmit = async () => {
       }
     }
   }
-  gtagRenderer('reminder_launched')
+  gtagRenderer('run_read_no_reply_reminder_launched')
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'read-no-reply-reminder' }
