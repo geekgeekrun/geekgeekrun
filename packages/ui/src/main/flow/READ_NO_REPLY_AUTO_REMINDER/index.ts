@@ -183,6 +183,9 @@ const mainLoop = async () => {
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
+    await pageMapByName.boss?.waitForFunction(() => {
+      return Array.isArray(document.querySelector('.main-wrap .chat-user')?.__vue__?.list)
+    })
     // find target boss - with unread icon, or recommend system message
     const friendListData = (await pageMapByName.boss!.evaluate(
       `
