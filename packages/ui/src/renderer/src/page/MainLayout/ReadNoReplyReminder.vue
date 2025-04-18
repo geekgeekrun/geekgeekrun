@@ -261,56 +261,94 @@ const handleSubmit = async () => {
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
   gtagRenderer('config_saved')
-  try {
-    await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
-  } catch (err) {
-    if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
-      gtagRenderer('cannot_launch_due_to_resume_placeholder_not_exist')
-      console.log(`提示词模板无效`, err)
-      ElMessageBox.confirm(
-        '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
-        '',
-        {
-          confirmButtonText: '是',
-          cancelButtonText: '否',
-          type: 'warning',
-          closeOnClickModal: false,
-          dangerouslyUseHTMLString: true
-        }
-      )
-        .then(async () => {
-          gtagRenderer('reset_template_clicked_in_invalid_tip_dialog')
-          await restoreDefaultTemplate()
-        })
-        .catch(() => {
-          gtagRenderer('close_invalid_tip_dialog')
-        })
-    } else {
-      gtagRenderer('cannot_launch_due_to_unknown_error', { err })
-      ElMessage({
-        type: 'error',
-        message: '用于生成自动提醒消息的提示词检查未通过，请重试'
-      })
-    }
-    return
-  }
   if (
     formContent.value.autoReminder?.rechatContentSource ===
-      RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT &&
-    !(await electron.ipcRenderer.invoke('resume-content-enough-detect'))
+    RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
   ) {
-    gtagRenderer('resume_content_not_enough_dialog_show')
     try {
-      await ElMessageBox.confirm(
-        `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不符合预期（例如相同内容重复生成、生成预期之外的内容）<br /><br />要继续运行吗？`,
-        {
-          cancelButtonText: '不，我再看看',
-          confirmButtonText: '是的，继续运行',
-          dangerouslyUseHTMLString: true
-        }
-      )
-    } catch {
+      await electron.ipcRenderer.invoke('check-if-llm-config-list-valid')
+    } catch (err) {
+      if (err?.message?.includes(`CANNOT_FIND_VALID_CONFIG`)) {
+        gtagRenderer('cannot_launch_due_to_invalid_llm_config')
+        console.log(`大模型配置无效`, err)
+        ElMessageBox.confirm(
+          '大模型配置不存在或者包含无效配置<br />您是否希望查看并修正当前大模型配置？',
+          '',
+          {
+            confirmButtonText: '是',
+            cancelButtonText: '否',
+            type: 'warning',
+            closeOnClickModal: false,
+            dangerouslyUseHTMLString: true
+          }
+        )
+          .then(async () => {
+            gtagRenderer('view_llm_config_clicked_in_invalid_tip_dialog')
+            try {
+              await electron.ipcRenderer.invoke('llm-config')
+            } catch (err) {
+              console.log(err)
+            }
+          })
+          .catch(() => {
+            gtagRenderer('close_invalid_llm_config_tip_dialog')
+          })
+      } else {
+        gtagRenderer('cannot_launch_due_to_unknown_error_when_check_llm_config', { err })
+        ElMessage({
+          type: 'error',
+          message: '大模型配置检查未通过，请重试'
+        })
+      }
       return
+    }
+    try {
+      await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
+    } catch (err) {
+      if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
+        gtagRenderer('cannot_launch_due_to_resume_placeholder_not_exist')
+        console.log(`提示词模板无效`, err)
+        ElMessageBox.confirm(
+          '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
+          '',
+          {
+            confirmButtonText: '是',
+            cancelButtonText: '否',
+            type: 'warning',
+            closeOnClickModal: false,
+            dangerouslyUseHTMLString: true
+          }
+        )
+          .then(async () => {
+            gtagRenderer('reset_template_clicked_in_invalid_tip_dialog')
+            await restoreDefaultTemplate()
+          })
+          .catch(() => {
+            gtagRenderer('close_invalid_resume_template_tip_dialog')
+          })
+      } else {
+        gtagRenderer('cannot_launch_due_to_unknown_error_when_check_prompt', { err })
+        ElMessage({
+          type: 'error',
+          message: '用于生成自动提醒消息的提示词检查未通过，请重试'
+        })
+      }
+      return
+    }
+    if (!(await electron.ipcRenderer.invoke('resume-content-enough-detect'))) {
+      gtagRenderer('resume_content_not_enough_dialog_show')
+      try {
+        await ElMessageBox.confirm(
+          `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不符合预期（例如相同内容重复生成、生成预期之外的内容）<br /><br />要继续运行吗？`,
+          {
+            cancelButtonText: '不，我再看看',
+            confirmButtonText: '是的，继续运行',
+            dangerouslyUseHTMLString: true
+          }
+        )
+      } catch {
+        return
+      }
     }
   }
   gtagRenderer('reminder_launched')

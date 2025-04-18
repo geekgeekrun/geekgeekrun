@@ -517,7 +517,21 @@ export default function initIpc() {
   ipcMain.handle('overwrite-auto-remind-prompt-with-default', async () => {
     await writeDefaultAutoRemindPrompt()
   })
-
+  ipcMain.handle('check-if-llm-config-list-valid', async () => {
+    const llmConfigList = await readConfigFile('llm.json')
+    if (!Array.isArray(llmConfigList) || !llmConfigList?.length) {
+      throw new Error('CANNOT_FIND_VALID_CONFIG')
+    }
+    if (llmConfigList.some((it) => !/^http(s)?:\/\//.test(it.providerCompleteApiUrl))) {
+      throw new Error('CANNOT_FIND_VALID_CONFIG')
+    }
+    if (llmConfigList.length > 1) {
+      const firstEnabledModel = llmConfigList.find((it) => it.enabled)
+      if (!firstEnabledModel) {
+        throw new Error('CANNOT_FIND_VALID_CONFIG')
+      }
+    }
+  })
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)
   })
