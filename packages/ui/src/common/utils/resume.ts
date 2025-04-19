@@ -79,5 +79,5 @@ export function formatResumeJsonToMarkdown(resume) {
 }
 
 export function resumeContentEnoughDetect(resumeItem: { content: ResumeContent }) {
-  return formatResumeJsonToMarkdown(resumeItem)?.length > 800
+  return resumeItem?.content && formatResumeJsonToMarkdown(resumeItem)?.length > 800
 }
