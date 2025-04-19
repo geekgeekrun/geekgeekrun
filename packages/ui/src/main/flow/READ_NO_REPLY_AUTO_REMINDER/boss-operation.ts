@@ -204,6 +204,7 @@ export const sendGptContent = async (page: Page, chatRecords) => {
   try {
     const rawMarkdownText = res?.message?.content
     textToSend = JSON.parse(rawMarkdownText.replace(/^```json/m, '').replace(/```$/m, ''))?.response
+    textToSend = textToSend?.replace(/。$/, '')
     if (!textToSend) {
       throw new Error(`empty content. ${err?.message} ${res?.message?.content}`)
     }
