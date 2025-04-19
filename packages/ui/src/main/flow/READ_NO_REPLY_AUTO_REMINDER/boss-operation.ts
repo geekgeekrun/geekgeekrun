@@ -10,6 +10,7 @@ import {
 import { formatResumeJsonToMarkdown } from '../../../common/utils/resume'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../common/constant'
 import { LlmModelUsageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/LlmModelUsageRecord'
+import gtag from '../../utils/gtag'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {
   const emotionEntryButtonProxy = await page.$('.chat-conversation .message-controls .btn-emotion')
@@ -146,10 +147,10 @@ export const sendGptContent = async (page: Page, chatRecords) => {
     })
   }
   console.log(chatList)
-  let res
+  let res, llmConfig
   while (!res) {
     const llmConfigList = await readConfigFile('llm.json')
-    const llmConfig = pickLlmConfigFromList(llmConfigList)
+    llmConfig = pickLlmConfigFromList(llmConfigList)
     if (!llmConfig) {
       throw new Error(`CANNOT_FIND_A_USABLE_MODEL`)
     }
@@ -203,9 +204,24 @@ export const sendGptContent = async (page: Page, chatRecords) => {
   let textToSend
   try {
     const rawMarkdownText = res?.message?.content
-    textToSend = JSON.parse(rawMarkdownText.replace(/^```json/m, '').replace(/```$/m, ''))?.response
+    try {
+      textToSend = JSON.parse(
+        rawMarkdownText.replace(/^```json/m, '').replace(/```$/m, '')
+      )?.response
+    } catch (err) {
+      gtag('encounter_error_when_parse_llm_respond_text', {
+        err,
+        model: llmConfig?.model,
+        providerCompleteApiUrl: llmConfig?.providerCompleteApiUrl
+      })
+      throw err
+    }
     textToSend = textToSend?.replace(/。$/, '')
     if (!textToSend) {
+      gtag('llm_respond_text_is_empty', {
+        model: llmConfig?.model,
+        providerCompleteApiUrl: llmConfig?.providerCompleteApiUrl
+      })
       throw new Error(`empty content. ${err?.message} ${res?.message?.content}`)
     }
   } catch (err) {
