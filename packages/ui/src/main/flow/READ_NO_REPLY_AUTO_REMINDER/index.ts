@@ -297,16 +297,24 @@ const mainLoop = async () => {
             .filter((it) => it.bizType !== 101 && it.isSelf)
             .slice(-recentMessageQuantityForLlm)
           await sendGptContent(pageMapByName.boss!, messageListForGpt)
+          gtag('read_no_reply_reminder_llm_content_sent')
         } catch (err) {
           console.log(err)
           if (rechatLlmFallback === RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION) {
             await sendLookForwardReplyEmotion(pageMapByName.boss!)
+            gtag('read_no_reply_reminder_look_forward_reply_emotion_sent', {
+              fallback: true
+            })
           } else {
+            gtag('read_no_reply_reminder_encounter_error', {
+              error: err
+            })
             throw err
           }
         }
       } else {
         await sendLookForwardReplyEmotion(pageMapByName.boss!)
+        gtag('read_no_reply_reminder_look_forward_reply_emotion_sent')
       }
     } else {
       cursorToContinueFind += 1
