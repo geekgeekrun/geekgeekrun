@@ -24,7 +24,11 @@
         <template #header>
           <div class="diff-table-header">
             {{ transformUtcDateToLocalDate(item.value).format('YYYY-MM-DD HH:mm:ss') }}
-            <el-tooltip content="待对比条目少于2个" :disabled="tableProps.length > 1">
+            <el-tooltip
+              content="待对比条目少于2个"
+              :disabled="tableProps.length > 1"
+              @show="gtagRenderer('tooltip_shown_about_compare_item_no_enough')"
+            >
               <el-radio v-model="diffPivot" :label="item.value" :disabled="tableProps.length <= 1">作为diff基准</el-radio>
             </el-tooltip>
           </div>
@@ -44,6 +48,7 @@ import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoC
 import { ElTable, ElTableColumn, ElForm, ElFormItem, ElRow, ElCol, ElDivider } from 'element-plus'
 import TextDiff from '../../components/TextDiff.vue'
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const props = defineProps({
   jobInfo: {

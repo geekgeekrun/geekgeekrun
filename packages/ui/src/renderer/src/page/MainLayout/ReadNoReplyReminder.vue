@@ -14,7 +14,12 @@
       <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：">
         <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
           <div>
-            <el-tooltip effect="light" placement="right" :enterable="false">
+            <el-tooltip
+              effect="light"
+              placement="right"
+              :enterable="false"
+              @show="gtagRenderer('tooltip_shown_about_look_forward_reply_emotion_figure')"
+            >
               <template #content>
                 <img block h-100px src="./resources/look-forward-reply-emotion.gif" />
               </template>

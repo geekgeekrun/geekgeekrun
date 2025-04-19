@@ -4,7 +4,11 @@
       <div class="nav-list flex-1 of-auto">
         <RouterLink to="./GeekAutoStartChatWithBoss">
           Boss炸弹
-          <el-tooltip placement="right" :enterable="false">
+          <el-tooltip
+            placement="right"
+            :enterable="false"
+            @show="gtagRenderer('tooltip_shown_for_nav_boss_b_entry')"
+          >
             <template #content>
               <div w-480px>
                 <div>扩列神器！按照你所设置的规则，自动开聊推荐职位列表中的匹配的Boss。</div>
@@ -49,7 +53,11 @@
         </RouterLink>
         <RouterLink to="./ReadNoReplyReminder">
           已读不回提醒器
-          <el-tooltip placement="right" :enterable="false">
+          <el-tooltip
+            placement="right"
+            :enterable="false"
+            @show="gtagRenderer('tooltip_shown_for_read_no_reply_reminder_entry')"
+          >
             <template #content>
               <div w-480px>
                 <div>

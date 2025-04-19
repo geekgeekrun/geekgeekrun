@@ -21,7 +21,11 @@
         </el-form-item>
         <el-form-item prop="expectCompanies" mb10px>
           <div font-size-12px>
-            期望公司（以逗号分隔）<el-tooltip effect="light" placement="bottom-start">
+            期望公司（以逗号分隔）<el-tooltip
+              effect="light"
+              placement="bottom-start"
+              @show="gtagRenderer('tooltip_shown_about_expect_company_figure')"
+            >
               <template #content>
                 <img block h-270px src="./resources/intro-of-job-entry.png" />
               </template>
@@ -45,7 +49,11 @@
           <span font-size-12px>（以下条件为空表示不筛选）</span>
         </el-form-item>
         <div>
-          <el-tooltip effect="light" placement="bottom">
+          <el-tooltip
+            effect="light"
+            placement="bottom"
+            @show="gtagRenderer('tooltip_shown_about_expect_job_info_figure')"
+          >
             <template #content>
               <img block h-270px src="./resources/intro-of-job-info.png" />
             </template>
@@ -53,7 +61,11 @@
               ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
             >
           </el-tooltip>
-          <el-tooltip effect="light" placement="bottom-start">
+          <el-tooltip
+            effect="light"
+            placement="bottom-start"
+            @show="gtagRenderer('tooltip_shown_about_mark_not_suit_intro')"
+          >
             <template #content>
               <ol m0 line-height-1.5em w-400px pl2em>
                 <li>
@@ -66,7 +78,12 @@
                   如有错误标记，请在左侧“<a
                     href="javascript:void(0)"
                     style="color: var(--el-color-primary)"
-                    @click.prevent="$router.push('/main-layout/MarkAsNotSuitRecord')"
+                    @click.prevent="
+                      () => {
+                        gtagRenderer('click_view_mark_as_not_suit_record_from_boss_b_tooltip')
+                        $router.push('/main-layout/MarkAsNotSuitRecord')
+                      }
+                    "
                     >标记不合适</a
                   >”记录中找到相关记录，手动对这些职位发起会话
                 </li>
