@@ -177,7 +177,7 @@ export const sendGptContent = async (page: Page, chatRecords) => {
       )
       res = completion?.choices?.[0] ?? null
       Object.assign(llmRequestRecord, {
-        completionTokens: completion.usage?.completion_token ?? null,
+        completionTokens: completion.usage?.completion_tokens ?? null,
         promptCacheHitTokens: completion.usage?.prompt_cache_hit_tokens ?? null,
         promptCacheMissTokens: completion.usage?.prompt_cache_miss_tokens ?? null,
         promptTokens: completion.usage?.prompt_tokens ?? null,
