@@ -1,7 +1,8 @@
 import { requireTypeorm } from "../utils/module-loader";
-const { Entity, PrimaryGeneratedColumn, Column } = requireTypeorm()
+const { Entity, PrimaryGeneratedColumn, Column, Index } = requireTypeorm()
 
 @Entity()
+@Index(["providerCompleteApiUrl", "model", "providerApiSecretMd5"])
 export class LlmModelUsageRecord {
   @PrimaryGeneratedColumn()
   id: number;
