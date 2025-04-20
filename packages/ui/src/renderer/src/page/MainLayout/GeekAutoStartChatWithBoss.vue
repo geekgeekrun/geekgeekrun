@@ -21,7 +21,7 @@
         </el-form-item>
         <el-form-item prop="expectCompanies" mb10px>
           <div font-size-12px>
-            期望公司（以逗号分隔）<el-tooltip
+            期望公司（以逗号分隔，不区分大小写）<el-tooltip
               effect="light"
               placement="bottom-start"
               @show="gtagRenderer('tooltip_shown_about_expect_company_figure')"
