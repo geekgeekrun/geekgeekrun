@@ -78,6 +78,14 @@ export function formatResumeJsonToMarkdown(resume) {
   return result
 }
 
+export function checkIsResumeContentValid(resumeItem: { content: ResumeContent }) {
+  return (
+    !!resumeItem?.content &&
+    resumeItem.content.geekProjExpList?.[0]?.name?.trim() &&
+    resumeItem.content.geekWorkExpList?.[0]?.positionName?.trim()
+  )
+}
+
 export function resumeContentEnoughDetect(resumeItem: { content: ResumeContent }) {
   return resumeItem?.content && formatResumeJsonToMarkdown(resumeItem)?.length > 800
 }

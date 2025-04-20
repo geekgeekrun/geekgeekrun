@@ -270,6 +270,25 @@ const handleSubmit = async () => {
     formContent.value.autoReminder?.rechatContentSource ===
     RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
   ) {
+    if (!(await electron.ipcRenderer.invoke('check-is-resume-content-valid'))) {
+      gtagRenderer('cannot_launch_due_to_invalid_resume_content_dialog_show')
+      try {
+        await ElMessageBox.confirm(`简历内容无效；您需要编辑一下您的简历`, {
+          cancelButtonText: '取消',
+          confirmButtonText: '好的，去编辑我的简历',
+          dangerouslyUseHTMLString: true
+        })
+        gtagRenderer('cannot_launch_due_to_invalid_resume_content_dialog_click_confirm')
+        try {
+          await electron.ipcRenderer.invoke('resume-edit')
+        } catch (err) {
+          console.log(err)
+        }
+      } catch {
+        gtagRenderer('cannot_launch_due_to_invalid_resume_content_dialog_click_cancel')
+      }
+      return
+    }
     try {
       await electron.ipcRenderer.invoke('check-if-llm-config-list-valid')
     } catch (err) {
@@ -351,7 +370,9 @@ const handleSubmit = async () => {
             dangerouslyUseHTMLString: true
           }
         )
+        gtagRenderer('resume_content_not_enough_dialog_click_confirm')
       } catch {
+        gtagRenderer('resume_content_not_enough_dialog_click_cancel')
         return
       }
     }
