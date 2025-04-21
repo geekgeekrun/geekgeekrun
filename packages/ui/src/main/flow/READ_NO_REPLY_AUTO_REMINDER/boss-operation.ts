@@ -209,7 +209,7 @@ export const sendGptContent = async (page: Page, chatRecords) => {
         rawMarkdownText.replace(/^```json/m, '').replace(/```$/m, '')
       )?.response
     } catch (err) {
-      gtag('encounter_error_when_parse_llm_respond_text', {
+      gtag('encounter_error_when_parse_llm_text', {
         err,
         model: llmConfig?.model,
         providerCompleteApiUrl: llmConfig?.providerCompleteApiUrl

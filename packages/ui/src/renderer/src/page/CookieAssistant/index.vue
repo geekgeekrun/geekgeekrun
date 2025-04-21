@@ -87,7 +87,7 @@
               font-size-inherit
               @click="
                 () => {
-                  gtagRenderer('replace_inputted_cookie_by_collected_cookie')
+                  gtagRenderer('replace_inputted_cookie_by_collected')
                   fillCollectedCookie()
                 }
               "
@@ -144,13 +144,13 @@ const formRules = {
               `JSON格式无效 - 存在语法错误: ${err.message}；建议使用EditThisCookie扩展程序进行复制。`
             )
           )
-          gtagRenderer('wrong_cookie_format_for_json_syntax-error')
+          gtagRenderer('wrong_cookie_format_json_syntax_error')
           return
         }
 
         if (!checkCookieListFormat(JSON.parse(formContent.value.collectedCookies))) {
           cb(new Error(`Cookie格式无效 - 部分字段缺失；建议使用EditThisCookie扩展程序进行复制。`))
-          gtagRenderer('wrong_cookie_format_for_field_loss')
+          gtagRenderer('wrong_cookie_format_field_loss')
           return
         }
         cb()
@@ -168,7 +168,7 @@ const handleCookieCollected = (_, payload) => {
     fillCollectedCookie()
     gtagRenderer('cookie_collected_and_auto_filled')
   } else {
-    gtagRenderer('cookie_collected_but_user_has_changed_input')
+    gtagRenderer('cookie_collected_after_changed_input')
   }
 }
 const fillCollectedCookie = () => {

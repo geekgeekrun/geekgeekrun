@@ -7,7 +7,7 @@
           <el-tooltip
             placement="right"
             :enterable="false"
-            @show="gtagRenderer('tooltip_shown_for_nav_boss_b_entry')"
+            @show="gtagRenderer('tooltip_show_for_nav_boss_b_entry')"
           >
             <template #content>
               <div w-480px>
@@ -56,7 +56,7 @@
           <el-tooltip
             placement="right"
             :enterable="false"
-            @show="gtagRenderer('tooltip_shown_for_read_no_reply_reminder_entry')"
+            @show="gtagRenderer('tooltip_show_for_rnrr_entry')"
           >
             <template #content>
               <div w-480px>

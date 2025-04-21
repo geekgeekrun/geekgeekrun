@@ -1,4 +1,5 @@
 import buildInfo from '../../../common/build-info.json'
+import os from 'node:os'
 
 type LowercaseLetter =
   | 'a'
@@ -55,6 +56,7 @@ function getCommonParams() {
   return {
     app_version: buildInfo.version,
     app_build_hash: buildInfo.buildHash,
+    os_info: `${os.type()} | ${os.release()} | ${os.arch()}`,
     t: Number(new Date())
   }
 }

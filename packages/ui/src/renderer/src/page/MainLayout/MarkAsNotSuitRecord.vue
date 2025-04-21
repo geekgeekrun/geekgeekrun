@@ -77,7 +77,7 @@
           size="small"
           @click="
             () => {
-              gtagRenderer('mark_as_not_suit_record_refresh_clicked')
+              gtagRenderer('mansr_refresh_clicked')
               getMarkAsNotSuitRecord()
             }
           "
@@ -104,7 +104,7 @@
         scene="markAsNotSuitRecord"
         @closed="
           () => {
-            gtagRenderer('mark_as_not_suit_record_closed')
+            gtagRenderer('mansr_closed')
             selectedJobInfoForViewSnapshot = null
           }
         "
@@ -137,7 +137,7 @@ const tableRef = ref<InstanceType<typeof ElTable>>()
 const isTableLoading = ref(false)
 async function getMarkAsNotSuitRecord() {
   try {
-    gtagRenderer('mark_as_not_suit_record_request_sent', {
+    gtagRenderer('mansr_request_sent', {
       page_no: pagination.value.pageNo,
       page_size: pagination.value.pageSize,
     })
@@ -152,12 +152,12 @@ async function getMarkAsNotSuitRecord() {
       pageNo: res.pageNo,
       pageSize: pagination.value.pageSize
     }
-    gtagRenderer('mark_as_not_suit_record_request_success', {
+    gtagRenderer('mansr_request_success', {
       page_no: pagination.value.pageNo,
       page_size: pagination.value.pageSize,
     })
   } catch (err) {
-    gtagRenderer('mark_as_not_suit_record_request_error', {
+    gtagRenderer('mansr_request_error', {
       err,
       page_no: pagination.value.pageNo,
       page_size: pagination.value.pageSize,

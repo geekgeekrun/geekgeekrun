@@ -24,7 +24,7 @@
             期望公司（以逗号分隔，不区分大小写）<el-tooltip
               effect="light"
               placement="bottom-start"
-              @show="gtagRenderer('tooltip_shown_about_expect_company_figure')"
+              @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
             >
               <template #content>
                 <img block h-270px src="./resources/intro-of-job-entry.png" />
@@ -52,7 +52,7 @@
           <el-tooltip
             effect="light"
             placement="bottom"
-            @show="gtagRenderer('tooltip_shown_about_expect_job_info_figure')"
+            @show="gtagRenderer('tooltip_show_about_expect_job_info_figure')"
           >
             <template #content>
               <img block h-270px src="./resources/intro-of-job-info.png" />
@@ -64,7 +64,7 @@
           <el-tooltip
             effect="light"
             placement="bottom-start"
-            @show="gtagRenderer('tooltip_shown_about_mark_not_suit_intro')"
+            @show="gtagRenderer('tooltip_show_about_mark_not_suit_intro')"
           >
             <template #content>
               <ol m0 line-height-1.5em w-400px pl2em>
@@ -80,7 +80,7 @@
                     style="color: var(--el-color-primary)"
                     @click.prevent="
                       () => {
-                        gtagRenderer('click_view_mark_as_not_suit_record_from_boss_b_tooltip')
+                        gtagRenderer('click_view_mansr_from_boss_b_tooltip')
                         $router.push('/main-layout/MarkAsNotSuitRecord')
                       }
                     "
@@ -286,7 +286,7 @@ const handleSubmit = async () => {
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'geek-auto-start-chat-with-boss' }
   })
-  gtagRenderer('config_saved_and_will_launch_auto_start_chat', {
+  gtagRenderer('config_saved_and_launch_auto_start_chat', {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
   })
 }

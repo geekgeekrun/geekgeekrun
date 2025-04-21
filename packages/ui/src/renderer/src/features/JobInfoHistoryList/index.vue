@@ -27,7 +27,7 @@
             <el-tooltip
               content="待对比条目少于2个"
               :disabled="tableProps.length > 1"
-              @show="gtagRenderer('tooltip_shown_about_compare_item_no_enough')"
+              @show="gtagRenderer('tooltip_show_about_lake_of_compare_item')"
             >
               <el-radio v-model="diffPivot" :label="item.value" :disabled="tableProps.length <= 1">作为diff基准</el-radio>
             </el-tooltip>

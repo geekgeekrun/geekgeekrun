@@ -22,19 +22,19 @@ const { ipcRenderer } = electron
 const router = useRouter()
 
 const handleStopButtonClick = async () => {
-  gtagRenderer('read_no_reply_reminder_stop_button_clicked')
+  gtagRenderer('rnrr_stop_button_clicked')
   ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
 }
 
 const isStopping = ref(false)
 const handleStopping = () => {
-  gtagRenderer('read_no_reply_reminder_become_stopping')
+  gtagRenderer('rnrr_become_stopping')
   isStopping.value = true
 }
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopping', handleStopping)
 
 const handleStopped = () => {
-  gtagRenderer('read_no_reply_reminder_become_stopped')
+  gtagRenderer('rnrr_become_stopped')
   router.replace('/main-layout/ReadNoReplyReminder')
 }
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', handleStopped)
@@ -49,14 +49,14 @@ onMounted(async () => {
     await electron.ipcRenderer.invoke('run-read-no-reply-auto-reminder')
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
-      gtagRenderer('read_no_reply_reminder_cannot_run_due_to_corrupt')
+      gtagRenderer('rnrr_cannot_run_for_corrupt')
       ElMessage.error({
         message: `核心组件损坏，正在尝试修复`
       })
       router.replace('/')
     }
     console.error(err)
-    gtagRenderer('read_no_reply_reminder_cannot_run_due_to_unknown_error', { err })
+    gtagRenderer('rnrr_cannot_run_for_unknown_error', { err })
   }
 })
 </script>

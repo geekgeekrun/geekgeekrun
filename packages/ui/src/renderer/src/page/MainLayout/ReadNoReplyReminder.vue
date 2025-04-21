@@ -18,7 +18,7 @@
               effect="light"
               placement="right"
               :enterable="false"
-              @show="gtagRenderer('tooltip_shown_about_look_forward_reply_emotion_figure')"
+              @show="gtagRenderer('tooltip_show_about_lfr_emotion_figure')"
             >
               <template #content>
                 <img block h-100px src="./resources/look-forward-reply-emotion.gif" />
@@ -271,21 +271,21 @@ const handleSubmit = async () => {
     RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
   ) {
     if (!(await electron.ipcRenderer.invoke('check-is-resume-content-valid'))) {
-      gtagRenderer('cannot_launch_due_to_invalid_resume_content_dialog_show')
+      gtagRenderer('cannot_launch_for_invalid_rc_dialog_show')
       try {
         await ElMessageBox.confirm(`简历内容无效；您需要编辑一下您的简历`, {
           cancelButtonText: '取消',
           confirmButtonText: '好的，去编辑我的简历',
           dangerouslyUseHTMLString: true
         })
-        gtagRenderer('cannot_launch_due_to_invalid_resume_content_dialog_click_confirm')
+        gtagRenderer('invalid_rc_dialog_click_confirm')
         try {
           await electron.ipcRenderer.invoke('resume-edit')
         } catch (err) {
           console.log(err)
         }
       } catch {
-        gtagRenderer('cannot_launch_due_to_invalid_resume_content_dialog_click_cancel')
+        gtagRenderer('invalid_rc_dialog_click_cancel')
       }
       return
     }
@@ -293,7 +293,7 @@ const handleSubmit = async () => {
       await electron.ipcRenderer.invoke('check-if-llm-config-list-valid')
     } catch (err) {
       if (err?.message?.includes(`CANNOT_FIND_VALID_CONFIG`)) {
-        gtagRenderer('cannot_launch_due_to_invalid_llm_config')
+        gtagRenderer('cannot_launch_for_invalid_llm_config')
         console.log(`大模型配置无效`, err)
         ElMessageBox.confirm(
           '大模型配置不存在或者包含无效配置<br />您是否希望查看并修正当前大模型配置？',
@@ -307,7 +307,7 @@ const handleSubmit = async () => {
           }
         )
           .then(async () => {
-            gtagRenderer('view_llm_config_clicked_in_invalid_tip_dialog')
+            gtagRenderer('invalid_llm_config_tip_dialog_confirm')
             try {
               await electron.ipcRenderer.invoke('llm-config')
             } catch (err) {
@@ -315,10 +315,10 @@ const handleSubmit = async () => {
             }
           })
           .catch(() => {
-            gtagRenderer('close_invalid_llm_config_tip_dialog')
+            gtagRenderer('invalid_llm_config_tip_dialog_cancel')
           })
       } else {
-        gtagRenderer('cannot_launch_due_to_unknown_error_when_check_llm_config', { err })
+        gtagRenderer('cannot_launch_for_check_llm_config_error', { err })
         ElMessage({
           type: 'error',
           message: '大模型配置检查未通过，请重试'
@@ -330,7 +330,7 @@ const handleSubmit = async () => {
       await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
     } catch (err) {
       if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
-        gtagRenderer('cannot_launch_due_to_resume_placeholder_not_exist')
+        gtagRenderer('cannot_launch_for_no_resume_placehold')
         console.log(`提示词模板无效`, err)
         ElMessageBox.confirm(
           '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
@@ -344,14 +344,14 @@ const handleSubmit = async () => {
           }
         )
           .then(async () => {
-            gtagRenderer('reset_template_clicked_in_invalid_tip_dialog')
+            gtagRenderer('confirm_invalid_rt_tip_dialog')
             await restoreDefaultTemplate()
           })
           .catch(() => {
-            gtagRenderer('close_invalid_resume_template_tip_dialog')
+            gtagRenderer('close_invalid_rt_tip_dialog')
           })
       } else {
-        gtagRenderer('cannot_launch_due_to_unknown_error_when_check_prompt', { err })
+        gtagRenderer('cannot_launch_for_check_prompt_error', { err })
         ElMessage({
           type: 'error',
           message: '用于生成自动提醒消息的提示词检查未通过，请重试'
@@ -360,7 +360,7 @@ const handleSubmit = async () => {
       return
     }
     if (!(await electron.ipcRenderer.invoke('resume-content-enough-detect'))) {
-      gtagRenderer('resume_content_not_enough_dialog_show')
+      gtagRenderer('rc_not_enough_dialog_show')
       try {
         await ElMessageBox.confirm(
           `简历内容可能不够充足（各个部分内容长度相加 <800 字）<br />后续大模型根据简历生成的内容将可能不符合预期（例如相同内容重复生成、生成预期之外的内容）<br /><br />要继续运行吗？`,
@@ -370,9 +370,9 @@ const handleSubmit = async () => {
             dangerouslyUseHTMLString: true
           }
         )
-        gtagRenderer('resume_content_not_enough_dialog_click_confirm')
+        gtagRenderer('rc_not_enough_dialog_click_confirm')
       } catch {
-        gtagRenderer('resume_content_not_enough_dialog_click_cancel')
+        gtagRenderer('rc_not_enough_dialog_click_cancel')
         return
       }
     }

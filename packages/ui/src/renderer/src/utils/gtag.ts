@@ -4,8 +4,8 @@ export function gtagRenderer(name, params: any = null) {
       name,
       params: {
         ...(params ?? {}),
-        user_agent: navigator.userAgent,
-        current_href: location.href,
+        page_location: location.href,
+        page_title: document.title,
         screen_w: window.screen?.width ?? null,
         screen_h: window.screen?.height ?? null,
         screen_dpr: window.devicePixelRatio

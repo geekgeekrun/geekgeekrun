@@ -67,7 +67,7 @@ const processTasks = async () => {
       })
       await p
     } catch {
-      gtagRenderer('encounter_error_when_downloading_dependencies')
+      gtagRenderer('encounter_error_when_download_deps')
       await ElMessageBox.confirm('需要重试吗？', '核心组件下载失败', {
         closeOnClickModal: false,
         closeOnPressEscape: false,
@@ -76,11 +76,11 @@ const processTasks = async () => {
         cancelButtonText: '退出程序'
       })
         .then(() => {
-          gtagRenderer('start_retry_download_dependencies')
+          gtagRenderer('start_retry_download_deps')
           processTasks()
         })
         .catch(() => {
-          gtagRenderer('cancel_download_dependencies_and_exit')
+          gtagRenderer('cancel_download_deps_and_exit')
           promiseList.length = 0
           electron.ipcRenderer.invoke('exit-app-immediately')
         })
