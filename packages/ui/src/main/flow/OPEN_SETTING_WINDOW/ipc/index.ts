@@ -33,7 +33,10 @@ import { WriteStream } from 'node:fs'
 import { hasOwn } from '@vue/shared'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
-import { getValidTemplate } from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+import {
+  getValidTemplate,
+  requestNewMessageContent
+} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
 import {
   autoReminderPromptTemplateFileName,
   writeDefaultAutoRemindPrompt
@@ -42,6 +45,11 @@ import {
   checkIsResumeContentValid,
   resumeContentEnoughDetect
 } from '../../../../common/utils/resume'
+import {
+  createReadNoReplyReminderLlmMockWindow,
+  readNoReplyReminderLlmMockWindow
+} from '../../../window/readNoReplyReminderLlmMockWindow'
+import { RequestSceneEnum } from '../../../features/llm-request-log'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -539,6 +547,33 @@ export default function initIpc() {
       }
     }
   })
+  ipcMain.on('test-llm-config-effect', () => {
+    createReadNoReplyReminderLlmMockWindow({
+      parent: mainWindow!,
+      modal: true,
+      show: true
+    })
+    async function requestLlm(_, requestPayload) {
+      return await requestNewMessageContent(requestPayload.messageList, {
+        requestScene: RequestSceneEnum.testing
+      })
+    }
+    ipcMain.handle('request-llm-for-test', requestLlm)
+    readNoReplyReminderLlmMockWindow?.once('closed', () => {
+      ipcMain.removeHandler('request-llm-for-test')
+    })
+    async function getLlmConfigList() {
+      return await readConfigFile('llm.json')
+    }
+    ipcMain.handle('get-llm-config-for-test', getLlmConfigList)
+    readNoReplyReminderLlmMockWindow?.once('closed', () => {
+      ipcMain.removeHandler('get-llm-config-for-test')
+    })
+  })
+  ipcMain.on('close-read-no-reply-reminder-llm-mock-window', () =>
+    readNoReplyReminderLlmMockWindow?.close()
+  )
+
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)
   })

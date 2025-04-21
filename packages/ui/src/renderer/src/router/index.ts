@@ -32,6 +32,13 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/readNoReplyReminderLlmMock',
+    component: () => import('@renderer/page/ReadNoReplyReminderLlmMock/index.vue'),
+    meta: {
+      title: '已读不回提醒器 大语言模型测试'
+    }
+  },
+  {
     path: '/main-layout',
     component: () => import('@renderer/page/MainLayout/index.vue'),
     redirect: '/main-layout/GeekAutoStartChatWithBoss',

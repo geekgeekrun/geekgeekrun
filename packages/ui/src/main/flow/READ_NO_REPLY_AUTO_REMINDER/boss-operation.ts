@@ -115,7 +115,7 @@ export const writeDefaultAutoRemindPrompt = async () => {
   await writeStorageFile(autoReminderPromptTemplateFileName, defaultPrompt, { isJson: false })
 }
 
-export const sendGptContent = async (page: Page, chatRecords) => {
+export const requestNewMessageContent = async (chatRecords, { requestScene } = {}) => {
   const template = await getValidTemplate()
   const resumeObject = (await readConfigFile('resumes.json'))?.[0]
   const resumeContent = formatResumeJsonToMarkdown(resumeObject)
@@ -148,6 +148,9 @@ export const sendGptContent = async (page: Page, chatRecords) => {
   }
   console.log(chatList)
   let res, llmConfig
+  const llmRequestRecord: Omit<LlmModelUsageRecord, 'id' | 'providerApiSecretMd5'> & {
+    providerApiSecret: string
+  } = {}
   while (!res) {
     const llmConfigList = await readConfigFile('llm.json')
     llmConfig = pickLlmConfigFromList(llmConfigList)
@@ -155,17 +158,15 @@ export const sendGptContent = async (page: Page, chatRecords) => {
       throw new Error(`CANNOT_FIND_A_USABLE_MODEL`)
     }
     console.log(llmConfig.providerCompleteApiUrl)
-    const llmRequestRecord: Omit<LlmModelUsageRecord, 'id' | 'providerApiSecretMd5'> & {
-      providerApiSecret: string
-    } = {
+    Object.assign(llmRequestRecord, {
       providerCompleteApiUrl: llmConfig.providerCompleteApiUrl,
       model: llmConfig.model,
       providerApiSecret: llmConfig.providerApiSecret,
       requestStartTime: new Date(),
       hasError: false,
       errorMessage: '',
-      requestScene: RequestSceneEnum.readNoReplyAutoReminder
-    }
+      requestScene
+    })
     try {
       const completion = await completes(
         {
@@ -227,6 +228,19 @@ export const sendGptContent = async (page: Page, chatRecords) => {
   } catch (err) {
     throw new Error(`fail to parse response. ${err?.message} ${res?.message?.content}`)
   }
+  return {
+    responseText: textToSend,
+    usedLlmConfig: llmConfig,
+    recordInfo: llmRequestRecord
+  }
+}
+
+export async function sendGptContent(page: Page, chatRecords) {
+  const textToSend = (
+    await requestNewMessageContent(chatRecords, {
+      requestScene: RequestSceneEnum.readNoReplyAutoReminder
+    })
+  ).responseText
   const chatInputSelector = `.chat-conversation .message-controls .chat-input`
   const chatInputHandle = await page.$(chatInputSelector)
   await chatInputHandle.click()

@@ -81,7 +81,7 @@
             <div>
               <div>
                 <el-button size="small" type="primary" @click="handleClickEditPrompt">
-                  使用外部编辑器编辑提示词模板
+                  使用外部编辑器编辑提示词模板 (Markdown)
                 </el-button>
                 <el-button
                   size="small"
@@ -132,6 +132,11 @@
                 />
               </el-select>
             </div>
+          </el-form-item>
+          <el-form-item>
+            <el-button size="small" type="primary" @click="handleTestEffectClicked"
+              >使用当前配置模拟已读不回复聊过程</el-button
+            >
           </el-form-item>
         </template>
       </div>
@@ -256,6 +261,100 @@ watch(
   }
 )
 
+async function checkIsCanRun() {
+  if (!(await electron.ipcRenderer.invoke('check-is-resume-content-valid'))) {
+    gtagRenderer('cannot_launch_for_invalid_rc_dialog_show')
+    try {
+      await ElMessageBox.confirm(`简历内容无效；您需要编辑一下您的简历`, {
+        cancelButtonText: '取消',
+        confirmButtonText: '好的，去编辑我的简历',
+        dangerouslyUseHTMLString: true
+      })
+      gtagRenderer('invalid_rc_dialog_click_confirm')
+      try {
+        await electron.ipcRenderer.invoke('resume-edit')
+      } catch (err) {
+        console.log(err)
+      }
+    } catch {
+      gtagRenderer('invalid_rc_dialog_click_cancel')
+    }
+    return false
+  }
+  try {
+    await electron.ipcRenderer.invoke('check-if-llm-config-list-valid')
+  } catch (err) {
+    if (err?.message?.includes(`CANNOT_FIND_VALID_CONFIG`)) {
+      gtagRenderer('cannot_launch_for_invalid_llm_config')
+      console.log(`大模型配置无效`, err)
+      ElMessageBox.confirm(
+        '大模型配置不存在或者包含无效配置<br />您是否希望查看并修正当前大模型配置？',
+        '',
+        {
+          confirmButtonText: '是',
+          cancelButtonText: '否',
+          type: 'warning',
+          closeOnClickModal: false,
+          dangerouslyUseHTMLString: true
+        }
+      )
+        .then(async () => {
+          gtagRenderer('invalid_llm_config_tip_dialog_confirm')
+          try {
+            await electron.ipcRenderer.invoke('llm-config')
+          } catch (err) {
+            console.log(err)
+          }
+        })
+        .catch(() => {
+          gtagRenderer('invalid_llm_config_tip_dialog_cancel')
+        })
+    } else {
+      gtagRenderer('cannot_launch_for_check_llm_config_error', { err })
+      ElMessage({
+        type: 'error',
+        message: '大模型配置检查未通过，请重试'
+      })
+    }
+    return false
+  }
+  try {
+    await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
+  } catch (err) {
+    if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
+      gtagRenderer('cannot_launch_for_no_resume_placehold')
+      console.log(`提示词模板无效`, err)
+      ElMessageBox.confirm(
+        '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
+        '',
+        {
+          confirmButtonText: '是',
+          cancelButtonText: '否',
+          type: 'warning',
+          closeOnClickModal: false,
+          dangerouslyUseHTMLString: true
+        }
+      )
+        .then(async () => {
+          gtagRenderer('confirm_invalid_rt_tip_dialog')
+          await restoreDefaultTemplate()
+        })
+        .catch(() => {
+          gtagRenderer('close_invalid_rt_tip_dialog')
+        })
+    } else {
+      gtagRenderer('cannot_launch_for_check_prompt_error', { err })
+      ElMessage({
+        type: 'error',
+        message: '用于生成自动提醒消息的提示词检查未通过，请重试'
+      })
+    }
+    return false
+  }
+
+  return true
+}
+
 const handleSubmit = async () => {
   gtagRenderer('run_read_no_reply_reminder_clicked', {
     throttle_interval_minutes: formContent.value.autoReminder.throttleIntervalMinutes,
@@ -270,93 +369,7 @@ const handleSubmit = async () => {
     formContent.value.autoReminder?.rechatContentSource ===
     RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
   ) {
-    if (!(await electron.ipcRenderer.invoke('check-is-resume-content-valid'))) {
-      gtagRenderer('cannot_launch_for_invalid_rc_dialog_show')
-      try {
-        await ElMessageBox.confirm(`简历内容无效；您需要编辑一下您的简历`, {
-          cancelButtonText: '取消',
-          confirmButtonText: '好的，去编辑我的简历',
-          dangerouslyUseHTMLString: true
-        })
-        gtagRenderer('invalid_rc_dialog_click_confirm')
-        try {
-          await electron.ipcRenderer.invoke('resume-edit')
-        } catch (err) {
-          console.log(err)
-        }
-      } catch {
-        gtagRenderer('invalid_rc_dialog_click_cancel')
-      }
-      return
-    }
-    try {
-      await electron.ipcRenderer.invoke('check-if-llm-config-list-valid')
-    } catch (err) {
-      if (err?.message?.includes(`CANNOT_FIND_VALID_CONFIG`)) {
-        gtagRenderer('cannot_launch_for_invalid_llm_config')
-        console.log(`大模型配置无效`, err)
-        ElMessageBox.confirm(
-          '大模型配置不存在或者包含无效配置<br />您是否希望查看并修正当前大模型配置？',
-          '',
-          {
-            confirmButtonText: '是',
-            cancelButtonText: '否',
-            type: 'warning',
-            closeOnClickModal: false,
-            dangerouslyUseHTMLString: true
-          }
-        )
-          .then(async () => {
-            gtagRenderer('invalid_llm_config_tip_dialog_confirm')
-            try {
-              await electron.ipcRenderer.invoke('llm-config')
-            } catch (err) {
-              console.log(err)
-            }
-          })
-          .catch(() => {
-            gtagRenderer('invalid_llm_config_tip_dialog_cancel')
-          })
-      } else {
-        gtagRenderer('cannot_launch_for_check_llm_config_error', { err })
-        ElMessage({
-          type: 'error',
-          message: '大模型配置检查未通过，请重试'
-        })
-      }
-      return
-    }
-    try {
-      await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid')
-    } catch (err) {
-      if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
-        gtagRenderer('cannot_launch_for_no_resume_placehold')
-        console.log(`提示词模板无效`, err)
-        ElMessageBox.confirm(
-          '提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认的提示词模板？',
-          '',
-          {
-            confirmButtonText: '是',
-            cancelButtonText: '否',
-            type: 'warning',
-            closeOnClickModal: false,
-            dangerouslyUseHTMLString: true
-          }
-        )
-          .then(async () => {
-            gtagRenderer('confirm_invalid_rt_tip_dialog')
-            await restoreDefaultTemplate()
-          })
-          .catch(() => {
-            gtagRenderer('close_invalid_rt_tip_dialog')
-          })
-      } else {
-        gtagRenderer('cannot_launch_for_check_prompt_error', { err })
-        ElMessage({
-          type: 'error',
-          message: '用于生成自动提醒消息的提示词检查未通过，请重试'
-        })
-      }
+    if (!(await checkIsCanRun())) {
       return
     }
     if (!(await electron.ipcRenderer.invoke('resume-content-enough-detect'))) {
@@ -455,6 +468,13 @@ const rechatLlmFallbackOptions = [
     value: RECHAT_LLM_FALLBACK.EXIT_REMINDER_PROGRAM
   }
 ]
+
+async function handleTestEffectClicked() {
+  if (!(await checkIsCanRun())) {
+    return
+  }
+  electron.ipcRenderer.send('test-llm-config-effect')
+}
 </script>
 
 <style scoped lang="scss">
