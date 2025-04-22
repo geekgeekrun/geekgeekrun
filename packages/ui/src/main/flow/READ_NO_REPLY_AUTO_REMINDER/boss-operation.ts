@@ -27,8 +27,7 @@ export const sendLookForwardReplyEmotion = async (page: Page) => {
   await lookForwardReplyEmojiProxy!.click()
 }
 
-const blockModelSet = new Set()
-const pickLlmConfigFromList = (llmConfigList) => {
+const pickLlmConfigFromList = (llmConfigList, blockModelSet) => {
   if (llmConfigList.length === 1) {
     llmConfigList[0].enabled = true
     llmConfigList[0].serveWeight = SINGLE_ITEM_DEFAULT_SERVE_WEIGHT
@@ -115,7 +114,13 @@ export const writeDefaultAutoRemindPrompt = async () => {
   await writeStorageFile(autoReminderPromptTemplateFileName, defaultPrompt, { isJson: false })
 }
 
-export const requestNewMessageContent = async (chatRecords, { requestScene } = {}) => {
+export const requestNewMessageContent = async (
+  chatRecords,
+  {
+    requestScene,
+    llmConfigIdForPick
+  }: { requestScene?: RequestSceneEnum; llmConfigIdForPick?: string[] } = {}
+) => {
   const template = await getValidTemplate()
   const resumeObject = (await readConfigFile('resumes.json'))?.[0]
   const resumeContent = formatResumeJsonToMarkdown(resumeObject)
@@ -151,9 +156,15 @@ export const requestNewMessageContent = async (chatRecords, { requestScene } = {
   const llmRequestRecord: Omit<LlmModelUsageRecord, 'id' | 'providerApiSecretMd5'> & {
     providerApiSecret: string
   } = {}
+  const blockModelSet = new Set()
   while (!res) {
-    const llmConfigList = await readConfigFile('llm.json')
-    llmConfig = pickLlmConfigFromList(llmConfigList)
+    let llmConfigList = await readConfigFile('llm.json')
+    if (llmConfigIdForPick?.length) {
+      llmConfigList = llmConfigList.filter((it) => {
+        return llmConfigIdForPick.includes(it.id)
+      })
+    }
+    llmConfig = pickLlmConfigFromList(llmConfigList, blockModelSet)
     if (!llmConfig) {
       throw new Error(`CANNOT_FIND_A_USABLE_MODEL`)
     }

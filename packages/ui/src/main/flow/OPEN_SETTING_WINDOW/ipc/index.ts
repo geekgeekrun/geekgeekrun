@@ -555,7 +555,8 @@ export default function initIpc() {
     })
     async function requestLlm(_, requestPayload) {
       return await requestNewMessageContent(requestPayload.messageList, {
-        requestScene: RequestSceneEnum.testing
+        requestScene: RequestSceneEnum.testing,
+        llmConfigIdForPick: requestPayload.llmConfigIdForPick ?? null
       })
     }
     ipcMain.handle('request-llm-for-test', requestLlm)

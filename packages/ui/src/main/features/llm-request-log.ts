@@ -1,9 +1,9 @@
 import { saveGptCompletionRequestRecord } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 
-export const RequestSceneEnum = {
-  testing: 1,
-  readNoReplyAutoReminder: 2,
-  geekAutoStartChatWithBoss: 3
+export enum RequestSceneEnum {
+  testing = 1,
+  readNoReplyAutoReminder = 2,
+  geekAutoStartChatWithBoss = 3
 }
 
 let dbInitPromise
