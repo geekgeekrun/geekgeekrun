@@ -140,6 +140,7 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { ElMessage } from 'element-plus'
 type MessageItem = {
   text: string
   usedLlmConfig: string
@@ -183,6 +184,12 @@ async function sendLlmGeneratedContent() {
     ;(scrollElRef.value as any as HTMLDivElement)?.scrollTo({
       top: scrollElRef.value?.scrollHeight,
       behavior: 'smooth'
+    })
+  } catch (err) {
+    ElMessage.error({
+      dangerouslyUseHTMLString: true,
+      grouping: true,
+      message: `<div>本次测试所使用的模型不可用</div><div style="margin-top: 10px; white-space: nowrap;">建议在大语言模型配置中关闭相关模型</div>`
     })
   } finally {
     isLoading.value = false
