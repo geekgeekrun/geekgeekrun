@@ -547,12 +547,17 @@ export default function initIpc() {
       }
     }
   })
-  ipcMain.on('test-llm-config-effect', () => {
-    createReadNoReplyReminderLlmMockWindow({
-      parent: mainWindow!,
-      modal: true,
-      show: true
-    })
+  ipcMain.on('test-llm-config-effect', (_, { autoReminderConfig } = {}) => {
+    createReadNoReplyReminderLlmMockWindow(
+      {
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      },
+      {
+        autoReminderConfig
+      }
+    )
     async function requestLlm(_, requestPayload) {
       return await requestNewMessageContent(requestPayload.messageList, {
         requestScene: RequestSceneEnum.testing,

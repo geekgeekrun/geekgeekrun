@@ -1,9 +1,11 @@
 import { BrowserWindow } from 'electron'
 import path from 'path'
+import { URL } from 'node:url'
 
 export let readNoReplyReminderLlmMockWindow: BrowserWindow | null = null
 export function createReadNoReplyReminderLlmMockWindow(
-  opt?: Electron.BrowserWindowConstructorOptions
+  opt?: Electron.BrowserWindowConstructorOptions,
+  { autoReminderConfig } = {}
 ): BrowserWindow {
   // Create the browser window.
   if (readNoReplyReminderLlmMockWindow) {
@@ -29,16 +31,19 @@ export function createReadNoReplyReminderLlmMockWindow(
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
+  let urlObj: URL
   if (process.env.NODE_ENV === 'development' && process.env['ELECTRON_RENDERER_URL']) {
-    readNoReplyReminderLlmMockWindow.loadURL(
-      process.env['ELECTRON_RENDERER_URL'] + '#/readNoReplyReminderLlmMock'
-    )
+    urlObj = new URL(process.env['ELECTRON_RENDERER_URL'] + '#/readNoReplyReminderLlmMock')
   } else {
-    readNoReplyReminderLlmMockWindow.loadURL(
+    urlObj = new URL(
       'file://' + path.join(__dirname, '../renderer/index.html') + '#/readNoReplyReminderLlmMock'
     )
   }
 
+  for (const [k, v] of Object.entries(autoReminderConfig || {})) {
+    urlObj.searchParams.append(k, v)
+  }
+  readNoReplyReminderLlmMockWindow.loadURL(String(urlObj))
   readNoReplyReminderLlmMockWindow!.once('closed', () => {
     readNoReplyReminderLlmMockWindow = null
   })

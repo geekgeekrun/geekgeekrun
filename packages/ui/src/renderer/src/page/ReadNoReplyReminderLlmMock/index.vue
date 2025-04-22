@@ -22,7 +22,12 @@
         <div class="pb20px"></div>
         <div v-for="(item, index) in messageList" :key="index" flex flex-col flex-items-end>
           <div class="message-item-wrap flex flex-col">
-            <div class="message-item">
+            <div
+              class="message-item"
+              :class="{
+                'will-enter-context': getIsEnterContent(index)
+              }"
+            >
               {{ item.text }}
             </div>
             <div
@@ -148,6 +153,12 @@ type MessageItem = {
 }
 const messageList = ref<MessageItem[]>([])
 
+const recentMessageQuantityForLlm =
+  Number(new URL(location.href).searchParams.get('recentMessageQuantityForLlm')) || 8
+function getIsEnterContent(index) {
+  return messageList.value.length - index - 1 < recentMessageQuantityForLlm
+}
+
 const llmConfigList = ref([])
 const llmConfigListForRender = computed(() => {
   return [
@@ -172,7 +183,7 @@ async function sendLlmGeneratedContent() {
   isLoading.value = true
   try {
     const response = await electron.ipcRenderer.invoke('request-llm-for-test', {
-      messageList: JSON.parse(JSON.stringify(messageList.value ?? [])),
+      messageList: JSON.parse(JSON.stringify((messageList.value ?? []).slice(-8))),
       llmConfigIdForPick: selectedLlmConfig.value ? [selectedLlmConfig.value] : null
     })
     console.log(response)
@@ -224,7 +235,22 @@ function formatApiSecret(text) {
     background-color: #d1f0ef;
     color: #333;
     padding: 10px;
-    border-radius: 8px 8px 0 8px;
+    border-radius: 8px 8px 0 0;
+    &.will-enter-context {
+      position: relative;
+      &::before {
+        content: '聊天上下文';
+        display: flex;
+        font-size: 10px;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background-color: #10c7c3;
+        color: #fff;
+        line-height: 1;
+        padding: 2px 4px;
+      }
+    }
   }
 }
 </style>

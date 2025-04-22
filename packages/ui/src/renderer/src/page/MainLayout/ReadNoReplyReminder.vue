@@ -116,6 +116,11 @@
               次聊天内容作为上下文生成新消息
             </div>
           </el-form-item>
+          <el-form-item>
+            <el-button size="small" type="primary" @click="handleTestEffectClicked"
+              >使用当前配置模拟已读不回复聊过程</el-button
+            >
+          </el-form-item>
           <el-form-item prop="recentMessageQuantityForLlm">
             <div class="flex flex-items-center">
               <span class="whitespace-nowrap">当所有模型均不可使用时&nbsp;</span>
@@ -132,11 +137,6 @@
                 />
               </el-select>
             </div>
-          </el-form-item>
-          <el-form-item>
-            <el-button size="small" type="primary" @click="handleTestEffectClicked"
-              >使用当前配置模拟已读不回复聊过程</el-button
-            >
           </el-form-item>
         </template>
       </div>
@@ -473,7 +473,9 @@ async function handleTestEffectClicked() {
   if (!(await checkIsCanRun())) {
     return
   }
-  electron.ipcRenderer.send('test-llm-config-effect')
+  electron.ipcRenderer.send('test-llm-config-effect', {
+    autoReminderConfig: JSON.parse(JSON.stringify(formContent.value.autoReminder))
+  })
 }
 </script>
 
