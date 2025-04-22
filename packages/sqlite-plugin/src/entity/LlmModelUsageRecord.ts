@@ -2,7 +2,7 @@ import { requireTypeorm } from "../utils/module-loader";
 const { Entity, PrimaryGeneratedColumn, Column, Index } = requireTypeorm()
 
 @Entity()
-@Index(["providerCompleteApiUrl", "model", "providerApiSecretMd5"])
+@Index(["providerCompleteApiUrl", "model", "providerApiSecret"])
 export class LlmModelUsageRecord {
   @PrimaryGeneratedColumn()
   id: number;
@@ -13,8 +13,10 @@ export class LlmModelUsageRecord {
   @Column()
   model: string
 
-  @Column()
-  providerApiSecretMd5: string
+  @Column({
+    nullable: true
+  })
+  providerApiSecret: string
 
   @Column({
     nullable: true
