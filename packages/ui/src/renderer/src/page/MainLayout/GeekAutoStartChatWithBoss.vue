@@ -20,19 +20,45 @@
           </div>
         </el-form-item>
         <el-form-item prop="expectCompanies" mb10px>
-          <div font-size-12px>
-            期望公司（以逗号分隔，不区分大小写）<el-tooltip
-              effect="light"
-              placement="bottom-start"
-              @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
-            >
-              <template #content>
-                <img block h-270px src="./resources/intro-of-job-entry.png" />
-              </template>
-              <el-button type="text" font-size-12px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span>期望公司信息位置图示</el-button
+          <div
+            v-full
+            font-size-12px
+            flex
+            :style="{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: '100%'
+            }"
+          >
+            <div>
+              期望公司（以逗号分隔，不区分大小写）<el-tooltip
+                effect="light"
+                placement="bottom-start"
+                @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
               >
-            </el-tooltip>
+                <template #content>
+                  <img block h-270px src="./resources/intro-of-job-entry.png" />
+                </template>
+                <el-button type="text" font-size-12px
+                  ><span><QuestionFilled w-1em h-1em mr2px /></span>期望公司信息位置图示</el-button
+                >
+              </el-tooltip>
+            </div>
+            <el-dropdown @command="handleExpectCompanyTemplateClicked">
+              <el-button size="small"
+                >期望公司模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
+              ></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item
+                    v-for="item in expectCompanyTemplateList"
+                    :key="item.name"
+                    :command="item"
+                    >{{ item.name }}</el-dropdown-item
+                  >
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
           <el-input
             v-model="formContent.expectCompanies"
@@ -48,51 +74,75 @@
           查看职位详情后，是发起投递还是标记不合适的条件
           <span font-size-12px>（以下条件为空表示不筛选）</span>
         </el-form-item>
-        <div>
-          <el-tooltip
-            effect="light"
-            placement="bottom"
-            @show="gtagRenderer('tooltip_show_about_expect_job_info_figure')"
-          >
-            <template #content>
-              <img block h-270px src="./resources/intro-of-job-info.png" />
-            </template>
-            <el-button type="text" font-size-12px
-              ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
+        <div
+          flex
+          :style="{
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }"
+        >
+          <div>
+            <el-tooltip
+              effect="light"
+              placement="bottom"
+              @show="gtagRenderer('tooltip_show_about_expect_job_info_figure')"
             >
-          </el-tooltip>
-          <el-tooltip
-            effect="light"
-            placement="bottom-start"
-            @show="gtagRenderer('tooltip_show_about_mark_not_suit_intro')"
-          >
-            <template #content>
-              <ol m0 line-height-1.5em w-400px pl2em>
-                <li>
-                  如果查找到的职位，职位名称、职位类型、职位描述与如下正则不匹配，则这个职位将被标记为不合适
-                </li>
-                <li>
-                  如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适
-                </li>
-                <li>
-                  如有错误标记，请在左侧“<a
-                    href="javascript:void(0)"
-                    style="color: var(--el-color-primary)"
-                    @click.prevent="
-                      () => {
-                        gtagRenderer('click_view_mansr_from_boss_b_tooltip')
-                        $router.push('/main-layout/MarkAsNotSuitRecord')
-                      }
-                    "
-                    >标记不合适</a
-                  >”记录中找到相关记录，手动对这些职位发起会话
-                </li>
-              </ol>
-            </template>
-            <el-button type="text" font-size-12px
-              ><span><QuestionFilled w-1em h-1em mr2px /></span>标记不合适机制</el-button
+              <template #content>
+                <img block h-270px src="./resources/intro-of-job-info.png" />
+              </template>
+              <el-button type="text" font-size-12px
+                ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
+              >
+            </el-tooltip>
+            <el-tooltip
+              effect="light"
+              placement="bottom-start"
+              @show="gtagRenderer('tooltip_show_about_mark_not_suit_intro')"
             >
-          </el-tooltip>
+              <template #content>
+                <ol m0 line-height-1.5em w-400px pl2em>
+                  <li>
+                    如果查找到的职位，职位名称、职位类型、职位描述与如下正则不匹配，则这个职位将被标记为不合适
+                  </li>
+                  <li>
+                    如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适
+                  </li>
+                  <li>
+                    如有错误标记，请在左侧“<a
+                      href="javascript:void(0)"
+                      style="color: var(--el-color-primary)"
+                      @click.prevent="
+                        () => {
+                          gtagRenderer('click_view_mansr_from_boss_b_tooltip')
+                          $router.push('/main-layout/MarkAsNotSuitRecord')
+                        }
+                      "
+                      >标记不合适</a
+                    >”记录中找到相关记录，手动对这些职位发起会话
+                  </li>
+                </ol>
+              </template>
+              <el-button type="text" font-size-12px
+                ><span><QuestionFilled w-1em h-1em mr2px /></span>标记不合适机制</el-button
+              >
+            </el-tooltip>
+          </div>
+          <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
+            <el-button size="small"
+              >职位详情筛选模板（按职类区分）
+              <el-icon class="el-icon--right"><arrow-down /></el-icon
+            ></el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  v-for="item in expectJobFilterTemplateList"
+                  :key="item.name"
+                  :command="item"
+                  >{{ item.name }}</el-dropdown-item
+                >
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
         <div
           :style="{
@@ -168,6 +218,9 @@ import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 import { gtagRenderer } from '@renderer/utils/gtag'
+import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
+import { ArrowDown } from '@element-plus/icons-vue'
+
 const router = useRouter()
 
 const formContent = ref({
@@ -321,6 +374,98 @@ const normalizeExpectCompanies = () => {
 const handleClickLaunchLogin = () => {
   gtagRenderer('launch_login_clicked')
   router.replace('/cookieAssistant')
+}
+const expectCompanyTemplateList = [
+  {
+    name: '默认值',
+    value: defaultTargetCompanyListConf.join(',')
+  },
+  {
+    name: '不限公司（随便投）',
+    value: ''
+  },
+  {
+    name: '大厂及关联企业',
+    value: `抖音,字节,字跳,有竹居,脸萌,头条,懂车帝,滴滴,嘀嘀,小桔,网易,有道,腾讯,酷狗,酷我,阅文,搜狗,京东,沃东天骏,达达,达冠,百度,度小满,爱奇艺,携程,趣拿,去哪儿,集度,理想,蔚来,顺丰,讯飞,同程,艺龙,马蜂窝,贝壳,自如,链家,我爱我家,相寓,多点,金山,小米,猎豹,新浪,微博,阿里,蚂蚁,飞猪,乌鸫,饿了么,LAZADA,来赞达,飞猪,菜鸟,哈啰,钉钉,高德,美团,三快,猫眼,快手,映客,小红书,行吟,奇虎,360,三六零,鸿盈,奇富,奇元,亚信,启明星辰,奇安信,深信服,长亭,绿盟,天融信,商汤,SenseTime,大华,海康威视,hikvision,汽车之家,车好多,瓜子,易车,昆仑万维,昆仑天工,闲徕,趣加,FunPlus,完美,马上消费,轻松,水滴,白龙马,58,车欢欢,五八,红布林,致美,快狗,天鹅到家,转转,美餐,知乎,智者四海,易点云,搜狐,用友,畅捷通,猿辅导,小猿,猿力,好未来,学而思,希望学,新东方,东方甄选,东方优选,作业帮,高途,跟谁学,学科网,天学网,一起教育,一起作业,美术宝,火花思维,粉笔,老虎国际,一心向上,向上一意,联想,拉勾,乐视,欢聚,竞技世界,拼多多,寻梦,得物,Moka,希瑞亚斯,北森,OPPO,欧珀,vivo,维沃,小天才,步步高,读书郎,货拉拉,陌陌,探探,Shopee,首汽租车,神州租车,天眼查,旷视,小冰,美图,智谱华章,MiniMax,石头科技,迅雷,TP,希音,SHEIN,稀宇,深言,百川智能,与爱为舞,牵手`
+  },
+  {
+    name: '阿里系',
+    value: `阿里,蚂蚁,飞猪,乌鸫,饿了么,LAZADA,来赞达,菜鸟,哈啰,钉钉,高德,白龙马,新浪,微博`
+  },
+  {
+    name: '字节（头条/抖音）系',
+    value: `抖音,字节,字跳,有竹居,脸萌,头条,懂车帝`
+  },
+  {
+    name: '百度系',
+    value: `百度,度小满,爱奇艺,携程,趣拿,集度,作业帮`
+  },
+  {
+    name: '腾讯系',
+    value: `腾讯,酷狗,酷我,阅文,搜狗,京东,沃东天骏,达达,达冠,美团,三快,猫眼,快手,拼多多,寻梦,Shopee,滴滴,嘀嘀,小桔`
+  },
+  {
+    name: '外包、劳务派遣企业',
+    value: `青钱,软通动力,南天,睿服,中电金信,佰钧成,云链,博彦,汉克时代,柯莱特,拓保,亿达信息,纬创,微创,微澜,诚迈科技,法本,兆尹,诚迈,联合永道,新致软件,宇信科技,华为,德科,FESCO,科锐,科之锐`
+  }
+]
+function handleExpectCompanyTemplateClicked(item) {
+  gtagRenderer('expect_company_tpl_clicked', {
+    name: item.name
+  })
+  formContent.value.expectCompanies = item.value
+}
+
+const expectJobFilterTemplateList = [
+  {
+    name: '不限职位（随便投）',
+    config: {
+      expectJobNameRegExpStr: '',
+      expectJobTypeRegExpStr: '',
+      expectJobDescRegExpStr: ''
+    }
+  },
+  {
+    name: '研发 - 前端开发工程师',
+    config: {
+      expectJobNameRegExpStr: '前端|H5|FE',
+      expectJobTypeRegExpStr: '前端开发|javascript',
+      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5'
+    }
+  },
+  {
+    name: '研发 - Java',
+    config: {
+      expectJobNameRegExpStr: 'Java',
+      expectJobTypeRegExpStr: 'Java',
+      expectJobDescRegExpStr: 'JVM|Java|消息队列|MySQL|Nginx|Redis|Dubbo'
+    }
+  },
+  {
+    name: '人力 - 员工关系',
+    config: {
+      expectJobNameRegExpStr: '员工关系|劳动关系|SSC|人力资源|人资',
+      expectJobTypeRegExpStr: '员工关系|人力资源',
+      expectJobDescRegExpStr: '社保|考勤|入职|离职'
+    }
+  },
+  {
+    name: '人力 - 招聘',
+    config: {
+      expectJobNameRegExpStr: '招聘|招聘HR|招聘专员|招聘顾问|招聘专家|Recruiter|人力资源|人资',
+      expectJobTypeRegExpStr: '招聘|人力资源|猎头顾问',
+      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头'
+    }
+  }
+]
+function handleExpectJobFilterTemplateClicked(item) {
+  gtagRenderer('expect_job_filter_tpl_clicked', {
+    name: item.name
+  })
+
+  Object.assign(formContent.value, {
+    ...item.config
+  })
 }
 </script>
 
