@@ -72,7 +72,7 @@ export default async function gtag<T extends string>(
   }
   // ServiceWorker环境下直接调用上报函数
   const reporter = (await import('./Analytics')).default
-  return reporter.fireEvent(name, params)
+  return reporter.fireEvent(name.replace(/-/g, '_'), params)
 }
 
 // Fire a page view event.

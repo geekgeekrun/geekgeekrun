@@ -167,7 +167,7 @@ const handleGotoProjectPageClick = () => {
 
 const handleLaunchBossSite = debounce(
   async () => {
-    gtagRenderer('launch-boss-site-clicked')
+    gtagRenderer('launch_boss_site_clicked')
     return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
       url: `https://www.zhipin.com/`
     })
