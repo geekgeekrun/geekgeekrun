@@ -409,7 +409,7 @@ async function toRecommendPage (hooks) {
     }
   }
 
-  const INIT_START_EXCEPT_JOB_INDEX = 1
+  const INIT_START_EXCEPT_JOB_INDEX = 0
   let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
   afterPageLoad: while (true) {
     let expectJobList
@@ -422,20 +422,21 @@ async function toRecommendPage (hooks) {
         await sleepWithRandomDelay(2500)
 
         await Promise.all([
-          page.waitForSelector('.job-recommend-main .recommend-search-expect .recommend-job-btn'),
+          page.waitForSelector('.c-expect-select .expect-list .expect-item'),
           page.waitForSelector('.job-list-container .rec-job-list')
         ])
+        await page.click(`.c-expect-select .expect-list .expect-item`)
         const currentActiveJobIndex = await page.evaluate(`
-          [...document.querySelectorAll('.job-recommend-main .recommend-search-expect .recommend-job-btn')].findIndex(it => it.classList.contains('active'))
+          [...document.querySelectorAll('.c-expect-select .expect-list .expect-item')].findIndex(it => it.classList.contains('active'))
         `)
 
-        expectJobList = await page.evaluate(`document.querySelector('.job-recommend-search')?.__vue__?.expectList`)
+        expectJobList = await page.evaluate(`document.querySelector('.c-expect-select')?.__vue__?.expectList`)
         if (currentActiveJobIndex === currentExceptJobIndex) {
           // first navigation and can immediately start chat (recommend job)
         } else {
           // not first navigation and should choose a job (except job)
           // click first expect job
-          const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
+          const expectJobTabHandlers = await page.$$('.c-expect-select .expect-list .expect-item')
           await expectJobTabHandlers[currentExceptJobIndex].click()
           await page.waitForResponse(
             response => {
@@ -486,7 +487,7 @@ async function toRecommendPage (hooks) {
 
               // job list
               const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
-              let jobListData = await page.evaluate(`document.querySelector('.job-recommend-main')?.__vue__?.jobList`)
+              let jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
               let hasReachLastPage = false
               let targetJobIndex = -1
               let targetJobData
@@ -522,7 +523,7 @@ async function toRecommendPage (hooks) {
                     await sleep(1)
                     await requestNextPagePromiseWithResolver?.promise
                     hasReachLastPage = await page.evaluate(`
-                      !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
+                      !(document.querySelector('.page-jobs-main')?.__vue__?.hasMore)
                     `)
                     if (hasReachLastPage) {
                       console.log(`Arrive the terminal of the job list.`)
@@ -533,7 +534,7 @@ async function toRecommendPage (hooks) {
                   await sleep(3000)
                   jobListData = await page.evaluate(
                     `
-                      document.querySelector('.job-recommend-main')?.__vue__?.jobList
+                      document.querySelector('.page-jobs-main')?.__vue__?.jobList
                     `
                   )
                   tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => 
@@ -568,6 +569,10 @@ async function toRecommendPage (hooks) {
                     const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list li.job-card-box')
                     const targetJobElProxy = recommendJobItemList[tempTargetJobIndexToCheckDetail]
                     // click that element
+                    await page.evaluate(() => {
+                      document.documentElement.scrollTop = 0
+                    })
+                    await sleep(500)
                     await targetJobElProxy.click()
                     await page.waitForResponse(
                       response => {
@@ -670,6 +675,10 @@ async function toRecommendPage (hooks) {
 
           await hooks.newChatWillStartup?.promise(targetJobData)
           const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
+          await page.evaluate(() => {
+            document.documentElement.scrollTop = 0
+          })
+          await sleep(500)
           //#region click the chat button
           await startChatButtonProxy.click()
 
