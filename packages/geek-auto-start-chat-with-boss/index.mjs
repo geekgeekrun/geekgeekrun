@@ -264,7 +264,7 @@ async function setFilterCondition (selectedFilters) {
     const placeholderText = placeholderTexts[i]
     const filterDropdownProxy = await (async () => {
       const jsHandle = (await page.evaluateHandle((placeholderText) => {
-        const filterBar = document.querySelector('.job-recommend-main .job-recommend-search')
+        const filterBar = document.querySelector('.page-jobs-main .filter-condition-inner')
         const dropdownEntry = filterBar.__vue__.$children.find(it => it.placeholder === placeholderText)
         return dropdownEntry.$el
       }, placeholderText)).asElement();
@@ -289,18 +289,18 @@ async function setFilterCondition (selectedFilters) {
       const optionKaPrefix = optionKaPrefixes[i]
       if (!currentFilterConditions.length) {
         if (placeholderText === '公司行业') {
-          const activeOptionElAtCurrentFilterProxyList = await page.$$(`.job-recommend-main .recommend-search-more .active[ka^="${optionKaPrefix}"]`)
+          const activeOptionElAtCurrentFilterProxyList = await page.$$(`.page-jobs-main .filter-condition-inner .active[ka^="${optionKaPrefix}"]`)
           for (const it of activeOptionElAtCurrentFilterProxyList) {
             await it.click()
           }
         } else {
           // select 不限 immediately
-          const buxianOptionElProxy = await page.$(`.job-recommend-main .recommend-search-more [ka="${optionKaPrefix}${0}"]`)
+          const buxianOptionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${0}"]`)
           await buxianOptionElProxy.click()
         }
       } else {
         //#region uncheck options perviously checked but not existed in current filter.
-        const activeOptionElAtCurrentFilterProxyList = await page.$$(`.job-recommend-main .recommend-search-more .active[ka^="${optionKaPrefix}"]`)
+        const activeOptionElAtCurrentFilterProxyList = await page.$$(`.page-jobs-main .filter-condition-inner .active[ka^="${optionKaPrefix}"]`)
         const activeOptionValues = (await Promise.all(
           activeOptionElAtCurrentFilterProxyList.map(elProxy => {
             return elProxy.evaluate((el) => {
@@ -339,7 +339,7 @@ async function setFilterCondition (selectedFilters) {
             optionValue = conditionToCheck[j]
           }
           await sleepWithRandomDelay(500)
-          const optionElProxy = await page.$(`.job-recommend-main .recommend-search-more [ka="${optionKaPrefix}${optionValue}"]`)
+          const optionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${optionValue}"]`)
           if (!optionElProxy) {
             continue;
           }
@@ -520,7 +520,7 @@ async function toRecommendPage (hooks) {
                   ) {
                     scrolledHeight += increase
                     await page.mouse.wheel({deltaY: increase});
-                    await sleep(1)
+                    await sleep(100)
                     await requestNextPagePromiseWithResolver?.promise
                     hasReachLastPage = await page.evaluate(`
                       !(document.querySelector('.page-jobs-main')?.__vue__?.hasMore)
@@ -531,7 +531,7 @@ async function toRecommendPage (hooks) {
                   }
                   requestNextPagePromiseWithResolver = null
 
-                  await sleep(3000)
+                  await sleep(5000)
                   jobListData = await page.evaluate(
                     `
                       document.querySelector('.page-jobs-main')?.__vue__?.jobList
@@ -747,7 +747,7 @@ async function toRecommendPage (hooks) {
     }
     // for of reach terminal
     if (
-      currentExceptJobIndex + 1 > expectJobList.length
+      currentExceptJobIndex + 1 >= expectJobList.length
     ) {
       hooks.noPositionFoundForCurrentJob?.call()
       await Promise.all([
