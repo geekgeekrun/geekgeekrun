@@ -15,7 +15,6 @@ export function createLlmConfigWindow(
     resizable: false,
     show: false,
     autoHideMenuBar: true,
-    frame: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false

@@ -18,6 +18,7 @@ export default function initPublicIpc() {
       if (!win) {
         return
       }
+      win.setMinimumSize(size.width, size.height)
       win.setSize(size.width, size.height, size.animate)
     }
   )

@@ -257,6 +257,7 @@ import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../../common/constant'
 import { v4 as uuid } from 'uuid'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 interface LlmConfigItem {
   id: string
   providerCompleteApiUrl: string
@@ -498,11 +499,12 @@ function removeConfig(index) {
 
 watch(
   () => formContent.value.length,
-  (nVal) => {
+  async (nVal) => {
+    await sleep(100)
     if (nVal <= 1) {
       electron.ipcRenderer.send('update-window-size', {
         width: window.innerWidth,
-        height: 550
+        height: 576
       })
     } else {
       electron.ipcRenderer.send('update-window-size', {
