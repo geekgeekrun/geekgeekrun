@@ -50,6 +50,7 @@ import {
   readNoReplyReminderLlmMockWindow
 } from '../../../window/readNoReplyReminderLlmMockWindow'
 import { RequestSceneEnum } from '../../../features/llm-request-log'
+import { checkUpdateForUi } from '../../../features/updater'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -579,6 +580,10 @@ export default function initIpc() {
   ipcMain.on('close-read-no-reply-reminder-llm-mock-window', () =>
     readNoReplyReminderLlmMockWindow?.close()
   )
+  ipcMain.handle('check-update', async () => {
+    const newRelease = await checkUpdateForUi()
+    return newRelease
+  })
 
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)
