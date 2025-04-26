@@ -96,7 +96,7 @@ if (
 }
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
-const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
+const recommendJobPageUrl = `https://www.zhipin.com/web/geek/jobs`
 
 const expectCompanySet = new Set(targetCompanyList)
 const enableCompanyAllowList = Boolean(expectCompanySet.size)

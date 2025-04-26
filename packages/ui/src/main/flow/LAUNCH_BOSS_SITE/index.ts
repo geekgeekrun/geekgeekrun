@@ -59,7 +59,7 @@ const attachRequestsListener = async (target: Target) => {
       }
       await writeStorageFile('job-not-suit-reason-code-to-text-cache.json', reasonCodeToTextMap)
     } else if (
-      page.url().startsWith('https://www.zhipin.com/web/geek/job-recommend') &&
+      page.url().startsWith('https://www.zhipin.com/web/geek/jobs') &&
       response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/save.json')
     ) {
       const currentJobData = await page.evaluate(
@@ -106,7 +106,7 @@ const attachRequestsListener = async (target: Target) => {
         markDetail
       )
     } else if (
-      page.url().startsWith('https://www.zhipin.com/web/geek/job-recommend') &&
+      page.url().startsWith('https://www.zhipin.com/web/geek/jobs') &&
       response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json')
     ) {
       const request = response.request().url()
