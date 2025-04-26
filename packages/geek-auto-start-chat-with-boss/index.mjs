@@ -750,6 +750,8 @@ async function toRecommendPage (hooks) {
       currentExceptJobIndex + 1 >= expectJobList.length
     ) {
       hooks.noPositionFoundForCurrentJob?.call()
+      hooks.noPositionFoundAfterTraverseAllJob?.call()
+      await sleep((20 + 30 * Math.random()) * 1000)
       await Promise.all([
         page.reload(),
         page.waitForNavigation()
@@ -757,8 +759,7 @@ async function toRecommendPage (hooks) {
       currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     } else {
       hooks.noPositionFoundForCurrentJob?.call()
-      hooks.noPositionFoundAfterTraverseAllJob?.call()
-
+      await sleep((10 + 15 * Math.random()) * 1000)
       currentExceptJobIndex += 1
     }
   }
