@@ -224,6 +224,7 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
           ? 8
           : parseInt(conf.recentMessageQuantityForLlm)
       : 8
+  conf.rechatLlmFallback = conf.rechatLlmFallback ?? RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
   formContent.value.autoReminder = conf
 })
 
