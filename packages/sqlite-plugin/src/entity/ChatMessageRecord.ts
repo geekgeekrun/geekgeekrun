@@ -25,7 +25,7 @@ export class ChatMessageRecord {
   @Column({
     nullable: true
   })
-  style?: 'sent' | 'receive';
+  style?: 'sent' | 'received';
 
   @Column({
     nullable: true

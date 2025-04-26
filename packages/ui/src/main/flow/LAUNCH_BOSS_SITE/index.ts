@@ -189,7 +189,7 @@ const attachRequestsListener = async (target: Target) => {
         mappedItem.mid = it.mid
         mappedItem.encryptFromUserId = it.isSelf ? currentUserInfo.encryptUserId : bossInfo.encryptBossId
         mappedItem.encryptToUserId = it.isSelf ? bossInfo.encryptBossId : currentUserInfo.encryptUserId
-        mappedItem.style = it.style
+        mappedItem.style = it.isSelf ? 'sent' : 'received'
         mappedItem.type = it.type
         mappedItem.time = it.time ? new Date(it.time) : null
         mappedItem.text = it.text
