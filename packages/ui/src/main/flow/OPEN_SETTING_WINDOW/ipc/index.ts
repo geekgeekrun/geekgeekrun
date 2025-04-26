@@ -1,5 +1,5 @@
 import { ipcMain, shell, app } from 'electron'
-
+import path from 'path'
 import * as childProcess from 'node:child_process'
 import {
   ensureConfigFileExist,
@@ -8,7 +8,8 @@ import {
   readConfigFile,
   writeConfigFile,
   readStorageFile,
-  writeStorageFile
+  writeStorageFile,
+  storageFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
@@ -30,14 +31,27 @@ import { pipeWriteRegardlessError } from '../../utils/pipe'
 import { WriteStream } from 'node:fs'
 // eslint-disable-next-line vue/prefer-import-from-vue
 import { hasOwn } from '@vue/shared'
+import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
+import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
+import {
+  getValidTemplate,
+  requestNewMessageContent
+} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+import {
+  autoReminderPromptTemplateFileName,
+  writeDefaultAutoRemindPrompt
+} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+import {
+  checkIsResumeContentValid,
+  resumeContentEnoughDetect
+} from '../../../../common/utils/resume'
+import {
+  createReadNoReplyReminderLlmMockWindow,
+  readNoReplyReminderLlmMockWindow
+} from '../../../window/readNoReplyReminderLlmMockWindow'
+import { RequestSceneEnum } from '../../../features/llm-request-log'
 
 export default function initIpc() {
-  ipcMain.on('open-external-link', (_, link) => {
-    shell.openExternal(link, {
-      activate: true
-    })
-  })
-
   ipcMain.handle('fetch-config-file-content', async () => {
     const configFileContentList = configFileNameList.map((fileName) => {
       return readConfigFile(fileName)
@@ -69,8 +83,15 @@ export default function initIpc() {
     if (hasOwn(payload, 'anyCombineRecommendJobFilter')) {
       bossConfig.anyCombineRecommendJobFilter = payload.anyCombineRecommendJobFilter
     }
-    if (hasOwn(payload, 'expectJobRegExpStr')) {
-      bossConfig.expectJobRegExpStr = payload.expectJobRegExpStr
+    delete bossConfig.expectJobRegExpStr
+    if (hasOwn(payload, 'expectJobNameRegExpStr')) {
+      bossConfig.expectJobNameRegExpStr = payload.expectJobNameRegExpStr
+    }
+    if (hasOwn(payload, 'expectJobTypeRegExpStr')) {
+      bossConfig.expectJobTypeRegExpStr = payload.expectJobTypeRegExpStr
+    }
+    if (hasOwn(payload, 'expectJobDescRegExpStr')) {
+      bossConfig.expectJobDescRegExpStr = payload.expectJobDescRegExpStr
     }
     if (hasOwn(payload, 'autoReminder')) {
       bossConfig.autoReminder = payload.autoReminder
@@ -434,6 +455,130 @@ export default function initIpc() {
   ipcMain.handle('get-job-history-by-encrypt-id', async (_, encryptJobId) => {
     return await getJobHistoryByEncryptId(encryptJobId)
   })
+
+  ipcMain.handle('llm-config', async () => {
+    createLlmConfigWindow({
+      parent: mainWindow!,
+      modal: true,
+      show: true
+    })
+    const defer = Promise.withResolvers()
+    async function saveLlmConfigHandler(_, configToSave) {
+      await writeConfigFile('llm.json', configToSave)
+      defer.resolve()
+      ipcMain.removeHandler('save-llm-config')
+      llmConfigWindow?.close()
+    }
+    ipcMain.handle('save-llm-config', saveLlmConfigHandler)
+    llmConfigWindow?.once('closed', () => {
+      ipcMain.removeHandler('save-llm-config')
+      defer.reject(new Error('cancel'))
+    })
+    return defer.promise
+  })
+  ipcMain.on('close-llm-config', () => llmConfigWindow?.close())
+
+  ipcMain.handle('resume-edit', async () => {
+    createResumeEditorWindow({
+      parent: mainWindow!,
+      modal: true,
+      show: true
+    })
+    const defer = Promise.withResolvers()
+    async function saveResumeHandler(_, resumeContent) {
+      await writeConfigFile('resumes.json', [
+        {
+          name: '默认简历',
+          updateTime: Number(new Date()),
+          content: resumeContent
+        }
+      ])
+      defer.resolve()
+      resumeEditorWindow?.close()
+    }
+    ipcMain.handle('save-resume-content', saveResumeHandler)
+    resumeEditorWindow?.once('closed', () => {
+      ipcMain.removeHandler('save-resume-content')
+      ipcMain.removeHandler('fetch-resume-content')
+      defer.reject(new Error('cancel'))
+    })
+
+    ipcMain.handle('fetch-resume-content', async () => {
+      const res = (await readConfigFile('resumes.json'))?.[0]
+      return res?.content ?? null
+    })
+    return defer.promise
+  })
+  ipcMain.on('no-reply-reminder-prompt-edit', async () => {
+    const template = await readStorageFile(autoReminderPromptTemplateFileName, { isJson: false })
+    if (!template) {
+      await writeDefaultAutoRemindPrompt()
+    }
+    const filePath = path.join(storageFilePath, autoReminderPromptTemplateFileName)
+    shell.openPath(filePath)
+  })
+  ipcMain.on('close-resume-editor', () => resumeEditorWindow?.close())
+  ipcMain.handle('check-if-auto-remind-prompt-valid', async () => {
+    await getValidTemplate()
+  })
+  ipcMain.handle('check-is-resume-content-valid', async () => {
+    const res = (await readConfigFile('resumes.json'))?.[0]
+    return checkIsResumeContentValid(res)
+  })
+  ipcMain.handle('resume-content-enough-detect', async () => {
+    const res = (await readConfigFile('resumes.json'))?.[0]
+    return resumeContentEnoughDetect(res)
+  })
+  ipcMain.handle('overwrite-auto-remind-prompt-with-default', async () => {
+    await writeDefaultAutoRemindPrompt()
+  })
+  ipcMain.handle('check-if-llm-config-list-valid', async () => {
+    const llmConfigList = await readConfigFile('llm.json')
+    if (!Array.isArray(llmConfigList) || !llmConfigList?.length) {
+      throw new Error('CANNOT_FIND_VALID_CONFIG')
+    }
+    if (llmConfigList.some((it) => !/^http(s)?:\/\//.test(it.providerCompleteApiUrl))) {
+      throw new Error('CANNOT_FIND_VALID_CONFIG')
+    }
+    if (llmConfigList.length > 1) {
+      const firstEnabledModel = llmConfigList.find((it) => it.enabled)
+      if (!firstEnabledModel) {
+        throw new Error('CANNOT_FIND_VALID_CONFIG')
+      }
+    }
+  })
+  ipcMain.on('test-llm-config-effect', (_, { autoReminderConfig } = {}) => {
+    createReadNoReplyReminderLlmMockWindow(
+      {
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      },
+      {
+        autoReminderConfig
+      }
+    )
+    async function requestLlm(_, requestPayload) {
+      return await requestNewMessageContent(requestPayload.messageList, {
+        requestScene: RequestSceneEnum.testing,
+        llmConfigIdForPick: requestPayload.llmConfigIdForPick ?? null
+      })
+    }
+    ipcMain.handle('request-llm-for-test', requestLlm)
+    readNoReplyReminderLlmMockWindow?.once('closed', () => {
+      ipcMain.removeHandler('request-llm-for-test')
+    })
+    async function getLlmConfigList() {
+      return await readConfigFile('llm.json')
+    }
+    ipcMain.handle('get-llm-config-for-test', getLlmConfigList)
+    readNoReplyReminderLlmMockWindow?.once('closed', () => {
+      ipcMain.removeHandler('get-llm-config-for-test')
+    })
+  })
+  ipcMain.on('close-read-no-reply-reminder-llm-mock-window', () =>
+    readNoReplyReminderLlmMockWindow?.close()
+  )
 
   ipcMain.handle('exit-app-immediately', () => {
     app.exit(0)

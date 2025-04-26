@@ -55,7 +55,17 @@
     </div>
     <div class="flex flex-0 flex-justify-between pt10px pb10px">
       <div class="w100px">
-        <el-button :loading="isTableLoading" size="small" @click="getJobLibrary">刷新</el-button>
+        <el-button
+          :loading="isTableLoading"
+          size="small"
+          @click="
+            () => {
+              gtagRenderer('job_library_refresh_clicked')
+              getJobLibrary()
+            }
+          "
+          >刷新</el-button
+        >
       </div>
       <ElPagination
         v-model:current-page="pagination.pageNo"
@@ -74,7 +84,13 @@
       <JobInfoSnapshot
         v-if="selectedJobInfoForViewSnapshot"
         :job-info="selectedJobInfoForViewSnapshot"
-        @closed="selectedJobInfoForViewSnapshot = null"
+        scene="jobLibrary"
+        @closed="
+          () => {
+            gtagRenderer('job_info_snapshot_closed')
+            selectedJobInfoForViewSnapshot = null
+          }
+        "
       />
     </ElDrawer>
     <ElDialog
@@ -92,6 +108,7 @@
         :job-info-history-list="selectedJobHistory ?? []"
         @closed="
           () => {
+            gtagRenderer('job_library_list_dialog_closed')
             selectedJobInfoForViewHistory = null
             selectedJobHistory = null
           }
@@ -109,6 +126,7 @@ import { type JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/Job
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import JobInfoHistoryList from '../../features/JobInfoHistoryList/index.vue'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const tableData = ref<VChatStartupLog[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
@@ -121,6 +139,10 @@ const tableRef = ref<InstanceType<typeof ElTable>>()
 const isTableLoading = ref(false)
 async function getJobLibrary() {
   try {
+    gtagRenderer('job_library_request_sent', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     isTableLoading.value = true
     const { data: res } = (await electron.ipcRenderer.invoke('get-job-library', {
       pageNo: pagination.value.pageNo,
@@ -132,7 +154,16 @@ async function getJobLibrary() {
       pageNo: res.pageNo,
       pageSize: pagination.value.pageSize
     }
+    gtagRenderer('job_library_request_success', {
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
   } catch (err) {
+    gtagRenderer('job_library_request_error', {
+      err,
+      page_no: pagination.value.pageNo,
+      page_size: pagination.value.pageSize,
+    })
     console.log(err)
     tableData.value = []
   } finally {
@@ -160,10 +191,12 @@ const drawVisibleModelValue = ref(false)
 const selectedJobInfoForViewSnapshot = ref<VChatStartupLog | null>(null)
 
 function handleViewJobSnapshotButtonClick(record: VChatStartupLog) {
+  gtagRenderer('view_job_snapshot_button_clicked')
   selectedJobInfoForViewSnapshot.value = record
   drawVisibleModelValue.value = true
 }
 async function handleViewJobOnlineButtonClick(encryptJobId: string) {
+  gtagRenderer('view_job_online_button_clicked')
   return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
     url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
   })
@@ -173,6 +206,7 @@ const historyDialogVisibleModelValue = ref(false)
 const selectedJobInfoForViewHistory = ref<VChatStartupLog | null>(null)
 const selectedJobHistory = ref<null | JobInfoChangeLog[]>(null)
 async function handleViewJobHistoryButtonClick(record: VChatStartupLog) {
+  gtagRenderer('view_job_history_button_clicked')
   let { data: historyList } = await electron.ipcRenderer.invoke(
     'get-job-history-by-encrypt-id',
     record.encryptJobId
@@ -227,12 +261,13 @@ async function handleViewJobHistoryButtonClick(record: VChatStartupLog) {
   // })
 
   if (!historyList.length) {
+    gtagRenderer('job_history_is_not_found')
     ElMessage.warning({
       message: '未找到与此条目相关的历史变更记录，再多投一投吧'
     })
     return
   }
-
+  gtagRenderer('job_history_is_found')
   historyDialogVisibleModelValue.value = true
   selectedJobInfoForViewHistory.value = record
   selectedJobHistory.value = historyList

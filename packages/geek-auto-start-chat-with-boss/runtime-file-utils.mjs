@@ -6,16 +6,18 @@ import os from 'node:os'
 import defaultDingtalkConf from './default-config-file/dingtalk.json' assert {type: 'json'}
 import defaultBossConf from './default-config-file/boss.json' assert {type: 'json'}
 import defaultTargetCompanyListConf from './default-config-file/target-company-list.json' assert {type: 'json'}
+import defaultLlmConf from './default-config-file/llm.json' assert { type: 'json' }
 
 import defaultBossCookieStorage from './default-storage-file/boss-cookies.json' assert { type: 'json' }
 import defaultBossLocalStorageStorage from './default-storage-file/boss-local-storage.json' assert { type: 'json' }
 import defaultJobNotSuitReasonCodeToTextCacheStorage from './default-storage-file/job-not-suit-reason-code-to-text-cache.json' assert { type: 'json' }
-export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json']
+export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json', 'llm.json']
 
 const defaultConfigFileContentMap = {
   'boss.json': JSON.stringify(defaultBossConf),
   'dingtalk.json': JSON.stringify(defaultDingtalkConf),
-  'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf)
+  'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf),
+  'llm.json': JSON.stringify(defaultLlmConf)
 }
 
 const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
@@ -69,8 +71,12 @@ export const readConfigFile = (fileName) => {
     )
   } catch {
     fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
-    ensureConfigFileExist()
-    o = JSON.parse(defaultConfigFileContentMap[fileName])
+    if (defaultConfigFileContentMap[fileName]) {
+      ensureConfigFileExist()
+      o = JSON.parse(defaultConfigFileContentMap[fileName])
+    } else {
+      o = null
+    }
   }
 
   return o
@@ -112,7 +118,8 @@ export const ensureStorageFileExist = () => {
   )
 }
 
-export const readStorageFile = (fileName) => {
+export const readStorageFile = (fileName, { isJson } = {}) => {
+  isJson = isJson ?? true
   const joinedPath = path.join(storageFilePath, fileName)
 
   if (!fs.existsSync(
@@ -123,21 +130,36 @@ export const readStorageFile = (fileName) => {
 
   let o
   try {
-    o = JSON.parse(
-      fs.readFileSync(joinedPath)
-    )
+    const content = fs.readFileSync(joinedPath)
+    if (isJson) {
+      o = JSON.parse(content)
+    }
+    else {
+      o = content.toString()
+    }
   } catch {
     fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
     ensureStorageFileExist()
-    o = JSON.parse(defaultStorageFileContentMap[fileName])
+    if (isJson) {
+      o = JSON.parse(defaultStorageFileContentMap[fileName] ?? 'null')
+    }
+    else {
+      o = defaultStorageFileContentMap[fileName] ?? null
+    }
   }
 
   return o
 }
 
-export const writeStorageFile = async (fileName, content) => {
+export const writeStorageFile = async (fileName, content, { isJson } = {}) => {
+  isJson = isJson ?? true
   const filePath = path.join(storageFilePath, fileName)
-  const fileContent = JSON.stringify(content)
+  let fileContent
+  if (isJson) {
+    fileContent = JSON.stringify(content)
+  } else {
+    fileContent = content
+  }
   return fsPromise.writeFile(
     filePath,
     fileContent

@@ -1,4 +1,5 @@
 import buildInfo from '../../../common/build-info.json'
+import os from 'node:os'
 
 type LowercaseLetter =
   | 'a'
@@ -55,6 +56,7 @@ function getCommonParams() {
   return {
     app_version: buildInfo.version,
     app_build_hash: buildInfo.buildHash,
+    os_info: `${os.type()} | ${os.release()} | ${os.arch()}`,
     t: Number(new Date())
   }
 }
@@ -68,9 +70,14 @@ export default async function gtag<T extends string>(
     ...getCommonParams(),
     ...params
   }
+  Object.keys(params).forEach((k) => {
+    if ([null, undefined].includes(params[k])) {
+      delete params[k]
+    }
+  })
   // ServiceWorker环境下直接调用上报函数
   const reporter = (await import('./Analytics')).default
-  return reporter.fireEvent(name, params)
+  return reporter.fireEvent(name.replace(/-/g, '_'), params)
 }
 
 // Fire a page view event.

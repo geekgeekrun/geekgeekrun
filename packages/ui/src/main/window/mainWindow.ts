@@ -23,8 +23,6 @@ export function createMainWindow(): BrowserWindow {
     }
   })
 
-  process.env.NODE_ENV === 'development' && openDevTools(mainWindow)
-
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -35,6 +33,12 @@ export function createMainWindow(): BrowserWindow {
         modal: true,
         show: true
       })
+  })
+  mainWindow.on('ready-to-show', async () => {
+    process.env.NODE_ENV === 'development' &&
+      setTimeout(() => {
+        mainWindow && openDevTools(mainWindow)
+      }, 500)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

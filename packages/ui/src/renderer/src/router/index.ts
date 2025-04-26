@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import BootstrapSplash from '@renderer/page/BootstrapSplash/index.vue'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -17,55 +18,76 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/configuration',
-    component: () => import('@renderer/page/Configuration/index.vue'),
-    redirect: '/configuration/GeekAutoStartChatWithBoss',
+    path: '/llmConfig',
+    component: () => import('@renderer/page/LlmConfig/index.vue'),
+    meta: {
+      title: '大语言模型设置'
+    }
+  },
+  {
+    path: '/resumeEditor',
+    component: () => import('@renderer/page/ResumeEditor/index.vue'),
+    meta: {
+      title: '简历编辑'
+    }
+  },
+  {
+    path: '/readNoReplyReminderLlmMock',
+    component: () => import('@renderer/page/ReadNoReplyReminderLlmMock/index.vue'),
+    meta: {
+      title: '已读不回提醒器 大语言模型测试'
+    }
+  },
+  {
+    path: '/main-layout',
+    component: () => import('@renderer/page/MainLayout/index.vue'),
+    redirect: '/main-layout/GeekAutoStartChatWithBoss',
     children: [
       {
         path: 'GeekAutoStartChatWithBoss',
-        component: () => import('@renderer/page/Configuration/GeekAutoStartChatWithBoss.vue'),
+        component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss.vue'),
         meta: {
           title: 'BOSS炸弹'
         }
       },
       {
         path: 'ReadNoReplyReminder',
-        component: () => import('@renderer/page/Configuration/ReadNoReplyReminder.vue'),
+        component: () => import('@renderer/page/MainLayout/ReadNoReplyReminder.vue'),
         meta: {
           title: '已读不回提醒器'
         }
       },
       {
         path: 'StartChatRecord',
-        component: () => import('@renderer/page/Configuration/StartChatRecord.vue'),
+        component: () => import('@renderer/page/MainLayout/StartChatRecord.vue'),
         meta: {
           title: '开聊记录'
         }
       },
       {
         path: 'MarkAsNotSuitRecord',
-        component: () => import('@renderer/page/Configuration/MarkAsNotSuitRecord.vue'),
+        component: () => import('@renderer/page/MainLayout/MarkAsNotSuitRecord.vue'),
         meta: {
           title: '标记不合适记录'
         }
       },
       {
         path: 'JobLibrary',
-        component: () => import('@renderer/page/Configuration/JobLibrary.vue'),
+        component: () => import('@renderer/page/MainLayout/JobLibrary.vue'),
         meta: {
           title: '职位库'
         }
       },
       {
         path: 'BossLibrary',
-        component: () => import('@renderer/page/Configuration/BossLibrary.vue'),
+        component: () => import('@renderer/page/MainLayout/BossLibrary.vue'),
         meta: {
           title: 'Boss库'
         }
       },
       {
         path: 'CompanyLibrary',
-        component: () => import('@renderer/page/Configuration/CompanyLibrary.vue'),
+        component: () => import('@renderer/page/MainLayout/CompanyLibrary.vue'),
         meta: {
           title: '公司库'
         }
@@ -114,7 +136,7 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue'),
         meta: {
           title: '正在下载核心组件'
-        },
+        }
       }
     ]
   }
@@ -125,12 +147,16 @@ const router = createRouter({
   routes
 })
 
-router.afterEach((to) => {
+router.afterEach((to, from) => {
   if (to.meta?.title) {
-    document.title = `${to.meta.title} - GeekGeekRun`
+    document.title = `${to.meta.title} - GeekGeekRun 牛人快跑`
   } else {
-    document.title = `GeekGeekRun`
+    document.title = `GeekGeekRun 牛人快跑`
   }
+  gtagRenderer('router_path_changed', {
+    from_path: from.fullPath,
+    to_path: to.fullPath
+  })
 })
 
 export default router

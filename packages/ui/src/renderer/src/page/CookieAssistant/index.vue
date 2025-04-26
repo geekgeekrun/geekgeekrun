@@ -1,6 +1,6 @@
 <template>
   <div class="cookie-assistant-page">
-    <div ml1em mt1em mb1em >Cookie 助手</div>
+    <div ml1em mt1em mb1em font-size-16px>Cookie 助手</div>
     <el-alert
       v-if="cookieInvalid"
       type="warning"
@@ -11,11 +11,11 @@
     </el-alert>
     <div ml1em mt1em line-height-normal>
       如果您了解如何获取Cookie、了解有效的Cookie格式，可以直接在下方输入框中进行编辑。由于手动编辑较为麻烦，建议您打开已登录过Boss直聘的浏览器，使用<a
-        color-blue
-        decoration-none
+        class="color-blue! decoration-none"
         href="javascript:void(0)"
         @click.prevent="handleEditThisCookieExtensionStoreLinkClick"
-        >EditThisCookie 扩展程序</a
+      >
+        EditThisCookie 扩展程序 </a
       >复制Cookie，然后粘贴在下方输入框中。文本格式为被序列化为JSON的数组，不含两侧引号。
     </div>
     <br />
@@ -85,7 +85,12 @@
               size="small"
               type="primary"
               font-size-inherit
-              @click="fillCollectedCookie"
+              @click="
+                () => {
+                  gtagRenderer('replace_inputted_cookie_by_collected')
+                  fillCollectedCookie()
+                }
+              "
               >使用获取到的Cookie</el-button
             ></template
           ></el-alert
@@ -103,7 +108,8 @@
 import { ElForm, ElMessage } from 'element-plus'
 import { ref, onUnmounted, onMounted } from 'vue'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const router = useRouter()
 const cookieInvalid = ref(false)
@@ -138,11 +144,13 @@ const formRules = {
               `JSON格式无效 - 存在语法错误: ${err.message}；建议使用EditThisCookie扩展程序进行复制。`
             )
           )
+          gtagRenderer('wrong_cookie_format_json_syntax_error')
           return
         }
 
         if (!checkCookieListFormat(JSON.parse(formContent.value.collectedCookies))) {
           cb(new Error(`Cookie格式无效 - 部分字段缺失；建议使用EditThisCookie扩展程序进行复制。`))
+          gtagRenderer('wrong_cookie_format_field_loss')
           return
         }
         cb()
@@ -158,6 +166,9 @@ const handleCookieCollected = (_, payload) => {
   collectedCookie.value = payload.cookies
   if (!hasUserMutateInput.value) {
     fillCollectedCookie()
+    gtagRenderer('cookie_collected_and_auto_filled')
+  } else {
+    gtagRenderer('cookie_collected_after_changed_input')
   }
 }
 const fillCollectedCookie = () => {
@@ -169,28 +180,33 @@ const fillCollectedCookie = () => {
 }
 
 const handleClickLaunchLogin = () => {
+  gtagRenderer('launch_login_button_clicked')
   electron.ipcRenderer.send('launch-bosszhipin-login-page-with-preload-extension')
   loginCookieWaitingStatus.value = LOGIN_COOKIE_WAITING_STATUS.WAITING_FOR_LOGIN
 }
 
 const handleEditThisCookieExtensionStoreLinkClick = () => {
+  gtagRenderer('etc_extension_link_clicked')
   electron.ipcRenderer.send(
     'open-external-link',
-    'https://chromewebstore.google.com/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg'
+    'https://chromewebstore.google.com/detail/editthiscookie-v3/ojfebgpkimhlhcblbalbfjblapadhbol'
   )
 }
 
 const handleCancel = () => {
-  router.replace('/configuration')
+  gtagRenderer('cancel_clicked')
+  router.replace('/main-layout')
 }
 const handleSubmit = async () => {
+  gtagRenderer('save_clicked')
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('write-storage-file', {
     fileName: 'boss-cookies.json',
     data: formContent.value.collectedCookies
   })
   ElMessage.success('Boss直聘 Cookie 保存成功')
-  router.replace('/configuration')
+  gtagRenderer('save_cookie_done')
+  router.replace('/main-layout')
 }
 
 const handleBossZhipinLoginPageClosed = () => {
@@ -199,6 +215,9 @@ const handleBossZhipinLoginPageClosed = () => {
   }
 }
 
+onMounted(() => {
+  gtagRenderer('cookie_assistant_mounted')
+})
 onMounted(async () => {
   electron.ipcRenderer.once('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)
   electron.ipcRenderer.on('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED', handleBossZhipinLoginPageClosed)
@@ -226,6 +245,7 @@ onUnmounted(() => {
 .cookie-assistant-page {
   max-width: 640px;
   margin: 0 auto;
+  font-size: 14px;
 }
 </style>
 

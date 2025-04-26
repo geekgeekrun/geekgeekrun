@@ -1,10 +1,10 @@
 import { bootstrap, launchBoss } from './bootstrap'
 import { MsgStatus, type ChatListItem } from './types'
 import { Browser, Page } from 'puppeteer'
-import { sendLookForwardReplyEmotion } from './boss-operation'
+import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import {
   getPublicDbFilePath,
@@ -17,10 +17,21 @@ import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
+import { RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
+import gtag from '../../utils/gtag'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
 const rechatLimitDay = readConfigFile('boss.json').autoReminder?.rechatLimitDay ?? 21
+const recentMessageQuantityForLlm =
+  readConfigFile('boss.json').autoReminder?.recentMessageQuantityForLlm ?? 8
+const rechatContentSource =
+  readConfigFile('boss.json').autoReminder?.rechatContentSource ??
+  RECHAT_CONTENT_SOURCE.LOOK_FORWARD_EMOTION
+const rechatLlmFallback =
+  readConfigFile('boss.json').autoReminder?.rechatLlmFallback ??
+  RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
+
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
@@ -172,6 +183,9 @@ const mainLoop = async () => {
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
+    await pageMapByName.boss?.waitForFunction(() => {
+      return Array.isArray(document.querySelector('.main-wrap .chat-user')?.__vue__?.list)
+    })
     // find target boss - with unread icon, or recommend system message
     const friendListData = (await pageMapByName.boss!.evaluate(
       `
@@ -277,7 +291,31 @@ const mainLoop = async () => {
         (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
     ) {
       await sleepWithRandomDelay(3250)
-      await sendLookForwardReplyEmotion(pageMapByName.boss!)
+      if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
+        try {
+          const messageListForGpt = historyMessageList
+            .filter((it) => it.bizType !== 101 && it.isSelf)
+            .slice(-recentMessageQuantityForLlm)
+          await sendGptContent(pageMapByName.boss!, messageListForGpt)
+          gtag('rnrr_llm_content_sent')
+        } catch (err) {
+          console.log(err)
+          if (rechatLlmFallback === RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION) {
+            await sendLookForwardReplyEmotion(pageMapByName.boss!)
+            gtag('rnrr_look_forward_reply_emotion_sent', {
+              fallback: true
+            })
+          } else {
+            gtag('rnrr_encounter_error', {
+              error: err
+            })
+            throw err
+          }
+        }
+      } else {
+        await sendLookForwardReplyEmotion(pageMapByName.boss!)
+        gtag('rnrr_look_forward_reply_emotion_sent')
+      }
     } else {
       cursorToContinueFind += 1
     }
@@ -336,6 +374,17 @@ export async function runEntry() {
           }) + '\r\n'
         )
         process.exit(1)
+      }
+      if (err instanceof Error && err.message === 'CANNOT_FIND_A_USABLE_MODEL') {
+        gtag('cannot_find_a_usable_model')
+        await dialog.showMessageBox({
+          type: 'error',
+          message:
+            '未找到可以使用的模型，请确定您所配置的模型均可使用。重启本程序或许可以解决这个问题',
+          buttons: ['退出']
+        })
+        process.exit(0)
+        break;
       }
     } finally {
       pageMapByName['boss'] = null

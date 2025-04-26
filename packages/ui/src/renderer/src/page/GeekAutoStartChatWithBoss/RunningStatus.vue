@@ -18,22 +18,26 @@ import { ref, onUnmounted, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FlyingCompanyLogoList from '../../features/FlyingCompanyLogoList/index.vue'
 import { ElMessage } from 'element-plus';
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const { ipcRenderer } = electron
 const router = useRouter()
 
 const handleStopButtonClick = async () => {
+  gtagRenderer('gascwb_stop_button_clicked')
   ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
 }
 
 const isStopping = ref(false)
 const handleStopping = () => {
+  gtagRenderer('gascwb_become_stopping')
   isStopping.value = true
 }
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopping', handleStopping)
 
 const handleStopped = () => {
-  router.replace('/configuration/GeekAutoStartChatWithBoss')
+  gtagRenderer('gascwb_become_stopped')
+  router.replace('/main-layout/GeekAutoStartChatWithBoss')
 }
 ipcRenderer.once('geek-auto-start-chat-with-boss-stopped', handleStopped)
 
@@ -47,12 +51,14 @@ onMounted(async () => {
     await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
+      gtagRenderer('gascwb_cannot_run_for_corrupt')
       ElMessage.error({
         message: `核心组件损坏，正在尝试修复`
       })
       router.replace('/')
     }
     console.error(err)
+    gtagRenderer('gascwb_cannot_run_for_unknown_error', { err })
   }
 })
 </script>

@@ -47,7 +47,10 @@ const payloadHandler = {
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
-        take: pageSize
+        take: pageSize,
+        order: {
+          date: 'DESC'
+        }
       })
     )
     return {
@@ -69,7 +72,10 @@ const payloadHandler = {
     const [data, totalItemCount] = await measureExecutionTime(
       recordRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
-        take: pageSize
+        take: pageSize,
+        order: {
+          date: 'DESC'
+        }
       })
     )
     return {

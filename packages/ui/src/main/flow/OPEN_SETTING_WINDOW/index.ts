@@ -4,6 +4,7 @@ import { createMainWindow } from '../../window/mainWindow'
 import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
+import initPublicIpc from '../../utils/initPublicIpc'
 export function openSettingWindow() {
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
   if (!app.requestSingleInstanceLock()) {
@@ -31,6 +32,7 @@ export function openSettingWindow() {
 
     // IPC test
     ipcMain.on('ping', () => console.log('pong'))
+    initPublicIpc()
     initIpc()
 
     app.on('activate', function () {

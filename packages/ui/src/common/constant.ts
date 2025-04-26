@@ -1,0 +1,1 @@
+export const SINGLE_ITEM_DEFAULT_SERVE_WEIGHT = 1

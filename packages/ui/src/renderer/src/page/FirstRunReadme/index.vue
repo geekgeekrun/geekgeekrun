@@ -87,6 +87,8 @@
 <script lang="ts" setup>
 import { ElCheckbox, ElCheckboxGroup, ElMessage } from 'element-plus'
 import { ref, onMounted, onBeforeMount } from 'vue';
+import { gtagRenderer } from '@renderer/utils/gtag'
+
 const electron = window.electron
 
 const readmeItemCheckStatusList = ref<number[]>([])
@@ -97,8 +99,10 @@ const handleCancel = () => {
 
 const unreadItemsAfterClickSubmit = ref<Record<number, true>>({})
 const handleSubmit = () => {
+  gtagRenderer('submit_clicked')
   const COUNT = 9
   if (readmeItemCheckStatusList.value.length !== COUNT) {
+    gtagRenderer('agreement_not_finish_read_tip_displayed')
     ElMessage.warning(
       `您还有${COUNT - readmeItemCheckStatusList.value.length}条没有读完，读完就打勾标记一下吧`
     )
@@ -111,6 +115,7 @@ const handleSubmit = () => {
     return
   }
   electron.ipcRenderer.invoke('first-launch-notice-approve')
+  gtagRenderer('submit_done')
 }
 const handleReadmeItemCheckStatusListChange = (value: number[]) => {
   value.forEach((it) => {

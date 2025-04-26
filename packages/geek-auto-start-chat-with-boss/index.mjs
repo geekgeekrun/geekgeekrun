@@ -79,6 +79,21 @@ const targetCompanyList = readConfigFile('target-company-list.json').filter(it =
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
+let {
+  expectJobNameRegExpStr,
+  expectJobTypeRegExpStr,
+  expectJobDescRegExpStr,
+} = readConfigFile('boss.json')
+if (
+  expectJobRegExpStr &&
+  !expectJobNameRegExpStr &&
+  !expectJobTypeRegExpStr &&
+  !expectJobDescRegExpStr
+) {
+  expectJobNameRegExpStr = expectJobRegExpStr
+  expectJobTypeRegExpStr = expectJobRegExpStr
+  expectJobDescRegExpStr = expectJobRegExpStr
+}
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/job-recommend`
@@ -191,22 +206,32 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
   return result
 }
 
-export function testIfJobTitleOrDescriptionSuit (jobInfo, regExpStr) {
-  if (!regExpStr) {
-    return true
-  }
+export function testIfJobTitleOrDescriptionSuit (jobInfo) {
+  let isJobNameSuit = true
   try {
-    const regExp = new RegExp(regExpStr, 'i')
-    if (
-      !regExp.test(jobInfo.jobName)
-      && !regExp.test(jobInfo.positionName)
-      && !regExp.test(jobInfo.postDescription)
-    ) {
-      return false
+    if (expectJobNameRegExpStr.trim()) {
+      const regExp = new RegExp(expectJobNameRegExpStr, 'i')
+      isJobNameSuit = regExp.test(jobInfo.jobName)
     }
   } catch {
   }
-  return true
+  let isJobTypeSuit = true
+  try {
+    if (expectJobTypeRegExpStr.trim()) {
+      const regExp = new RegExp(expectJobTypeRegExpStr, 'i')
+      isJobTypeSuit = regExp.test(jobInfo.positionName)
+    }
+  } catch {
+  }
+  let isJobDescSuit = true
+  try {
+    if (expectJobDescRegExpStr.trim()) {
+      const regExp = new RegExp(expectJobDescRegExpStr, 'i')
+      isJobDescSuit = regExp.test(jobInfo.postDescription)
+    }
+  } catch {
+  }
+  return isJobNameSuit && isJobTypeSuit && isJobDescSuit
 }
 
 async function setFilterCondition (selectedFilters) {
@@ -239,7 +264,7 @@ async function setFilterCondition (selectedFilters) {
     const placeholderText = placeholderTexts[i]
     const filterDropdownProxy = await (async () => {
       const jsHandle = (await page.evaluateHandle((placeholderText) => {
-        const filterBar = document.querySelector('.job-recommend-main .job-recommend-search')
+        const filterBar = document.querySelector('.page-jobs-main .filter-condition-inner')
         const dropdownEntry = filterBar.__vue__.$children.find(it => it.placeholder === placeholderText)
         return dropdownEntry.$el
       }, placeholderText)).asElement();
@@ -264,18 +289,18 @@ async function setFilterCondition (selectedFilters) {
       const optionKaPrefix = optionKaPrefixes[i]
       if (!currentFilterConditions.length) {
         if (placeholderText === '公司行业') {
-          const activeOptionElAtCurrentFilterProxyList = await page.$$(`.job-recommend-main .recommend-search-more .active[ka^="${optionKaPrefix}"]`)
+          const activeOptionElAtCurrentFilterProxyList = await page.$$(`.page-jobs-main .filter-condition-inner .active[ka^="${optionKaPrefix}"]`)
           for (const it of activeOptionElAtCurrentFilterProxyList) {
             await it.click()
           }
         } else {
           // select 不限 immediately
-          const buxianOptionElProxy = await page.$(`.job-recommend-main .recommend-search-more [ka="${optionKaPrefix}${0}"]`)
+          const buxianOptionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${0}"]`)
           await buxianOptionElProxy.click()
         }
       } else {
         //#region uncheck options perviously checked but not existed in current filter.
-        const activeOptionElAtCurrentFilterProxyList = await page.$$(`.job-recommend-main .recommend-search-more .active[ka^="${optionKaPrefix}"]`)
+        const activeOptionElAtCurrentFilterProxyList = await page.$$(`.page-jobs-main .filter-condition-inner .active[ka^="${optionKaPrefix}"]`)
         const activeOptionValues = (await Promise.all(
           activeOptionElAtCurrentFilterProxyList.map(elProxy => {
             return elProxy.evaluate((el) => {
@@ -314,7 +339,7 @@ async function setFilterCondition (selectedFilters) {
             optionValue = conditionToCheck[j]
           }
           await sleepWithRandomDelay(500)
-          const optionElProxy = await page.$(`.job-recommend-main .recommend-search-more [ka="${optionKaPrefix}${optionValue}"]`)
+          const optionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${optionValue}"]`)
           if (!optionElProxy) {
             continue;
           }
@@ -384,7 +409,7 @@ async function toRecommendPage (hooks) {
     }
   }
 
-  const INIT_START_EXCEPT_JOB_INDEX = 1
+  const INIT_START_EXCEPT_JOB_INDEX = 0
   let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
   afterPageLoad: while (true) {
     let expectJobList
@@ -397,20 +422,21 @@ async function toRecommendPage (hooks) {
         await sleepWithRandomDelay(2500)
 
         await Promise.all([
-          page.waitForSelector('.job-recommend-main .recommend-search-expect .recommend-job-btn'),
+          page.waitForSelector('.c-expect-select .expect-list .expect-item'),
           page.waitForSelector('.job-list-container .rec-job-list')
         ])
+        await page.click(`.c-expect-select .expect-list .expect-item`)
         const currentActiveJobIndex = await page.evaluate(`
-          [...document.querySelectorAll('.job-recommend-main .recommend-search-expect .recommend-job-btn')].findIndex(it => it.classList.contains('active'))
+          [...document.querySelectorAll('.c-expect-select .expect-list .expect-item')].findIndex(it => it.classList.contains('active'))
         `)
 
-        expectJobList = await page.evaluate(`document.querySelector('.job-recommend-search')?.__vue__?.expectList`)
+        expectJobList = await page.evaluate(`document.querySelector('.c-expect-select')?.__vue__?.expectList`)
         if (currentActiveJobIndex === currentExceptJobIndex) {
           // first navigation and can immediately start chat (recommend job)
         } else {
           // not first navigation and should choose a job (except job)
           // click first expect job
-          const expectJobTabHandlers = await page.$$('.job-recommend-main .recommend-search-expect .recommend-job-btn')
+          const expectJobTabHandlers = await page.$$('.c-expect-select .expect-list .expect-item')
           await expectJobTabHandlers[currentExceptJobIndex].click()
           await page.waitForResponse(
             response => {
@@ -461,7 +487,7 @@ async function toRecommendPage (hooks) {
 
               // job list
               const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
-              let jobListData = await page.evaluate(`document.querySelector('.job-recommend-main')?.__vue__?.jobList`)
+              let jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
               let hasReachLastPage = false
               let targetJobIndex = -1
               let targetJobData
@@ -494,10 +520,10 @@ async function toRecommendPage (hooks) {
                   ) {
                     scrolledHeight += increase
                     await page.mouse.wheel({deltaY: increase});
-                    await sleep(1)
+                    await sleep(100)
                     await requestNextPagePromiseWithResolver?.promise
                     hasReachLastPage = await page.evaluate(`
-                      !(document.querySelector('.job-recommend-main')?.__vue__?.hasMore)
+                      !(document.querySelector('.page-jobs-main')?.__vue__?.hasMore)
                     `)
                     if (hasReachLastPage) {
                       console.log(`Arrive the terminal of the job list.`)
@@ -505,16 +531,16 @@ async function toRecommendPage (hooks) {
                   }
                   requestNextPagePromiseWithResolver = null
 
-                  await sleep(3000)
+                  await sleep(5000)
                   jobListData = await page.evaluate(
                     `
-                      document.querySelector('.job-recommend-main')?.__vue__?.jobList
+                      document.querySelector('.page-jobs-main')?.__vue__?.jobList
                     `
                   )
                   tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => 
                     !blockBossNotNewChat.has(it.encryptBossId) &&
                     !blockBossNotActive.has(it.encryptBossId) &&
-                    [...expectCompanySet].find(name => it.brandName.includes(name)) &&
+                    [...expectCompanySet].find(name => it.brandName?.toLowerCase?.()?.includes(name.toLowerCase())) &&
                     !blockJobNotSuit.has(it.encryptJobId)
                   )
                 }
@@ -543,6 +569,10 @@ async function toRecommendPage (hooks) {
                     const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list li.job-card-box')
                     const targetJobElProxy = recommendJobItemList[tempTargetJobIndexToCheckDetail]
                     // click that element
+                    await page.evaluate(() => {
+                      document.documentElement.scrollTop = 0
+                    })
+                    await sleep(500)
                     await targetJobElProxy.click()
                     await page.waitForResponse(
                       response => {
@@ -594,7 +624,7 @@ async function toRecommendPage (hooks) {
                     continue continueFind
                   }
                   if (
-                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo, expectJobRegExpStr)
+                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo)
                   ) {
                     blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
                     try {
@@ -612,7 +642,6 @@ async function toRecommendPage (hooks) {
                       )
                     } catch {
                     }
-                    debugger
                     continue continueFind
                   }
                   const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
@@ -646,6 +675,10 @@ async function toRecommendPage (hooks) {
 
           await hooks.newChatWillStartup?.promise(targetJobData)
           const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
+          await page.evaluate(() => {
+            document.documentElement.scrollTop = 0
+          })
+          await sleep(500)
           //#region click the chat button
           await startChatButtonProxy.click()
 
@@ -714,9 +747,11 @@ async function toRecommendPage (hooks) {
     }
     // for of reach terminal
     if (
-      currentExceptJobIndex + 1 > expectJobList.length
+      currentExceptJobIndex + 1 >= expectJobList.length
     ) {
       hooks.noPositionFoundForCurrentJob?.call()
+      hooks.noPositionFoundAfterTraverseAllJob?.call()
+      await sleep((20 + 30 * Math.random()) * 1000)
       await Promise.all([
         page.reload(),
         page.waitForNavigation()
@@ -724,8 +759,7 @@ async function toRecommendPage (hooks) {
       currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
     } else {
       hooks.noPositionFoundForCurrentJob?.call()
-      hooks.noPositionFoundAfterTraverseAllJob?.call()
-
+      await sleep((10 + 15 * Math.random()) * 1000)
       currentExceptJobIndex += 1
     }
   }
