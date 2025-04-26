@@ -143,9 +143,10 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { ElMessage } from 'element-plus'
+import { gtagRenderer } from '@renderer/utils/gtag'
 type MessageItem = {
   text: string
   usedLlmConfig: string
@@ -176,10 +177,19 @@ async function getLlmConfigList() {
 }
 getLlmConfigList().catch(() => {})
 const selectedLlmConfig = ref(null)
+watch(
+  () => selectedLlmConfig.value,
+  () => {
+    gtagRenderer('change_mock_chat_llm_model', {
+      model: selectedLlmConfig.value?.model ?? ''
+    })
+  }
+)
 
 const scrollElRef = ref(null)
 const isLoading = ref(false)
 async function sendLlmGeneratedContent() {
+  gtagRenderer('click_mock_chat_send')
   isLoading.value = true
   try {
     const response = await electron.ipcRenderer.invoke('request-llm-for-test', {
@@ -223,6 +233,8 @@ function formatApiSecret(text) {
   }
   return `***`
 }
+
+gtagRenderer('enter_mock_chat_page')
 </script>
 
 <style lang="scss" scoped>

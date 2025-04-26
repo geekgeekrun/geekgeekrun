@@ -470,6 +470,7 @@ const rechatLlmFallbackOptions = [
 ]
 
 async function handleTestEffectClicked() {
+  gtagRenderer('goto_mock_chat_clicked')
   if (!(await checkIsCanRun())) {
     return
   }
