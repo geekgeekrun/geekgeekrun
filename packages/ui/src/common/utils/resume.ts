@@ -82,7 +82,7 @@ export function checkIsResumeContentValid(resumeItem: { content: ResumeContent }
   return (
     !!resumeItem?.content &&
     resumeItem.content.geekProjExpList?.[0]?.name?.trim() &&
-    resumeItem.content.geekWorkExpList?.[0]?.positionName?.trim()
+    resumeItem.content.geekWorkExpList?.[0]?.company?.trim()
   )
 }
 
