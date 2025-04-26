@@ -267,8 +267,8 @@ const mainLoop = async () => {
       })
     }
     await sleepWithRandomDelay(1500)
-    const bossInfo = await pageMapByName.boss?.evaluate(
-      'document.querySelector(".chat-conversation .chat-record")?.__vue__?.boss'
+    const conversationInfo = await pageMapByName.boss?.evaluate(
+      `document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$`
     )
 
     const historyMessageList =
@@ -282,7 +282,9 @@ const mainLoop = async () => {
     if (
       historyMessageList[historyMessageList.length - 1].isSelf &&
       historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&
-      ((bossInfo && !bossInfo.bothTalked) ||
+      ((conversationInfo &&
+        Object.hasOwn(conversationInfo, 'bothTalked') &&
+        !conversationInfo.bothTalked) ||
         !historyMessageList.filter(
           (it) => !it.isSelf // not sent by me
         ).length) &&
