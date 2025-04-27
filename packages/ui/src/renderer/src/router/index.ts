@@ -157,6 +157,7 @@ router.afterEach((to, from) => {
     from_path: from.fullPath,
     to_path: to.fullPath
   })
+  gtagRenderer('page_view')
 })
 
 export default router
