@@ -372,7 +372,7 @@ async function toRecommendPage (hooks) {
       return res.json()
     })
   await Promise.all([
-    page.goto(recommendJobPageUrl, { timeout: 60 * 1000 }),
+    page.goto(recommendJobPageUrl, { timeout: 120 * 1000 }),
     page.waitForNavigation(),
   ])
   if (
