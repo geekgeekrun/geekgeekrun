@@ -569,9 +569,6 @@ async function toRecommendPage (hooks) {
                     const recommendJobItemList = await recommendJobListElProxy.$$('ul.rec-job-list li.job-card-box')
                     const targetJobElProxy = recommendJobItemList[tempTargetJobIndexToCheckDetail]
                     // click that element
-                    await page.evaluate(() => {
-                      document.documentElement.scrollTop = 0
-                    })
                     await sleep(500)
                     await targetJobElProxy.click()
                     await page.waitForResponse(
@@ -675,9 +672,6 @@ async function toRecommendPage (hooks) {
 
           await hooks.newChatWillStartup?.promise(targetJobData)
           const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
-          await page.evaluate(() => {
-            document.documentElement.scrollTop = 0
-          })
           await sleep(500)
           //#region click the chat button
           await startChatButtonProxy.click()
