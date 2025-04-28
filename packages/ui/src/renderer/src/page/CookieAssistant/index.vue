@@ -1,6 +1,6 @@
 <template>
   <div class="cookie-assistant-page">
-    <div ml1em mt1em mb1em font-size-16px>Cookie 助手</div>
+    <div ml1em mt1em mb1em font-size-16px>Boss 登录助手</div>
     <el-alert
       v-if="cookieInvalid"
       type="warning"

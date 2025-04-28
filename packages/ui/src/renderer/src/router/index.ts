@@ -14,7 +14,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/cookieAssistant',
     component: () => import('@renderer/page/CookieAssistant/index.vue'),
     meta: {
-      title: 'Cookie 助手'
+      title: 'Boss 登录助手'
     }
   },
   {
