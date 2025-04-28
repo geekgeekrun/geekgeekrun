@@ -436,9 +436,9 @@ const expectJobFilterTemplateList = [
   {
     name: '研发 - Java',
     config: {
-      expectJobNameRegExpStr: 'Java',
-      expectJobTypeRegExpStr: 'Java',
-      expectJobDescRegExpStr: 'JVM|Java|消息队列|MySQL|Nginx|Redis|Dubbo'
+      expectJobNameRegExpStr: '\\bJava\\b',
+      expectJobTypeRegExpStr: '\\bJava\\b',
+      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo'
     }
   },
   {
