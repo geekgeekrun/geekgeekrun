@@ -7,6 +7,7 @@
     "industryList": []
   },
   "expectJobRegExpStr": "",
+  "jobNotMatchStrategy": 1,
   "autoReminder": {
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,

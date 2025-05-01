@@ -1,4 +1,4 @@
-import { DataSource } from "typeorm";
+import { DataSource, Raw } from "typeorm";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { BossInfo } from "./entity/BossInfo";
 import { CompanyInfo } from "./entity/CompanyInfo";
@@ -270,7 +270,7 @@ export async function saveMarkAsNotSuitRecord(
   ds: DataSource,
   _jobInfo,
   { encryptUserId },
-  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined } = {}
+  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined, markOp = undefined } = {}
 ) {
   const { jobInfo } = _jobInfo;
 
@@ -283,7 +283,8 @@ export async function saveMarkAsNotSuitRecord(
     autoStartupChatRecordId,
     markFrom,
     markReason,
-    extInfo: extInfo ? JSON.stringify(extInfo) : undefined
+    extInfo: extInfo ? JSON.stringify(extInfo) : undefined,
+    markOp
   }
   Object.assign(markAsNotSuitLog, markAsNotSuitLogPayload)
 
@@ -325,4 +326,16 @@ export async function saveGptCompletionRequestRecord(
   await chatMessageRecordRepository.save(list);
   //#endregion
   return
+}
+
+export async function getNotSuitMarkRecordsInLastSomeDays (ds: DataSource, days = 0) {
+  const repo = ds.getRepository(MarkAsNotSuitLog)
+  const result = await repo.findBy({
+    date: Raw(alias => `DATE(${alias}) >= DATE('${
+      new Date(
+        Number(new Date()) - 7 * 24 * 60 * 60 * 1000
+      ).toISOString()
+    }')`)
+  })
+  return result
 }

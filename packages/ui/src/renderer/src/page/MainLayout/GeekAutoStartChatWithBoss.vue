@@ -71,7 +71,7 @@
       </div>
       <div mb42px>
         <el-form-item mb0>
-          查看职位详情后，是发起投递还是标记不合适的条件
+          查看职位详情后，认为合适并发起投递的条件
           <span font-size-12px>（以下条件为空表示不筛选）</span>
         </el-form-item>
         <div
@@ -92,38 +92,6 @@
               </template>
               <el-button type="text" font-size-12px
                 ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
-              >
-            </el-tooltip>
-            <el-tooltip
-              effect="light"
-              placement="bottom-start"
-              @show="gtagRenderer('tooltip_show_about_mark_not_suit_intro')"
-            >
-              <template #content>
-                <ol m0 line-height-1.5em w-400px pl2em>
-                  <li>
-                    如果查找到的职位，职位名称、职位类型、职位描述与如下正则不匹配，则这个职位将被标记为不合适
-                  </li>
-                  <li>
-                    如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适
-                  </li>
-                  <li>
-                    如有错误标记，请在左侧“<a
-                      href="javascript:void(0)"
-                      style="color: var(--el-color-primary)"
-                      @click.prevent="
-                        () => {
-                          gtagRenderer('click_view_mansr_from_boss_b_tooltip')
-                          $router.push('/main-layout/MarkAsNotSuitRecord')
-                        }
-                      "
-                      >标记不合适</a
-                    >”记录中找到相关记录，手动对这些职位发起会话
-                  </li>
-                </ol>
-              </template>
-              <el-button type="text" font-size-12px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span>标记不合适机制</el-button
               >
             </el-tooltip>
           </div>
@@ -187,6 +155,66 @@
           </el-form-item>
         </div>
       </div>
+      <div
+        :style="{
+          display: 'grid',
+          gridTemplateColumns: '500px 1fr',
+          gap: '5px',
+          width: '100%',
+          alignItems: 'end'
+        }"
+      >
+        <el-form-item>
+          <div>
+            当查看职位详情后，发现职位不满足如上设置的条件时
+            <el-tooltip
+              effect="light"
+              placement="bottom-start"
+              @show="gtagRenderer('tooltip_show_about_mark_not_suit_intro')"
+            >
+              <template #content>
+                <ol m0 line-height-1.5em w-400px pl2em>
+                  <li>
+                    如果查找到的职位，职位名称、职位类型、职位描述与如上正则不匹配，则这个职位将被标记为不合适
+                  </li>
+                  <li>
+                    如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适
+                  </li>
+                  <li>
+                    如有错误标记，请在左侧“<a
+                      href="javascript:void(0)"
+                      style="color: var(--el-color-primary)"
+                      @click.prevent="
+                        () => {
+                          gtagRenderer('click_view_mansr_from_boss_b_tooltip')
+                          $router.push('/main-layout/MarkAsNotSuitRecord')
+                        }
+                      "
+                      >标记不合适</a
+                    >”记录中找到相关记录，手动对这些职位发起会话
+                  </li>
+                </ol>
+              </template>
+              <el-button type="text" font-size-12px
+                ><span><QuestionFilled w-1em h-1em mr2px /></span>标记不合适机制</el-button
+              >
+            </el-tooltip>
+          </div>
+
+          <el-select
+            v-model="formContent.jobNotMatchStrategy"
+            @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
+          >
+            <el-option
+              v-for="op in strategyOptionWhenCurrentJobNotMatch"
+              :key="op.value"
+              :label="op.name"
+              :value="op.value"
+              >{{ op.name }}</el-option
+            >
+          </el-select>
+        </el-form-item>
+      </div>
       <el-form-item
         label="职位备选筛选条件（当前求职期望无合适职位时，自动更改Boss筛选条件，查找新工作）"
         prop="filter"
@@ -202,7 +230,7 @@
           >
         </div>
       </el-form-item>
-      <el-form-item class="last-form-item mb0">
+      <el-form-item class="last-form-item mb18px">
         <el-button @click="handleSave">仅保存配置</el-button>
         <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
       </el-form-item>
@@ -211,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
@@ -220,6 +248,8 @@ import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-wi
 import { gtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
+import { MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/src/enums'
+import { debounce } from 'lodash-es'
 
 const router = useRouter()
 
@@ -229,13 +259,18 @@ const formContent = ref({
   anyCombineRecommendJobFilter: {},
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
-  expectJobDescRegExpStr: ''
+  expectJobDescRegExpStr: '',
+  jobNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
   return calculateTotalCombinations(formContent.value.anyCombineRecommendJobFilter)
 })
 
+const unwatchAnyCombineRecommendJobFilter = ref<null | (() => void)>(null)
+onBeforeUnmount(() => {
+  unwatchAnyCombineRecommendJobFilter.value?.()
+})
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   console.log(res)
   formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
@@ -248,7 +283,15 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     scaleList: [],
     industryList: []
   }
-  //
+  unwatchAnyCombineRecommendJobFilter.value = watch(
+    () => formContent.value?.anyCombineRecommendJobFilter,
+    debounce(() => {
+      gtagRenderer('any_combine_filter_changed')
+    }, 2000),
+    {
+      deep: true
+    }
+  )
   if (
     res.config['boss.json']?.expectJobRegExpStr &&
     typeof res.config['boss.json']?.expectJobNameRegExpStr === 'undefined' &&
@@ -262,6 +305,12 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.expectJobNameRegExpStr = res.config['boss.json'].expectJobNameRegExpStr?.trim()
   formContent.value.expectJobTypeRegExpStr = res.config['boss.json'].expectJobTypeRegExpStr?.trim()
   formContent.value.expectJobDescRegExpStr = res.config['boss.json'].expectJobDescRegExpStr?.trim()
+
+  formContent.value.jobNotMatchStrategy = strategyOptionWhenCurrentJobNotMatch
+    .map((it) => it.value)
+    .includes(res.config['boss.json'].jobNotMatchStrategy)
+    ? res.config['boss.json'].jobNotMatchStrategy
+    : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 })
 
 const formRules = {
@@ -467,6 +516,21 @@ function handleExpectJobFilterTemplateClicked(item) {
     ...item.config
   })
 }
+
+const strategyOptionWhenCurrentJobNotMatch = [
+  {
+    name: '在Boss直聘上标记不合适（推荐，这确保Boss直聘可以推荐新职位）',
+    value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+  },
+  {
+    name: '本地记录，且1周内再次遇到这个职位时将直接跳过',
+    value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+  },
+  {
+    name: '本地不记录，但本次运行再次遇到这个职位时将直接跳过',
+    value: MarkAsNotSuitOp.NO_OP
+  }
+]
 </script>
 
 <style scoped lang="scss">

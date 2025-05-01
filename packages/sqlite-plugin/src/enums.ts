@@ -4,3 +4,9 @@ export enum MarkAsNotSuitReason {
   USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON = 2,
   JOB_NOT_SUIT = 3,
 }
+
+export enum MarkAsNotSuitOp {
+  MARK_AS_NOT_SUIT_ON_BOSS = 1,
+  MARK_AS_NOT_SUIT_ON_LOCAL = 2,
+  NO_OP = 3
+}

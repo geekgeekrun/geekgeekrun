@@ -95,6 +95,9 @@ export default function initIpc() {
     if (hasOwn(payload, 'expectJobDescRegExpStr')) {
       bossConfig.expectJobDescRegExpStr = payload.expectJobDescRegExpStr
     }
+    if (hasOwn(payload, 'jobNotMatchStrategy')) {
+      bossConfig.jobNotMatchStrategy = payload.jobNotMatchStrategy
+    }
     if (hasOwn(payload, 'autoReminder')) {
       bossConfig.autoReminder = payload.autoReminder
     }

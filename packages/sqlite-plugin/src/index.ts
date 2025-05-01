@@ -22,10 +22,12 @@ import { ChatMessageRecord } from './entity/ChatMessageRecord'
 import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
 
 import sqlite3 from 'sqlite3';
-import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord } from "./handlers";
+import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord, getNotSuitMarkRecordsInLastSomeDays } from "./handlers";
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
+import { MarkAsNotSuitOp } from "./enums";
+import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/1746092370665-AddColumnForMarkAsNotSuitLog";
 
 export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
@@ -59,6 +61,7 @@ export function initDb(dbFilePath) {
     migrations: [
       UpdateChatStartupLogTable1729182577167,
       UpdateBossInfoTable1732032381304,
+      AddColumnForMarkAsNotSuitLog1746092370665,
     ],
     migrationsRun: true
   });
@@ -97,6 +100,19 @@ export default class SqlitePlugin {
         return await userInfoRepository.save(user);
       }
     );
+    hooks.mainFlowWillLaunch.tapPromise(
+      "SqlitePlugin",
+      async ({
+        jobNotMatchStrategy,
+        blockJobNotSuit
+      }) => {
+        if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+          const ds = await this.initPromise;
+          const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7) ?? []).map(it => it.encryptJobId);
+          last7DayMarkRecords.forEach(id => blockJobNotSuit.add(id))
+        }
+      }
+    );
 
     hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async (_jobInfo) => {
       const ds = await this.initPromise;
@@ -111,13 +127,14 @@ export default class SqlitePlugin {
       });
     });
 
-    hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined } = {}) => {
+    hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined, markOp = undefined } = {}) => {
       const ds = await this.initPromise;
       return await saveMarkAsNotSuitRecord(ds, _jobInfo, this.userInfo, {
         autoStartupChatRecordId: this.runRecordId,
         markFrom,
         markReason,
-        extInfo
+        extInfo,
+        markOp
       });
     });
   }

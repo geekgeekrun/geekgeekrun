@@ -16,7 +16,7 @@ import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } fr
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { MarkAsNotSuitReason, MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/dist/enums'
 
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
@@ -79,6 +79,7 @@ const targetCompanyList = readConfigFile('target-company-list.json').filter(it =
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
+const jobNotMatchStrategy = readConfigFile('boss.json').jobNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 let {
   expectJobNameRegExpStr,
   expectJobTypeRegExpStr,
@@ -624,20 +625,37 @@ async function toRecommendPage (hooks) {
                     !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo)
                   ) {
                     blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
-                    try {
-                      const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
-                      await hooks.jobMarkedAsNotSuit.promise(
-                        targetJobData,
-                        {
-                          markFrom: ChatStartupFrom.AutoFromRecommendList,
-                          markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
-                          extInfo: {
-                            bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
-                            chosenReasonInUi
+                    if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                      try {
+                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
+                        await hooks.jobMarkedAsNotSuit.promise(
+                          targetJobData,
+                          {
+                            markFrom: ChatStartupFrom.AutoFromRecommendList,
+                            markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                            extInfo: {
+                              bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
+                              chosenReasonInUi
+                            },
+                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
                           }
-                        }
-                      )
-                    } catch {
+                        )
+                      } catch {
+                      }
+                    }
+                    else if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                      try {
+                        await hooks.jobMarkedAsNotSuit.promise(
+                          targetJobData,
+                          {
+                            markFrom: ChatStartupFrom.AutoFromRecommendList,
+                            markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                            extInfo: null,
+                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          }
+                        )
+                      } catch {
+                      }
                     }
                     continue continueFind
                   }
@@ -773,7 +791,6 @@ export async function mainLoop (hooks) {
       }
     })
     hooks.puppeteerLaunched?.call()
-  
     page = (await browser.pages())[0]
     //set cookies
     hooks.cookieWillSet?.call(bossCookies)
@@ -782,6 +799,10 @@ export async function mainLoop (hooks) {
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
     await page.bringToFront()
+    await hooks.mainFlowWillLaunch?.callAsync({
+      jobNotMatchStrategy,
+      blockJobNotSuit
+    })
     await toRecommendPage(hooks)
     // goto search
 
