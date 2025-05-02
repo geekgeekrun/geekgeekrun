@@ -17,6 +17,7 @@ import { default as jobFilterConditions } from './internal-config/job-filter-con
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
 import { MarkAsNotSuitReason, MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { activeDescList } from './constant.mjs'
 
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
@@ -80,6 +81,23 @@ const targetCompanyList = readConfigFile('target-company-list.json').filter(it =
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
 const jobNotMatchStrategy = readConfigFile('boss.json').jobNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+const markAsNotActiveSelectedTimeRange = (() => {
+  let n = readConfigFile('boss.json').markAsNotActiveSelectedTimeRange
+  if (
+    typeof n !== 'number' || isNaN(parseInt(n)) || n >= activeDescList.length || n < 0
+  ) {
+    n = 7
+  }
+  return n
+})()
+const jobNotActiveStrategy = (() => {
+  let value = readConfigFile('boss.json').jobNotActiveStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+  if (markAsNotActiveSelectedTimeRange === 0) {
+    value = MarkAsNotSuitOp.NO_OP
+  }
+  return value
+})()
+
 let {
   expectJobNameRegExpStr,
   expectJobTypeRegExpStr,
@@ -122,6 +140,12 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
   const result = {}
   const notSuitableFeedbackButtonProxy = await page.$('.job-detail-box .job-detail-operate .not-suitable')
   if (notSuitableFeedbackButtonProxy) {
+    await notSuitableFeedbackButtonProxy.evaluate(el => {
+      el.scrollIntoView({
+        block: 'center'
+      })
+    })
+    await sleep(200)
     await notSuitableFeedbackButtonProxy.click()
     const rawReasonResData = (await (await page.waitForResponse(
       response => {
@@ -492,18 +516,24 @@ async function toRecommendPage (hooks) {
               let hasReachLastPage = false
               let targetJobIndex = -1
               let targetJobData
+              function getTempTargetJobIndexToCheckDetail () {
+                return jobListData.findIndex(it => 
+                  !blockBossNotNewChat.has(it.encryptBossId) &&
+                  !blockBossNotActive.has(it.encryptBossId) &&
+                  !blockJobNotSuit.has(it.encryptJobId) &&
+                  (
+                    enableCompanyAllowList ?
+                      [...expectCompanySet].find(
+                        name => it.brandName?.toLowerCase?.()?.includes(name.toLowerCase())
+                      )
+                      :
+                      true
+                  )
+                )
+              }
               continueFind: while (targetJobIndex < 0 && !hasReachLastPage) {
                 // when disable company allow list, we will believe that the first one in the list is your expect job.
-                let tempTargetJobIndexToCheckDetail = enableCompanyAllowList ? jobListData.findIndex(
-                  it => !blockBossNotNewChat.has(it.encryptBossId) 
-                    && !blockBossNotActive.has(it.encryptBossId)
-                    && [...expectCompanySet].find(
-                      name => it.brandName.includes(name)
-                    )
-                    && !blockJobNotSuit.has(it.encryptJobId)
-                ) : jobListData.findIndex(
-                  it => !blockBossNotNewChat.has(it.encryptBossId) && !blockBossNotActive.has(it.encryptBossId) && !blockJobNotSuit.has(it.encryptJobId)
-                )
+                let tempTargetJobIndexToCheckDetail = getTempTargetJobIndexToCheckDetail()
                 while (tempTargetJobIndexToCheckDetail < 0 && !hasReachLastPage) {
                   // fetch new
                   const recommendJobListElBBox = await recommendJobListElProxy.boundingBox()
@@ -538,12 +568,7 @@ async function toRecommendPage (hooks) {
                       document.querySelector('.page-jobs-main')?.__vue__?.jobList
                     `
                   )
-                  tempTargetJobIndexToCheckDetail = jobListData.findIndex(it => 
-                    !blockBossNotNewChat.has(it.encryptBossId) &&
-                    !blockBossNotActive.has(it.encryptBossId) &&
-                    [...expectCompanySet].find(name => it.brandName?.toLowerCase?.()?.includes(name.toLowerCase())) &&
-                    !blockJobNotSuit.has(it.encryptJobId)
-                  )
+                  tempTargetJobIndexToCheckDetail = getTempTargetJobIndexToCheckDetail()
                 }
 
                 if (tempTargetJobIndexToCheckDetail < 0 && hasReachLastPage) {
@@ -593,31 +618,44 @@ async function toRecommendPage (hooks) {
                   // 刚刚活跃 // 今日活跃 // 昨日活跃 // 3日内活跃 // 本周活跃 // 2周内活跃
                   // 本月活跃 // 2月内活跃 // 3月内活跃 // 4月内活跃 // 5月内活跃 // 近半年活跃 // 半年前活跃
                   //#endregion
-                  if ([
-                    '本月活跃',
-                    '2月内活跃',
-                    '3月内活跃',
-                    '4月内活跃',
-                    '5月内活跃',
-                    '近半年活跃',
-                    '半年前活跃',
-                  ].includes(targetJobData.bossInfo.activeTimeDesc)) {
+                  const indexOfActiveText = activeDescList.indexOf(targetJobData.bossInfo.activeTimeDesc)
+                  if (
+                    markAsNotActiveSelectedTimeRange > 0 &&
+                    indexOfActiveText > 0 && indexOfActiveText <= markAsNotActiveSelectedTimeRange
+                  ) {
                     blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
                     // click prevent recommend button
-                    try {
-                      const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
-                      await hooks.jobMarkedAsNotSuit.promise(
-                        targetJobData,
-                        {
-                          markFrom: ChatStartupFrom.AutoFromRecommendList,
-                          markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
-                          extInfo: {
-                            bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
-                            chosenReasonInUi
+                    if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                      try {
+                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
+                        await hooks.jobMarkedAsNotSuit.promise(
+                          targetJobData,
+                          {
+                            markFrom: ChatStartupFrom.AutoFromRecommendList,
+                            markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
+                            extInfo: {
+                              bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
+                              chosenReasonInUi
+                            },
+                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
                           }
-                        }
-                      )
-                    } catch {
+                        )
+                      } catch {
+                      }
+                    }
+                    else if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                      try {
+                        await hooks.jobMarkedAsNotSuit.promise(
+                          targetJobData,
+                          {
+                            markFrom: ChatStartupFrom.AutoFromRecommendList,
+                            markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
+                            extInfo: null,
+                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          }
+                        )
+                      } catch {
+                      }
                     }
                     continue continueFind
                   }
@@ -801,7 +839,9 @@ export async function mainLoop (hooks) {
     await page.bringToFront()
     await hooks.mainFlowWillLaunch?.callAsync({
       jobNotMatchStrategy,
-      blockJobNotSuit
+      jobNotActiveStrategy,
+      blockJobNotSuit,
+      blockBossNotActive,
     })
     await toRecommendPage(hooks)
     // goto search

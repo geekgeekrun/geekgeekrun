@@ -26,7 +26,7 @@ import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitR
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
-import { MarkAsNotSuitOp } from "./enums";
+import { MarkAsNotSuitOp, MarkAsNotSuitReason } from "./enums";
 import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/1746092370665-AddColumnForMarkAsNotSuitLog";
 
 export function initDb(dbFilePath) {
@@ -104,12 +104,41 @@ export default class SqlitePlugin {
       "SqlitePlugin",
       async ({
         jobNotMatchStrategy,
-        blockJobNotSuit
+        jobNotActiveStrategy,
+        blockJobNotSuit,
+        blockBossNotActive,
       }) => {
-        if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+        if (
+          jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
+          jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+        ) {
           const ds = await this.initPromise;
-          const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7) ?? []).map(it => it.encryptJobId);
-          last7DayMarkRecords.forEach(id => blockJobNotSuit.add(id))
+          const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7) ?? []);
+          if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+            last7DayMarkRecords
+              .filter(it =>
+                [
+                  MarkAsNotSuitReason.JOB_NOT_SUIT,
+                  MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON
+                ].includes(it.markReason)
+              )
+              .map(
+                it => it.encryptJobId
+              )
+              .forEach(
+                id => blockJobNotSuit.add(id)
+              )
+          }
+          if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+            last7DayMarkRecords
+              .filter(it => it.markReason === MarkAsNotSuitReason.BOSS_INACTIVE)
+              .map(
+                it => it.encryptJobId
+              )
+              .forEach(
+                id => blockJobNotSuit.add(id)
+              )
+          }
         }
       }
     );

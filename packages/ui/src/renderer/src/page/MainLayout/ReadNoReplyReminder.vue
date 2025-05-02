@@ -483,13 +483,13 @@ async function handleTestEffectClicked() {
 
 <style scoped lang="scss">
 .form-wrap {
-  margin: 0 auto;
-  max-width: 1000px;
   max-height: 100vh;
   overflow: auto;
   padding-left: 20px;
   padding-right: 20px;
   :deep(.el-form) {
+    margin: 0 auto;
+    max-width: 1000px;
     padding-top: 8px;
   }
   .last-form-item {

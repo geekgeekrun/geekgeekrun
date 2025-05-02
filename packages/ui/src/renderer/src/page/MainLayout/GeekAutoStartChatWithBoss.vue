@@ -155,69 +155,115 @@
           </el-form-item>
         </div>
       </div>
-      <div
-        :style="{
-          display: 'grid',
-          gridTemplateColumns: '500px 1fr',
-          gap: '5px',
-          width: '100%',
-          alignItems: 'end'
-        }"
-      >
-        <el-form-item>
-          <div>
-            当查看职位详情后，发现职位不满足如上设置的条件时
-            <el-tooltip
-              effect="light"
-              placement="bottom-start"
-              @show="gtagRenderer('tooltip_show_about_mark_not_suit_intro')"
-            >
-              <template #content>
-                <ol m0 line-height-1.5em w-400px pl2em>
-                  <li>
-                    如果查找到的职位，职位名称、职位类型、职位描述与如上正则不匹配，则这个职位将被标记为不合适
-                  </li>
-                  <li>
-                    如果查找到的职位活跃时间为“本月活跃”或更往前的时间，则这个职位将被标记为不合适
-                  </li>
-                  <li>
-                    如有错误标记，请在左侧“<a
-                      href="javascript:void(0)"
-                      style="color: var(--el-color-primary)"
-                      @click.prevent="
-                        () => {
-                          gtagRenderer('click_view_mansr_from_boss_b_tooltip')
-                          $router.push('/main-layout/MarkAsNotSuitRecord')
-                        }
-                      "
-                      >标记不合适</a
-                    >”记录中找到相关记录，手动对这些职位发起会话
-                  </li>
-                </ol>
-              </template>
-              <el-button type="text" font-size-12px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span>标记不合适机制</el-button
-              >
-            </el-tooltip>
-          </div>
-
-          <el-select
-            v-model="formContent.jobNotMatchStrategy"
-            @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
-          >
-            <el-option
-              v-for="op in strategyOptionWhenCurrentJobNotMatch"
-              :key="op.value"
-              :label="op.name"
-              :value="op.value"
-              >{{ op.name }}</el-option
-            >
-          </el-select>
+      <div>
+        <el-form-item mb0>
+          查看职位详情后，发现当前职位名称/类型/描述不符合如上设置的投递条件，将要执行的操作
         </el-form-item>
+        <el-tooltip
+          effect="light"
+          placement="bottom-start"
+          @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
+        >
+          <template #content>
+            <ul m0 line-height-1.5em w-400px pl2em>
+              <li>
+                如有错误标记，请在左侧“<a
+                  href="javascript:void(0)"
+                  style="color: var(--el-color-primary)"
+                  @click.prevent="
+                    () => {
+                      gtagRenderer('click_view_mansr_from_boss_b_tooltip')
+                      $router.push('/main-layout/MarkAsNotSuitRecord')
+                    }
+                  "
+                  >标记不合适</a
+                >”记录中找到相关记录，来查看职位详情，或手动对这些职位发起会话
+              </li>
+            </ul>
+          </template>
+          <!-- <el-button type="text" font-size-12px
+            ><span><QuestionFilled w-1em h-1em mr2px /></span
+            >职位被错误标记为不合适了如何处理？</el-button
+          > -->
+        </el-tooltip>
+        <div
+          :style="{
+            display: 'grid',
+            gridTemplateColumns: '1.25fr 0.75fr',
+            gap: '10px 0',
+            width: '100%',
+            alignItems: 'end'
+          }"
+        >
+          <el-form-item>
+            <el-select
+              v-model="formContent.jobNotMatchStrategy"
+              @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
+            >
+              <el-option
+                v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                :key="op.value"
+                :label="op.name"
+                :value="op.value"
+                >{{ op.name }}</el-option
+              >
+            </el-select>
+          </el-form-item>
+          <div />
+        </div>
+      </div>
+      <div>
+        <el-form-item mb0> 查看职位详情后，发现当前职位不活跃时，将要执行的操作 </el-form-item>
+        <div
+          :style="{
+            display: 'grid',
+            gridTemplateColumns: '1.25fr 0.75fr',
+            gap: '10px 0',
+            width: '100%',
+            alignItems: 'end'
+          }"
+        >
+          <el-form-item>
+            <div font-size-12px>认为职位不活跃的时间范围：</div>
+            <el-slider
+              v-model="formContent.markAsNotActiveSelectedTimeRange"
+              :marks="noActiveDefinitionMarks"
+              :max="10"
+              :step="1"
+              pl40px
+              pr20px
+              class="no-active-definition-text-slider"
+              :format-tooltip="
+                (v) =>
+                  typeof noActiveDefinitionMarks[v] === 'string'
+                    ? noActiveDefinitionMarks[v]
+                    : noActiveDefinitionMarks[v]?.label
+              "
+              @change="(value) => gtagRenderer('job_not_active_time_range_changed', { value })"
+            />
+          </el-form-item>
+          <div />
+          <el-form-item v-if="formContent.markAsNotActiveSelectedTimeRange > 0" mb0>
+            <div font-size-12px>发现当前职位不活跃时：</div>
+            <el-select
+              v-model="formContent.jobNotActiveStrategy"
+              @change="(value) => gtagRenderer('job_not_active_strategy_changed', { value })"
+            >
+              <el-option
+                v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                :key="op.value"
+                :label="op.name"
+                :value="op.value"
+                >{{ op.name }}</el-option
+              >
+            </el-select>
+          </el-form-item>
+        </div>
       </div>
       <el-form-item
         label="职位备选筛选条件（当前求职期望无合适职位时，自动更改Boss筛选条件，查找新工作）"
         prop="filter"
+        mt20px
         mb0
       >
         <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
@@ -244,6 +290,7 @@ import { ElForm, ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
+import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
@@ -260,7 +307,9 @@ const formContent = ref({
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
   expectJobDescRegExpStr: '',
-  jobNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+  jobNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+  jobNotActiveStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+  markAsNotActiveSelectedTimeRange: 7
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -310,6 +359,17 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     .map((it) => it.value)
     .includes(res.config['boss.json'].jobNotMatchStrategy)
     ? res.config['boss.json'].jobNotMatchStrategy
+    : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+  formContent.value.markAsNotActiveSelectedTimeRange = isNaN(
+    parseInt(String(res.config['boss.json'].markAsNotActiveSelectedTimeRange))
+  )
+    ? 7
+    : parseInt(String(res.config['boss.json'].markAsNotActiveSelectedTimeRange))
+
+  formContent.value.jobNotActiveStrategy = strategyOptionWhenCurrentJobNotMatch
+    .map((it) => it.value)
+    .includes(res.config['boss.json'].jobNotActiveStrategy)
+    ? res.config['boss.json'].jobNotActiveStrategy
     : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 })
 
@@ -531,17 +591,39 @@ const strategyOptionWhenCurrentJobNotMatch = [
     value: MarkAsNotSuitOp.NO_OP
   }
 ]
+
+const noActiveDefinitionMarks = computed(() => {
+  let arr = [...activeDescList]
+  arr.shift()
+  arr.unshift('不处理“职位不活跃”')
+  arr = arr.map((it, index) => {
+    if (index <= formContent.value.markAsNotActiveSelectedTimeRange) {
+      if (formContent.value.markAsNotActiveSelectedTimeRange > 0 && index === 0) {
+        return it
+      }
+      return {
+        style: {
+          color: '#1989FA',
+          fontWeight: 700
+        },
+        label: it
+      }
+    }
+    return it
+  })
+  return arr
+})
 </script>
 
 <style scoped lang="scss">
 .form-wrap {
-  margin: 0 auto;
-  max-width: 1000px;
   max-height: 100vh;
   overflow: auto;
   padding-left: 20px;
   padding-right: 20px;
   :deep(.el-form) {
+    max-width: 1000px;
+    margin: 0 auto;
     padding-top: 8px;
   }
   .last-form-item {
@@ -549,6 +631,35 @@ const strategyOptionWhenCurrentJobNotMatch = [
       margin-top: 0px;
       justify-content: flex-end;
     }
+  }
+}
+.no-active-definition-text-slider {
+  ::v-deep(.el-slider__marks-text) {
+    font-size: 10px;
+    margin-top: 5px;
+    &:nth-child(2n-1) {
+      margin-top: 20px;
+      &::before {
+        content: '';
+        bottom: calc(100% - 14px);
+        z-index: -1;
+        left: 50%;
+        transform: translateX(-50%);
+        position: absolute;
+        display: block;
+        width: 2px;
+        height: 26px;
+        background-image: linear-gradient(var(--el-slider-runway-bg-color), transparent);
+      }
+    }
+  }
+  ::v-deep(.el-slider__stop) {
+    box-shadow: 0 0 0 2px rgba(52, 137, 255, 0.3);
+  }
+  ::v-deep(.el-slider__button) {
+    transform: rotate(45deg);
+    border-radius: 10px 10px 0px 10px;
+    --el-slider-button-size: 18px;
   }
 }
 </style>

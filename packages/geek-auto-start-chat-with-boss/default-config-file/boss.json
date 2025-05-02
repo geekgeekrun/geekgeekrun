@@ -8,6 +8,8 @@
   },
   "expectJobRegExpStr": "",
   "jobNotMatchStrategy": 1,
+  "jobNotActiveStrategy": 1,
+  "markAsNotActiveSelectedTimeRange": 7,
   "autoReminder": {
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,

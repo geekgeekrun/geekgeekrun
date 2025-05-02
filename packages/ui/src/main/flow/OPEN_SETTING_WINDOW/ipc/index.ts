@@ -98,6 +98,12 @@ export default function initIpc() {
     if (hasOwn(payload, 'jobNotMatchStrategy')) {
       bossConfig.jobNotMatchStrategy = payload.jobNotMatchStrategy
     }
+    if (hasOwn(payload, 'markAsNotActiveSelectedTimeRange')) {
+      bossConfig.markAsNotActiveSelectedTimeRange = payload.markAsNotActiveSelectedTimeRange
+    }
+    if (hasOwn(payload, 'jobNotActiveStrategy')) {
+      bossConfig.jobNotActiveStrategy = payload.jobNotActiveStrategy
+    }
     if (hasOwn(payload, 'autoReminder')) {
       bossConfig.autoReminder = payload.autoReminder
     }
