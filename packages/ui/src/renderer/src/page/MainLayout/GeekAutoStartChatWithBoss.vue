@@ -157,8 +157,33 @@
       </div>
       <div>
         <el-form-item mb0>
-          查看职位详情后，发现当前职位名称/类型/描述不符合如上设置的投递条件，将要执行的操作
+          查看职位详情后，发现当前职位名称/类型/描述不符合投递条件时，将要执行的操作
         </el-form-item>
+        <div
+          :style="{
+            display: 'grid',
+            gridTemplateColumns: '1.25fr 0.75fr',
+            gap: '10px 0',
+            width: '100%',
+            alignItems: 'end'
+          }"
+        >
+          <el-form-item mb0>
+            <el-select
+              v-model="formContent.jobNotMatchStrategy"
+              @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
+            >
+              <el-option
+                v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                :key="op.value"
+                :label="op.name"
+                :value="op.value"
+                >{{ op.name }}</el-option
+              >
+            </el-select>
+          </el-form-item>
+          <div />
+        </div>
         <el-tooltip
           effect="light"
           placement="bottom-start"
@@ -181,36 +206,10 @@
               </li>
             </ul>
           </template>
-          <!-- <el-button type="text" font-size-12px
-            ><span><QuestionFilled w-1em h-1em mr2px /></span
-            >职位被错误标记为不合适了如何处理？</el-button
-          > -->
+          <el-button type="text" font-size-12px
+            ><span><QuestionFilled w-1em h-1em mr2px /></span>职位被错误标记时如何处理？</el-button
+          >
         </el-tooltip>
-        <div
-          :style="{
-            display: 'grid',
-            gridTemplateColumns: '1.25fr 0.75fr',
-            gap: '10px 0',
-            width: '100%',
-            alignItems: 'end'
-          }"
-        >
-          <el-form-item>
-            <el-select
-              v-model="formContent.jobNotMatchStrategy"
-              @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
-            >
-              <el-option
-                v-for="op in strategyOptionWhenCurrentJobNotMatch"
-                :key="op.value"
-                :label="op.name"
-                :value="op.value"
-                >{{ op.name }}</el-option
-              >
-            </el-select>
-          </el-form-item>
-          <div />
-        </div>
       </div>
       <div>
         <el-form-item mb0> 查看职位详情后，发现当前职位不活跃时，将要执行的操作 </el-form-item>
@@ -230,8 +229,8 @@
               :marks="noActiveDefinitionMarks"
               :max="10"
               :step="1"
-              pl40px
-              pr20px
+              pl50px
+              pr0
               class="no-active-definition-text-slider"
               :format-tooltip="
                 (v) =>
@@ -257,6 +256,33 @@
                 >{{ op.name }}</el-option
               >
             </el-select>
+            <el-tooltip
+              effect="light"
+              placement="bottom-start"
+              @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
+            >
+              <template #content>
+                <ul m0 line-height-1.5em w-400px pl2em>
+                  <li>
+                    如有错误标记，请在左侧“<a
+                      href="javascript:void(0)"
+                      style="color: var(--el-color-primary)"
+                      @click.prevent="
+                        () => {
+                          gtagRenderer('click_view_mansr_from_boss_b_tooltip')
+                          $router.push('/main-layout/MarkAsNotSuitRecord')
+                        }
+                      "
+                      >标记不合适</a
+                    >”记录中找到相关记录，来查看职位详情，或手动对这些职位发起会话
+                  </li>
+                </ul>
+              </template>
+              <el-button type="text" font-size-12px
+                ><span><QuestionFilled w-1em h-1em mr2px /></span
+                >职位被错误标记时如何处理？</el-button
+              >
+            </el-tooltip>
           </el-form-item>
         </div>
       </div>
