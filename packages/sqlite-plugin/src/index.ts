@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { type DataSource } from "typeorm";
 import { requireTypeorm } from "./utils/module-loader";
+import fs from 'node:fs'
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
@@ -33,7 +34,7 @@ export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
   const appDataSource = new DataSource({
     type: "sqlite",
-    synchronize: true,
+    synchronize: !fs.existsSync(dbFilePath),
     logging: true,
     logger: "simple-console",
     database: dbFilePath,

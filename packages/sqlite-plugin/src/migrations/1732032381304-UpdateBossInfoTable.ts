@@ -1,17 +1,24 @@
-import { MigrationInterface, QueryRunner, TableColumn } from "typeorm";
+import { DataSource, MigrationInterface, QueryRunner, TableColumn } from "typeorm";
+import { VBossLibrary } from "../entity/VBossLibrary";
+import { VChatStartupLog } from "../entity/VChatStartupLog";
+import { VCompanyLibrary } from "../entity/VCompanyLibrary";
+import { VJobLibrary } from "../entity/VJobLibrary";
+import { VMarkAsNotSuitLog } from "../entity/VMarkAsNotSuitLog";
 
-const viewNames = [
-  "v_boss_library",
-  "v_chat_startup_log",
-  "v_company_library",
-  "v_job_library",
-  "v_mark_as_not_suit_log",
-];
+const ViewEntities = [
+  VBossLibrary,
+  VChatStartupLog,
+  VCompanyLibrary,
+  VJobLibrary,
+  VMarkAsNotSuitLog,
+]
 
 export class UpdateBossInfoTable1732032381304 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    for (const viewName of viewNames) {
-      await queryRunner.query(`DROP VIEW IF EXISTS "${viewName}"`);
+    for (const EntityDefinition of ViewEntities) {
+      const dataSource = queryRunner.connection as DataSource;
+      const viewMetadata = dataSource.getMetadata(EntityDefinition);
+      await queryRunner.query(`DROP VIEW IF EXISTS "${viewMetadata.tableName}"`);
     }
     if (await queryRunner.hasTable("boss_info")) {
       if (await queryRunner.hasColumn("boss_info", "encryptCompanyId")) {
@@ -25,6 +32,15 @@ export class UpdateBossInfoTable1732032381304 implements MigrationInterface {
           })
         );
       }
+    }
+    for (const EntityDefinition of ViewEntities) {
+      const dataSource = queryRunner.connection as DataSource;
+      const viewMetadata = dataSource.getMetadata(EntityDefinition);
+        let expression = viewMetadata.expression;
+      if (typeof expression === 'function') {
+        expression = expression(dataSource).getQuery();
+      }
+      await queryRunner.query(`CREATE VIEW "${viewMetadata.tableName}" AS ${expression}`);
     }
   }
 
