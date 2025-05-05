@@ -32,6 +32,10 @@ const rechatLlmFallback =
   readConfigFile('boss.json').autoReminder?.rechatLlmFallback ??
   RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
 
+const expectJobTypeRegExpStr = readConfigFile('boss.json').expectJobTypeRegExpStr
+const onlyRemindBossWithExpectJobType =
+  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ?? !!expectJobTypeRegExpStr
+
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
@@ -267,6 +271,24 @@ const mainLoop = async () => {
       })
     }
     await sleepWithRandomDelay(1500)
+    // check if expect job type match
+    let isExpectJobTypeMatch = true
+    if (onlyRemindBossWithExpectJobType) {
+      const selectedFriendInfo = await pageMapByName.boss?.evaluate(
+        `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`
+      )
+      if (!selectedFriendInfo) {
+        isExpectJobTypeMatch = false
+      } else {
+        const jobType = selectedFriendInfo?.positionName
+        if (!jobType) {
+          isExpectJobTypeMatch = false
+        } else {
+          const regExp = new RegExp(expectJobTypeRegExpStr)
+          isExpectJobTypeMatch = regExp.test(jobType)
+        }
+      }
+    }
     const conversationInfo = await pageMapByName.boss?.evaluate(
       `document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$`
     )
@@ -280,6 +302,7 @@ const mainLoop = async () => {
 
     const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
     if (
+      isExpectJobTypeMatch &&
       historyMessageList[historyMessageList.length - 1].isSelf &&
       historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&
       ((conversationInfo &&

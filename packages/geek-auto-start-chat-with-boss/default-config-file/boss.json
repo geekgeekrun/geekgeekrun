@@ -16,6 +16,7 @@
     "geminiApiKey": "",
     "rechatContentSource": 1,
     "recentMessageQuantityForLlm": 8,
-    "rechatLlmFallback": 1
+    "rechatLlmFallback": 1,
+    "onlyRemindBossWithExpectJobType": true
   }
 }

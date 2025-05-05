@@ -133,7 +133,7 @@
           </el-form-item>
           <div mb10px font-size-12px flex flex-justify-center>且</div>
           <el-form-item mb0 prop="expectJobTypeRegExpStr">
-            <div font-size-12px>职位类型正则（不区分大小写）</div>
+            <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
             <el-input
               v-model="formContent.expectJobTypeRegExpStr"
               @blur="
@@ -323,6 +323,7 @@ import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with
 import { ArrowDown } from '@element-plus/icons-vue'
 import { MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/src/enums'
 import { debounce } from 'lodash-es'
+import mittBus from '../../utils/mitt'
 
 const router = useRouter()
 
@@ -470,6 +471,7 @@ const handleSubmit = async () => {
     return
   }
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  mittBus.emit('auto-start-chat-with-boss-config-saved')
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
     query: { flow: 'geek-auto-start-chat-with-boss' }
@@ -494,6 +496,7 @@ const handleSave = async () => {
     return
   }
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  mittBus.emit('auto-start-chat-with-boss-config-saved')
   ElMessage.success('配置保存成功')
   gtagRenderer('config_saved')
 }

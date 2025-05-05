@@ -11,6 +11,30 @@
           >编辑Cookie</el-button
         >
       </el-form-item>
+      <el-form-item>
+        <div>
+          <el-checkbox v-if="!expectJobTypeRegExpStr?.trim()" :model-value="false" disabled>
+            发送提醒消息前，先按照“Boss炸弹-职位类型正则”校验正在与Boss沟通的岗位是否满足期望，校验通过后再提醒
+          </el-checkbox>
+          <template v-else>
+            <el-checkbox v-model="formContent.autoReminder.onlyRemindBossWithExpectJobType">
+              发送提醒消息前，先按照“Boss炸弹-职位类型正则”校验正在与Boss沟通的岗位是否满足期望，校验通过后再提醒
+            </el-checkbox>
+            <div ml1.5em color-gray>
+              <div>当前职位类型正则：{{ expectJobTypeRegExpStr?.trim() }}</div>
+              <template
+                v-if="
+                  formContent.autoReminder.rechatContentSource ===
+                  RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
+                "
+              >
+                <div>当前简历中填写的期望职位：{{ resumeContent?.expectJob ?? '-' }}</div>
+                <div color-orange>请确保上方二者信息匹配</div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </el-form-item>
       <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：">
         <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
           <div>
@@ -184,6 +208,7 @@ import {
   RECHAT_LLM_FALLBACK
 } from '../../../../common/enums/auto-start-chat'
 import { gtagRenderer } from '@renderer/utils/gtag'
+import mittBus from '../../utils/mitt'
 
 const router = useRouter()
 const formContent = ref({
@@ -192,7 +217,8 @@ const formContent = ref({
     rechatLimitDay: 21,
     rechatContentSource: 1,
     recentMessageQuantityForLlm: 8,
-    rechatLlmFallback: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
+    rechatLlmFallback: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION,
+    onlyRemindBossWithExpectJobType: true
   }
 })
 
@@ -224,9 +250,31 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
           ? 8
           : parseInt(conf.recentMessageQuantityForLlm)
       : 8
+  conf.onlyRemindBossWithExpectJobType = conf.onlyRemindBossWithExpectJobType ?? true
   conf.rechatLlmFallback = conf.rechatLlmFallback ?? RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
   formContent.value.autoReminder = conf
 })
+
+const expectJobTypeRegExpStr = ref('')
+async function fetchExpectJobTypeRegExpStr() {
+  await electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+    expectJobTypeRegExpStr.value = res.config['boss.json']?.expectJobTypeRegExpStr
+  })
+}
+fetchExpectJobTypeRegExpStr()
+mittBus.on('auto-start-chat-with-boss-config-saved', fetchExpectJobTypeRegExpStr)
+onUnmounted(() => {
+  mittBus.off('auto-start-chat-with-boss-config-saved', fetchExpectJobTypeRegExpStr)
+})
+
+const resumeContent = ref(null)
+async function fetchResumeContent() {
+  await electron.ipcRenderer.invoke('fetch-resume-content').then((res) => {
+    resumeContent.value = res
+  })
+}
+
+fetchResumeContent()
 
 const formRules = {
   throttleIntervalMinutes: {
@@ -274,6 +322,7 @@ async function checkIsCanRun() {
       gtagRenderer('invalid_rc_dialog_click_confirm')
       try {
         await electron.ipcRenderer.invoke('resume-edit')
+        await fetchResumeContent()
       } catch (err) {
         console.log(err)
       }
@@ -449,6 +498,7 @@ const handleClickEditResume = async () => {
   gtagRenderer('edit_resume_clicked')
   try {
     await electron.ipcRenderer.invoke('resume-edit')
+    await fetchResumeContent()
   } catch (err) {
     console.log(err)
   }
