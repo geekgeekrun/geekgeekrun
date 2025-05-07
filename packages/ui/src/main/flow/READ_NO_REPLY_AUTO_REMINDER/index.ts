@@ -121,7 +121,6 @@ const mainLoop = async () => {
     '你与该职位竞争者PK情况',
     '简历诊断提醒',
     '附件简历还没准备好',
-    '开场问题，期待你的回答',
     '设置合适的期望薪资范围'
   ].map((it) => new RegExp(it))
   browser = await bootstrap()
@@ -202,9 +201,10 @@ const mainLoop = async () => {
         (rechatLimitDay && it.updateTime
           ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
           : true) &&
-        ((it.lastIsSelf && it.lastMsgStatus === MsgStatus.HAS_READ) ||
+        ((((it.lastIsSelf && it.lastMsgStatus === MsgStatus.HAS_READ) ||
           canNotConfirmIfHasReadMsgTemplateList.some((regExp) => regExp.test(it.lastText))) &&
-        !it.unreadCount
+          !it.unreadCount) ||
+          (!it.lastIsSelf && it.lastText === '开场问题，期待你的回答'))
       )
     })
 
