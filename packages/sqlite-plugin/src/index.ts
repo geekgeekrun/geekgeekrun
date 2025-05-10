@@ -29,12 +29,13 @@ import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
 import { MarkAsNotSuitOp, MarkAsNotSuitReason } from "./enums";
 import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/1746092370665-AddColumnForMarkAsNotSuitLog";
+import { Init1000000000000 } from "./migrations/1000000000000-Init";
 
 export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
   const appDataSource = new DataSource({
     type: "sqlite",
-    synchronize: !fs.existsSync(dbFilePath),
+    synchronize: false,
     logging: true,
     logger: "simple-console",
     database: dbFilePath,
@@ -60,6 +61,7 @@ export function initDb(dbFilePath) {
       LlmModelUsageRecord,
     ],
     migrations: [
+      Init1000000000000,
       UpdateChatStartupLogTable1729182577167,
       UpdateBossInfoTable1732032381304,
       AddColumnForMarkAsNotSuitLog1746092370665,
