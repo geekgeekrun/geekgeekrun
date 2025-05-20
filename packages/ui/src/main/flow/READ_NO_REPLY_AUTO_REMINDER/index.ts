@@ -32,6 +32,10 @@ const rechatLlmFallback =
   readConfigFile('boss.json').autoReminder?.rechatLlmFallback ??
   RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
 
+const expectJobTypeRegExpStr = readConfigFile('boss.json').expectJobTypeRegExpStr
+const onlyRemindBossWithExpectJobType =
+  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ?? !!expectJobTypeRegExpStr
+
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
@@ -117,7 +121,6 @@ const mainLoop = async () => {
     '你与该职位竞争者PK情况',
     '简历诊断提醒',
     '附件简历还没准备好',
-    '开场问题，期待你的回答',
     '设置合适的期望薪资范围'
   ].map((it) => new RegExp(it))
   browser = await bootstrap()
@@ -198,9 +201,10 @@ const mainLoop = async () => {
         (rechatLimitDay && it.updateTime
           ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
           : true) &&
-        ((it.lastIsSelf && it.lastMsgStatus === MsgStatus.HAS_READ) ||
+        ((((it.lastIsSelf && it.lastMsgStatus === MsgStatus.HAS_READ) ||
           canNotConfirmIfHasReadMsgTemplateList.some((regExp) => regExp.test(it.lastText))) &&
-        !it.unreadCount
+          !it.unreadCount) ||
+          (!it.lastIsSelf && it.lastText === '开场问题，期待你的回答'))
       )
     })
 
@@ -267,6 +271,24 @@ const mainLoop = async () => {
       })
     }
     await sleepWithRandomDelay(1500)
+    // check if expect job type match
+    let isExpectJobTypeMatch = true
+    if (onlyRemindBossWithExpectJobType) {
+      const selectedFriendInfo = await pageMapByName.boss?.evaluate(
+        `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`
+      )
+      if (!selectedFriendInfo) {
+        isExpectJobTypeMatch = false
+      } else {
+        const jobType = selectedFriendInfo?.positionName
+        if (!jobType) {
+          isExpectJobTypeMatch = false
+        } else {
+          const regExp = new RegExp(expectJobTypeRegExpStr)
+          isExpectJobTypeMatch = regExp.test(jobType)
+        }
+      }
+    }
     const conversationInfo = await pageMapByName.boss?.evaluate(
       `document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$`
     )
@@ -280,6 +302,7 @@ const mainLoop = async () => {
 
     const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
     if (
+      isExpectJobTypeMatch &&
       historyMessageList[historyMessageList.length - 1].isSelf &&
       historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&
       ((conversationInfo &&

@@ -132,6 +132,9 @@ importers:
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
+      mitt:
+        specifier: ^3.0.1
+        version: 3.0.1
       node-machine-id:
         specifier: ^1.1.12
         version: 1.1.12

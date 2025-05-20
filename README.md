@@ -166,3 +166,11 @@ Boss不明原因已读不回？简历就是投不出去？
 更多功能还在开发中~
 
 祝你求职成功，事业顺利，事事顺心
+
+## Star 数据 感谢支持
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=geekgeekrun/geekgeekrun&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=geekgeekrun/geekgeekrun&type=Date" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=geekgeekrun/geekgeekrun&type=Date" />
+</picture>

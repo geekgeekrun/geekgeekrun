@@ -513,15 +513,14 @@ export default function initIpc() {
     ipcMain.handle('save-resume-content', saveResumeHandler)
     resumeEditorWindow?.once('closed', () => {
       ipcMain.removeHandler('save-resume-content')
-      ipcMain.removeHandler('fetch-resume-content')
       defer.reject(new Error('cancel'))
     })
 
-    ipcMain.handle('fetch-resume-content', async () => {
-      const res = (await readConfigFile('resumes.json'))?.[0]
-      return res?.content ?? null
-    })
     return defer.promise
+  })
+  ipcMain.handle('fetch-resume-content', async () => {
+    const res = (await readConfigFile('resumes.json'))?.[0]
+    return res?.content ?? null
   })
   ipcMain.on('no-reply-reminder-prompt-edit', async () => {
     const template = await readStorageFile(autoReminderPromptTemplateFileName, { isJson: false })
