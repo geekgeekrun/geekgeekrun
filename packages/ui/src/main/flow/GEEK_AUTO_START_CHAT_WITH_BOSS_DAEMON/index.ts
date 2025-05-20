@@ -25,14 +25,10 @@ function runWithDaemon({ runRecordId, runMode, parentProcessPipe }) {
   const subProcessOfCore = childProcess.spawn(
     process.argv[0],
     isUiDev
-      ? [...process.argv.slice(1), `--run-record-id=${runRecordId}`]
-      : [`--run-record-id=${runRecordId}`],
+      ? [process.argv[1], `--run-record-id=${runRecordId}`, `--mode=${runMode}`]
+      : [`--run-record-id=${runRecordId}`, `--mode=${runMode}`],
     {
-      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc'],
-      env: {
-        ...process.env,
-        MAIN_BOSSGEEKGO_UI_RUN_MODE: runMode
-      }
+      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
     }
   )
 

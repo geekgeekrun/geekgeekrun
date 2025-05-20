@@ -46,7 +46,6 @@ industryFilterExemption.forEach(item => {
 ensureConfigFileExist()
 ensureStorageFileExist()
 
-const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
 export const autoStartChatEventBus = new EventEmitter()
 

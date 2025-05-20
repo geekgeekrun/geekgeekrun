@@ -1,4 +1,9 @@
-const runMode = process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE
+import minimist from 'minimist'
+const isUiDev = process.env.NODE_ENV === 'development'
+const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
+console.log(commandlineArgs)
+
+const runMode = commandlineArgs['mode'];
 
 ;(async () => {
   switch (runMode) {

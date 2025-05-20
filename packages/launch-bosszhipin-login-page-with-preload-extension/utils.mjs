@@ -4,7 +4,6 @@ import os from 'node:os'
 import extractZip from 'extract-zip'
 import packageJson from './package.json' assert {type: 'json'}
 
-export const isRunFromUi = Boolean(process.env.MAIN_BOSSGEEKGO_UI_RUN_MODE)
 const isUiDev = process.env.NODE_ENV === 'development'
 
 export const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
@@ -28,12 +27,8 @@ async function getEditThisCookieZipPath () {
   if (editThisCookieZipPath) {
     return editThisCookieZipPath
   }
-  if (isRunFromUi) {
-    const { app } = await import('electron')
-    editThisCookieZipPath = path.join(app.getAppPath(), './node_modules', packageJson.name, 'extensions', 'EditThisCookie.zip')
-  } else {
-    editThisCookieZipPath = path.join(__dirname, 'extensions', 'EditThisCookie.zip')
-  }
+  const { app } = await import('electron')
+  editThisCookieZipPath = path.join(app.getAppPath(), './node_modules', packageJson.name, 'extensions', 'EditThisCookie.zip')
   return editThisCookieZipPath
 }
 
