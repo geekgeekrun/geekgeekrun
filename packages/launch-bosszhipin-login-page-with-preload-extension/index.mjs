@@ -17,7 +17,6 @@ import {
   runtimeFolderPath,
   ensureEditThisCookie,
   editThisCookieExtensionPath,
-  isRunFromUi,
 } from './utils.mjs'
 
 import { EventEmitter } from 'node:events'
@@ -56,10 +55,8 @@ export async function main() {
 
   page.once('close', async () => {
     browser.close()
-    if (isRunFromUi) {
-      const electron = await import('electron')
-      electron.app.quit()
-    }
+    const electron = await import('electron')
+    electron.app.quit()
   })
 
   const { dispose: disposeNavigationLock } = await blockNavigation(page, (req) => !req.url().startsWith('https://www.zhipin.com'))

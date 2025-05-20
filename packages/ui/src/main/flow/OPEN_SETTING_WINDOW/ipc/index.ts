@@ -151,12 +151,15 @@ export default function initIpc() {
     }
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'geekAutoStartWithBossDaemon',
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
     subProcessOfPuppeteer = childProcess.spawn(
       process.argv[0],
-      [...process.argv.slice(1), '--mode-to-daemon=geekAutoStartWithBossMain'],
+      [
+        ...process.argv.slice(1),
+        `--mode=geekAutoStartWithBossDaemon`,
+        `--mode-to-daemon=geekAutoStartWithBossMain`
+      ],
       {
         env: subProcessEnv,
         stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
@@ -205,13 +208,16 @@ export default function initIpc() {
     }
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'readNoReplyAutoReminder',
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
-    subProcessOfPuppeteer = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-      env: subProcessEnv,
-      stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
-    })
+    subProcessOfPuppeteer = childProcess.spawn(
+      process.argv[0],
+      [...process.argv.slice(1), `--mode=readNoReplyAutoReminder`],
+      {
+        env: subProcessEnv,
+        stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+      }
+    )
     // console.log(subProcessOfPuppeteer)
     return new Promise((resolve, reject) => {
       subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
@@ -264,15 +270,10 @@ export default function initIpc() {
     if (subProcessOfCheckAndDownloadDependencies) {
       return
     }
-    const subProcessEnv = {
-      ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'checkAndDownloadDependenciesForInit'
-    }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],
-      process.argv.slice(1),
+      [...process.argv.slice(1), `--mode="checkAndDownloadDependenciesForInit"`],
       {
-        env: subProcessEnv,
         stdio: [null, null, null, 'pipe', 'ipc']
       }
     )
@@ -334,12 +335,11 @@ export default function initIpc() {
     }
     const subProcessEnv = {
       ...process.env,
-      MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossZhipinLoginPageWithPreloadExtension',
       PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
     }
     subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
       process.argv[0],
-      process.argv.slice(1),
+      [...process.argv.slice(1), `--mode=launchBossZhipinLoginPageWithPreloadExtension`],
       {
         env: subProcessEnv,
         stdio: [null, null, null, 'pipe', 'ipc']
@@ -415,13 +415,16 @@ export default function initIpc() {
       const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
       const subProcessEnv = {
         ...process.env,
-        MAIN_BOSSGEEKGO_UI_RUN_MODE: 'launchBossSite',
         PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath
       }
-      subProcessOfOpenBossSite = childProcess.spawn(process.argv[0], process.argv.slice(1), {
-        env: subProcessEnv,
-        stdio: ['inherit', 'inherit', 'inherit', 'pipe']
-      })
+      subProcessOfOpenBossSite = childProcess.spawn(
+        process.argv[0],
+        [...process.argv.slice(1), `--mode=launchBossSite`],
+        {
+          env: subProcessEnv,
+          stdio: ['inherit', 'inherit', 'inherit', 'pipe']
+        }
+      )
       subProcessOfOpenBossSite.once('exit', () => {
         subProcessOfOpenBossSiteDefer = null
       })
