@@ -17,7 +17,6 @@
         v-if="modelValue?.length"
         size="small"
         type="danger"
-        text
         @click="handleClearSelectedCitiesInModelValue"
         >清空已选择的所有城市</el-button
       >
@@ -89,13 +88,12 @@
             <el-button
               v-if="selectedCities.length"
               type="danger"
-              text
               @click="handleClearSelectedCitiesInDialog"
               >清空已选择的所有城市</el-button
             >
           </div>
           <div>
-            <el-button type="text" @click="handleCancelClicked">取消</el-button>
+            <el-button @click="handleCancelClicked">取消</el-button>
             <el-button type="primary" @click="handleConfirmClicked">确定</el-button>
           </div>
         </div>

@@ -1,25 +1,29 @@
 <template>
   <div class="form-wrap geek-auto-start-run-with-boss">
     <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
-      <el-form-item label="BOSS直聘 Cookie">
-        <el-button size="small" type="primary" @click="handleClickLaunchLogin"
-          >编辑Cookie</el-button
-        >
-      </el-form-item>
+      <el-card class="config-section">
+        <el-form-item mb0>
+          <div>
+            <div font-size-16px>BOSS直聘 Cookie</div>
+            <el-button size="small" type="primary" @click="handleClickLaunchLogin"
+              >编辑Cookie</el-button
+            >
+          </div>
+        </el-form-item>
+      </el-card>
       <!-- <el-form-item
         label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
         prop="dingtalkRobotAccessToken"
       >
         <el-input v-model="formContent.dingtalkRobotAccessToken" />
       </el-form-item> -->
-      <div>
+      <el-card class="config-section">
         <el-form-item mb0>
-          <div>是否查看职位详情的条件</div>
+          <div font-size-16px>职位列表筛选条件</div>
         </el-form-item>
-        <el-form-item prop="expectCompanies" mb10px>
+        <el-form-item prop="expectCompanies" mb0>
           <div
-            v-full
-            font-size-12px
+            font-size-14px
             flex
             :style="{
               justifyContent: 'space-between',
@@ -28,7 +32,7 @@
             }"
           >
             <div>
-              期望公司（以逗号分隔，不区分大小写；为空表示不筛选）<el-tooltip
+              期望公司白名单（以逗号分隔，不区分大小写；输入框留空表示不筛选）<el-tooltip
                 effect="light"
                 placement="bottom-start"
                 @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
@@ -78,211 +82,222 @@
             <el-input />
           </div>
         </el-form-item> -->
-        <div
-          :style="{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr'
-          }"
-        >
-          <el-form-item prop="expectCityList" mb10px>
-            <div
-              font-size-12px
-              :style="{
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                width: '100%'
-              }"
-            >
-              <div>期望工作地</div>
-              <city-chooser v-model="formContent.expectCityList" />
-            </div>
-          </el-form-item>
-          <el-form-item v-if="formContent.expectCityList?.length" prop="expectCityList" mb10px>
-            <div
-              font-size-12px
-              :style="{
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                width: '100%'
-              }"
-            >
-              <div>当找到的工作和期望工作地不匹配时，将要执行的操作</div>
-              <el-form-item mb0>
-                <el-select
-                  v-model="formContent.expectCityNotMatchStrategy"
-                  @change="
-                    (value) => gtagRenderer('expect_city_not_match_strategy_changed', { value })
-                  "
-                >
-                  <el-option
-                    v-for="op in strategyOptionWhenCurrentJobNotMatch"
-                    :key="op.value"
-                    :label="op.name"
-                    :value="op.value"
-                    >{{ op.name }}</el-option
-                  >
-                </el-select>
-              </el-form-item>
-            </div>
-          </el-form-item>
-        </div>
-      </div>
-      <div mb42px>
-        <el-form-item mb0>
-          查看职位详情后，认为合适并发起投递的条件
-          <span font-size-12px>（以下条件为空表示不筛选）</span>
-        </el-form-item>
-        <div
-          flex
-          :style="{
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }"
-        >
-          <div>
-            <el-tooltip
-              effect="light"
-              placement="bottom"
-              @show="gtagRenderer('tooltip_show_about_expect_job_info_figure')"
-            >
-              <template #content>
-                <img block h-270px src="../resources/intro-of-job-info.png" />
-              </template>
-              <el-button type="text" font-size-12px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
-              >
-            </el-tooltip>
-          </div>
-          <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
-            <el-button size="small"
-              >职位详情筛选模板（按职类区分）
-              <el-icon class="el-icon--right"><arrow-down /></el-icon
-            ></el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item
-                  v-for="item in expectJobFilterTemplateList"
-                  :key="item.name"
-                  :command="item"
-                  >{{ item.name }}</el-dropdown-item
-                >
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-        <div
-          :style="{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1em 1fr 1em 1fr',
-            gap: '5px',
-            width: '100%',
-            alignItems: 'end'
-          }"
-        >
-          <el-form-item mb0 prop="expectJobNameRegExpStr">
-            <div font-size-12px>职位名称正则（不区分大小写）</div>
-            <el-input
-              v-model="formContent.expectJobNameRegExpStr"
-              placeholder="true"
-              @blur="
-                formContent.expectJobNameRegExpStr =
-                  formContent.expectJobNameRegExpStr?.trim() ?? ''
-              "
-            />
-          </el-form-item>
-          <div mb10px font-size-12px flex flex-justify-center>且</div>
-          <el-form-item mb0 prop="expectJobTypeRegExpStr">
-            <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
-            <el-input
-              v-model="formContent.expectJobTypeRegExpStr"
-              placeholder="true"
-              @blur="
-                formContent.expectJobTypeRegExpStr =
-                  formContent.expectJobTypeRegExpStr?.trim() ?? ''
-              "
-            />
-          </el-form-item>
-          <div mb10px font-size-12px flex flex-justify-center>且</div>
-          <el-form-item mb0 prop="expectJobDescRegExpStr">
-            <div font-size-12px>职位描述正则（不区分大小写）</div>
-            <el-input
-              v-model="formContent.expectJobDescRegExpStr"
-              placeholder="true"
-              @blur="
-                formContent.expectJobDescRegExpStr =
-                  formContent.expectJobDescRegExpStr?.trim() ?? ''
-              "
-            />
-          </el-form-item>
-        </div>
-      </div>
-      <div>
-        <el-form-item mb0>
-          查看职位详情后，发现当前职位名称/类型/描述不符合投递条件时，将要执行的操作
-        </el-form-item>
-        <div
-          :style="{
-            display: 'grid',
-            gridTemplateColumns: '1.25fr 0.75fr',
-            gap: '10px 0',
-            width: '100%',
-            alignItems: 'end'
-          }"
-        >
-          <el-form-item mb0>
-            <el-select
-              v-model="formContent.jobNotMatchStrategy"
-              @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
-            >
-              <el-option
-                v-for="op in strategyOptionWhenCurrentJobNotMatch"
-                :key="op.value"
-                :label="op.name"
-                :value="op.value"
-                >{{ op.name }}</el-option
-              >
-            </el-select>
-          </el-form-item>
-          <div />
-        </div>
-        <el-tooltip
-          effect="light"
-          placement="bottom-start"
-          @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
-        >
-          <template #content>
-            <ul m0 line-height-1.5em w-400px pl2em>
-              <li>
-                如有错误标记，请在左侧“<a
-                  href="javascript:void(0)"
-                  style="color: var(--el-color-primary)"
-                  @click.prevent="
-                    () => {
-                      gtagRenderer('click_view_mansr_from_boss_b_tooltip')
-                      $router.push('/main-layout/MarkAsNotSuitRecord')
-                    }
-                  "
-                  >标记不合适</a
-                >”记录中找到相关记录，来查看职位详情，或手动对这些职位发起会话
-              </li>
-            </ul>
-          </template>
-          <el-button type="text" font-size-12px
-            ><span><QuestionFilled w-1em h-1em mr2px /></span>职位被错误标记时如何处理？</el-button
+        <div class="h-1px bg-#f0f0f0" mt16px mb16px />
+        <div mt16px>
+          <div font-size-14px>期望工作地</div>
+          <div
+            :style="{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '10px'
+            }"
           >
-        </el-tooltip>
-      </div>
-      <div>
-        <el-form-item mb0> 查看职位详情后，发现当前职位不活跃时，将要执行的操作 </el-form-item>
-        <div
-          :style="{
-            display: 'grid',
-            gridTemplateColumns: '1.25fr 0.75fr',
-            gap: '10px 0',
-            width: '100%',
-            alignItems: 'end'
-          }"
-        >
+            <el-form-item prop="expectCityList" mb0>
+              <div
+                font-size-12px
+                :style="{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  width: '100%'
+                }"
+              >
+                <city-chooser v-model="formContent.expectCityList" />
+              </div>
+            </el-form-item>
+            <div
+              v-if="formContent.expectCityList?.length"
+              :style="{
+                backgroundColor: '#f0f0f0',
+                width: '1px'
+              }"
+            ></div>
+            <el-form-item
+              v-if="formContent.expectCityList?.length"
+              prop="expectCityList"
+              mb10px
+              :style="{
+                flex: 1,
+                minWidth: '400px'
+              }"
+            >
+              <div
+                font-size-12px
+                :style="{
+                  width: '100%'
+                }"
+              >
+                <div>当前职位工作地与期望工作地不匹配时：</div>
+                <el-form-item mb0>
+                  <el-select
+                    v-model="formContent.expectCityNotMatchStrategy"
+                    @change="
+                      (value) => gtagRenderer('expect_city_not_match_strategy_changed', { value })
+                    "
+                  >
+                    <el-option
+                      v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+              </div>
+            </el-form-item>
+          </div>
+
+          <el-tooltip
+            effect="light"
+            placement="bottom-start"
+            @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
+          >
+            <template #content>
+              <ul m0 line-height-1.5em w-400px pl2em>
+                <li>
+                  如有错误标记，请在左侧“<a
+                    href="javascript:void(0)"
+                    style="color: var(--el-color-primary)"
+                    @click.prevent="
+                      () => {
+                        gtagRenderer('click_view_mansr_from_boss_b_tooltip')
+                        $router.push('/main-layout/MarkAsNotSuitRecord')
+                      }
+                    "
+                    >标记不合适</a
+                  >”记录中找到相关记录，来查看职位详情，或手动对这些职位发起会话
+                </li>
+              </ul>
+            </template>
+            <el-button type="text" font-size-12px
+              ><span><QuestionFilled w-1em h-1em mr2px /></span
+              >职位被错误标记不合适时如何处理？</el-button
+            >
+          </el-tooltip>
+        </div>
+      </el-card>
+      <el-card class="config-section">
+        <el-form-item mb0>
+          <div font-size-16px>职位详情筛选条件</div>
+        </el-form-item>
+        <div>
+          <div
+            flex
+            :style="{
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }"
+          >
+            <div font-size-14px>
+              期望职位信息
+              <el-tooltip
+                effect="light"
+                placement="bottom"
+                @show="gtagRenderer('tooltip_show_about_expect_job_info_figure')"
+              >
+                <template #content>
+                  <img block h-270px src="../resources/intro-of-job-info.png" />
+                </template>
+                <el-button type="text" font-size-12px
+                  ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
+                >
+              </el-tooltip>
+            </div>
+            <div>
+              <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
+                <el-button size="small"
+                  >职位详情筛选模板（按职类区分）
+                  <el-icon class="el-icon--right"><arrow-down /></el-icon
+                ></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="item in expectJobFilterTemplateList"
+                      :key="item.name"
+                      :command="item"
+                      >{{ item.name }}</el-dropdown-item
+                    >
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
+          </div>
+          <div
+            :style="{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1em 1fr 1em 1fr',
+              gap: '5px',
+              width: '100%',
+              alignItems: 'end'
+            }"
+            class="job-detail-filter-wrap"
+          >
+            <el-form-item mb0 prop="expectJobNameRegExpStr">
+              <div font-size-12px>职位名称正则（不区分大小写）</div>
+              <el-input
+                v-model="formContent.expectJobNameRegExpStr"
+                placeholder="true"
+                @blur="
+                  formContent.expectJobNameRegExpStr =
+                    formContent.expectJobNameRegExpStr?.trim() ?? ''
+                "
+              />
+            </el-form-item>
+            <div mb10px font-size-12px flex flex-justify-center>且</div>
+            <el-form-item mb0 prop="expectJobTypeRegExpStr">
+              <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
+              <el-input
+                v-model="formContent.expectJobTypeRegExpStr"
+                placeholder="true"
+                @blur="
+                  formContent.expectJobTypeRegExpStr =
+                    formContent.expectJobTypeRegExpStr?.trim() ?? ''
+                "
+              />
+            </el-form-item>
+            <div mb10px font-size-12px flex flex-justify-center>且</div>
+            <el-form-item mb0 prop="expectJobDescRegExpStr">
+              <div font-size-12px>职位描述正则（不区分大小写）</div>
+              <el-input
+                v-model="formContent.expectJobDescRegExpStr"
+                placeholder="true"
+                @blur="
+                  formContent.expectJobDescRegExpStr =
+                    formContent.expectJobDescRegExpStr?.trim() ?? ''
+                "
+              />
+            </el-form-item>
+          </div>
+          <div class="mt10px lh-2em font-size-12px">当前职位名称/类型/描述不符合投递条件时：</div>
+          <div
+            :style="{
+              display: 'grid',
+              gridTemplateColumns: '1.25fr 0.75fr',
+              gap: '10px 0',
+              width: '100%',
+              alignItems: 'end'
+            }"
+          >
+            <el-form-item mb0>
+              <el-select
+                v-model="formContent.jobNotMatchStrategy"
+                @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
+              >
+                <el-option
+                  v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                  :key="op.value"
+                  :label="op.name"
+                  :value="op.value"
+                  >{{ op.name }}</el-option
+                >
+              </el-select>
+            </el-form-item>
+            <div />
+          </div>
+        </div>
+        <div class="h-1px bg-#f0f0f0" mt16px mb16px />
+        <div mt16px>
+          <div mb0 lh-2em font-size-14px>活跃度</div>
           <el-form-item>
             <div font-size-12px>认为职位不活跃的时间范围：</div>
             <el-slider
@@ -291,7 +306,8 @@
               :max="10"
               :step="1"
               pl50px
-              pr0
+              pr50px
+              pb30px
               class="no-active-definition-text-slider"
               :format-tooltip="
                 (v) =>
@@ -302,21 +318,37 @@
               @change="(value) => gtagRenderer('job_not_active_time_range_changed', { value })"
             />
           </el-form-item>
-          <div />
-          <el-form-item v-if="formContent.markAsNotActiveSelectedTimeRange > 0" mb0>
-            <div font-size-12px>发现当前职位不活跃时：</div>
-            <el-select
-              v-model="formContent.jobNotActiveStrategy"
-              @change="(value) => gtagRenderer('job_not_active_strategy_changed', { value })"
-            >
-              <el-option
-                v-for="op in strategyOptionWhenCurrentJobNotMatch"
-                :key="op.value"
-                :label="op.name"
-                :value="op.value"
-                >{{ op.name }}</el-option
+          <div
+            :style="{
+              display: 'grid',
+              gridTemplateColumns: '1.25fr 0.75fr',
+              gap: '10px 0',
+              width: '100%',
+              alignItems: 'end'
+            }"
+          >
+            <el-form-item v-if="formContent.markAsNotActiveSelectedTimeRange > 0" mb0>
+              <div font-size-12px>发现当前职位不活跃时：</div>
+              <el-select
+                v-model="formContent.jobNotActiveStrategy"
+                @change="(value) => gtagRenderer('job_not_active_strategy_changed', { value })"
               >
-            </el-select>
+                <el-option
+                  v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                  :key="op.value"
+                  :label="op.name"
+                  :value="op.value"
+                  >{{ op.name }}</el-option
+                >
+              </el-select>
+            </el-form-item>
+          </div>
+        </div>
+      </el-card>
+      <el-card class="config-section">
+        <el-form-item prop="filter" mb0>
+          <div font-size-16px>
+            职位备选筛选条件
             <el-tooltip
               effect="light"
               placement="bottom-start"
@@ -324,46 +356,28 @@
             >
               <template #content>
                 <ul m0 line-height-1.5em w-400px pl2em>
-                  <li>
-                    如有错误标记，请在左侧“<a
-                      href="javascript:void(0)"
-                      style="color: var(--el-color-primary)"
-                      @click.prevent="
-                        () => {
-                          gtagRenderer('click_view_mansr_from_boss_b_tooltip')
-                          $router.push('/main-layout/MarkAsNotSuitRecord')
-                        }
-                      "
-                      >标记不合适</a
-                    >”记录中找到相关记录，来查看职位详情，或手动对这些职位发起会话
-                  </li>
+                  <li>当前求职期望无合适职位时，自动更改Boss直聘页面上的筛选条件，查找新工作</li>
                 </ul>
               </template>
               <el-button type="text" font-size-12px
-                ><span><QuestionFilled w-1em h-1em mr2px /></span
-                >职位被错误标记时如何处理？</el-button
+                ><span><QuestionFilled w-1em h-1em mr2px /></span>这个配置是如何工作的？</el-button
               >
             </el-tooltip>
-          </el-form-item>
-        </div>
-      </div>
-      <el-form-item
-        label="职位备选筛选条件（当前求职期望无合适职位时，自动更改Boss筛选条件，查找新工作）"
-        prop="filter"
-        mt20px
-        mb0
-      >
-        <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
-        <div>
-          当前组合条件数：{{ currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString() }}
-          <span
-            v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
-            class="color-orange"
-            >不建议选择太多组合条件</span
-          >
-        </div>
-      </el-form-item>
-      <el-form-item class="last-form-item mb18px">
+          </div>
+          <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
+          <div font-size-12px>
+            当前组合条件数：{{
+              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
+            }}
+            <span
+              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
+              class="color-orange"
+              >不建议选择太多组合条件</span
+            >
+          </div>
+        </el-form-item>
+      </el-card>
+      <el-form-item class="last-form-item mb20px mt20px">
         <el-button @click="handleSave">仅保存配置</el-button>
         <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
       </el-form-item>
@@ -690,7 +704,7 @@ const strategyOptionWhenCurrentJobNotMatch = [
 const noActiveDefinitionMarks = computed(() => {
   let arr = [...activeDescList]
   arr.shift()
-  arr.unshift('不处理“职位不活跃”')
+  arr.unshift('不筛选')
   arr = arr.map((it, index) => {
     if (index <= formContent.value.markAsNotActiveSelectedTimeRange) {
       if (formContent.value.markAsNotActiveSelectedTimeRange > 0 && index === 0) {
@@ -716,10 +730,12 @@ const noActiveDefinitionMarks = computed(() => {
   overflow: auto;
   padding-left: 20px;
   padding-right: 20px;
+  .config-section {
+    margin-top: 10px;
+  }
   :deep(.el-form) {
     max-width: 1000px;
     margin: 0 auto;
-    padding-top: 8px;
   }
   .last-form-item {
     :deep(.el-form-item__content) {
@@ -730,22 +746,19 @@ const noActiveDefinitionMarks = computed(() => {
 }
 .no-active-definition-text-slider {
   ::v-deep(.el-slider__marks-text) {
-    font-size: 10px;
-    margin-top: 5px;
-    &:nth-child(2n-1) {
-      margin-top: 20px;
-      &::before {
-        content: '';
-        bottom: calc(100% - 14px);
-        z-index: -1;
-        left: 50%;
-        transform: translateX(-50%);
-        position: absolute;
-        display: block;
-        width: 2px;
-        height: 26px;
-        background-image: linear-gradient(var(--el-slider-runway-bg-color), transparent);
-      }
+    font-size: 12px;
+    margin-top: 22px;
+    &::before {
+      content: '';
+      bottom: calc(100% - 6px);
+      z-index: -1;
+      left: 50%;
+      transform: translateX(-50%);
+      position: absolute;
+      display: block;
+      width: 2px;
+      height: 20px;
+      background-image: linear-gradient(var(--el-slider-runway-bg-color), transparent);
     }
   }
   ::v-deep(.el-slider__stop) {
@@ -755,6 +768,12 @@ const noActiveDefinitionMarks = computed(() => {
     transform: rotate(45deg);
     border-radius: 10px 10px 0px 10px;
     --el-slider-button-size: 18px;
+  }
+}
+.job-detail-filter-wrap {
+  transition: 0.2s ease margin-bottom;
+  &:has(.el-form-item__error) {
+    margin-bottom: 40px;
   }
 }
 </style>

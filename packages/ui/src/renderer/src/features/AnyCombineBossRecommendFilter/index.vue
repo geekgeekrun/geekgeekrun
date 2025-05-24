@@ -1,7 +1,7 @@
 <template>
   <div class="job-combo-filter">
     <div class="filter-item">
-      <div>薪资待遇</div>
+      <div font-size-12px>薪资待遇</div>
       <el-select
         v-model="modelValue.salaryList"
         multiple
@@ -18,7 +18,7 @@
       </el-select>
     </div>
     <div class="filter-item">
-      <div>工作经验</div>
+      <div font-size-12px>工作经验</div>
       <el-select
         v-model="modelValue.experienceList"
         multiple
@@ -35,7 +35,7 @@
       </el-select>
     </div>
     <div class="filter-item">
-      <div>学历要求</div>
+      <div font-size-12px>学历要求</div>
       <el-select
         v-model="modelValue.degreeList"
         multiple
@@ -52,7 +52,7 @@
       </el-select>
     </div>
     <div class="filter-item">
-      <div>公司行业</div>
+      <div font-size-12px>公司行业</div>
       <el-select
         v-model="modelValue.industryList"
         multiple
@@ -75,7 +75,7 @@
       </el-select>
     </div>
     <div class="filter-item">
-      <div>公司规模</div>
+      <div font-size-12px>公司规模</div>
       <el-select
         v-model="modelValue.scaleList"
         multiple
