@@ -14,10 +14,7 @@
       </el-form-item> -->
       <div>
         <el-form-item mb0>
-          <div>
-            是否查看职位详情的条件
-            <span font-size-12px>（以下条件为空表示不筛选）</span>
-          </div>
+          <div>是否查看职位详情的条件</div>
         </el-form-item>
         <el-form-item prop="expectCompanies" mb10px>
           <div
@@ -31,13 +28,13 @@
             }"
           >
             <div>
-              期望公司（以逗号分隔，不区分大小写）<el-tooltip
+              期望公司（以逗号分隔，不区分大小写；为空表示不筛选）<el-tooltip
                 effect="light"
                 placement="bottom-start"
                 @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
               >
                 <template #content>
-                  <img block h-270px src="./resources/intro-of-job-entry.png" />
+                  <img block h-270px src="../resources/intro-of-job-entry.png" />
                 </template>
                 <el-button type="text" font-size-12px
                   ><span><QuestionFilled w-1em h-1em mr2px /></span>期望公司信息位置图示</el-button
@@ -68,6 +65,67 @@
             @blur="normalizeExpectCompanies"
           />
         </el-form-item>
+        <!-- <el-form-item prop="expectSalary" mb10px>
+          <div
+            font-size-12px
+            :style="{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: '100%'
+            }"
+          >
+            <div>期望薪资范围（以 k 为单位）</div>
+            <el-input />
+          </div>
+        </el-form-item> -->
+        <div
+          :style="{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr'
+          }"
+        >
+          <el-form-item prop="expectCityList" mb10px>
+            <div
+              font-size-12px
+              :style="{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                width: '100%'
+              }"
+            >
+              <div>期望工作地</div>
+              <city-chooser v-model="formContent.expectCityList" />
+            </div>
+          </el-form-item>
+          <el-form-item v-if="formContent.expectCityList?.length" prop="expectCityList" mb10px>
+            <div
+              font-size-12px
+              :style="{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                width: '100%'
+              }"
+            >
+              <div>当找到的工作和期望工作地不匹配时，将要执行的操作</div>
+              <el-form-item mb0>
+                <el-select
+                  v-model="formContent.expectCityNotMatchStrategy"
+                  @change="
+                    (value) => gtagRenderer('expect_city_not_match_strategy_changed', { value })
+                  "
+                >
+                  <el-option
+                    v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                    :key="op.value"
+                    :label="op.name"
+                    :value="op.value"
+                    >{{ op.name }}</el-option
+                  >
+                </el-select>
+              </el-form-item>
+            </div>
+          </el-form-item>
+        </div>
       </div>
       <div mb42px>
         <el-form-item mb0>
@@ -88,7 +146,7 @@
               @show="gtagRenderer('tooltip_show_about_expect_job_info_figure')"
             >
               <template #content>
-                <img block h-270px src="./resources/intro-of-job-info.png" />
+                <img block h-270px src="../resources/intro-of-job-info.png" />
               </template>
               <el-button type="text" font-size-12px
                 ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
@@ -125,6 +183,7 @@
             <div font-size-12px>职位名称正则（不区分大小写）</div>
             <el-input
               v-model="formContent.expectJobNameRegExpStr"
+              placeholder="true"
               @blur="
                 formContent.expectJobNameRegExpStr =
                   formContent.expectJobNameRegExpStr?.trim() ?? ''
@@ -136,6 +195,7 @@
             <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
             <el-input
               v-model="formContent.expectJobTypeRegExpStr"
+              placeholder="true"
               @blur="
                 formContent.expectJobTypeRegExpStr =
                   formContent.expectJobTypeRegExpStr?.trim() ?? ''
@@ -147,6 +207,7 @@
             <div font-size-12px>职位描述正则（不区分大小写）</div>
             <el-input
               v-model="formContent.expectJobDescRegExpStr"
+              placeholder="true"
               @blur="
                 formContent.expectJobDescRegExpStr =
                   formContent.expectJobDescRegExpStr?.trim() ?? ''
@@ -323,7 +384,8 @@ import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with
 import { ArrowDown } from '@element-plus/icons-vue'
 import { MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/src/enums'
 import { debounce } from 'lodash-es'
-import mittBus from '../../utils/mitt'
+import mittBus from '../../../utils/mitt'
+import CityChooser from './components/CityChooser.vue'
 
 const router = useRouter()
 
@@ -336,7 +398,9 @@ const formContent = ref({
   expectJobDescRegExpStr: '',
   jobNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
   jobNotActiveStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
-  markAsNotActiveSelectedTimeRange: 7
+  markAsNotActiveSelectedTimeRange: 7,
+  expectCityList: [],
+  expectCityNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -398,6 +462,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     .includes(res.config['boss.json'].jobNotActiveStrategy)
     ? res.config['boss.json'].jobNotActiveStrategy
     : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+
+  formContent.value.expectCityList = res.config['boss.json']?.expectCityList ?? []
 })
 
 const formRules = {
@@ -612,11 +678,11 @@ const strategyOptionWhenCurrentJobNotMatch = [
     value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
   },
   {
-    name: '本地记录，且1周内再次遇到这个职位时将直接跳过',
+    name: '7天内再次遇到这个职位时直接跳过',
     value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
   },
   {
-    name: '本地不记录，但本次运行再次遇到这个职位时将直接跳过',
+    name: '本次运行再次遇到这个职位时直接跳过',
     value: MarkAsNotSuitOp.NO_OP
   }
 ]

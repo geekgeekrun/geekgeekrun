@@ -45,7 +45,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       {
         path: 'GeekAutoStartChatWithBoss',
-        component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss.vue'),
+        component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss/index.vue'),
         meta: {
           title: 'BOSS炸弹'
         }
