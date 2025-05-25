@@ -108,12 +108,14 @@ export default class SqlitePlugin {
       async ({
         jobNotMatchStrategy,
         jobNotActiveStrategy,
+        expectCityNotMatchStrategy,
         blockJobNotSuit,
         blockBossNotActive,
       }) => {
         if (
           jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
-          jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+          jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
+          expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
         ) {
           const ds = await this.initPromise;
           const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7) ?? []);
@@ -135,6 +137,16 @@ export default class SqlitePlugin {
           if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
             last7DayMarkRecords
               .filter(it => it.markReason === MarkAsNotSuitReason.BOSS_INACTIVE)
+              .map(
+                it => it.encryptJobId
+              )
+              .forEach(
+                id => blockJobNotSuit.add(id)
+              )
+          }
+          if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+            last7DayMarkRecords
+              .filter(it => it.markReason === MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
               .map(
                 it => it.encryptJobId
               )

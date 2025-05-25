@@ -549,7 +549,12 @@ async function toRecommendPage (hooks) {
                           :
                           true
                       ) || (
-                        (Array.isArray(expectCityList) && expectCityList.length) ? !expectCityList.includes(it.cityName) : false
+                        // enter job detail to mark as not suit
+                        (
+                          Array.isArray(expectCityList) &&
+                          expectCityList.length &&
+                          expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                        ) ? !expectCityList.includes(it.cityName) : false
                       )
                     )
                 })
@@ -694,9 +699,8 @@ async function toRecommendPage (hooks) {
                           targetJobData,
                           {
                             markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                            markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
                             extInfo: {
-                              bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
                               chosenReasonInUi
                             },
                             markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
@@ -711,7 +715,7 @@ async function toRecommendPage (hooks) {
                           targetJobData,
                           {
                             markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                            markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
                             extInfo: null,
                             markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
                           }
@@ -911,6 +915,7 @@ export async function mainLoop (hooks) {
     await hooks.mainFlowWillLaunch?.callAsync({
       jobNotMatchStrategy,
       jobNotActiveStrategy,
+      expectCityNotMatchStrategy,
       blockJobNotSuit,
       blockBossNotActive,
     })

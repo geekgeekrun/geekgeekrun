@@ -498,6 +498,11 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 
   formContent.value.expectCityList = res.config['boss.json']?.expectCityList ?? []
+  formContent.value.expectCityNotMatchStrategy = strategyOptionWhenCurrentJobNotMatch
+    .map((it) => it.value)
+    .includes(res.config['boss.json'].expectCityNotMatchStrategy)
+    ? res.config['boss.json'].expectCityNotMatchStrategy
+    : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 })
 
 const formRules = {
