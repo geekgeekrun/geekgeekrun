@@ -746,15 +746,15 @@ function handleExpectJobFilterTemplateClicked(item) {
 
 const strategyOptionWhenCurrentJobNotMatch = [
   {
-    name: '在Boss直聘上标记不合适（推荐，这确保Boss直聘可以推荐新职位）',
+    name: '在Boss直聘上标记不合适（推荐，这确保Boss直聘推荐新职位来置换不合适职位）',
     value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
   },
   {
-    name: '7天内再次遇到这个职位时直接跳过',
+    name: '在本地数据库中标记不合适，且7天内再遇到这个职位时直接跳过',
     value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
   },
   {
-    name: '本次运行再次遇到这个职位时直接跳过',
+    name: '仅在本次运行中记录不合适，且本次运行再遇到这个职位时直接跳过',
     value: MarkAsNotSuitOp.NO_OP
   }
 ]
