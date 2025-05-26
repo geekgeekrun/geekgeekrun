@@ -11,7 +11,8 @@
   "jobNotActiveStrategy": 1,
   "markAsNotActiveSelectedTimeRange": 7,
   "expectCityList": [],
-  "expectCityNotMatchStrategy": 1,
+  "expectCityNotMatchStrategy": 3,
+  "strategyScopeOptionWhenMarkJobCityNotMatch": 2,
   "autoReminder": {
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,

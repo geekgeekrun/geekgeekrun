@@ -11,3 +11,8 @@ export enum MarkAsNotSuitOp {
   MARK_AS_NOT_SUIT_ON_LOCAL = 2,
   NO_OP = 3
 }
+
+export enum StrategyScopeOptionWhenMarkJobNotMatch {
+  ALL_JOB = 1,
+  ONLY_COMPANY_MATCHED_JOB = 2
+}

@@ -118,40 +118,65 @@
                   width: '1px'
                 }"
               ></div>
-              <el-form-item
+              <div
                 v-if="formContent.expectCityList?.length"
                 prop="expectCityList"
-                mb10px
                 :style="{
                   flex: 1,
                   minWidth: '400px'
                 }"
               >
-                <div
-                  font-size-12px
+                <el-form-item
+                  mb10px
                   :style="{
                     width: '100%'
                   }"
                 >
-                  <div>当前职位工作地与期望工作地不匹配时：</div>
-                  <el-form-item mb0>
-                    <el-select
-                      v-model="formContent.expectCityNotMatchStrategy"
-                      @change="
-                        (value) => gtagRenderer('expect_city_not_match_strategy_changed', { value })
-                      "
+                  <div font-size-12px>当前职位工作地与期望工作地不匹配时：</div>
+                  <el-select
+                    v-model="formContent.expectCityNotMatchStrategy"
+                    @change="
+                      (value) => gtagRenderer('expect_city_not_match_strategy_changed', { value })
+                    "
+                  >
+                    <el-option
+                      v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
                     >
-                      <el-option
-                        v-for="op in strategyOptionWhenCurrentJobNotMatch"
-                        :key="op.value"
-                        :label="op.name"
-                        :value="op.value"
-                        >{{ op.name }}</el-option
-                      >
-                    </el-select>
-                  </el-form-item>
-                </div>
-              </el-form-item>
+                  </el-select>
+                </el-form-item>
+                <el-form-item
+                  v-if="
+                    [
+                      MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                      MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                    ].includes(formContent.expectCityNotMatchStrategy)
+                  "
+                  mb0
+                  :style="{
+                    width: '100%'
+                  }"
+                >
+                  <div font-size-12px>标记不合适针对的职位范围：</div>
+                  <el-select
+                    v-model="formContent.strategyScopeOptionWhenMarkJobCityNotMatch"
+                    @change="
+                      (value) => gtagRenderer('strategy_scope_option_wmjcnm_changed', { value })
+                    "
+                  >
+                    <el-option
+                      v-for="op in strategyScopeOptionWhenMarkJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+              </div>
             </div>
 
             <el-tooltip
@@ -335,7 +360,7 @@
               }"
             >
               <el-form-item v-if="formContent.markAsNotActiveSelectedTimeRange > 0" mb0>
-                <div font-size-12px>发现当前职位不活跃时：</div>
+                <div font-size-12px>当前职位活跃度在如上范围内（即不活跃）时：</div>
                 <el-select
                   v-model="formContent.jobNotActiveStrategy"
                   @change="(value) => gtagRenderer('job_not_active_strategy_changed', { value })"
@@ -416,7 +441,10 @@ import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-wi
 import { gtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
-import { MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/src/enums'
+import {
+  MarkAsNotSuitOp,
+  StrategyScopeOptionWhenMarkJobNotMatch
+} from '@geekgeekrun/sqlite-plugin/src/enums'
 import { debounce } from 'lodash-es'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
@@ -434,7 +462,9 @@ const formContent = ref({
   jobNotActiveStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
   markAsNotActiveSelectedTimeRange: 7,
   expectCityList: [],
-  expectCityNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+  expectCityNotMatchStrategy: MarkAsNotSuitOp.NO_OP,
+  strategyScopeOptionWhenMarkJobCityNotMatch:
+    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -502,7 +532,10 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     .map((it) => it.value)
     .includes(res.config['boss.json'].expectCityNotMatchStrategy)
     ? res.config['boss.json'].expectCityNotMatchStrategy
-    : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+    : MarkAsNotSuitOp.NO_OP
+  formContent.value.strategyScopeOptionWhenMarkJobCityNotMatch =
+    res.config['boss.json']?.strategyScopeOptionWhenMarkJobCityNotMatch ??
+    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 })
 
 const formRules = {
@@ -723,6 +756,17 @@ const strategyOptionWhenCurrentJobNotMatch = [
   {
     name: '本次运行再次遇到这个职位时直接跳过',
     value: MarkAsNotSuitOp.NO_OP
+  }
+]
+
+const strategyScopeOptionWhenMarkJobNotMatch = [
+  {
+    name: '所有职位',
+    value: StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
+  },
+  {
+    name: '仅和“期望公司白名单”匹配的职位',
+    value: StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
   }
 ]
 

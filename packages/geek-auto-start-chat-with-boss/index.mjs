@@ -16,7 +16,7 @@ import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } fr
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason, MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import { activeDescList } from './constant.mjs'
 
 const jobFilterConditionsMapByCode = {}
@@ -81,8 +81,10 @@ const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecom
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
 const jobNotMatchStrategy = readConfigFile('boss.json').jobNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 
-const expectCityNotMatchStrategy = readConfigFile('boss.json').expectCityNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+const expectCityNotMatchStrategy = readConfigFile('boss.json').expectCityNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const expectCityList = readConfigFile('boss.json').expectCityList ?? []
+
+const strategyScopeOptionWhenMarkJobCityNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobCityNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
 const markAsNotActiveSelectedTimeRange = (() => {
   let n = readConfigFile('boss.json').markAsNotActiveSelectedTimeRange
@@ -531,7 +533,24 @@ async function toRecommendPage (hooks) {
 
               // job list
               const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
-              let jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
+              let jobListData = []
+              async function updateJobListData () {
+                jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
+                if (
+                  expectCityNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
+                  Array.isArray(expectCityList) &&
+                  expectCityList.length
+                ) {
+                  console.log(`add job city not suit into blockJobNotSuit set`)
+                  for (const it of jobListData) {
+                    if (!expectCityList.includes(it.cityName)) {
+                      blockJobNotSuit.add(it.encryptJobId)
+                    }
+                  }
+                }
+              }
+              await updateJobListData()
+
               let hasReachLastPage = false
               let targetJobIndex = -1
               let targetJobData, selectedJobData // they show be same; one is from list, another is from detail
@@ -553,7 +572,11 @@ async function toRecommendPage (hooks) {
                         (
                           Array.isArray(expectCityList) &&
                           expectCityList.length &&
-                          expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                          [
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          ].includes(expectCityNotMatchStrategy) &&
+                          strategyScopeOptionWhenMarkJobCityNotMatch === StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
                         ) ? !expectCityList.includes(it.cityName) : false
                       )
                     )
@@ -591,11 +614,7 @@ async function toRecommendPage (hooks) {
                   requestNextPagePromiseWithResolver = null
 
                   await sleep(5000)
-                  jobListData = await page.evaluate(
-                    `
-                      document.querySelector('.page-jobs-main')?.__vue__?.jobList
-                    `
-                  )
+                  await updateJobListData()
                   tempTargetJobIndexToCheckDetail = getTempTargetJobIndexToCheckDetail()
                 }
 
