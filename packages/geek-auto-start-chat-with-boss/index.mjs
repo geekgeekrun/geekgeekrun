@@ -536,6 +536,9 @@ async function toRecommendPage (hooks) {
               let jobListData = []
               async function updateJobListData () {
                 jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
+                // due to city can get from list immediately
+                // so just set those job which city is not suit to blockJobNotSuit
+                // to skip view detail
                 if (
                   expectCityNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
                   Array.isArray(expectCityList) &&
