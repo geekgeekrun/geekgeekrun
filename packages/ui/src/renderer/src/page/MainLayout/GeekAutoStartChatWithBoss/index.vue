@@ -234,6 +234,50 @@
                     ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
                   >
                 </el-tooltip>
+                <el-tooltip
+                  effect="light"
+                  placement="bottom"
+                  @show="gtagRenderer('tooltip_show_about_how_to_fill_df')"
+                >
+                  <template #content>
+                    <p style="margin-top: 4px; margin-bottom: 4px">
+                      目前版本中，职位名称正则、职位类型正则、职位描述正则三个筛选条件，为“且”的关系。<br />
+                      也就是说，职位信息中只要任一不能匹配到，即这个职位会被标记不合适。<br />
+                      你可以留空某个输入框，这表示任何职位一定匹配这个条件。<br />
+                      如果三个输入框均留空，表示列表中出现的任意职位一定同时匹配这三个条件。
+                    </p>
+                    因此，可以按照如下场景填写你对于期望职位的筛选条件：
+                    <ul style="margin-top: 4px; margin-bottom: 4px">
+                      <li>
+                        如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。<br />
+                        这可以确保求职方向基本正确。
+                      </li>
+                      <li>
+                        如果你着重关注职位描述，请填写“职位描述正则”，其余两个输入框酌情填写。
+                      </li>
+                      <li>如果你想开聊列表里的推荐的任意职位，请清空这三个输入框。</li>
+                    </ul>
+                    <div>
+                      你可以在左侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
+                    </div>
+                    <div>
+                      <b>“职位类型正则”填写过程中请注意</b
+                      >，“职位类型”是由Boss直聘预定义好的一系列职位分类，<br />
+                      因此<b>请按照这个分类编写正则来进行填写</b>。这个分类可以在此找到：<br />
+                      <img w-400px src="../resources/job-type-source-entry.png" />
+                    </div>
+                    <a
+                      href="javascript:;"
+                      style="color: var(--el-color-primary)"
+                      @click.prevent="handleHowToFillDetailFilterClick"
+                      >请参阅这个链接</a
+                    >
+                  </template>
+                  <el-button type="text" font-size-12px
+                    ><span><QuestionFilled w-1em h-1em mr2px /></span
+                    >怎样填写下面的三个输入框？</el-button
+                  >
+                </el-tooltip>
               </div>
               <div>
                 <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
@@ -791,6 +835,14 @@ const noActiveDefinitionMarks = computed(() => {
   })
   return arr
 })
+
+function handleHowToFillDetailFilterClick() {
+  gtagRenderer('click_linux_do_how_to_fill_df')
+  electron.ipcRenderer.send(
+    'open-external-link',
+    'https://linux.do/t/topic/640626/74?u=geekgeekrun'
+  )
+}
 </script>
 
 <style scoped lang="scss">
