@@ -38,6 +38,10 @@
               <template v-else-if="row.markReason === MarkAsNotSuitReason.JOB_NOT_SUIT">
                 <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
               </template>
+              <template v-if="row.markReason === MarkAsNotSuitReason.JOB_CITY_NOT_SUIT">
+                <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
+                <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
+              </template>
             </template>
           </ElTableColumn>
           <ElTableColumn prop="experienceName" label="工作经验" />
@@ -139,7 +143,7 @@ async function getMarkAsNotSuitRecord() {
   try {
     gtagRenderer('mansr_request_sent', {
       page_no: pagination.value.pageNo,
-      page_size: pagination.value.pageSize,
+      page_size: pagination.value.pageSize
     })
     isTableLoading.value = true
     const { data: res } = (await electron.ipcRenderer.invoke('get-mark-as-not-suit-record', {
@@ -154,13 +158,13 @@ async function getMarkAsNotSuitRecord() {
     }
     gtagRenderer('mansr_request_success', {
       page_no: pagination.value.pageNo,
-      page_size: pagination.value.pageSize,
+      page_size: pagination.value.pageSize
     })
   } catch (err) {
     gtagRenderer('mansr_request_error', {
       err,
       page_no: pagination.value.pageNo,
-      page_size: pagination.value.pageSize,
+      page_size: pagination.value.pageSize
     })
     console.log(err)
     tableData.value = []
@@ -204,7 +208,8 @@ function handleViewJobSnapshotButtonClick(record: VMarkAsNotSuitLog) {
 const markReasonTopicMap = {
   [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃',
   [MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON]: '手动标记不合适',
-  [MarkAsNotSuitReason.JOB_NOT_SUIT]: '职位不合适'
+  [MarkAsNotSuitReason.JOB_NOT_SUIT]: '职位不合适',
+  [MarkAsNotSuitReason.JOB_CITY_NOT_SUIT]: '工作地不合适'
 }
 
 function formatMarkReason(row: VMarkAsNotSuitLog) {
@@ -225,6 +230,18 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
         .join('\n')
     }
     case MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON: {
+      const extInfo = (() => {
+        try {
+          return JSON.parse(row.extInfo)
+        } catch {
+          return null
+        }
+      })()
+      return [extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`]
+        .filter(Boolean)
+        .join('\n')
+    }
+    case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
       const extInfo = (() => {
         try {
           return JSON.parse(row.extInfo)

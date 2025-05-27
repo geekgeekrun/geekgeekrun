@@ -92,7 +92,11 @@ const attachRequestsListener = async (target: Target) => {
         },
         markReason: MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON
       }
-      gtag('job_marked_as_not_suit', { markFrom: markDetail.markFrom })
+      gtag('job_marked_as_not_suit', {
+        markFrom: markDetail.markFrom,
+        bossActiveTimeDesc: currentJobData?.bossInfo?.activeTimeDesc,
+        encryptJobId: currentJobData?.jobInfo?.encryptId
+      })
       if (reasonCodeToTextMap[chosenCode]?.includes('活跃度低')) {
         markDetail.markReason = MarkAsNotSuitReason.BOSS_INACTIVE
         markDetail.extInfo.bossActiveTimeDesc = currentJobData?.bossInfo.activeTimeDesc
@@ -127,7 +131,10 @@ const attachRequestsListener = async (target: Target) => {
       const currentUserInfo = await page.evaluate(
         'document.querySelector(".job-detail-box").__vue__.$store.state.userInfo'
       )
-      gtag('new_chat_startup', { chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList })
+      gtag('new_chat_startup', {
+        chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList,
+        encryptJobId: currentJobData?.jobInfo?.encryptId
+      })
       await saveChatStartupRecord(
         await dbInitPromise,
         currentJobData,

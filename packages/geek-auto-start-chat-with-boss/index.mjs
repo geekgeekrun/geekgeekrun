@@ -16,7 +16,7 @@ import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } fr
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason, MarkAsNotSuitOp } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import { activeDescList } from './constant.mjs'
 
 const jobFilterConditionsMapByCode = {}
@@ -80,6 +80,12 @@ const targetCompanyList = readConfigFile('target-company-list.json').filter(it =
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
 const jobNotMatchStrategy = readConfigFile('boss.json').jobNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+
+const expectCityNotMatchStrategy = readConfigFile('boss.json').expectCityNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
+const expectCityList = readConfigFile('boss.json').expectCityList ?? []
+
+const strategyScopeOptionWhenMarkJobCityNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobCityNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+
 const markAsNotActiveSelectedTimeRange = (() => {
   let n = readConfigFile('boss.json').markAsNotActiveSelectedTimeRange
   if (
@@ -178,6 +184,22 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
             const recruitStoppedOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`)
             if (recruitStoppedOptionProxy) {
               await recruitStoppedOptionProxy.click()
+              isOptionChosen = true
+            }
+          }
+          break
+        }
+        case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
+          const bossNotActiveOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`)
+          if (bossNotActiveOptionProxy) {
+            await bossNotActiveOptionProxy.click()
+            isOptionChosen = true
+          } else {
+            const fallbackOptionProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title="同城距离远"]`))
+              ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
+              ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+            if (fallbackOptionProxy) {
+              await fallbackOptionProxy.click()
               isOptionChosen = true
             }
           }
@@ -511,24 +533,57 @@ async function toRecommendPage (hooks) {
 
               // job list
               const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
-              let jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
+              let jobListData = []
+              async function updateJobListData () {
+                jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
+                // due to city can get from list immediately
+                // so just set those job which city is not suit to blockJobNotSuit
+                // to skip view detail
+                if (
+                  expectCityNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
+                  Array.isArray(expectCityList) &&
+                  expectCityList.length
+                ) {
+                  console.log(`add job city not suit into blockJobNotSuit set`)
+                  for (const it of jobListData) {
+                    if (!expectCityList.includes(it.cityName)) {
+                      blockJobNotSuit.add(it.encryptJobId)
+                    }
+                  }
+                }
+              }
+              await updateJobListData()
+
               let hasReachLastPage = false
               let targetJobIndex = -1
-              let targetJobData
+              let targetJobData, selectedJobData // they show be same; one is from list, another is from detail
               function getTempTargetJobIndexToCheckDetail () {
-                return jobListData.findIndex(it => 
-                  !blockBossNotNewChat.has(it.encryptBossId) &&
-                  !blockBossNotActive.has(it.encryptBossId) &&
-                  !blockJobNotSuit.has(it.encryptJobId) &&
-                  (
-                    enableCompanyAllowList ?
-                      [...expectCompanySet].find(
-                        name => it.brandName?.toLowerCase?.()?.includes(name.toLowerCase())
+                return jobListData.findIndex(it => {
+                  return !blockBossNotNewChat.has(it.encryptBossId) &&
+                    !blockBossNotActive.has(it.encryptBossId) &&
+                    !blockJobNotSuit.has(it.encryptJobId) &&
+                    (
+                      (
+                        enableCompanyAllowList ?
+                          [...expectCompanySet].find(
+                            name => it.brandName?.toLowerCase?.()?.includes(name.toLowerCase())
+                          )
+                          :
+                          true
+                      ) || (
+                        // enter job detail to mark as not suit
+                        (
+                          Array.isArray(expectCityList) &&
+                          expectCityList.length &&
+                          [
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          ].includes(expectCityNotMatchStrategy) &&
+                          strategyScopeOptionWhenMarkJobCityNotMatch === StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
+                        ) ? !expectCityList.includes(it.cityName) : false
                       )
-                      :
-                      true
-                  )
-                )
+                    )
+                })
               }
               continueFind: while (targetJobIndex < 0 && !hasReachLastPage) {
                 // when disable company allow list, we will believe that the first one in the list is your expect job.
@@ -562,11 +617,7 @@ async function toRecommendPage (hooks) {
                   requestNextPagePromiseWithResolver = null
 
                   await sleep(5000)
-                  jobListData = await page.evaluate(
-                    `
-                      document.querySelector('.page-jobs-main')?.__vue__?.jobList
-                    `
-                  )
+                  await updateJobListData()
                   tempTargetJobIndexToCheckDetail = getTempTargetJobIndexToCheckDetail()
                 }
 
@@ -609,6 +660,7 @@ async function toRecommendPage (hooks) {
                     await sleepWithRandomDelay(2000)
                   }
                   targetJobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
+                  selectedJobData = await page.evaluate('document.querySelector(".page-jobs-main").__vue__.currentJob')
                   // save the job detail info
                   await hooks.jobDetailIsGetFromRecommendList?.promise(targetJobData)
 
@@ -659,6 +711,43 @@ async function toRecommendPage (hooks) {
                     continue continueFind
                   }
                   if (
+                    (Array.isArray(expectCityList) && expectCityList.length) && !expectCityList.includes(selectedJobData.cityName)
+                  ) {
+                    blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                    if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                      try {
+                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
+                        await hooks.jobMarkedAsNotSuit.promise(
+                          targetJobData,
+                          {
+                            markFrom: ChatStartupFrom.AutoFromRecommendList,
+                            markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
+                            extInfo: {
+                              chosenReasonInUi
+                            },
+                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                          }
+                        )
+                      } catch {
+                      }
+                    }
+                    else if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                      try {
+                        await hooks.jobMarkedAsNotSuit.promise(
+                          targetJobData,
+                          {
+                            markFrom: ChatStartupFrom.AutoFromRecommendList,
+                            markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
+                            extInfo: null,
+                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          }
+                        )
+                      } catch {
+                      }
+                    }
+                    continue continueFind
+                  }
+                  if (
                     !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo)
                   ) {
                     blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
@@ -694,6 +783,15 @@ async function toRecommendPage (hooks) {
                       } catch {
                       }
                     }
+                    continue continueFind
+                  }
+                  // test company again - when allow list not include target company, just skip
+                  if (
+                    enableCompanyAllowList && ![...expectCompanySet].find(
+                      name => selectedJobData.brandName?.toLowerCase?.()?.includes(name.toLowerCase())
+                    )
+                  ) {
+                    // just skip
                     continue continueFind
                   }
                   const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
@@ -839,6 +937,7 @@ export async function mainLoop (hooks) {
     await hooks.mainFlowWillLaunch?.callAsync({
       jobNotMatchStrategy,
       jobNotActiveStrategy,
+      expectCityNotMatchStrategy,
       blockJobNotSuit,
       blockBossNotActive,
     })

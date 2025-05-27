@@ -107,6 +107,16 @@ export default function initIpc() {
     if (hasOwn(payload, 'autoReminder')) {
       bossConfig.autoReminder = payload.autoReminder
     }
+    if (hasOwn(payload, 'expectCityList')) {
+      bossConfig.expectCityList = payload.expectCityList
+    }
+    if (hasOwn(payload, 'expectCityNotMatchStrategy')) {
+      bossConfig.expectCityNotMatchStrategy = payload.expectCityNotMatchStrategy
+    }
+    if (hasOwn(payload, 'strategyScopeOptionWhenMarkJobCityNotMatch')) {
+      bossConfig.strategyScopeOptionWhenMarkJobCityNotMatch =
+        payload.strategyScopeOptionWhenMarkJobCityNotMatch
+    }
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
     if (hasOwn(payload, 'expectCompanies')) {
