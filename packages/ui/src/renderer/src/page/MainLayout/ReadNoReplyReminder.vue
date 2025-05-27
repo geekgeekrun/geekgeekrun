@@ -174,7 +174,7 @@
           @blur="handleThrottleIntervalMinutesBlur"
         />&nbsp;分钟内不多次跟进同一Boss
       </el-form-item>
-      <el-form-item label="跟进时限（天）" prop="rechatLimitDay">
+      <el-form-item label="跟进时限（天）" prop="rechatLimitDay" mb-0>
         <div>
           <div><el-checkbox v-model="enableRechatLimit" />&nbsp;启用</div>
           <el-input-number
@@ -191,6 +191,30 @@
           </div>
           <div v-else>这将会跟进列表中所有聊天（<span class="text-orange">不建议</span>）</div>
         </div>
+      </el-form-item>
+      <el-form-item>
+        <el-tooltip
+          effect="light"
+          placement="bottom-start"
+          @show="gtagRenderer('tooltip_show_about_stop_trace_one_boss')"
+        >
+          <template #content>
+            <ul m0 line-height-1.5em w-300px pl2em>
+              <li>
+                请向你不想继续提醒的Boss发送任意消息，发送后立即撤回的这条消息即可。
+                <br />
+                <br />
+                对于PC端Boss直聘，鼠标移动到要撤回的消息，点按鼠标右键调出菜单，再鼠标左键点击菜单中的“撤回”。如图所示：
+                <br />
+                <img block w-full src="./resources/withdraw-message-guide.png" />
+              </li>
+            </ul>
+          </template>
+          <el-button type="text" font-size-12px
+            ><span><QuestionFilled w-1em h-1em mr2px /></span
+            >我不想持续提醒某个Boss了，如何处理？</el-button
+          >
+        </el-tooltip>
       </el-form-item>
       <el-form-item class="last-form-item">
         <el-button type="primary" @click="handleSubmit">开始提醒</el-button>
@@ -209,6 +233,7 @@ import {
 } from '../../../../common/enums/auto-start-chat'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import mittBus from '../../utils/mitt'
+import { QuestionFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const formContent = ref({
