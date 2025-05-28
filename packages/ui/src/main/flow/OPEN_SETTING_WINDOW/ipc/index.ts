@@ -166,7 +166,7 @@ export default function initIpc() {
     subProcessOfPuppeteer = childProcess.spawn(
       process.argv[0],
       [
-        ...process.argv.slice(1),
+        process.argv[1],
         `--mode=geekAutoStartWithBossDaemon`,
         `--mode-to-daemon=geekAutoStartWithBossMain`
       ],
@@ -222,7 +222,7 @@ export default function initIpc() {
     }
     subProcessOfPuppeteer = childProcess.spawn(
       process.argv[0],
-      [...process.argv.slice(1), `--mode=readNoReplyAutoReminder`],
+      [process.argv[1], `--mode=readNoReplyAutoReminder`],
       {
         env: subProcessEnv,
         stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
@@ -282,7 +282,7 @@ export default function initIpc() {
     }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],
-      [...process.argv.slice(1), `--mode="checkAndDownloadDependenciesForInit"`],
+      [process.argv[1], `--mode=checkAndDownloadDependenciesForInit`],
       {
         stdio: [null, null, null, 'pipe', 'ipc']
       }
@@ -349,7 +349,7 @@ export default function initIpc() {
     }
     subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
       process.argv[0],
-      [...process.argv.slice(1), `--mode=launchBossZhipinLoginPageWithPreloadExtension`],
+      [process.argv[1], `--mode=launchBossZhipinLoginPageWithPreloadExtension`],
       {
         env: subProcessEnv,
         stdio: [null, null, null, 'pipe', 'ipc']
@@ -429,7 +429,7 @@ export default function initIpc() {
       }
       subProcessOfOpenBossSite = childProcess.spawn(
         process.argv[0],
-        [...process.argv.slice(1), `--mode=launchBossSite`],
+        [process.argv[1], `--mode=launchBossSite`],
         {
           env: subProcessEnv,
           stdio: ['inherit', 'inherit', 'inherit', 'pipe']
