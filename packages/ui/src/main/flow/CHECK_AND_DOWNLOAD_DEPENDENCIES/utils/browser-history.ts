@@ -33,6 +33,13 @@ export const getLastUsedAndAvailableBrowser = async (): Promise<BrowserInfo | nu
       await removeLastUsedAndAvailableBrowserPath()
       return null
     }
+
+    // blacklist browser
+    if (path.includes(`Microsoft\\Edge\\Application\\msedge.exe`)) {
+      await removeLastUsedAndAvailableBrowserPath()
+      return null
+    }
+
     return {
       executablePath: path,
       browser

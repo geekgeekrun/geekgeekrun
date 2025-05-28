@@ -8,12 +8,10 @@ import {
   getLastUsedAndAvailableBrowser,
   removeLastUsedAndAvailableBrowserPath
 } from '../browser-history'
-import { getExecutableFileVersion } from '@geekgeekrun/utils/windows-only/file.mjs'
 import gtag from '../../../../utils/gtag'
 
 const getPuppeteerManagerModule = async () => {
-  let puppeteerManager
-  puppeteerManager = await import('@puppeteer/browsers')
+  const puppeteerManager = await import('@puppeteer/browsers')
 
   return puppeteerManager
 }
@@ -129,33 +127,8 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
 
 export async function findAndLocateUserInstalledChromiumExecutableSync(): Promise<BrowserInfo> {
   const exceptChromiumMainVersion = Number(EXPECT_CHROMIUM_BUILD_ID.split('.')[0])
-  // For windows, try to find Edge(chromium)
-  if (os.platform() === 'win32') {
-    // TODO: handle windows
-    const edgeExecutableLocation = path.join(
-      process.env['ProgramFiles(x86)']!,
-      'Microsoft/Edge/Application',
-      'msedge.exe'
-    )
-    if (fs.existsSync(edgeExecutableLocation)) {
-      try {
-        const version = await getExecutableFileVersion(edgeExecutableLocation)
-        const mainVersion = Number(version.split('.')[0])
-        if (mainVersion >= exceptChromiumMainVersion) {
-          return {
-            executablePath: edgeExecutableLocation,
-            browser: `Edge ${version}`
-          }
-        }
-      } catch (err) {
-        console.log(err)
-      }
-    }
-  }
-
-  // For other, use findChrome
-  let findChrome: typeof import('find-chrome-bin').findChrome
-  findChrome = (await import('find-chrome-bin')).findChrome
+  const findChrome: typeof import('find-chrome-bin').findChrome = (await import('find-chrome-bin'))
+    .findChrome
   const targetBrowser = await findChrome({
     min: exceptChromiumMainVersion
   })
