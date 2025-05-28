@@ -76,7 +76,8 @@ export const checkAndDownloadPuppeteerExecutable = async (
       browser: puppeteerManager.Browser.CHROME,
       cacheDir,
       buildId: EXPECT_CHROMIUM_BUILD_ID,
-      downloadProgressCallback: options.downloadProgressCallback
+      downloadProgressCallback: options.downloadProgressCallback,
+      baseUrl: `https://registry.npmmirror.com/-/binary/chrome-for-testing`
     })
   } else {
     gtag('use_installed_browser')
