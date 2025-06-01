@@ -16,3 +16,8 @@ export enum StrategyScopeOptionWhenMarkJobNotMatch {
   ALL_JOB = 1,
   ONLY_COMPANY_MATCHED_JOB = 2
 }
+
+export enum SalaryCalculateWay {
+  MONTH_SALARY = 1,
+  ANNUAL_PACKAGE = 2
+}

@@ -117,6 +117,23 @@ export default function initIpc() {
       bossConfig.strategyScopeOptionWhenMarkJobCityNotMatch =
         payload.strategyScopeOptionWhenMarkJobCityNotMatch
     }
+    if (hasOwn(payload, 'expectSalaryCalculateWay')) {
+      bossConfig.expectSalaryCalculateWay = payload.expectSalaryCalculateWay
+    }
+    if (hasOwn(payload, 'expectSalaryNotMatchStrategy')) {
+      bossConfig.expectSalaryNotMatchStrategy = payload.expectSalaryNotMatchStrategy
+    }
+    if (hasOwn(payload, 'strategyScopeOptionWhenMarkSalaryNotMatch')) {
+      bossConfig.strategyScopeOptionWhenMarkSalaryNotMatch =
+        payload.strategyScopeOptionWhenMarkSalaryNotMatch
+    }
+    if (hasOwn(payload, 'expectSalaryLow')) {
+      bossConfig.expectSalaryLow = payload.expectSalaryLow
+    }
+    if (hasOwn(payload, 'expectSalaryHigh')) {
+      bossConfig.expectSalaryHigh = payload.expectSalaryHigh
+    }
+
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
     if (hasOwn(payload, 'expectCompanies')) {
