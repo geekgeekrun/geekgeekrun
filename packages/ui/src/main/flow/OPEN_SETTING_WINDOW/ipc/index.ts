@@ -107,6 +107,8 @@ export default function initIpc() {
     if (hasOwn(payload, 'autoReminder')) {
       bossConfig.autoReminder = payload.autoReminder
     }
+
+    // city
     if (hasOwn(payload, 'expectCityList')) {
       bossConfig.expectCityList = payload.expectCityList
     }
@@ -117,6 +119,8 @@ export default function initIpc() {
       bossConfig.strategyScopeOptionWhenMarkJobCityNotMatch =
         payload.strategyScopeOptionWhenMarkJobCityNotMatch
     }
+
+    // salary
     if (hasOwn(payload, 'expectSalaryCalculateWay')) {
       bossConfig.expectSalaryCalculateWay = payload.expectSalaryCalculateWay
     }
@@ -132,6 +136,18 @@ export default function initIpc() {
     }
     if (hasOwn(payload, 'expectSalaryHigh')) {
       bossConfig.expectSalaryHigh = payload.expectSalaryHigh
+    }
+
+    // work exp
+    if (hasOwn(payload, 'expectWorkExpList')) {
+      bossConfig.expectWorkExpList = payload.expectWorkExpList
+    }
+    if (hasOwn(payload, 'expectWorkExpNotMatchStrategy')) {
+      bossConfig.expectWorkExpNotMatchStrategy = payload.expectWorkExpNotMatchStrategy
+    }
+    if (hasOwn(payload, 'strategyScopeOptionWhenMarkJobWorkExpNotMatch')) {
+      bossConfig.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
+        payload.strategyScopeOptionWhenMarkJobWorkExpNotMatch
     }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))

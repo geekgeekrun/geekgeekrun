@@ -106,7 +106,6 @@
               ></div>
               <div
                 v-if="formContent.expectCityList?.length"
-                prop="expectCityList"
                 :style="{
                   flex: 1,
                   minWidth: '400px'
@@ -167,7 +166,9 @@
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
-            <div font-size-14px>薪资（暂不支持日结职位，日结职位将直接跳过）</div>
+            <div font-size-14px>
+              薪资（仅支持按月计算薪资的职位；非按月计算薪资职位（例如兼职职位、实习职位）将直接跳过）
+            </div>
             <div
               :style="{
                 display: 'flex',
@@ -387,6 +388,101 @@
                     v-model="formContent.strategyScopeOptionWhenMarkSalaryNotMatch"
                     @change="
                       (value) => gtagRenderer('strategy_scope_option_wmjsnm_changed', { value })
+                    "
+                  >
+                    <el-option
+                      v-for="op in strategyScopeOptionWhenMarkJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+              </div>
+            </div>
+          </div>
+          <div class="h-1px bg-#f0f0f0" mt16px mb16px />
+          <div mt16px>
+            <div font-size-14px>工作经验</div>
+            <div
+              :style="{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '10px'
+              }"
+            >
+              <el-form-item prop="expectWorkExpList" mb0>
+                <div font-size-12px>认为匹配的工作经验</div>
+                <div
+                  font-size-12px
+                  :style="{
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%'
+                  }"
+                >
+                  <el-select
+                    v-model="formContent.expectWorkExpList"
+                    multiple
+                    placeholder="不限制，都匹配"
+                    @change="(value) => gtagRenderer('expect_work_exp_list_changed', { value })"
+                  >
+                    <template v-for="op in conditions.experienceList" :key="op.code">
+                      <el-option v-if="!!op.code" :label="op.name" :value="op.name">{{
+                        op.name
+                      }}</el-option>
+                    </template>
+                  </el-select>
+                </div>
+              </el-form-item>
+              <div
+                v-if="formContent.expectWorkExpList?.length"
+                :style="{
+                  backgroundColor: '#f0f0f0',
+                  width: '1px'
+                }"
+              ></div>
+              <div
+                v-if="formContent.expectWorkExpList?.length"
+                :style="{
+                  flex: 1,
+                  minWidth: '400px'
+                }"
+              >
+                <el-form-item
+                  mb10px
+                  :style="{
+                    width: '100%'
+                  }"
+                >
+                  <div font-size-12px>当前工作经验不匹配时：</div>
+                  <el-select
+                    v-model="formContent.expectWorkExpNotMatchStrategy"
+                    @change="
+                      (value) => gtagRenderer('expect_we_not_match_strategy_changed', { value })
+                    "
+                  >
+                    <el-option
+                      v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+                <el-form-item
+                  mb0
+                  :style="{
+                    width: '100%'
+                  }"
+                >
+                  <div font-size-12px>标记不合适针对的职位范围：</div>
+                  <el-select
+                    v-model="formContent.strategyScopeOptionWhenMarkJobWorkExpNotMatch"
+                    @change="
+                      (value) => gtagRenderer('strategy_scope_option_wmjwenm_changed', { value })
                     "
                   >
                     <el-option
@@ -687,6 +783,7 @@ import {
 import { debounce } from 'lodash-es'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
+import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 
 const router = useRouter()
 
@@ -700,6 +797,7 @@ const formContent = ref({
   jobNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
   jobNotActiveStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
   markAsNotActiveSelectedTimeRange: 7,
+  // city
   expectCityList: [],
   expectCityNotMatchStrategy: MarkAsNotSuitOp.NO_OP,
   strategyScopeOptionWhenMarkJobCityNotMatch:
@@ -710,7 +808,12 @@ const formContent = ref({
   strategyScopeOptionWhenMarkSalaryNotMatch:
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB,
   expectSalaryLow: null,
-  expectSalaryHigh: null
+  expectSalaryHigh: null,
+  // work exp
+  expectWorkExpList: [],
+  expectWorkExpNotMatchStrategy: MarkAsNotSuitOp.NO_OP,
+  strategyScopeOptionWhenMarkJobWorkExpNotMatch:
+    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -773,6 +876,7 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     ? res.config['boss.json'].jobNotActiveStrategy
     : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 
+  // city
   formContent.value.expectCityList = res.config['boss.json']?.expectCityList ?? []
   formContent.value.expectCityNotMatchStrategy = strategyOptionWhenCurrentJobNotMatch
     .map((it) => it.value)
@@ -782,7 +886,9 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.strategyScopeOptionWhenMarkJobCityNotMatch =
     res.config['boss.json']?.strategyScopeOptionWhenMarkJobCityNotMatch ??
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
-  formContent.value.strategyScopeOptionWhenMarkJobCityNotMatch =
+
+  // salary
+  formContent.value.expectSalaryCalculateWay =
     res.config['boss.json'].expectSalaryCalculateWay ?? SalaryCalculateWay.MONTH_SALARY
   formContent.value.expectSalaryNotMatchStrategy =
     res.config['boss.json'].expectSalaryNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
@@ -792,6 +898,18 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.expectSalaryLow = parseFloat(res.config['boss.json'].expectSalaryLow) || null
   formContent.value.expectSalaryHigh = parseFloat(res.config['boss.json'].expectSalaryHigh) || null
   ensureSalaryRangeCorrect()
+
+  // work exp
+  formContent.value.expectWorkExpList =
+    Array.isArray(res.config['boss.json'].expectWorkExpList) &&
+    res.config['boss.json'].expectWorkExpList.length
+      ? res.config['boss.json'].expectWorkExpList
+      : []
+  formContent.value.expectWorkExpNotMatchStrategy =
+    res.config['boss.json'].expectWorkExpNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
+  formContent.value.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
+    res.config['boss.json'].strategyScopeOptionWhenMarkJobWorkExpNotMatch ??
+    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 })
 
 const formRules = {
