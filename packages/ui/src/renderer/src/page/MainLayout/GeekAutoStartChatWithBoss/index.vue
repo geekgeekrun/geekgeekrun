@@ -404,7 +404,7 @@
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
-            <div font-size-14px>工作经验</div>
+            <div font-size-14px>工作经验（暂不支持按日计算薪资的实习类职位）</div>
             <div
               :style="{
                 display: 'flex',
@@ -429,9 +429,14 @@
                     @change="(value) => gtagRenderer('expect_work_exp_list_changed', { value })"
                   >
                     <template v-for="op in conditions.experienceList" :key="op.code">
-                      <el-option v-if="!!op.code" :label="op.name" :value="op.name">{{
-                        op.name
-                      }}</el-option>
+                      <el-option
+                        v-if="!!op.code"
+                        :label="op.name"
+                        :value="op.name"
+                        :disabled="op.code === 108 || op.name === '在校生'"
+                      >
+                        {{ op.name }}</el-option
+                      >
                     </template>
                   </el-select>
                 </div>
@@ -911,6 +916,9 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     res.config['boss.json'].expectWorkExpList.length
       ? res.config['boss.json'].expectWorkExpList
       : []
+  const s = new Set([...(formContent.value?.expectWorkExpList ?? [])])
+  s.delete('在校生')
+  formContent.value.expectWorkExpList = [...s]
   formContent.value.expectWorkExpNotMatchStrategy =
     res.config['boss.json'].expectWorkExpNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
   formContent.value.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
