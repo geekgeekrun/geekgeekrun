@@ -12,7 +12,17 @@
       <div>当前未选择任何期望城市，将不会按照城市进行筛选</div>
     </div>
     <div>
-      <el-button size="small" type="primary" @click="isDialogVisible = true">选择城市</el-button>
+      <el-button
+        size="small"
+        type="primary"
+        @click="
+          () => {
+            isDialogVisible = true
+            gtagRenderer('choose_city_entry_button_clicked')
+          }
+        "
+        >选择城市</el-button
+      >
       <el-button
         v-if="modelValue?.length"
         size="small"
@@ -105,6 +115,7 @@
 <script lang="ts" setup>
 import { PropType, ref } from 'vue'
 import cityGroupData from '../../../../../../common/constant/cityGroup.json'
+import { gtagRenderer } from '@renderer/utils/gtag'
 
 const props = defineProps({
   modelValue: {
@@ -136,23 +147,29 @@ for (const group of cityGroup) {
 function handleDialogOpen() {
   activeTabName.value = '热门城市'
   selectedCities.value = [...(props.modelValue ?? [])]
+  gtagRenderer('choose_city_dialog_open')
 }
 
 function handleCancelClicked() {
+  gtagRenderer('choose_city_cancel_button_clicked')
   isDialogVisible.value = false
 }
 function handleConfirmClicked() {
+  gtagRenderer('choose_city_confirm_button_clicked', { value: selectedCities.value.join(',') })
   isDialogVisible.value = false
   emits('update:modelValue', [...(selectedCities.value ?? [])])
 }
 function handleDialogClosed() {
   selectedCities.value = []
+  gtagRenderer('choose_city_dialog_closed')
 }
 
 function handleClearSelectedCitiesInModelValue() {
   emits('update:modelValue', [])
+  gtagRenderer('clear_selected_cities_in_mv_clicked')
 }
 function handleClearSelectedCitiesInDialog() {
   selectedCities.value = []
+  gtagRenderer('clear_selected_cities_in_dialog_clicked')
 }
 </script>

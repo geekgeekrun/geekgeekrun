@@ -376,7 +376,7 @@
                     [
                       MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
                       MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
-                    ].includes(formContent.expectCityNotMatchStrategy)
+                    ].includes(formContent.expectSalaryNotMatchStrategy)
                   "
                   mb0
                   :style="{
@@ -473,6 +473,12 @@
                   </el-select>
                 </el-form-item>
                 <el-form-item
+                  v-if="
+                    [
+                      MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                      MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                    ].includes(formContent.expectWorkExpNotMatchStrategy)
+                  "
                   mb0
                   :style="{
                     width: '100%'
