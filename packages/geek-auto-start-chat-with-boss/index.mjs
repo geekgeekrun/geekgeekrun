@@ -684,6 +684,149 @@ async function toRecommendPage (hooks) {
                   // save the job detail info
                   await hooks.jobDetailIsGetFromRecommendList?.promise(targetJobData)
 
+                  //#region collect not suit reasons
+                  const notSuitReasonIdToStrategyMap = {}
+                  const notSuitConditionHandleMap = {
+                    async active() {
+                      blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
+                      if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
+                              extInfo: {
+                                bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
+                              extInfo: null,
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                    },
+                    async city() {
+                      blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                      if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
+                              extInfo: {
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
+                              extInfo: null,
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                    },
+                    async workExp() {
+                      blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                      if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT,
+                              extInfo: {
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT,
+                              extInfo: null,
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                    },
+                    async jobDetail() {
+                      blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                      if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                              extInfo: {
+                                bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
+                              extInfo: null,
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                    }
+                  }
+
                   //#region
                   // null
                   // 刚刚活跃 // 今日活跃 // 昨日活跃 // 3日内活跃 // 本周活跃 // 2周内活跃
@@ -694,159 +837,50 @@ async function toRecommendPage (hooks) {
                     markAsNotActiveSelectedTimeRange > 0 &&
                     indexOfActiveText > 0 && indexOfActiveText <= markAsNotActiveSelectedTimeRange
                   ) {
-                    blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
                     // click prevent recommend button
-                    if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
-                      try {
-                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
-                            extInfo: {
-                              bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
-                              chosenReasonInUi
-                            },
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    else if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
-                      try {
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
-                            extInfo: null,
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    continue continueFind
+                    notSuitReasonIdToStrategyMap.active = jobNotActiveStrategy
                   }
                   if (
                     (Array.isArray(expectCityList) && expectCityList.length) && !expectCityList.includes(selectedJobData.cityName)
                   ) {
-                    blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
-                    if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
-                      try {
-                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
-                            extInfo: {
-                              chosenReasonInUi
-                            },
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    else if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
-                      try {
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
-                            extInfo: null,
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    continue continueFind
+                    notSuitReasonIdToStrategyMap.city = expectCityNotMatchStrategy
                   }
                   if (
                     (Array.isArray(expectWorkExpList) && expectWorkExpList.length) && !expectWorkExpList.includes(selectedJobData.jobExperience)
                   ) {
-                    blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
-                    if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
-                      try {
-                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT)
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT,
-                            extInfo: {
-                              chosenReasonInUi
-                            },
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    else if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
-                      try {
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT,
-                            extInfo: null,
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    continue continueFind
+                    notSuitReasonIdToStrategyMap.workExp = expectWorkExpNotMatchStrategy
                   }
                   if (
                     !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo)
                   ) {
-                    blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
-                    if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
-                      try {
-                        const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
-                            extInfo: {
-                              bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
-                              chosenReasonInUi
-                            },
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
-                          }
-                        )
-                      } catch {
-                      }
-                    }
-                    else if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
-                      try {
-                        await hooks.jobMarkedAsNotSuit.promise(
-                          targetJobData,
-                          {
-                            markFrom: ChatStartupFrom.AutoFromRecommendList,
-                            markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
-                            extInfo: null,
-                            markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
-                          }
-                        )
-                      } catch {
-                      }
-                    }
+                    notSuitReasonIdToStrategyMap.jobDetail = jobNotMatchStrategy
+                  }
+                  // #endregion
+
+                  // #region execute mark logic
+                  // 1. find the one mark on Boss
+                  const markOnBossCondition = Object.keys(notSuitReasonIdToStrategyMap).find(k => notSuitReasonIdToStrategyMap[k] === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS)
+                  if (markOnBossCondition) {
+                    await notSuitConditionHandleMap[markOnBossCondition]()
                     continue continueFind
                   }
-                  // test company again - when allow list not include target company, just skip
+                  // 2. if there is no condition to mark Boss, then find the one mark on local db
+                  const markOnLocalDbCondition = Object.keys(notSuitReasonIdToStrategyMap).find(k => notSuitReasonIdToStrategyMap[k] === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL)
+                  if (markOnLocalDbCondition) {
+                    await notSuitConditionHandleMap[markOnBossCondition]()
+                    continue continueFind
+                  }
+                  // #endregion
                   if (
+                    // test company again - when allow list not include target company, just skip
                     enableCompanyAllowList && ![...expectCompanySet].find(
                       name => selectedJobData.brandName?.toLowerCase?.()?.includes(name.toLowerCase())
-                    )
+                    ) ||
+                    // check if job has been marked as not suit or not active
+                    [
+                      ...blockJobNotSuit,
+                      ...blockBossNotActive
+                    ].includes(targetJobData.jobInfo.encryptId)
                   ) {
                     // just skip
                     continue continueFind
