@@ -5,6 +5,7 @@ export enum MarkAsNotSuitReason {
   JOB_NOT_SUIT = 3,
   JOB_CITY_NOT_SUIT = 4,
   JOB_WORK_EXP_NOT_SUIT = 5,
+  JOB_SALARY_NOT_SUIT = 6,
 }
 
 export enum MarkAsNotSuitOp {
@@ -20,5 +21,5 @@ export enum StrategyScopeOptionWhenMarkJobNotMatch {
 
 export enum SalaryCalculateWay {
   MONTH_SALARY = 1,
-  ANNUAL_PACKAGE = 2
+  ANNUAL_PACKAGE = 2,
 }

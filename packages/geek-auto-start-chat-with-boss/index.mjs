@@ -18,7 +18,7 @@ import { default as rawIndustryFilterExemption } from './internal-config/job-fil
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
 import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import { activeDescList } from './constant.mjs'
-
+import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
   arr.forEach(option => {
@@ -90,7 +90,7 @@ const strategyScopeOptionWhenMarkJobCityNotMatch = readConfigFile('boss.json').s
 const expectSalaryLow = parseFloat(readConfigFile('boss.json').expectSalaryLow) || null
 const expectSalaryHigh = parseFloat(readConfigFile('boss.json').expectSalaryHigh) || null
 const expectSalaryCalculateWay = readConfigFile('boss.json').expectSalaryCalculateWay ?? SalaryCalculateWay.MONTH_SALARY
-const expectSalaryNotMatchStrategy = readConfigFile('boss.json').expectSalaryCalculateWay ?? MarkAsNotSuitOp.NO_OP
+const expectSalaryNotMatchStrategy = readConfigFile('boss.json').expectSalaryNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const isSalaryFilterEnabled = expectSalaryLow || expectSalaryHigh
 const strategyScopeOptionWhenMarkSalaryNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkSalaryNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
@@ -203,7 +203,8 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
           break
         }
         case MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT:
-        case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
+        case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT:
+        case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="同城距离远"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
@@ -548,10 +549,29 @@ async function toRecommendPage (hooks) {
                 // due to city can get from list immediately
                 // so just set those job which city is not suit to blockJobNotSuit
                 // to skip view detail
+
+                // skip invalid salaryData (兼职、日结、实习 etc)
+                jobListData.forEach(it => {
+                  const salaryData = parseSalary(it.salaryDesc)
+                  if (!salaryData.high || !salaryData.low) {
+                    blockJobNotSuit.add(it.encryptJobId)
+                  }
+                })
                 if (
-                  expectCityNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
-                  Array.isArray(expectCityList) &&
-                  expectCityList.length
+                  (
+                    expectCityNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
+                    Array.isArray(expectCityList) &&
+                    expectCityList.length
+                  ) ||
+                  (
+                    expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
+                    Array.isArray(expectWorkExpList) &&
+                    expectWorkExpList.length
+                  ) ||
+                  (
+                    strategyScopeOptionWhenMarkSalaryNotMatch === MarkAsNotSuitOp.NO_OP &&
+                    isSalaryFilterEnabled
+                  )
                 ) {
                   console.log(`add job city not suit into blockJobNotSuit set`)
                   for (const it of jobListData) {
@@ -566,6 +586,26 @@ async function toRecommendPage (hooks) {
               let hasReachLastPage = false
               let targetJobIndex = -1
               let targetJobData, selectedJobData // they show be same; one is from list, another is from detail
+              function checkIfSalarySuit(salaryDesc) {
+                const salaryData = parseSalary(salaryDesc)
+                if (expectSalaryCalculateWay === SalaryCalculateWay.MONTH_SALARY) {
+                  if (expectSalaryHigh && salaryData.high > expectSalaryHigh) {
+                    return false
+                  }
+                  if (expectSalaryLow && salaryData.low < expectSalaryLow) {
+                    return false
+                  }
+                } else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
+                  const salaryDataMonth = salaryData.month || 12
+                  if (expectSalaryHigh && (salaryData.high * salaryDataMonth) / 10 > expectSalaryHigh) {
+                    return false
+                  }
+                  if (expectSalaryLow && (salaryData.low * salaryDataMonth) / 10 < expectSalaryLow) {
+                    return false
+                  }
+                }
+                return true
+              }
               function getTempTargetJobIndexToCheckDetail () {
                 return jobListData.findIndex(it => {
                   return !blockBossNotNewChat.has(it.encryptBossId) &&
@@ -601,6 +641,16 @@ async function toRecommendPage (hooks) {
                           ].includes(expectWorkExpNotMatchStrategy) &&
                           strategyScopeOptionWhenMarkJobWorkExpNotMatch === StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
                         ) ? !expectWorkExpList.includes(it.jobExperience) : false
+                      ) || (
+                        // enter job detail to mark as not suit for salary filter
+                        (
+                          isSalaryFilterEnabled &&
+                          [
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          ].includes(expectSalaryNotMatchStrategy) &&
+                          strategyScopeOptionWhenMarkSalaryNotMatch === StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
+                        ) ? !checkIfSalarySuit(it.salaryDesc) : false
                       )
                     )
                 })
@@ -824,6 +874,43 @@ async function toRecommendPage (hooks) {
                         } catch {
                         }
                       }
+                    },
+                    async salary() {
+                      blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                      if (expectSalaryNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT,
+                              extInfo: {
+                                salaryDesc: selectedJobData.salaryDesc,
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (expectSalaryNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT,
+                              extInfo: {
+                                salaryDesc: selectedJobData.salaryDesc,
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                            }
+                          )
+                        } catch {
+                        }
+                      }
                     }
                   }
 
@@ -855,7 +942,13 @@ async function toRecommendPage (hooks) {
                   ) {
                     notSuitReasonIdToStrategyMap.jobDetail = jobNotMatchStrategy
                   }
+                  if (
+                    !checkIfSalarySuit(selectedJobData.salaryDesc)
+                  ) {
+                    notSuitReasonIdToStrategyMap.salary = expectSalaryNotMatchStrategy
+                  }
                   // #endregion
+                  console.log('not suit reason and related strategy: ', notSuitReasonIdToStrategyMap)
 
                   // #region execute mark logic
                   // 1. find the one mark on Boss
