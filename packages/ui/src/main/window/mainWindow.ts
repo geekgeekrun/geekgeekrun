@@ -10,7 +10,7 @@ export function createMainWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
-    minWidth: 1024,
+    minWidth: 1280,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux'
