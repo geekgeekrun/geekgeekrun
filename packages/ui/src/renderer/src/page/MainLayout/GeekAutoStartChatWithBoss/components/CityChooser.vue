@@ -11,7 +11,12 @@
     <div v-else>
       <div>当前未选择任何期望城市，将不会按照城市进行筛选</div>
     </div>
-    <div>
+    <div
+      line-height-1
+      :style="{
+        marginTop: modelValue?.length ? '10px' : ''
+      }"
+    >
       <el-button
         size="small"
         type="primary"

@@ -77,7 +77,7 @@
           </el-form-item>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
-            <div font-size-14px>工作地</div>
+            <div font-size-14px mb8px>工作地</div>
             <div
               :style="{
                 display: 'flex',
@@ -100,15 +100,10 @@
               <div
                 v-if="formContent.expectCityList?.length"
                 :style="{
-                  backgroundColor: '#f0f0f0',
-                  width: '1px'
-                }"
-              ></div>
-              <div
-                v-if="formContent.expectCityList?.length"
-                :style="{
-                  flex: 1,
-                  minWidth: '400px'
+                  width: '400px',
+                  borderLeft: '1px solid #f0f0f0',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
                 }"
               >
                 <el-form-item
@@ -166,7 +161,7 @@
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
-            <div font-size-14px>
+            <div font-size-14px mb8px>
               薪资（仅支持按月计算薪资的职位；非按月计算薪资职位（例如兼职职位、实习职位）将直接跳过）
             </div>
             <div
@@ -338,15 +333,10 @@
               <div
                 v-if="isShowSalaryMarkAsNotSuitStrategy"
                 :style="{
-                  backgroundColor: '#f0f0f0',
-                  width: '1px'
-                }"
-              ></div>
-              <div
-                v-if="isShowSalaryMarkAsNotSuitStrategy"
-                :style="{
-                  flex: 1,
-                  minWidth: '400px'
+                  width: '400px',
+                  borderLeft: '1px solid #f0f0f0',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
                 }"
               >
                 <el-form-item
@@ -404,7 +394,7 @@
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
-            <div font-size-14px>工作经验（暂不支持按日计算薪资的实习类职位）</div>
+            <div font-size-14px mb8px>工作经验（暂不支持按日计算薪资的实习类职位）</div>
             <div
               :style="{
                 display: 'flex',
@@ -444,15 +434,10 @@
               <div
                 v-if="formContent.expectWorkExpList?.length"
                 :style="{
-                  backgroundColor: '#f0f0f0',
-                  width: '1px'
-                }"
-              ></div>
-              <div
-                v-if="formContent.expectWorkExpList?.length"
-                :style="{
-                  flex: 1,
-                  minWidth: '400px'
+                  width: '400px',
+                  borderLeft: '1px solid #f0f0f0',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
                 }"
               >
                 <el-form-item
@@ -620,7 +605,7 @@
                   "
                 />
               </el-form-item>
-              <div mb10px font-size-12px flex flex-justify-center>且</div>
+              <div mb10px font-size-12px flex flex-justify-center fw-800>且</div>
               <el-form-item mb0 prop="expectJobTypeRegExpStr">
                 <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
                 <el-input
@@ -632,7 +617,7 @@
                   "
                 />
               </el-form-item>
-              <div mb10px font-size-12px flex flex-justify-center>且</div>
+              <div mb10px font-size-12px flex flex-justify-center fw-800>且</div>
               <el-form-item mb0 prop="expectJobDescRegExpStr">
                 <div font-size-12px>职位描述正则（不区分大小写）</div>
                 <el-input
@@ -645,32 +630,42 @@
                 />
               </el-form-item>
             </div>
-            <div class="mt10px lh-2em font-size-12px">当前职位名称/类型/描述不符合投递条件时：</div>
-            <div
-              :style="{
-                display: 'grid',
-                gridTemplateColumns: '1.25fr 0.75fr',
-                gap: '10px 0',
-                width: '100%',
-                alignItems: 'end'
-              }"
+            <template
+              v-if="
+                formContent.expectJobNameRegExpStr?.trim() ||
+                formContent.expectJobTypeRegExpStr?.trim() ||
+                formContent.expectJobDescRegExpStr?.trim()
+              "
             >
-              <el-form-item mb0>
-                <el-select
-                  v-model="formContent.jobNotMatchStrategy"
-                  @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
-                >
-                  <el-option
-                    v-for="op in strategyOptionWhenCurrentJobNotMatch"
-                    :key="op.value"
-                    :label="op.name"
-                    :value="op.value"
-                    >{{ op.name }}</el-option
+              <div class="mt10px lh-2em font-size-12px">
+                当前职位名称/类型/描述不符合投递条件时：
+              </div>
+              <div
+                :style="{
+                  display: 'grid',
+                  gridTemplateColumns: '1.25fr 0.75fr',
+                  gap: '10px 0',
+                  width: '100%',
+                  alignItems: 'end'
+                }"
+              >
+                <el-form-item mb0>
+                  <el-select
+                    v-model="formContent.jobNotMatchStrategy"
+                    @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
                   >
-                </el-select>
-              </el-form-item>
-              <div />
-            </div>
+                    <el-option
+                      v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+                <div />
+              </div>
+            </template>
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
@@ -1153,7 +1148,7 @@ const strategyScopeOptionWhenMarkJobNotMatch = [
     value: StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
   },
   {
-    name: '仅和“期望公司白名单”匹配的职位',
+    name: '仅和“公司白名单”匹配的职位',
     value: StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
   }
 ]
