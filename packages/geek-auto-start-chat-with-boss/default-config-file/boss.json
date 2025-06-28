@@ -13,6 +13,7 @@
   "expectCityList": [],
   "expectCityNotMatchStrategy": 3,
   "strategyScopeOptionWhenMarkJobCityNotMatch": 2,
+  "jobDetailRegExpMatchLogic": 1,
   "autoReminder": {
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,

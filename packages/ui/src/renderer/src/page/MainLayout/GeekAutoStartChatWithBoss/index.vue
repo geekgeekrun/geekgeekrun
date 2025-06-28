@@ -584,6 +584,23 @@
                 </el-dropdown>
               </div>
             </div>
+            <div :style="{ width: '100%' }">
+              <el-form-item mb0 prop="expectJobNameRegExpStr">
+                <div font-size-12px>职位名称/类型/描述正则匹配筛选逻辑</div>
+                <el-select
+                  v-model="formContent.jobDetailRegExpMatchLogic"
+                  @change="(value) => gtagRenderer('job_detail_re_ml_change', { value })"
+                >
+                  <el-option
+                    v-for="op in jobDetailRegExpMatchLogicOptions"
+                    :key="op.value"
+                    :label="op.name"
+                    :value="op.value"
+                    >{{ op.name }}</el-option
+                  >
+                </el-select>
+              </el-form-item>
+            </div>
             <div
               :style="{
                 display: 'grid',
@@ -784,7 +801,8 @@ import { ArrowDown } from '@element-plus/icons-vue'
 import {
   MarkAsNotSuitOp,
   StrategyScopeOptionWhenMarkJobNotMatch,
-  SalaryCalculateWay
+  SalaryCalculateWay,
+  JobDetailRegExpMatchLogic
 } from '@geekgeekrun/sqlite-plugin/src/enums'
 import { debounce } from 'lodash-es'
 import mittBus from '../../../utils/mitt'
@@ -819,7 +837,8 @@ const formContent = ref({
   expectWorkExpList: [],
   expectWorkExpNotMatchStrategy: MarkAsNotSuitOp.NO_OP,
   strategyScopeOptionWhenMarkJobWorkExpNotMatch:
-    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB,
+  jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
@@ -919,6 +938,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
     res.config['boss.json'].strategyScopeOptionWhenMarkJobWorkExpNotMatch ??
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+  formContent.value.jobDetailRegExpMatchLogic =
+    res.config['boss.json'].jobDetailRegExpMatchLogic ?? JobDetailRegExpMatchLogic.EVERY
 })
 
 const formRules = {
@@ -1150,6 +1171,17 @@ const strategyScopeOptionWhenMarkJobNotMatch = [
   {
     name: '仅和“公司白名单”匹配的职位',
     value: StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+  }
+]
+
+const jobDetailRegExpMatchLogicOptions = [
+  {
+    name: '“且”模式 - 所有正则匹配时才认为职位匹配',
+    value: JobDetailRegExpMatchLogic.EVERY
+  },
+  {
+    name: '“或”模式 - 任一正则匹配时即认为职位匹配',
+    value: JobDetailRegExpMatchLogic.SOME
   }
 ]
 

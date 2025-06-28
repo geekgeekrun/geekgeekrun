@@ -149,6 +149,9 @@ export default function initIpc() {
       bossConfig.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
         payload.strategyScopeOptionWhenMarkJobWorkExpNotMatch
     }
+    if (hasOwn(payload, 'jobDetailRegExpMatchLogic')) {
+      bossConfig.jobDetailRegExpMatchLogic = payload.jobDetailRegExpMatchLogic
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
