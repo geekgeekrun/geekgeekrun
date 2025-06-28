@@ -520,50 +520,6 @@
                     ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
                   >
                 </el-tooltip>
-                <el-tooltip
-                  effect="light"
-                  placement="bottom"
-                  @show="gtagRenderer('tooltip_show_about_how_to_fill_df')"
-                >
-                  <template #content>
-                    <p style="margin-top: 4px; margin-bottom: 4px">
-                      目前版本中，职位名称正则、职位类型正则、职位描述正则三个筛选条件，为“且”的关系。<br />
-                      也就是说，职位信息中只要任一不能匹配到，即这个职位会被标记不合适。<br />
-                      你可以留空某个输入框，这表示任何职位一定匹配这个条件。<br />
-                      如果三个输入框均留空，表示列表中出现的任意职位一定同时匹配这三个条件。
-                    </p>
-                    因此，可以按照如下场景填写你对于期望职位的筛选条件：
-                    <ul style="margin-top: 4px; margin-bottom: 4px">
-                      <li>
-                        如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。<br />
-                        这可以确保求职方向基本正确。
-                      </li>
-                      <li>
-                        如果你着重关注职位描述，请填写“职位描述正则”，其余两个输入框酌情填写。
-                      </li>
-                      <li>如果你想开聊列表里的推荐的任意职位，请清空这三个输入框。</li>
-                    </ul>
-                    <div>
-                      你可以在左侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
-                    </div>
-                    <div>
-                      <b>“职位类型正则”填写过程中请注意</b
-                      >，“职位类型”是由Boss直聘预定义好的一系列职位分类，<br />
-                      因此<b>请按照这个分类编写正则来进行填写</b>。这个分类可以在此找到：<br />
-                      <img w-400px src="../resources/job-type-source-entry.png" />
-                    </div>
-                    <a
-                      href="javascript:;"
-                      style="color: var(--el-color-primary)"
-                      @click.prevent="handleHowToFillDetailFilterClick"
-                      >请参阅这个链接</a
-                    >
-                  </template>
-                  <el-button type="text" font-size-12px
-                    ><span><QuestionFilled w-1em h-1em mr2px /></span
-                    >怎样填写下面的三个输入框？</el-button
-                  >
-                </el-tooltip>
               </div>
               <div>
                 <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
@@ -584,88 +540,166 @@
                 </el-dropdown>
               </div>
             </div>
-            <div :style="{ width: '100%' }">
-              <el-form-item mb0 prop="expectJobNameRegExpStr">
-                <div font-size-12px>职位名称/类型/描述正则匹配筛选逻辑</div>
-                <el-select
-                  v-model="formContent.jobDetailRegExpMatchLogic"
-                  @change="(value) => gtagRenderer('job_detail_re_ml_change', { value })"
-                >
-                  <el-option
-                    v-for="op in jobDetailRegExpMatchLogicOptions"
-                    :key="op.value"
-                    :label="op.name"
-                    :value="op.value"
-                    >{{ op.name }}</el-option
-                  >
-                </el-select>
-              </el-form-item>
-            </div>
             <div
               :style="{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1em 1fr 1em 1fr',
-                gap: '5px',
                 width: '100%',
-                alignItems: 'end'
+                display: 'flex',
+                gap: '10px'
               }"
-              class="job-detail-filter-wrap"
             >
-              <el-form-item mb0 prop="expectJobNameRegExpStr">
-                <div font-size-12px>职位名称正则（不区分大小写）</div>
-                <el-input
-                  v-model="formContent.expectJobNameRegExpStr"
-                  placeholder="true"
-                  @blur="
-                    formContent.expectJobNameRegExpStr =
-                      formContent.expectJobNameRegExpStr?.trim() ?? ''
-                  "
+              <div flex-1>
+                <el-form-item mb0 prop="expectJobNameRegExpStr">
+                  <div font-size-12px>职位类型/正则/描述 正则匹配筛选逻辑</div>
+                  <el-select
+                    v-model="formContent.jobDetailRegExpMatchLogic"
+                    @change="(value) => gtagRenderer('job_detail_re_ml_change', { value })"
+                  >
+                    <el-option
+                      v-for="op in jobDetailRegExpMatchLogicOptions"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+                <div
+                  :style="{
+                    width: '100%',
+                    height: '1px',
+                    backgroundColor: '#f0f0f0',
+                    marginTop: '0.5lh'
+                  }"
                 />
-              </el-form-item>
-              <div mb10px font-size-12px flex flex-justify-center fw-800>且</div>
-              <el-form-item mb0 prop="expectJobTypeRegExpStr">
-                <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
-                <el-input
-                  v-model="formContent.expectJobTypeRegExpStr"
-                  placeholder="true"
-                  @blur="
-                    formContent.expectJobTypeRegExpStr =
-                      formContent.expectJobTypeRegExpStr?.trim() ?? ''
-                  "
-                />
-              </el-form-item>
-              <div mb10px font-size-12px flex flex-justify-center fw-800>且</div>
-              <el-form-item mb0 prop="expectJobDescRegExpStr">
-                <div font-size-12px>职位描述正则（不区分大小写）</div>
-                <el-input
-                  v-model="formContent.expectJobDescRegExpStr"
-                  placeholder="true"
-                  @blur="
-                    formContent.expectJobDescRegExpStr =
-                      formContent.expectJobDescRegExpStr?.trim() ?? ''
-                  "
-                />
-              </el-form-item>
-            </div>
-            <template
-              v-if="
-                formContent.expectJobNameRegExpStr?.trim() ||
-                formContent.expectJobTypeRegExpStr?.trim() ||
-                formContent.expectJobDescRegExpStr?.trim()
-              "
-            >
-              <div class="mt10px lh-2em font-size-12px">
-                当前职位名称/类型/描述不符合投递条件时：
+                <div
+                  :style="{
+                    display: 'grid',
+                    gridTemplateColumns: '2em 1fr',
+                    gap: '5px',
+                    flex: 1,
+                    alignItems: 'end'
+                  }"
+                  class="job-detail-filter-wrap"
+                >
+                  <div></div>
+                  <el-tooltip
+                    effect="light"
+                    placement="bottom"
+                    @show="gtagRenderer('tooltip_show_about_how_to_fill_df')"
+                  >
+                    <template #content>
+                      <div w-600px>
+                        <p style="margin-top: 4px; margin-bottom: 4px">
+                          目前版本中，职位名称正则、职位类型正则、职位描述正则三个筛选条件，为“且”的关系。<br />
+                          也就是说，职位信息中只要任一不能匹配到，即这个职位会被标记不合适。<br />
+                          你可以留空某个输入框，这表示任何职位一定匹配这个条件。<br />
+                          如果三个输入框均留空，表示列表中出现的任意职位同时匹配这三个条件（即不根据职位类型/正则/描述进行筛选）。
+                        </p>
+                        因此，可以按照如下场景填写你对于期望职位的筛选条件：
+                        <ul style="margin-top: 4px; margin-bottom: 4px">
+                          <li>
+                            如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。<br />
+                            这可以确保求职方向基本正确。
+                          </li>
+                          <li>
+                            如果你着重关注职位描述，请填写“职位描述正则”，其余两个输入框酌情填写。
+                          </li>
+                          <li>如果你想开聊列表里的推荐的任意职位，不根据职位类型/正则/描述进行筛选，请清空这三个输入框。</li>
+                        </ul>
+                        <div>
+                          你可以在左侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
+                        </div>
+                        <div>
+                          <b>“职位类型正则”填写过程中请注意</b
+                          >，“职位类型”是由Boss直聘预定义好的一系列职位分类，<br />
+                          因此<b>请按照这个分类编写正则来进行填写</b>。这个分类可以在此找到：<br />
+                          <img w-400px src="../resources/job-type-source-entry.png" />
+                        </div>
+                        <a
+                          href="javascript:;"
+                          style="color: var(--el-color-primary)"
+                          @click.prevent="handleHowToFillDetailFilterClick"
+                          >请参阅这个链接</a
+                        >
+                      </div>
+                    </template>
+                    <el-button
+                      type="text"
+                      font-size-12px
+                      :style="{
+                        width: 'fit-content',
+                        padding: '0',
+                        height: 'auto',
+                        position: 'relative',
+                        top: '6px'
+                      }"
+                      ><span><QuestionFilled w-1em h-1em mr2px /></span
+                      >怎样填写下面的三个输入框？它们工作机制是怎样的？</el-button
+                    >
+                  </el-tooltip>
+                  <div></div>
+                  <el-form-item mb0 prop="expectJobNameRegExpStr">
+                    <div font-size-12px>职位名称正则（不区分大小写）</div>
+                    <el-input
+                      v-model="formContent.expectJobNameRegExpStr"
+                      type="textarea"
+                      :placeholder="getJobDetailRegExpMatchLogicConfig().inputPlaceholderText"
+                      :autosize="{ minRows: 2 }"
+                      max-h-6lh
+                      @blur="
+                        formContent.expectJobNameRegExpStr =
+                          formContent.expectJobNameRegExpStr?.trim() ?? ''
+                      "
+                    />
+                  </el-form-item>
+                  <div mb0px font-size-12px flex flex-justify-center fw-800>
+                    {{ getJobDetailRegExpMatchLogicConfig().logicText }}
+                  </div>
+                  <el-form-item mb0 prop="expectJobTypeRegExpStr">
+                    <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
+                    <el-input
+                      v-model="formContent.expectJobTypeRegExpStr"
+                      type="textarea"
+                      :placeholder="getJobDetailRegExpMatchLogicConfig().inputPlaceholderText"
+                      :autosize="{ minRows: 2 }"
+                      max-h-6lh
+                      @blur="
+                        formContent.expectJobTypeRegExpStr =
+                          formContent.expectJobTypeRegExpStr?.trim() ?? ''
+                      "
+                    />
+                  </el-form-item>
+                  <div mb0px font-size-12px flex flex-justify-center fw-800>
+                    {{ getJobDetailRegExpMatchLogicConfig().logicText }}
+                  </div>
+                  <el-form-item mb0 prop="expectJobDescRegExpStr">
+                    <div font-size-12px>职位描述正则（不区分大小写）</div>
+                    <el-input
+                      v-model="formContent.expectJobDescRegExpStr"
+                      type="textarea"
+                      :placeholder="getJobDetailRegExpMatchLogicConfig().inputPlaceholderText"
+                      :autosize="{ minRows: 2 }"
+                      max-h-6lh
+                      @blur="
+                        formContent.expectJobDescRegExpStr =
+                          formContent.expectJobDescRegExpStr?.trim() ?? ''
+                      "
+                    />
+                  </el-form-item>
+                </div>
               </div>
               <div
+                v-if="!isJobDetailRegExpEmpty()"
                 :style="{
-                  display: 'grid',
-                  gridTemplateColumns: '1.25fr 0.75fr',
-                  gap: '10px 0',
-                  width: '100%',
-                  alignItems: 'end'
+                  width: '400px',
+                  borderLeft: '1px solid #f0f0f0',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
                 }"
               >
+                <div class="mt10px lh-2em font-size-12px">
+                  当前职位名称/类型/描述不符合投递条件时：
+                </div>
                 <el-form-item mb0>
                   <el-select
                     v-model="formContent.jobNotMatchStrategy"
@@ -680,9 +714,17 @@
                     >
                   </el-select>
                 </el-form-item>
-                <div />
               </div>
-            </template>
+              <div
+                v-else
+                :style="{
+                  width: '400px',
+                  borderLeft: '1px solid transparent',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
+                }"
+              />
+            </div>
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
@@ -1306,6 +1348,40 @@ function handleHowToFillDetailFilterClick() {
     'open-external-link',
     'https://linux.do/t/topic/640626/74?u=geekgeekrun'
   )
+}
+
+function isJobDetailRegExpEmpty() {
+  return [
+    formContent.value.expectJobDescRegExpStr,
+    formContent.value.expectJobNameRegExpStr,
+    formContent.value.expectJobTypeRegExpStr
+  ]
+    .map((it) => Boolean(it?.trim()))
+    .every((it) => it === false)
+}
+
+function getJobDetailRegExpMatchLogicConfig() {
+  const result = {
+    logicText: '-',
+    inputPlaceholderText: '-'
+  }
+  if (formContent.value.jobDetailRegExpMatchLogic === JobDetailRegExpMatchLogic.EVERY) {
+    Object.assign(result, {
+      logicText: '且',
+      inputPlaceholderText: 'true'
+    })
+  }
+  if (formContent.value.jobDetailRegExpMatchLogic === JobDetailRegExpMatchLogic.SOME) {
+    Object.assign(result, {
+      logicText: '或',
+      inputPlaceholderText: 'false'
+    })
+  }
+
+  if (isJobDetailRegExpEmpty()) {
+    result.inputPlaceholderText = 'true'
+  }
+  return result
 }
 </script>
 
