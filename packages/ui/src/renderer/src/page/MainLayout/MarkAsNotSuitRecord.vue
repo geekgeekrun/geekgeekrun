@@ -42,6 +42,14 @@
                 <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
                 <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
               </template>
+              <template v-if="row.markReason === MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT">
+                <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
+                <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
+              </template>
+              <template v-if="row.markReason === MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT">
+                <strong>{{ markReasonTopicMap[row.markReason] }}</strong>
+                <pre class="m-0 of-auto">{{ formatMarkReason(row) }}</pre>
+              </template>
             </template>
           </ElTableColumn>
           <ElTableColumn prop="experienceName" label="工作经验" />
@@ -209,7 +217,9 @@ const markReasonTopicMap = {
   [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃',
   [MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON]: '手动标记不合适',
   [MarkAsNotSuitReason.JOB_NOT_SUIT]: '职位不合适',
-  [MarkAsNotSuitReason.JOB_CITY_NOT_SUIT]: '工作地不合适'
+  [MarkAsNotSuitReason.JOB_CITY_NOT_SUIT]: '工作地不合适',
+  [MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT]: '工作经验不合适',
+  [MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT]: '薪资不合适'
 }
 
 function formatMarkReason(row: VMarkAsNotSuitLog) {
@@ -241,6 +251,7 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
         .filter(Boolean)
         .join('\n')
     }
+    case MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT:
     case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
       const extInfo = (() => {
         try {
@@ -250,6 +261,21 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
         }
       })()
       return [extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`]
+        .filter(Boolean)
+        .join('\n')
+    }
+    case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
+      const extInfo = (() => {
+        try {
+          return JSON.parse(row.extInfo)
+        } catch {
+          return null
+        }
+      })()
+      return [
+        extInfo?.salaryDesc && `薪资：${extInfo.salaryDesc}`,
+        extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`
+      ]
         .filter(Boolean)
         .join('\n')
     }
