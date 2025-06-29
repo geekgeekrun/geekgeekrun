@@ -16,7 +16,7 @@ import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } fr
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay, JobDetailRegExpMatchLogic } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import { activeDescList } from './constant.mjs'
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
 const jobFilterConditionsMapByCode = {}
@@ -99,6 +99,8 @@ const expectWorkExpList = readConfigFile('boss.json').expectWorkExpList ?? []
 const expectWorkExpNotMatchStrategy = readConfigFile('boss.json').expectWorkExpNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const strategyScopeOptionWhenMarkJobWorkExpNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobWorkExpNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
+let jobDetailRegExpMatchLogic = readConfigFile('boss.json').jobDetailRegExpMatchLogic ?? JobDetailRegExpMatchLogic.EVERY
+
 const markAsNotActiveSelectedTimeRange = (() => {
   let n = readConfigFile('boss.json').markAsNotActiveSelectedTimeRange
   if (
@@ -130,6 +132,16 @@ if (
   expectJobNameRegExpStr = expectJobRegExpStr
   expectJobTypeRegExpStr = expectJobRegExpStr
   expectJobDescRegExpStr = expectJobRegExpStr
+}
+
+if (
+  [
+    expectJobNameRegExpStr,
+    expectJobTypeRegExpStr,
+    expectJobDescRegExpStr,
+  ].map(it => Boolean(it?.trim())).every(it => !it)
+) {
+  jobDetailRegExpMatchLogic = JobDetailRegExpMatchLogic.EVERY
 }
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
@@ -262,8 +274,8 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
   return result
 }
 
-export function testIfJobTitleOrDescriptionSuit (jobInfo) {
-  let isJobNameSuit = true
+export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
+  let isJobNameSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobNameRegExpStr.trim()) {
       const regExp = new RegExp(expectJobNameRegExpStr, 'i')
@@ -271,7 +283,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo) {
     }
   } catch {
   }
-  let isJobTypeSuit = true
+  let isJobTypeSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobTypeRegExpStr.trim()) {
       const regExp = new RegExp(expectJobTypeRegExpStr, 'i')
@@ -279,7 +291,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo) {
     }
   } catch {
   }
-  let isJobDescSuit = true
+  let isJobDescSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobDescRegExpStr.trim()) {
       const regExp = new RegExp(expectJobDescRegExpStr, 'i')
@@ -287,7 +299,12 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo) {
     }
   } catch {
   }
-  return isJobNameSuit && isJobTypeSuit && isJobDescSuit
+  if (matchLogic === JobDetailRegExpMatchLogic.SOME) {
+    return isJobNameSuit || isJobTypeSuit || isJobDescSuit
+  }
+  else {
+    return isJobNameSuit && isJobTypeSuit && isJobDescSuit
+  }
 }
 
 async function setFilterCondition (selectedFilters) {
@@ -938,7 +955,7 @@ async function toRecommendPage (hooks) {
                     notSuitReasonIdToStrategyMap.workExp = expectWorkExpNotMatchStrategy
                   }
                   if (
-                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo)
+                    !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo, jobDetailRegExpMatchLogic)
                   ) {
                     notSuitReasonIdToStrategyMap.jobDetail = jobNotMatchStrategy
                   }
