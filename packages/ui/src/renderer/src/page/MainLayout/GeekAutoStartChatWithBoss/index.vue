@@ -549,7 +549,7 @@
             >
               <div flex-1>
                 <el-form-item mb0 prop="expectJobNameRegExpStr">
-                  <div font-size-12px>职位类型/正则/描述 正则匹配筛选逻辑</div>
+                  <div font-size-12px>职位名称/类型/描述 正则匹配筛选逻辑</div>
                   <el-select
                     v-model="formContent.jobDetailRegExpMatchLogic"
                     @change="(value) => gtagRenderer('job_detail_re_ml_change', { value })"
@@ -588,39 +588,53 @@
                     @show="gtagRenderer('tooltip_show_about_how_to_fill_df')"
                   >
                     <template #content>
-                      <div w-600px>
-                        <p style="margin-top: 4px; margin-bottom: 4px">
-                          目前版本中，职位名称正则、职位类型正则、职位描述正则三个筛选条件，为“且”的关系。<br />
-                          也就是说，职位信息中只要任一不能匹配到，即这个职位会被标记不合适。<br />
-                          你可以留空某个输入框，这表示任何职位一定匹配这个条件。<br />
-                          如果三个输入框均留空，表示列表中出现的任意职位同时匹配这三个条件（即不根据职位类型/正则/描述进行筛选）。
-                        </p>
+                      <div w-800px>
+                        <div style="margin-top: 4px; margin-bottom: 4px">
+                          上方“职位名称/类型/描述
+                          正则匹配筛选逻辑”配置，你可以自行决定如下三个正则“所有正则匹配时才认为职位匹配”还是“任一正则匹配时即认为职位匹配”。
+                        </div>
+                        <ul m0>
+                          <li>
+                            当选择“所有正则匹配时才认为职位匹配”规则时，如果你留空某个输入框，表示任何职位一定匹配这个条件。
+                          </li>
+                          <li>
+                            当选择“任一正则匹配时即认为职位匹配”规则时，如果你留空某个输入框，表示任何职位一定不匹配这个条件。
+                          </li>
+                        </ul>
+                        <b>请注意</b>，如果<span color-orange>三个输入框均留空</span
+                        >，无论上方“职位名称/类型/描述 正则匹配筛选逻辑”配置是什么，都表示<span
+                          color-orange
+                          >列表中出现的任意职位都将认为同时匹配这三个条件（即不根据职位名称/类型/描述进行筛选）</span
+                        >。<br />
                         因此，可以按照如下场景填写你对于期望职位的筛选条件：
                         <ul style="margin-top: 4px; margin-bottom: 4px">
                           <li>
-                            如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。<br />
-                            这可以确保求职方向基本正确。
+                            如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。这可以确保求职方向基本正确。
                           </li>
                           <li>
                             如果你着重关注职位描述，请填写“职位描述正则”，其余两个输入框酌情填写。
                           </li>
-                          <li>如果你想开聊列表里的推荐的任意职位，不根据职位类型/正则/描述进行筛选，请清空这三个输入框。</li>
+                          <li>
+                            如果你想开聊列表里的推荐的任意职位，不根据职位名称/类型/描述进行筛选，请清空这三个输入框。
+                          </li>
                         </ul>
                         <div>
-                          你可以在左侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
+                          你可以在右侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
                         </div>
                         <div>
                           <b>“职位类型正则”填写过程中请注意</b
-                          >，“职位类型”是由Boss直聘预定义好的一系列职位分类，<br />
-                          因此<b>请按照这个分类编写正则来进行填写</b>。这个分类可以在此找到：<br />
+                          >，“职位类型”是由Boss直聘预定义好的一系列职位分类，因此<b>请按照这个分类来编写正则</b>。<br />
+                          这个分类可以在此找到：<br />
                           <img w-400px src="../resources/job-type-source-entry.png" />
                         </div>
-                        <a
-                          href="javascript:;"
-                          style="color: var(--el-color-primary)"
-                          @click.prevent="handleHowToFillDetailFilterClick"
-                          >请参阅这个链接</a
-                        >
+                        <div>
+                          关于误伤/误投的排查，<a
+                            href="javascript:;"
+                            style="color: var(--el-color-primary)"
+                            @click.prevent="handleHowToFillDetailFilterClick"
+                            >请参阅这个链接</a
+                          >
+                        </div>
                       </div>
                     </template>
                     <el-button
@@ -634,7 +648,7 @@
                         top: '6px'
                       }"
                       ><span><QuestionFilled w-1em h-1em mr2px /></span
-                      >怎样填写下面的三个输入框？它们工作机制是怎样的？</el-button
+                      >如下三个输入框工作机制是怎样的？怎样填写？误伤/误投如何排查？</el-button
                     >
                   </el-tooltip>
                   <div></div>
@@ -1144,7 +1158,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '',
       expectJobTypeRegExpStr: '',
-      expectJobDescRegExpStr: ''
+      expectJobDescRegExpStr: '',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1152,7 +1167,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '前端|H5|FE',
       expectJobTypeRegExpStr: '前端开发|javascript',
-      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5'
+      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1160,7 +1176,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '\\bJava\\b',
       expectJobTypeRegExpStr: '\\bJava\\b',
-      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo'
+      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1168,7 +1185,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '员工关系|劳动关系|SSC|人力资源|人资',
       expectJobTypeRegExpStr: '员工关系|人力资源',
-      expectJobDescRegExpStr: '社保|考勤|入职|离职'
+      expectJobDescRegExpStr: '社保|考勤|入职|离职',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1176,7 +1194,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '招聘|招聘HR|招聘专员|招聘顾问|招聘专家|Recruiter|人力资源|人资',
       expectJobTypeRegExpStr: '招聘|人力资源|猎头顾问',
-      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头'
+      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   }
 ]
