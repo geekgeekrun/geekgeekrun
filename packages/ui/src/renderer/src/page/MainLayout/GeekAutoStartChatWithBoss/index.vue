@@ -17,6 +17,50 @@
             </div>
           </el-form-item>
         </el-card>
+        <el-card class="config-section">
+          <el-form-item prop="filter">
+            <div font-size-16px>
+              职位备选筛选条件
+              <el-tooltip
+                effect="light"
+                placement="bottom-start"
+                @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
+              >
+                <template #content>
+                  <ul m0 line-height-1.5em w-400px pl2em>
+                    <li>当前求职期望无合适职位时，自动更改Boss直聘页面上的筛选条件，查找新工作</li>
+                  </ul>
+                </template>
+                <el-button type="text" font-size-12px
+                  ><span><QuestionFilled w-1em h-1em mr2px /></span
+                  >这个配置是如何工作的？</el-button
+                >
+              </el-tooltip>
+            </div>
+            <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
+          </el-form-item>
+          <el-form-item prop="filter" mb0>
+            <el-checkbox
+              v-if="anyCombineBossRecommendFilterHasCondition"
+              v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
+            >
+              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
+            </el-checkbox>
+            <el-checkbox v-else :model-value="false" disabled>
+              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
+            </el-checkbox>
+          </el-form-item>
+          <div font-size-12px mt10px>
+            当前组合条件数：{{
+              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
+            }}
+            <span
+              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
+              class="color-orange"
+              >不建议选择太多组合条件</span
+            >
+          </div>
+        </el-card>
         <!-- <el-form-item
           label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
           prop="dingtalkRobotAccessToken"
@@ -788,50 +832,6 @@
                 </el-select>
               </el-form-item>
             </div>
-          </div>
-        </el-card>
-        <el-card class="config-section">
-          <el-form-item prop="filter">
-            <div font-size-16px>
-              职位备选筛选条件
-              <el-tooltip
-                effect="light"
-                placement="bottom-start"
-                @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
-              >
-                <template #content>
-                  <ul m0 line-height-1.5em w-400px pl2em>
-                    <li>当前求职期望无合适职位时，自动更改Boss直聘页面上的筛选条件，查找新工作</li>
-                  </ul>
-                </template>
-                <el-button type="text" font-size-12px
-                  ><span><QuestionFilled w-1em h-1em mr2px /></span
-                  >这个配置是如何工作的？</el-button
-                >
-              </el-tooltip>
-            </div>
-            <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
-          </el-form-item>
-          <el-form-item prop="filter" mb0>
-            <el-checkbox
-              v-if="anyCombineBossRecommendFilterHasCondition"
-              v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
-            >
-              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
-            </el-checkbox>
-            <el-checkbox v-else :model-value="false" disabled>
-              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
-            </el-checkbox>
-          </el-form-item>
-          <div font-size-12px mt10px>
-            当前组合条件数：{{
-              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
-            }}
-            <span
-              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
-              class="color-orange"
-              >不建议选择太多组合条件</span
-            >
           </div>
         </el-card>
       </el-form>
