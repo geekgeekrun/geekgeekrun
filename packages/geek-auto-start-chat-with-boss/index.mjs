@@ -12,7 +12,11 @@ import { EventEmitter } from 'node:events'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
 
 import { readConfigFile, writeStorageFile, ensureConfigFileExist, readStorageFile, ensureStorageFileExist } from './runtime-file-utils.mjs'
-import { calculateTotalCombinations, combineFiltersWithConstraintsGenerator } from './combineCalculator.mjs'
+import {
+  calculateTotalCombinations,
+  combineFiltersWithConstraintsGenerator,
+  checkAnyCombineBossRecommendFilterHasCondition
+} from './combineCalculator.mjs'
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
@@ -78,6 +82,10 @@ const bossLocalStorage = readStorageFile('boss-local-storage.json')
 const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
+let isSkipEmptyConditionForCombineRecommendJobFilter = readConfigFile('boss.json').isSkipEmptyConditionForCombineRecommendJobFilter
+if (!checkAnyCombineBossRecommendFilterHasCondition(anyCombineRecommendJobFilter)) {
+  isSkipEmptyConditionForCombineRecommendJobFilter = false
+}
 const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
 const jobNotMatchStrategy = readConfigFile('boss.json').jobNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 
@@ -495,14 +503,25 @@ async function toRecommendPage (hooks) {
         await sleepWithRandomDelay(2500)
 
         await Promise.all([
-          page.waitForSelector('.c-expect-select .expect-list .expect-item'),
-          page.waitForSelector('.job-list-container .rec-job-list')
+          page.waitForSelector('.c-expect-select .expect-list .expect-item'),          
+          Promise.race([
+            page.waitForSelector(".job-list-container .rec-job-list"),
+            page.waitForSelector(".recommend-result-job .job-empty-wrapper")
+          ])
         ])
         await page.click(`.c-expect-select .expect-list .expect-item`)
         const currentActiveJobIndex = await page.evaluate(`
           [...document.querySelectorAll('.c-expect-select .expect-list .expect-item')].findIndex(it => it.classList.contains('active'))
         `)
 
+        if (
+          isSkipEmptyConditionForCombineRecommendJobFilter &&
+          Object.keys(filterCondition).length &&
+          Object.keys(filterCondition).every(k => !filterCondition[k]?.length)
+        ) {
+          sleep(4000)
+          continue iterateFilterCondition
+        }
         expectJobList = await page.evaluate(`document.querySelector('.c-expect-select')?.__vue__?.expectList`)
         if (currentActiveJobIndex === currentExceptJobIndex) {
           // first navigation and can immediately start chat (recommend job)
@@ -524,9 +543,12 @@ async function toRecommendPage (hooks) {
           await storeStorage(page).catch(() => void 0)
           await sleepWithRandomDelay(2000)
         }
-        await sleepWithRandomDelay(3000)
+        await sleepWithRandomDelay(1500)
         await setFilterCondition(filterCondition)
-
+        await sleep(1500) // TODO: accurately check if job list request sent and response received after set condition
+        await page.waitForFunction(() => {
+          return !document.querySelector('.job-recommend-result .job-rec-loading')
+        })
         try {
           const { targetJobIndex, targetJobData } = await new Promise(async (resolve, reject) => {
             try {
@@ -557,9 +579,17 @@ async function toRecommendPage (hooks) {
                   }
                 }
               )
-
               // job list
-              const recommendJobListElProxy = await page.$('.job-list-container .rec-job-list')
+              let  recommendJobListElProxy
+              try {
+                recommendJobListElProxy= await page.waitForSelector('.job-list-container .rec-job-list', { timeout: 5 * 1000 })
+              } catch {}
+              if (!recommendJobListElProxy){
+                await hooks.encounterEmptyRecommendJobList?.promise({
+                  pageQuery: await page.evaluate(() => new URL(location.href).searchParams.toString())
+                })
+                throw new Error('CANNOT_FIND_EXCEPT_JOB_IN_THIS_FILTER_CONDITION')
+              }
               let jobListData = []
               async function updateJobListData () {
                 jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)

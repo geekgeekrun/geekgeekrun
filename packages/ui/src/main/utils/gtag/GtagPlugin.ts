@@ -23,5 +23,8 @@ export default class GtagPlugin {
     hooks.noPositionFoundAfterTraverseAllJob.tap('GtagPlugin', () => {
       gtag('no_position_found_after_traverse_all_job')
     })
+    hooks.encounterEmptyRecommendJobList.tap('GtagPlugin', ({ pageQuery }) => {
+      gtag('encounter_empty_rec_job_list', { pageQuery })
+    })
   }
 }

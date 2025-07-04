@@ -791,7 +791,7 @@
           </div>
         </el-card>
         <el-card class="config-section">
-          <el-form-item prop="filter" mb0>
+          <el-form-item prop="filter">
             <div font-size-16px>
               职位备选筛选条件
               <el-tooltip
@@ -811,17 +811,28 @@
               </el-tooltip>
             </div>
             <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
-            <div font-size-12px>
-              当前组合条件数：{{
-                currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
-              }}
-              <span
-                v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
-                class="color-orange"
-                >不建议选择太多组合条件</span
-              >
-            </div>
           </el-form-item>
+          <el-form-item prop="filter" mb0>
+            <el-checkbox
+              v-if="anyCombineBossRecommendFilterHasCondition"
+              v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
+            >
+              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
+            </el-checkbox>
+            <el-checkbox v-else :model-value="false" disabled>
+              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
+            </el-checkbox>
+          </el-form-item>
+          <div font-size-12px mt10px>
+            当前组合条件数：{{
+              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
+            }}
+            <span
+              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
+              class="color-orange"
+              >不建议选择太多组合条件</span
+            >
+          </div>
         </el-card>
       </el-form>
     </div>
@@ -850,7 +861,10 @@ import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
-import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
+import {
+  calculateTotalCombinations,
+  checkAnyCombineBossRecommendFilterHasCondition
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
@@ -894,11 +908,24 @@ const formContent = ref({
   expectWorkExpNotMatchStrategy: MarkAsNotSuitOp.NO_OP,
   strategyScopeOptionWhenMarkJobWorkExpNotMatch:
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB,
-  jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY
+  jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY,
+
+  isSkipEmptyConditionForCombineRecommendJobFilter: false
+})
+
+const anyCombineBossRecommendFilterHasCondition = computed(() => {
+  return checkAnyCombineBossRecommendFilterHasCondition(
+    formContent.value.anyCombineRecommendJobFilter
+  )
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
-  return calculateTotalCombinations(formContent.value.anyCombineRecommendJobFilter)
+  return calculateTotalCombinations(
+    formContent.value.anyCombineRecommendJobFilter,
+    anyCombineBossRecommendFilterHasCondition.value
+      ? !formContent.value.isSkipEmptyConditionForCombineRecommendJobFilter
+      : true
+  )
 })
 
 const unwatchAnyCombineRecommendJobFilter = ref<null | (() => void)>(null)
@@ -996,6 +1023,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
   formContent.value.jobDetailRegExpMatchLogic =
     res.config['boss.json'].jobDetailRegExpMatchLogic ?? JobDetailRegExpMatchLogic.EVERY
+  formContent.value.isSkipEmptyConditionForCombineRecommendJobFilter =
+    res.config['boss.json'].isSkipEmptyConditionForCombineRecommendJobFilter ?? false
 })
 
 const formRules = {

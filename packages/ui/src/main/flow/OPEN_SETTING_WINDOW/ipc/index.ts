@@ -152,6 +152,10 @@ export default function initIpc() {
     if (hasOwn(payload, 'jobDetailRegExpMatchLogic')) {
       bossConfig.jobDetailRegExpMatchLogic = payload.jobDetailRegExpMatchLogic
     }
+    if (hasOwn(payload, 'isSkipEmptyConditionForCombineRecommendJobFilter')) {
+      bossConfig.isSkipEmptyConditionForCombineRecommendJobFilter =
+        payload.isSkipEmptyConditionForCombineRecommendJobFilter
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 

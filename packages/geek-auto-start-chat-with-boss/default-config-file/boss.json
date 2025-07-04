@@ -6,6 +6,7 @@
     "scaleList": [],
     "industryList": []
   },
+  "isSkipEmptyConditionForCombineRecommendJobFilter": false,
   "expectJobRegExpStr": "",
   "jobNotMatchStrategy": 1,
   "jobNotActiveStrategy": 1,

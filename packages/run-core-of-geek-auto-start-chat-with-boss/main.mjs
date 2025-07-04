@@ -56,7 +56,8 @@ const main = async () => {
     newChatStartup: new AsyncSeriesHook(['positionInfoDetail', 'chatRunningContext']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
-    errorEncounter: new SyncHook(['errorInfo'])
+    errorEncounter: new SyncHook(['errorInfo']),
+    encounterEmptyRecommendJobList: new AsyncSeriesHook(['args'])
   }
   initPlugins(hooks)
   await hooks.daemonInitialized.callAsync()

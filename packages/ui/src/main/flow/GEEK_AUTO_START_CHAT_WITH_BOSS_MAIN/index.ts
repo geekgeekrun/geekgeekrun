@@ -93,7 +93,8 @@ const runAutoChat = async () => {
     jobMarkedAsNotSuit: new AsyncSeriesHook(['positionInfoDetail', 'markDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
-    errorEncounter: new SyncHook(['errorInfo'])
+    errorEncounter: new SyncHook(['errorInfo']),
+    encounterEmptyRecommendJobList: new AsyncSeriesHook(['args'])
   }
   initPlugins(hooks)
 
