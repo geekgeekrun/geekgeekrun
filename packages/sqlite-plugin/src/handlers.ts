@@ -333,9 +333,33 @@ export async function getNotSuitMarkRecordsInLastSomeDays (ds: DataSource, days 
   const result = await repo.findBy({
     date: Raw(alias => `DATE(${alias}) >= DATE('${
       new Date(
-        Number(new Date()) - 7 * 24 * 60 * 60 * 1000
+        Number(new Date()) - days * 24 * 60 * 60 * 1000
       ).toISOString()
     }')`)
+  })
+  return result
+}
+
+export async function getChatStartupRecordsInLastSomeDays (ds: DataSource, days = 0) {
+  const repo = ds.getRepository(ChatStartupLog)
+  const result = await repo.findBy({
+    date: Raw(alias => `DATE(${alias}) >= DATE('${
+      new Date(
+        Number(new Date()) - days * 24 * 60 * 60 * 1000
+      ).toISOString()
+    }')`)
+  })
+  return result
+}
+
+export async function getBossIdsByJobIds (ds: DataSource, jobIds: string[] = []) {
+  const repo = ds.getRepository(JobInfo)
+  const result = await repo.find({
+    where: jobIds.map(
+      id => ({
+        encryptJobId: id
+      })
+    )
   })
   return result
 }

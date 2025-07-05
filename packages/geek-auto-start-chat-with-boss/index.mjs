@@ -1288,6 +1288,7 @@ export async function mainLoop (hooks) {
       expectCityNotMatchStrategy,
       blockJobNotSuit,
       blockBossNotActive,
+      blockBossNotNewChat
     })
     await toRecommendPage(hooks)
     // goto search

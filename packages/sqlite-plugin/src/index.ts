@@ -23,7 +23,14 @@ import { ChatMessageRecord } from './entity/ChatMessageRecord'
 import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
 
 import sqlite3 from 'sqlite3';
-import { saveChatStartupRecord, saveJobInfoFromRecommendPage, saveMarkAsNotSuitRecord, getNotSuitMarkRecordsInLastSomeDays } from "./handlers";
+import {
+  saveChatStartupRecord,
+  saveJobInfoFromRecommendPage,
+  saveMarkAsNotSuitRecord,
+  getNotSuitMarkRecordsInLastSomeDays,
+  getChatStartupRecordsInLastSomeDays,
+  getBossIdsByJobIds
+} from "./handlers";
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
@@ -111,6 +118,7 @@ export default class SqlitePlugin {
         expectCityNotMatchStrategy,
         blockJobNotSuit,
         blockBossNotActive,
+        blockBossNotNewChat
       }) => {
         if (
           jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
@@ -118,7 +126,7 @@ export default class SqlitePlugin {
           expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
         ) {
           const ds = await this.initPromise;
-          const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7) ?? []);
+          const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7)) ?? [];
           if (
             jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
             jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
@@ -162,6 +170,12 @@ export default class SqlitePlugin {
               .forEach(
                 id => blockJobNotSuit.add(id)
               )
+          }
+          const last30DayChatStartupRecords = (await getChatStartupRecordsInLastSomeDays(ds, 30)) ?? [];
+          const chattedJobIds = last30DayChatStartupRecords.map(it => it.encryptJobId)
+          const chattedBossIds = ((await getBossIdsByJobIds(ds, chattedJobIds)) ?? []).map(it => it.encryptBossId)
+          for (const id of chattedBossIds) {
+            blockBossNotNewChat.add(id)
           }
         }
       }
