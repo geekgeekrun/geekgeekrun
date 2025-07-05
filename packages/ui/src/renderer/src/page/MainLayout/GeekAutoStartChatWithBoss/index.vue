@@ -20,15 +20,21 @@
         <el-card class="config-section">
           <el-form-item prop="filter">
             <div font-size-16px>
-              职位备选筛选条件
+              职位筛选条件
               <el-tooltip
                 effect="light"
                 placement="bottom-start"
                 @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
               >
                 <template #content>
-                  <ul m0 line-height-1.5em w-400px pl2em>
-                    <li>当前求职期望无合适职位时，自动更改Boss直聘页面上的筛选条件，查找新工作</li>
+                  <ul m0 line-height-1.5em w-540px pl2em>
+                    <li>
+                      这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
+                      <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
+                    </li>
+                    <li color-orange>
+                      建议不要筛选过多条件，否则最终组合数会成为一个很大的数字。这将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率
+                    </li>
                   </ul>
                 </template>
                 <el-button type="text" font-size-12px
@@ -55,9 +61,10 @@
               currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
             }}
             <span
-              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
+              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 5"
               class="color-orange"
-              >不建议选择太多组合条件</span
+              >不建议选择太多组合条件 -
+              否则将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率</span
             >
           </div>
         </el-card>
