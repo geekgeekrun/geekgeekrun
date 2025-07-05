@@ -443,6 +443,23 @@ async function setFilterCondition (selectedFilters) {
   }
 }
 
+const jobSource = [
+  {
+    name: 'recommendJob'
+  },
+  {
+    name: 'userSetExpectJob'
+  },
+  {
+    name: 'searchJob',
+    keyword: 'HRBP'
+  },
+  {
+    name: 'searchJob',
+    keyword: '招聘'
+  }
+]
+
 async function toRecommendPage (hooks) {
   let userInfoPromise = page.waitForResponse((response) => {
       if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
@@ -490,8 +507,98 @@ async function toRecommendPage (hooks) {
     }
   }
 
-  const INIT_START_EXCEPT_JOB_INDEX = 0
-  let currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
+  const RECOMMEND_JOB_ENTRY_SELECTOR = `.c-expect-select a[ka="jobs_recommend_tab_click"]`
+  const USER_SET_EXPECT_JOB_ENTRIES_SELECTOR = `.c-expect-select .expect-list .expect-item`
+  const SEARCH_BOX_SELECTOR = `.c-search-input .search-input-box`
+
+  const computedSourceList = []
+  for (const source of jobSource) {
+    switch (source.name) {
+      case 'recommendJob': {
+        computedSourceList.push({
+          sourceName: source.name,
+          selector: RECOMMEND_JOB_ENTRY_SELECTOR,
+          async getIsCurrentActiveSource () {
+            return await page.evaluate(
+              ({ RECOMMEND_JOB_ENTRY_SELECTOR }) => {
+                return document.querySelector(RECOMMEND_JOB_ENTRY_SELECTOR).classList.contains('active')
+              }, {
+                RECOMMEND_JOB_ENTRY_SELECTOR
+              }
+            )
+          },
+          async setToActiveSource() {
+            // not first navigation and should choose a job (except job)
+            // click first expect job
+            const expectJobTabHandler = await page.$(RECOMMEND_JOB_ENTRY_SELECTOR)
+            await expectJobTabHandler.click() // switch to first condition
+          }
+        })
+        continue
+      }
+      case 'userSetExpectJob': {
+        await page.waitForSelector(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR)
+        const allExpectJobEntryHandles = await page.$$(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR)
+        allExpectJobEntryHandles.forEach((it, index) => {
+          computedSourceList.push({
+            sourceName: source.name,
+            selector: `${USER_SET_EXPECT_JOB_ENTRIES_SELECTOR}:nth-child(${index + 1})`,
+            async getIsCurrentActiveSource () {
+              return await page.evaluate(
+                ({
+                  USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
+                  index
+                }) => {
+                  return document.querySelector(`${USER_SET_EXPECT_JOB_ENTRIES_SELECTOR}:nth-child(${index + 1})`).classList.contains('active')
+                }, {
+                  USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
+                  index
+                }
+              )
+            },
+            async setToActiveSource() {
+              // not first navigation and should choose a job (except job)
+              // click first expect job
+              const expectJobTabHandler = await page.$(`${USER_SET_EXPECT_JOB_ENTRIES_SELECTOR}:nth-child(${index + 1})`)
+              await expectJobTabHandler.click() // switch to first condition
+            }
+          })
+        })
+        break
+      }
+      case 'searchJob': {
+        computedSourceList.push({
+          sourceName: source.name,
+          async getIsCurrentActiveSource () {
+            const elHandle = await page.$(`.page-jobs-main`)
+            const currentKeyWord = await elHandle?.evaluate((el) => {
+              return el?.__vue__?.formData?.query
+            })
+            if (!currentKeyWord) {
+              return false
+            }
+            return currentKeyWord === source.keyword
+          },
+          async setToActiveSource() {
+            await page.waitForSelector(SEARCH_BOX_SELECTOR)
+            const inputHandle = await page.$(`${SEARCH_BOX_SELECTOR} input`)
+            await inputHandle.focus()
+            await sleep(100)
+            let currentValue = await inputHandle.evaluate(el => el.value)
+            while (currentValue) {
+              await inputHandle.press('Backspace')
+              currentValue = await inputHandle.evaluate(el => el.value)
+            }
+            await inputHandle.type(source.keyword?.trim() || '', { delay: 100 })
+            await sleep(500)
+            await inputHandle.press('Enter')
+          }
+        })
+      }
+    }
+  }
+
+  let currentSourceIndex = 0
   afterPageLoad: while (true) {
     let expectJobList
     iterateFilterCondition: for (
@@ -503,16 +610,25 @@ async function toRecommendPage (hooks) {
         await sleepWithRandomDelay(2500)
 
         await Promise.all([
-          page.waitForSelector('.c-expect-select .expect-list .expect-item'),          
+          Promise.race([
+            page.waitForSelector(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR),
+            page.waitForSelector(RECOMMEND_JOB_ENTRY_SELECTOR),
+          ]),
           Promise.race([
             page.waitForSelector(".job-list-container .rec-job-list"),
             page.waitForSelector(".recommend-result-job .job-empty-wrapper")
           ])
         ])
-        await page.click(`.c-expect-select .expect-list .expect-item`)
-        const currentActiveJobIndex = await page.evaluate(`
-          [...document.querySelectorAll('.c-expect-select .expect-list .expect-item')].findIndex(it => it.classList.contains('active'))
-        `)
+        // await page.click(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR)
+        await sleep(3000)
+        let onPageCurrentSourceIndex = -1
+        for (let i=0; i < computedSourceList.length; i++) {
+          const computedSource = computedSourceList[i]
+          if (await computedSource.getIsCurrentActiveSource()) {
+            onPageCurrentSourceIndex = i
+            break
+          }
+        }
 
         if (
           isSkipEmptyConditionForCombineRecommendJobFilter &&
@@ -523,17 +639,15 @@ async function toRecommendPage (hooks) {
           continue iterateFilterCondition
         }
         expectJobList = await page.evaluate(`document.querySelector('.c-expect-select')?.__vue__?.expectList`)
-        if (currentActiveJobIndex === currentExceptJobIndex) {
+        if (onPageCurrentSourceIndex === currentSourceIndex) {
           // first navigation and can immediately start chat (recommend job)
         } else {
-          // not first navigation and should choose a job (except job)
-          // click first expect job
-          const expectJobTabHandlers = await page.$$('.c-expect-select .expect-list .expect-item')
-          await expectJobTabHandlers[currentExceptJobIndex].click()
+          await computedSourceList[currentSourceIndex].setToActiveSource()
           await page.waitForResponse(
             response => {
               if (
-                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json')
+                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json') ||
+                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/search/joblist.json')
               ) {
                 return true
               }
@@ -556,7 +670,10 @@ async function toRecommendPage (hooks) {
               page.on(
                 'request',
                 function reqHandler (request) {
-                  if (request.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json')) {
+                  if (
+                    request.url().startsWith('https://www.zhipin.com/wapi/zpgeek/pc/recommend/job/list.json') ||
+                    request.url().startsWith('https://www.zhipin.com/wapi/zpgeek/search/joblist.json')
+                  ) {
                     requestNextPagePromiseWithResolver = (() => {
                       const o = {}
                       o.promise = new Promise((resolve, reject) => {
@@ -1125,20 +1242,20 @@ async function toRecommendPage (hooks) {
     }
     // for of reach terminal
     if (
-      currentExceptJobIndex + 1 >= expectJobList.length
+      currentSourceIndex + 1 >= computedSourceList.length
     ) {
       hooks.noPositionFoundForCurrentJob?.call()
       hooks.noPositionFoundAfterTraverseAllJob?.call()
       await sleep((20 + 30 * Math.random()) * 1000)
       await Promise.all([
-        page.reload(),
+        page.goto(`https://www.zhipin.com/web/geek/jobs`),
         page.waitForNavigation()
       ])
-      currentExceptJobIndex = INIT_START_EXCEPT_JOB_INDEX
+      currentSourceIndex = 0
     } else {
       hooks.noPositionFoundForCurrentJob?.call()
       await sleep((10 + 15 * Math.random()) * 1000)
-      currentExceptJobIndex += 1
+      currentSourceIndex += 1
     }
   }
 }
