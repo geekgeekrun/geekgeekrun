@@ -119,7 +119,10 @@ export default class SqlitePlugin {
         ) {
           const ds = await this.initPromise;
           const last7DayMarkRecords = (await getNotSuitMarkRecordsInLastSomeDays(ds, 7) ?? []);
-          if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+          if (
+            jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
+            jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+          ) {
             last7DayMarkRecords
               .filter(it =>
                 [
@@ -134,7 +137,10 @@ export default class SqlitePlugin {
                 id => blockJobNotSuit.add(id)
               )
           }
-          if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+          if (
+            jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
+            jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+          ) {
             last7DayMarkRecords
               .filter(it => it.markReason === MarkAsNotSuitReason.BOSS_INACTIVE)
               .map(
@@ -144,7 +150,10 @@ export default class SqlitePlugin {
                 id => blockJobNotSuit.add(id)
               )
           }
-          if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL) {
+          if (
+            expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL ||
+            expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+          ) {
             last7DayMarkRecords
               .filter(it => it.markReason === MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
               .map(
