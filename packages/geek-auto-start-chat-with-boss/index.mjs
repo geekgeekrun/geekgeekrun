@@ -1124,7 +1124,7 @@ async function toRecommendPage (hooks) {
                   // 2. if there is no condition to mark Boss, then find the one mark on local db
                   const markOnLocalDbCondition = Object.keys(notSuitReasonIdToStrategyMap).find(k => notSuitReasonIdToStrategyMap[k] === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL)
                   if (markOnLocalDbCondition) {
-                    await notSuitConditionHandleMap[markOnBossCondition]()
+                    await notSuitConditionHandleMap[markOnLocalDbCondition]()
                     continue continueFind
                   }
                   // #endregion
