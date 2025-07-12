@@ -70,25 +70,7 @@
             <div v-if="element.type === 'search'">
               <div flex flex-items-center>
                 <span color-orange align-self-end mr10px>
-                  <template v-if="!element?.children?.length">
-                    添加一个关键词后方可启用-&gt;
-                  </template>
-                  <template
-                    v-else-if="
-                      element.enabled &&
-                      element?.children?.every((it) => !(it.enabled && !!it.keyword?.trim()))
-                    "
-                  >
-                    启用下方任一非空项后方可启用
-                  </template>
-                  <template
-                    v-else-if="
-                      element.enabled &&
-                      element?.children?.some((it) => it.enabled && !it.keyword?.trim())
-                    "
-                  >
-                    空项会被跳过
-                  </template>
+                  {{ getSearchSourceTipText(element) }}
                 </span>
                 <el-button
                   p-0
@@ -148,7 +130,7 @@
                           () => {
                             if (!searchItem.keyword?.trim()) {
                               Message.info({
-                                message: '关键词为空，请输入要搜索的关键词',
+                                message: '该条关键词为空，请输入要搜索的关键词',
                                 grouping: true
                               })
                             } else if (!element.enabled) {
@@ -190,7 +172,7 @@
 import { computed, ref } from 'vue'
 import draggable from 'vuedraggable'
 import { ElMessage as Message } from 'element-plus'
-defineProps({
+const props = defineProps({
   modelValue: {
     type: Array
   }
@@ -222,6 +204,42 @@ function addSearchKeyword(item) {
 
 function removeSearchKeywordByIndex(item, index) {
   item.children?.splice(index, 1)
+}
+const searchKeywordCountMap = computed(() => {
+  const target = props.modelValue?.find((it) => it.type === 'search' && it.enabled)
+  if (!target || !target?.children?.length) {
+    return {}
+  }
+  const map = {}
+  target.children?.forEach((it) => {
+    if (!it.keyword) {
+      return
+    }
+    if (!map[it.keyword]) {
+      map[it.keyword] = 0
+    }
+    map[it.keyword]++
+  })
+
+  return map
+})
+
+const getSearchSourceTipText = (element) => {
+  if (!element?.children?.length) {
+    return `添加一个关键词后方可启用->`
+  }
+  const seg: string[] = []
+  if (element.enabled) {
+    if (element.children?.every((it) => !(it.enabled && !!it.keyword?.trim()))) {
+      seg.push(`启用下方任一非空项后方可启用`)
+    } else if (element.children?.some((it) => it.enabled && !it.keyword?.trim())) {
+      seg.push(`空项会被跳过`)
+    }
+    if (Object.values(searchKeywordCountMap.value).some((n) => n > 1)) {
+      seg.push(`重复项仅取第一个启用的项`)
+    }
+  }
+  return seg.join('；')
 }
 </script>
 
