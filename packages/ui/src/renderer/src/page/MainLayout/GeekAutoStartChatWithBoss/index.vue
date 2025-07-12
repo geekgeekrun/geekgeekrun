@@ -29,7 +29,7 @@
                     @show="gtagRenderer('tooltip_show_about_job_source_ui')"
                   >
                     <template #content>
-                      <div m0 line-height-1.5em w-fit-content >
+                      <div m0 line-height-1.5em w-fit-content>
                         <img block h-320px src="../resources/intro-of-job-source.png" />
                       </div>
                     </template>
@@ -750,7 +750,16 @@
                       "
                     />
                   </el-form-item>
-                  <div mb0px font-size-12px flex flex-justify-center fw-800>
+                  <div
+                    mb0px
+                    font-size-12px
+                    flex
+                    flex-justify-center
+                    fw-800
+                    flex-self-start
+                    position-relative
+                    style="top: 42px"
+                  >
                     {{ getJobDetailRegExpMatchLogicConfig().logicText }}
                   </div>
                   <el-form-item mb0 prop="expectJobTypeRegExpStr">
@@ -769,7 +778,16 @@
                       "
                     />
                   </el-form-item>
-                  <div mb0px font-size-12px flex flex-justify-center fw-800>
+                  <div
+                    mb0px
+                    font-size-12px
+                    flex
+                    flex-justify-center
+                    fw-800
+                    flex-self-start
+                    position-relative
+                    style="top: 42px"
+                  >
                     {{ getJobDetailRegExpMatchLogicConfig().logicText }}
                   </div>
                   <el-form-item mb0 prop="expectJobDescRegExpStr">
@@ -1626,12 +1644,6 @@ function formatJobSourceFormValueToConfig(formValue = []) {
     --el-slider-button-size: 18px;
   }
 }
-.job-detail-filter-wrap {
-  transition: 0.2s ease margin-bottom;
-  &:has(.el-form-item__error) {
-    margin-bottom: 40px;
-  }
-}
 </style>
 
 <style lang="scss">
@@ -1639,6 +1651,10 @@ function formatJobSourceFormValueToConfig(formValue = []) {
   .el-form-item__error.el-form-item__error {
     font-size: 12px;
     line-height: 1.2em;
+  }
+  .job-detail-filter-wrap .el-form-item__error {
+    position: static;
+    word-break: break-word;
   }
   .job-source-form-item {
     margin-bottom: 0;
