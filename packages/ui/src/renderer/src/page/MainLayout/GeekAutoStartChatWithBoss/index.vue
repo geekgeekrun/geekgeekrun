@@ -50,10 +50,10 @@
               v-if="anyCombineBossRecommendFilterHasCondition"
               v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
             >
-              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
+              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
             </el-checkbox>
             <el-checkbox v-else :model-value="false" disabled>
-              <span font-size-12px>跳过初始空条件，直接使用备选条件查找职位</span>
+              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
             </el-checkbox>
           </el-form-item>
           <div font-size-12px mt10px>
