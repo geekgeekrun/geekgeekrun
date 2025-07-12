@@ -155,18 +155,9 @@ if (
 let {
   jobSourceList
 } = readConfigFile('boss.json')
-
-if (!jobSourceList?.length) {
-  jobSourceList = [
-    {
-      type: "expect",
-      enabled: true
-    }
-  ]
-}
 const normalizedJobSource = []
 const addedSourceSet = new Set()
-for (const source of jobSourceList) {
+for (const source of (jobSourceList ?? [])) {
   if (addedSourceSet.has(source.type)) {
     continue
   }
@@ -199,6 +190,11 @@ for (const source of jobSourceList) {
     })
     addedSourceSet.add(source.type)
   }
+}
+if (!normalizedJobSource?.length) {
+  normalizedJobSource.push({
+    type: 'expect'
+  })
 }
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/jobs`
