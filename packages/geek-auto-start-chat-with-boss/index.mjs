@@ -1282,7 +1282,7 @@ export async function mainLoop (hooks) {
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
     await page.bringToFront()
-    await hooks.mainFlowWillLaunch?.callAsync({
+    await hooks.mainFlowWillLaunch?.promise({
       jobNotMatchStrategy,
       jobNotActiveStrategy,
       expectCityNotMatchStrategy,
