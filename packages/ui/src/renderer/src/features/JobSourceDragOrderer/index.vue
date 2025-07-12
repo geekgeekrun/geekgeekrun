@@ -24,10 +24,9 @@
             <div flex w-full flex-1>
               <template
                 v-if="
-                  element.item.type === 'search' &&
-                  (!element.item?.children?.length ||
-                    !element.item?.children?.some((it) => it.enabled) ||
-                    !element.item?.children?.some((it) => !!it.keyword?.trim()))
+                  element.type === 'search' &&
+                  (!element?.children?.length ||
+                    element?.children?.every((it) => !(it.enabled && !!it.keyword?.trim())))
                 "
               >
                 <el-switch
@@ -37,12 +36,29 @@
                   active-text="启用"
                   inactive-text="禁用"
                   inline-prompt
+                  @click="
+                    () => {
+                      if (!element?.children?.length) {
+                        Message.info({
+                          message: '请添加一个要搜索的关键词',
+                          grouping: true
+                        })
+                      } else if (
+                        element?.children?.every((it) => !(it.enabled && !!it.keyword?.trim()))
+                      ) {
+                        Message.info({
+                          message: '请启用一个要搜索的关键词',
+                          grouping: true
+                        })
+                      }
+                    }
+                  "
                 />
                 {{ element.label }}
               </template>
               <template v-else>
                 <el-switch
-                  v-model="element.item.enabled"
+                  v-model="element.enabled"
                   mr10px
                   active-text="启用"
                   inactive-text="禁用"
@@ -51,35 +67,47 @@
                 {{ element.label }}
               </template>
             </div>
-            <div v-if="element.item.type === 'search'">
+            <div v-if="element.type === 'search'">
               <div flex flex-items-center>
                 <span color-orange align-self-end mr10px>
-                  <template v-if="!element.item?.children?.length">
+                  <template v-if="!element?.children?.length">
                     添加一个关键词后方可启用-&gt;
                   </template>
                   <template
                     v-else-if="
-                      element.item?.children?.every((it) => !(it.enabled && !!it.keyword?.trim()))
+                      element.enabled &&
+                      element?.children?.every((it) => !(it.enabled && !!it.keyword?.trim()))
                     "
                   >
-                    至少启用下方任意一个不为空的关键词后方可启用
+                    启用下方任一非空项后方可启用
                   </template>
                   <template
-                    v-else-if="element.item?.children?.some((it) => it.enabled && !it.keyword?.trim())"
+                    v-else-if="
+                      element.enabled &&
+                      element?.children?.some((it) => it.enabled && !it.keyword?.trim())
+                    "
                   >
-                    留空的关键词会被跳过
+                    空项会被跳过
                   </template>
                 </span>
-                <el-button p-0 h-fit type="text" @click="addSearchKeyword(element.item)"
+                <el-button
+                  p-0
+                  h-fit
+                  type="text"
+                  @click="
+                    () => {
+                      addSearchKeyword(element)
+                    }
+                  "
                   >添加关键词</el-button
                 >
               </div>
             </div>
           </span>
         </div>
-        <div v-if="element.item.type === 'search' && element.item?.children?.length">
+        <div v-if="element.type === 'search' && element?.children?.length">
           <draggable
-            v-model="element.item.children"
+            v-model="element.children"
             class="list-group"
             :component-data="{
               tag: 'ul',
@@ -101,7 +129,7 @@
                   <span class="inner-content">
                     <div flex w-full>
                       <el-switch
-                        v-if="element.item.enabled"
+                        v-if="element.enabled && searchItem.keyword?.trim()"
                         v-model="searchItem.enabled"
                         mr10px
                         active-text="启用"
@@ -116,6 +144,21 @@
                         active-text="启用"
                         inactive-text="禁用"
                         inline-prompt
+                        @click="
+                          () => {
+                            if (!searchItem.keyword?.trim()) {
+                              Message.info({
+                                message: '关键词为空，请输入要搜索的关键词',
+                                grouping: true
+                              })
+                            } else if (!element.enabled) {
+                              Message.info({
+                                message: '请启用“通过搜索找到的职位”来源',
+                                grouping: true
+                              })
+                            }
+                          }
+                        "
                       />
                       <el-input
                         v-model="searchItem.keyword"
@@ -129,7 +172,7 @@
                       h-fit
                       type="danger"
                       link
-                      @click="removeSearchKeywordByIndex(element.item, index)"
+                      @click="removeSearchKeywordByIndex(element, index)"
                       >删除</el-button
                     >
                   </span>
@@ -146,7 +189,7 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import draggable from 'vuedraggable'
-
+import { ElMessage as Message } from 'element-plus'
 defineProps({
   modelValue: {
     type: Array
@@ -169,6 +212,7 @@ function addSearchKeyword(item) {
   if (!item.children) {
     item.children = []
   }
+  item.enabled = true
   item.children.push({
     type: 'search-kw',
     enabled: true,

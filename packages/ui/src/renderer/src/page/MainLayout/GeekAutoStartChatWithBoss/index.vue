@@ -18,10 +18,35 @@
           </el-form-item>
         </el-card>
         <el-card class="config-section">
-          <el-form-item prop="filter" mb0>
+          <el-form-item class="job-source-form-item" prop="__jobSourceList">
             <div w-full>
-              <div font-size-16px>职位来源及查找顺序</div>
-              <JobSourceDragOrderer v-model="formContent.__jobSourceList" />
+              <div ref="jobSourceFormItemSectionEl" font-size-16px>
+                <div>
+                  职位来源及其查找顺序
+                  <el-tooltip
+                    effect="light"
+                    placement="bottom-start"
+                    @show="gtagRenderer('tooltip_show_about_job_source_ui')"
+                  >
+                    <template #content>
+                      <div m0 line-height-1.5em w-fit-content >
+                        <img block h-320px src="../resources/intro-of-job-source.png" />
+                      </div>
+                    </template>
+                    <el-button type="text" font-size-12px
+                      ><span><QuestionFilled w-1em h-1em mr2px /></span
+                      >下方展示的各条目与Boss直聘界面对应关系是怎样的？</el-button
+                    >
+                  </el-tooltip>
+                </div>
+              </div>
+              <div font-size-12px>
+                拖放条目前方的手柄以调整职位来源查找顺序；点击条目前方的开关以启用/禁用对应的职位来源
+              </div>
+              <JobSourceDragOrderer
+                v-model="formContent.__jobSourceList"
+                class="job-source-drag-orderer"
+              />
             </div>
           </el-form-item>
         </el-card>
@@ -729,7 +754,9 @@
                     {{ getJobDetailRegExpMatchLogicConfig().logicText }}
                   </div>
                   <el-form-item mb0 prop="expectJobTypeRegExpStr">
-                    <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
+                    <div ref="jobDetailRegExpSectionEl" font-size-12px>
+                      职位类型正则（推荐填写，不区分大小写）
+                    </div>
                     <el-input
                       v-model="formContent.expectJobTypeRegExpStr"
                       type="textarea"
@@ -1052,6 +1079,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   )
 })
 
+const jobSourceFormItemSectionEl = ref()
+const jobDetailRegExpSectionEl = ref()
 const formRules = {
   expectJobNameRegExpStr: {
     validator(_, value, cb) {
@@ -1066,6 +1095,7 @@ const formRules = {
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
+        jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
         gtagRenderer('invalid_reg_exp_for_expect_job_name')
       }
     }
@@ -1083,6 +1113,7 @@ const formRules = {
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
+        jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
         gtagRenderer('invalid_reg_exp_for_expect_job_type')
       }
     }
@@ -1100,8 +1131,40 @@ const formRules = {
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
+        jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
         gtagRenderer('invalid_reg_exp_for_expect_job_desc')
       }
+    }
+  },
+  __jobSourceList: {
+    trigger: null,
+    validator(_, value, cb) {
+      if (!Array.isArray(value)) {
+        cb()
+        return
+      }
+      if (value.every((it) => !it.enabled)) {
+        cb(new Error(`将上方任一来源设置为“启用”后才能继续`))
+        return
+      }
+      const configMap = {}
+      for (const config of value) {
+        if (configMap[config.type]) {
+          continue
+        }
+        configMap[config.type] = config
+      }
+      if (
+        !configMap.expect.enabled &&
+        !configMap.recommend.enabled &&
+        configMap.search.enabled &&
+        !configMap.search?.children?.some((it) => it.enabled && it.keyword?.trim())
+      ) {
+        cb(new Error(`将上方任一来源设置为“启用”后才能继续`))
+        jobSourceFormItemSectionEl.value?.scrollIntoViewIfNeeded()
+        return
+      }
+      cb()
     }
   }
 }
@@ -1500,20 +1563,18 @@ function formatJobSourceConfigToFormValue(config = []) {
 
   return config.map((outerItem) => {
     return {
-      item: outerItem,
-      label: typeToNameKey[outerItem.type],
-      children:
-        outerItem.children && outerItem.type === 'search'
-          ? (outerItem.children || []).map((innerItem) => ({
-              item: innerItem
-            }))
-          : null
+      ...outerItem,
+      label: typeToNameKey[outerItem.type]
     }
   })
 }
 
 function formatJobSourceFormValueToConfig(formValue = []) {
-  return formValue.map((it) => it.item)
+  return formValue.map((it) => {
+    it = { ...it }
+    delete it.label
+    return it
+  })
 }
 </script>
 
@@ -1578,6 +1639,26 @@ function formatJobSourceFormValueToConfig(formValue = []) {
   .el-form-item__error.el-form-item__error {
     font-size: 12px;
     line-height: 1.2em;
+  }
+  .job-source-form-item {
+    margin-bottom: 0;
+    .job-source-drag-orderer {
+      margin-top: 10px;
+      background-color: #fff;
+      padding: 20px;
+      border: 1px solid var(--el-card-border-color);
+      border-radius: 4px;
+    }
+    &.is-error {
+      margin-bottom: 18px;
+      .el-input__wrapper {
+        box-shadow: 0 0 0 1px var(--el-border-color) inset;
+      }
+      .job-source-drag-orderer {
+        background-color: var(--el-color-danger-light-9);
+        border: 1px solid var(--el-color-danger);
+      }
+    }
   }
 }
 </style>
