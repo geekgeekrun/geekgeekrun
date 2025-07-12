@@ -44,7 +44,8 @@
     "pinia": "^3.0.2",
     "puppeteer": "20.1.0",
     "puppeteer-extra-plugin-stealth": "2.11.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",

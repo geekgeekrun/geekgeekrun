@@ -18,6 +18,14 @@
           </el-form-item>
         </el-card>
         <el-card class="config-section">
+          <el-form-item prop="filter" mb0>
+            <div w-full>
+              <div font-size-16px>职位来源及查找顺序</div>
+              <JobSourceDragOrderer v-model="formContent.__jobSourceList" />
+            </div>
+          </el-form-item>
+        </el-card>
+        <el-card class="config-section">
           <el-form-item prop="filter">
             <div font-size-16px>
               职位筛选条件
@@ -885,6 +893,7 @@ import { debounce } from 'lodash-es'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
+import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
 
 const router = useRouter()
 
@@ -917,7 +926,13 @@ const formContent = ref({
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB,
   jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY,
 
-  isSkipEmptyConditionForCombineRecommendJobFilter: false
+  isSkipEmptyConditionForCombineRecommendJobFilter: false,
+  __jobSourceList: formatJobSourceConfigToFormValue([
+    {
+      type: 'expect',
+      enabled: true
+    }
+  ])
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -1032,6 +1047,9 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     res.config['boss.json'].jobDetailRegExpMatchLogic ?? JobDetailRegExpMatchLogic.EVERY
   formContent.value.isSkipEmptyConditionForCombineRecommendJobFilter =
     res.config['boss.json'].isSkipEmptyConditionForCombineRecommendJobFilter ?? false
+  formContent.value.__jobSourceList = formatJobSourceConfigToFormValue(
+    res.config['boss.json'].jobSourceList || []
+  )
 })
 
 const formRules = {
@@ -1104,7 +1122,12 @@ const handleSubmit = async () => {
     console.log(err)
     return
   }
-  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  const clonedFormContent = JSON.parse(JSON.stringify(formContent.value))
+  clonedFormContent.jobSourceList = formatJobSourceFormValueToConfig(
+    clonedFormContent.__jobSourceList
+  )
+  delete clonedFormContent.__jobSourceList
+  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(clonedFormContent))
   mittBus.emit('auto-start-chat-with-boss-config-saved')
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
@@ -1129,7 +1152,12 @@ const handleSave = async () => {
     console.log(err)
     return
   }
-  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  const clonedFormContent = JSON.parse(JSON.stringify(formContent.value))
+  clonedFormContent.jobSourceList = formatJobSourceFormValueToConfig(
+    clonedFormContent.__jobSourceList
+  )
+  delete clonedFormContent.__jobSourceList
+  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(clonedFormContent))
   mittBus.emit('auto-start-chat-with-boss-config-saved')
   ElMessage.success('配置保存成功')
   gtagRenderer('config_saved')
@@ -1437,6 +1465,55 @@ function getJobDetailRegExpMatchLogicConfig() {
     result.inputPlaceholderText = 'true'
   }
   return result
+}
+
+function formatJobSourceConfigToFormValue(config = []) {
+  const typeToNameKey = {
+    recommend: '推荐列表中的职位',
+    expect: '根据设置的求职期望推荐的职位',
+    search: '通过搜索找到的职位'
+  }
+  const isInitEmpty = !config?.length
+  config = config.filter((it) => Object.hasOwn(typeToNameKey, it.type))
+
+  const addedSet = new Set()
+  const tempArr = []
+  config.forEach((it) => {
+    if (!Object.hasOwn(typeToNameKey, it.type)) {
+      return
+    }
+    tempArr.push(it)
+    addedSet.add(it.type)
+  })
+  config = tempArr
+  Object.keys(typeToNameKey).forEach((k) => {
+    if (addedSet.has(k)) {
+      return
+    }
+    // handle init value
+    tempArr.push({
+      type: k,
+      enabled: isInitEmpty && k === 'expect'
+    })
+    addedSet.add(k)
+  })
+
+  return config.map((outerItem) => {
+    return {
+      item: outerItem,
+      label: typeToNameKey[outerItem.type],
+      children:
+        outerItem.children && outerItem.type === 'search'
+          ? (outerItem.children || []).map((innerItem) => ({
+              item: innerItem
+            }))
+          : null
+    }
+  })
+}
+
+function formatJobSourceFormValueToConfig(formValue = []) {
+  return formValue.map((it) => it.item)
 }
 </script>
 

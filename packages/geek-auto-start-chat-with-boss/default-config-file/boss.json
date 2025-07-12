@@ -23,5 +23,11 @@
     "recentMessageQuantityForLlm": 8,
     "rechatLlmFallback": 1,
     "onlyRemindBossWithExpectJobType": true
-  }
+  },
+  "jobSourceList": [
+    {
+      "type": "expect",
+      "enabled": true
+    }
+  ]
 }

@@ -152,6 +152,54 @@ if (
   jobDetailRegExpMatchLogic = JobDetailRegExpMatchLogic.EVERY
 }
 
+let {
+  jobSourceList
+} = readConfigFile('boss.json')
+
+if (!jobSourceList?.length) {
+  jobSourceList = [
+    {
+      type: "expect",
+      enabled: true
+    }
+  ]
+}
+const normalizedJobSource = []
+const addedSourceSet = new Set()
+for (const source of jobSourceList) {
+  if (addedSourceSet.has(source.type)) {
+    continue
+  }
+  if (!source?.enabled) {
+    continue
+  }
+  if (source.type === 'search') {
+    for (const searchOption of (source.children ?? [])) {
+      if (!searchOption.enabled || !searchOption.keyword?.trim()) {
+        continue
+      }
+      const key = [
+        source.type,
+        searchOption.keyword.trim()
+      ].join('__')
+      if (addedSourceSet.has(key)) {
+        continue
+      }
+      normalizedJobSource.push({
+        type: 'search',
+        keyword: searchOption.keyword.trim()
+      })
+      addedSourceSet.add(key)
+    }
+    addedSourceSet.add(source.type)
+  }
+  else {
+    normalizedJobSource.push({
+      type: source.type,
+    })
+    addedSourceSet.add(source.type)
+  }
+}
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const recommendJobPageUrl = `https://www.zhipin.com/web/geek/jobs`
 
@@ -443,23 +491,6 @@ async function setFilterCondition (selectedFilters) {
   }
 }
 
-const jobSource = [
-  {
-    name: 'recommendJob'
-  },
-  {
-    name: 'userSetExpectJob'
-  },
-  {
-    name: 'searchJob',
-    keyword: 'HRBP'
-  },
-  {
-    name: 'searchJob',
-    keyword: '招聘'
-  }
-]
-
 async function toRecommendPage (hooks) {
   let userInfoPromise = page.waitForResponse((response) => {
       if (response.url().startsWith('https://www.zhipin.com/wapi/zpuser/wap/getUserInfo.json')) {
@@ -512,11 +543,11 @@ async function toRecommendPage (hooks) {
   const SEARCH_BOX_SELECTOR = `.c-search-input .search-input-box`
 
   const computedSourceList = []
-  for (const source of jobSource) {
-    switch (source.name) {
-      case 'recommendJob': {
+  for (const source of normalizedJobSource) {
+    switch (source.type) {
+      case 'recommend': {
         computedSourceList.push({
-          sourceName: source.name,
+          type: source.type,
           selector: RECOMMEND_JOB_ENTRY_SELECTOR,
           async getIsCurrentActiveSource () {
             return await page.evaluate(
@@ -536,12 +567,12 @@ async function toRecommendPage (hooks) {
         })
         continue
       }
-      case 'userSetExpectJob': {
+      case 'expect': {
         await page.waitForSelector(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR)
         const allExpectJobEntryHandles = await page.$$(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR)
         allExpectJobEntryHandles.forEach((it, index) => {
           computedSourceList.push({
-            sourceName: source.name,
+            type: source.type,
             selector: `${USER_SET_EXPECT_JOB_ENTRIES_SELECTOR}:nth-child(${index + 1})`,
             async getIsCurrentActiveSource () {
               return await page.evaluate(
@@ -566,9 +597,9 @@ async function toRecommendPage (hooks) {
         })
         break
       }
-      case 'searchJob': {
+      case 'search': {
         computedSourceList.push({
-          sourceName: source.name,
+          type: source.type,
           async getIsCurrentActiveSource () {
             const elHandle = await page.$(`.page-jobs-main`)
             const currentKeyWord = await elHandle?.evaluate((el) => {

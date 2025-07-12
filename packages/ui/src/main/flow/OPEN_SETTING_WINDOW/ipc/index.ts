@@ -156,6 +156,9 @@ export default function initIpc() {
       bossConfig.isSkipEmptyConditionForCombineRecommendJobFilter =
         payload.isSkipEmptyConditionForCombineRecommendJobFilter
     }
+    if (hasOwn(payload, 'jobSourceList')) {
+      bossConfig.jobSourceList = payload.jobSourceList
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
