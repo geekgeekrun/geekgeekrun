@@ -17,7 +17,11 @@
         drag = false
         setTimeout(() => {
           gtagRenderer('job-source-dragged', {
-            sourceOrder: modelValue?.map((it) => it.type).join(',')
+            sourceOrder: modelValue?.map((it) => JobSource[it.type]).join(','),
+            enabledSourceOrder: modelValue
+              ?.filter?.((it) => !!it.enabled)
+              ?.map((it) => JobSource[it.type])
+              ?.join(',')
           })
         }, 50)
       }
@@ -215,6 +219,7 @@ import { computed, ref } from 'vue'
 import draggable from 'vuedraggable'
 import { ElMessage as Message } from 'element-plus'
 import { gtagRenderer } from '@renderer/utils/gtag'
+import { JobSource } from '@geekgeekrun/sqlite-plugin/src/enums'
 const props = defineProps({
   modelValue: {
     type: Array
