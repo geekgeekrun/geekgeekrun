@@ -20,7 +20,7 @@ import {
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay, JobDetailRegExpMatchLogic } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay, JobDetailRegExpMatchLogic, JobSource } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import { activeDescList } from './constant.mjs'
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
 const jobFilterConditionsMapByCode = {}
@@ -938,7 +938,8 @@ async function toRecommendPage (hooks) {
                               markFrom: ChatStartupFrom.AutoFromRecommendList,
                               markReason: MarkAsNotSuitReason.BOSS_INACTIVE,
                               extInfo: null,
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -956,7 +957,8 @@ async function toRecommendPage (hooks) {
                                 bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
                                 chosenReasonInUi
                               },
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -973,7 +975,8 @@ async function toRecommendPage (hooks) {
                               markFrom: ChatStartupFrom.AutoFromRecommendList,
                               markReason: MarkAsNotSuitReason.JOB_CITY_NOT_SUIT,
                               extInfo: null,
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -990,7 +993,8 @@ async function toRecommendPage (hooks) {
                               extInfo: {
                                 chosenReasonInUi
                               },
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1007,7 +1011,8 @@ async function toRecommendPage (hooks) {
                               markFrom: ChatStartupFrom.AutoFromRecommendList,
                               markReason: MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT,
                               extInfo: null,
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1024,7 +1029,8 @@ async function toRecommendPage (hooks) {
                               extInfo: {
                                 chosenReasonInUi
                               },
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1041,7 +1047,8 @@ async function toRecommendPage (hooks) {
                               markFrom: ChatStartupFrom.AutoFromRecommendList,
                               markReason: MarkAsNotSuitReason.JOB_NOT_SUIT,
                               extInfo: null,
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1059,7 +1066,8 @@ async function toRecommendPage (hooks) {
                                 bossActiveTimeDesc: targetJobData.bossInfo.activeTimeDesc,
                                 chosenReasonInUi
                               },
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1078,7 +1086,8 @@ async function toRecommendPage (hooks) {
                               extInfo: {
                                 salaryDesc: selectedJobData.salaryDesc,
                               },
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1096,7 +1105,8 @@ async function toRecommendPage (hooks) {
                                 salaryDesc: selectedJobData.salaryDesc,
                                 chosenReasonInUi
                               },
-                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
                         } catch {
@@ -1226,7 +1236,13 @@ async function toRecommendPage (hooks) {
               throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
             }
           } else {
-            await hooks.newChatStartup?.promise(targetJobData, { chatStartupFrom: ChatStartupFrom.AutoFromRecommendList })
+            await hooks.newChatStartup?.promise(
+              targetJobData,
+              {
+                chatStartupFrom: ChatStartupFrom.AutoFromRecommendList,
+                jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
+              }
+            )
             blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
 
             await storeStorage(page).catch(() => void 0)

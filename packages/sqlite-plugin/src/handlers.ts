@@ -245,7 +245,7 @@ export async function saveChatStartupRecord(
   ds: DataSource,
   _jobInfo,
   { encryptUserId },
-  { autoStartupChatRecordId = undefined, chatStartupFrom = undefined } = {}
+  { autoStartupChatRecordId = undefined, chatStartupFrom = undefined, jobSource = undefined } = {}
 ) {
   const { jobInfo } = _jobInfo;
 
@@ -256,7 +256,8 @@ export async function saveChatStartupRecord(
     encryptCurrentUserId: encryptUserId,
     encryptJobId: jobInfo.encryptId,
     autoStartupChatRecordId,
-    chatStartupFrom
+    chatStartupFrom,
+    jobSource,
   }
   Object.assign(chatStartupLog, chatStartupLogPayload)
 
@@ -270,7 +271,7 @@ export async function saveMarkAsNotSuitRecord(
   ds: DataSource,
   _jobInfo,
   { encryptUserId },
-  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined, markOp = undefined } = {}
+  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined, markOp = undefined, jobSource = undefined } = {}
 ) {
   const { jobInfo } = _jobInfo;
 
@@ -284,7 +285,8 @@ export async function saveMarkAsNotSuitRecord(
     markFrom,
     markReason,
     extInfo: extInfo ? JSON.stringify(extInfo) : undefined,
-    markOp
+    markOp,
+    jobSource,
   }
   Object.assign(markAsNotSuitLog, markAsNotSuitLogPayload)
 

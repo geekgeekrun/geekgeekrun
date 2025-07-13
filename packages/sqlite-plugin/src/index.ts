@@ -188,22 +188,24 @@ export default class SqlitePlugin {
       await saveJobInfoFromRecommendPage(ds, _jobInfo);
     });
 
-    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo, { chatStartupFrom = ChatStartupFrom.AutoFromRecommendList } = {}) => {
+    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo, { chatStartupFrom = ChatStartupFrom.AutoFromRecommendList, jobSource = undefined } = {}) => {
       const ds = await this.initPromise;
       return await saveChatStartupRecord(ds, _jobInfo, this.userInfo, {
         autoStartupChatRecordId: this.runRecordId,
-        chatStartupFrom
+        chatStartupFrom,
+        jobSource
       });
     });
 
-    hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined, markOp = undefined } = {}) => {
+    hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined, markOp = undefined, jobSource = undefined } = {}) => {
       const ds = await this.initPromise;
       return await saveMarkAsNotSuitRecord(ds, _jobInfo, this.userInfo, {
         autoStartupChatRecordId: this.runRecordId,
         markFrom,
         markReason,
         extInfo,
-        markOp
+        markOp,
+        jobSource
       });
     });
   }
