@@ -12,7 +12,16 @@
     handle=".drag-handle-wrap"
     @update:model-value="emit('update:model-value', $event)"
     @start="drag = true"
-    @end="drag = false"
+    @end="
+      () => {
+        drag = false
+        setTimeout(() => {
+          gtagRenderer('job-source-dragged', {
+            sourceOrder: modelValue?.map((it) => it.type).join(',')
+          })
+        }, 50)
+      }
+    "
   >
     <template #item="{ element }">
       <li class="list-group-item">
@@ -51,6 +60,7 @@
                           grouping: true
                         })
                       }
+                      gtagRenderer('job-source-switch-ph-clicked', { type: element.type })
                     }
                   "
                 />
@@ -63,6 +73,9 @@
                   active-text="启用"
                   inactive-text="禁用"
                   inline-prompt
+                  @change="
+                    (v) => gtagRenderer('job-source-switch-changed', { type: element.type, v })
+                  "
                 />
                 {{ element.label }}
               </template>
@@ -79,6 +92,9 @@
                   @click="
                     () => {
                       addSearchKeyword(element)
+                      gtagRenderer('job-source-search-kw-added', {
+                        kwListLength: element.children?.length
+                      })
                     }
                   "
                   >添加关键词</el-button
@@ -100,7 +116,16 @@
             v-bind="dragOptions"
             handle=".drag-handle-wrap"
             @start="drag = true"
-            @end="drag = false"
+            @end="
+              () => {
+                drag = false
+                setTimeout(() => {
+                  gtagRenderer('job-source-search-kw-dragged', {
+                    kwListLength: element.children?.length
+                  })
+                }, 50)
+              }
+            "
           >
             <template #item="{ element: searchItem, index }">
               <li class="list-group-item">
@@ -117,6 +142,7 @@
                         active-text="启用"
                         inactive-text="禁用"
                         inline-prompt
+                        @change="(v) => gtagRenderer('job-source-search-kw-switch-changed', { v })"
                       />
                       <el-switch
                         v-else
@@ -139,13 +165,21 @@
                                 grouping: true
                               })
                             }
+                            gtagRenderer('job-source-search-kw-switch-ph-clicked')
                           }
                         "
                       />
                       <el-input
                         v-model="searchItem.keyword"
                         maxlength="100"
-                        @blur="() => (searchItem.keyword = searchItem.keyword?.trim() ?? '')"
+                        @blur="
+                          () => {
+                            searchItem.keyword = searchItem.keyword?.trim() ?? ''
+                            gtagRenderer('job-source-search-kw-input-blurred', {
+                              contentLength: searchItem.keyword?.length
+                            })
+                          }
+                        "
                       />
                     </div>
                     <el-button
@@ -154,7 +188,15 @@
                       h-fit
                       type="danger"
                       link
-                      @click="removeSearchKeywordByIndex(element, index)"
+                      @click="
+                        () => {
+                          removeSearchKeywordByIndex(element, index)
+                          gtagRenderer('job-source-search-kw-removed', {
+                            itemIndex: index,
+                            contentLength: searchItem.keyword?.length
+                          })
+                        }
+                      "
                       >删除</el-button
                     >
                   </span>
@@ -172,11 +214,14 @@
 import { computed, ref } from 'vue'
 import draggable from 'vuedraggable'
 import { ElMessage as Message } from 'element-plus'
+import { gtagRenderer } from '@renderer/utils/gtag'
 const props = defineProps({
   modelValue: {
     type: Array
   }
 })
+
+const setTimeout = globalThis.setTimeout.bind(globalThis)
 
 const emit = defineEmits(['update:model-value'])
 

@@ -82,6 +82,11 @@
             <el-checkbox
               v-if="anyCombineBossRecommendFilterHasCondition"
               v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
+              @change="
+                (v) => {
+                  gtagRenderer('is_skip_empty_condition_4crjf_changed', { v })
+                }
+              "
             >
               <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
             </el-checkbox>
@@ -994,6 +999,19 @@ const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
       : true
   )
 })
+watch(
+  () => currentAnyCombineRecommendJobFilterCombinationCount.value,
+  (v) => {
+    const allCountMap = {}
+    Object.entries(formContent.value.anyCombineRecommendJobFilter).forEach(([k, v]) => {
+      allCountMap[k + 'Length'] = v?.length
+    })
+    gtagRenderer('any_combine_rjfc_count', {
+      combinedAllCount: v,
+      ...allCountMap
+    })
+  }
+)
 
 const unwatchAnyCombineRecommendJobFilter = ref<null | (() => void)>(null)
 onBeforeUnmount(() => {
