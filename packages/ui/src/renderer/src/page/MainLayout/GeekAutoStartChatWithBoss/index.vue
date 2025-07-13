@@ -17,6 +17,95 @@
             </div>
           </el-form-item>
         </el-card>
+        <el-card class="config-section">
+          <el-form-item class="job-source-form-item" prop="__jobSourceList">
+            <div w-full>
+              <div ref="jobSourceFormItemSectionEl" font-size-16px>
+                <div>
+                  职位来源及其查找顺序
+                  <el-tooltip
+                    effect="light"
+                    placement="bottom-start"
+                    @show="gtagRenderer('tooltip_show_about_job_source_ui')"
+                  >
+                    <template #content>
+                      <div m0 line-height-1.5em w-fit-content>
+                        <img block h-320px src="../resources/intro-of-job-source.png" />
+                      </div>
+                    </template>
+                    <el-button type="text" font-size-12px
+                      ><span><QuestionFilled w-1em h-1em mr2px /></span
+                      >下方展示的各条目与Boss直聘界面对应关系是怎样的？</el-button
+                    >
+                  </el-tooltip>
+                </div>
+              </div>
+              <div font-size-12px>
+                拖放条目前方的手柄以调整职位来源查找顺序；点击条目前方的开关以启用/禁用对应的职位来源
+              </div>
+              <JobSourceDragOrderer
+                v-model="formContent.__jobSourceList"
+                class="job-source-drag-orderer"
+              />
+            </div>
+          </el-form-item>
+        </el-card>
+        <el-card class="config-section">
+          <el-form-item prop="filter">
+            <div font-size-16px>
+              职位筛选条件
+              <el-tooltip
+                effect="light"
+                placement="bottom-start"
+                @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
+              >
+                <template #content>
+                  <ul m0 line-height-1.5em w-540px pl2em>
+                    <li>
+                      这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
+                      <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
+                    </li>
+                    <li color-orange>
+                      建议不要筛选过多条件，否则最终组合数会成为一个很大的数字。这将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率
+                    </li>
+                  </ul>
+                </template>
+                <el-button type="text" font-size-12px
+                  ><span><QuestionFilled w-1em h-1em mr2px /></span
+                  >这个配置是如何工作的？</el-button
+                >
+              </el-tooltip>
+            </div>
+            <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
+          </el-form-item>
+          <el-form-item prop="filter" mb0>
+            <el-checkbox
+              v-if="anyCombineBossRecommendFilterHasCondition"
+              v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
+              @change="
+                (v) => {
+                  gtagRenderer('is_skip_empty_condition_4crjf_changed', { v })
+                }
+              "
+            >
+              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
+            </el-checkbox>
+            <el-checkbox v-else :model-value="false" disabled>
+              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
+            </el-checkbox>
+          </el-form-item>
+          <div font-size-12px mt10px>
+            当前组合条件数：{{
+              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
+            }}
+            <span
+              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 5"
+              class="color-orange"
+              >不建议选择太多组合条件 -
+              否则将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率</span
+            >
+          </div>
+        </el-card>
         <!-- <el-form-item
           label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
           prop="dingtalkRobotAccessToken"
@@ -520,50 +609,6 @@
                     ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
                   >
                 </el-tooltip>
-                <el-tooltip
-                  effect="light"
-                  placement="bottom"
-                  @show="gtagRenderer('tooltip_show_about_how_to_fill_df')"
-                >
-                  <template #content>
-                    <p style="margin-top: 4px; margin-bottom: 4px">
-                      目前版本中，职位名称正则、职位类型正则、职位描述正则三个筛选条件，为“且”的关系。<br />
-                      也就是说，职位信息中只要任一不能匹配到，即这个职位会被标记不合适。<br />
-                      你可以留空某个输入框，这表示任何职位一定匹配这个条件。<br />
-                      如果三个输入框均留空，表示列表中出现的任意职位一定同时匹配这三个条件。
-                    </p>
-                    因此，可以按照如下场景填写你对于期望职位的筛选条件：
-                    <ul style="margin-top: 4px; margin-bottom: 4px">
-                      <li>
-                        如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。<br />
-                        这可以确保求职方向基本正确。
-                      </li>
-                      <li>
-                        如果你着重关注职位描述，请填写“职位描述正则”，其余两个输入框酌情填写。
-                      </li>
-                      <li>如果你想开聊列表里的推荐的任意职位，请清空这三个输入框。</li>
-                    </ul>
-                    <div>
-                      你可以在左侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
-                    </div>
-                    <div>
-                      <b>“职位类型正则”填写过程中请注意</b
-                      >，“职位类型”是由Boss直聘预定义好的一系列职位分类，<br />
-                      因此<b>请按照这个分类编写正则来进行填写</b>。这个分类可以在此找到：<br />
-                      <img w-400px src="../resources/job-type-source-entry.png" />
-                    </div>
-                    <a
-                      href="javascript:;"
-                      style="color: var(--el-color-primary)"
-                      @click.prevent="handleHowToFillDetailFilterClick"
-                      >请参阅这个链接</a
-                    >
-                  </template>
-                  <el-button type="text" font-size-12px
-                    ><span><QuestionFilled w-1em h-1em mr2px /></span
-                    >怎样填写下面的三个输入框？</el-button
-                  >
-                </el-tooltip>
               </div>
               <div>
                 <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
@@ -586,69 +631,198 @@
             </div>
             <div
               :style="{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1em 1fr 1em 1fr',
-                gap: '5px',
                 width: '100%',
-                alignItems: 'end'
+                display: 'flex',
+                gap: '10px'
               }"
-              class="job-detail-filter-wrap"
             >
-              <el-form-item mb0 prop="expectJobNameRegExpStr">
-                <div font-size-12px>职位名称正则（不区分大小写）</div>
-                <el-input
-                  v-model="formContent.expectJobNameRegExpStr"
-                  placeholder="true"
-                  @blur="
-                    formContent.expectJobNameRegExpStr =
-                      formContent.expectJobNameRegExpStr?.trim() ?? ''
-                  "
+              <div flex-1>
+                <el-form-item mb0 prop="expectJobNameRegExpStr">
+                  <div font-size-12px>职位名称/类型/描述 正则匹配筛选逻辑</div>
+                  <el-select
+                    v-model="formContent.jobDetailRegExpMatchLogic"
+                    @change="(value) => gtagRenderer('job_detail_re_ml_change', { value })"
+                  >
+                    <el-option
+                      v-for="op in jobDetailRegExpMatchLogicOptions"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+                <div
+                  :style="{
+                    width: '100%',
+                    height: '1px',
+                    backgroundColor: '#f0f0f0',
+                    marginTop: '0.5lh'
+                  }"
                 />
-              </el-form-item>
-              <div mb10px font-size-12px flex flex-justify-center fw-800>且</div>
-              <el-form-item mb0 prop="expectJobTypeRegExpStr">
-                <div font-size-12px>职位类型正则（推荐填写，不区分大小写）</div>
-                <el-input
-                  v-model="formContent.expectJobTypeRegExpStr"
-                  placeholder="true"
-                  @blur="
-                    formContent.expectJobTypeRegExpStr =
-                      formContent.expectJobTypeRegExpStr?.trim() ?? ''
-                  "
-                />
-              </el-form-item>
-              <div mb10px font-size-12px flex flex-justify-center fw-800>且</div>
-              <el-form-item mb0 prop="expectJobDescRegExpStr">
-                <div font-size-12px>职位描述正则（不区分大小写）</div>
-                <el-input
-                  v-model="formContent.expectJobDescRegExpStr"
-                  placeholder="true"
-                  @blur="
-                    formContent.expectJobDescRegExpStr =
-                      formContent.expectJobDescRegExpStr?.trim() ?? ''
-                  "
-                />
-              </el-form-item>
-            </div>
-            <template
-              v-if="
-                formContent.expectJobNameRegExpStr?.trim() ||
-                formContent.expectJobTypeRegExpStr?.trim() ||
-                formContent.expectJobDescRegExpStr?.trim()
-              "
-            >
-              <div class="mt10px lh-2em font-size-12px">
-                当前职位名称/类型/描述不符合投递条件时：
+                <div
+                  :style="{
+                    display: 'grid',
+                    gridTemplateColumns: '2em 1fr',
+                    gap: '5px',
+                    flex: 1,
+                    alignItems: 'end'
+                  }"
+                  class="job-detail-filter-wrap"
+                >
+                  <div></div>
+                  <el-tooltip
+                    effect="light"
+                    placement="bottom"
+                    @show="gtagRenderer('tooltip_show_about_how_to_fill_df')"
+                  >
+                    <template #content>
+                      <div w-800px>
+                        <div style="margin-top: 4px; margin-bottom: 4px">
+                          上方“职位名称/类型/描述
+                          正则匹配筛选逻辑”配置，你可以自行决定如下三个正则“所有正则匹配时才认为职位匹配”还是“任一正则匹配时即认为职位匹配”。
+                        </div>
+                        <ul m0>
+                          <li>
+                            当选择“所有正则匹配时才认为职位匹配”规则时，如果你留空某个输入框，表示任何职位一定匹配这个条件。
+                          </li>
+                          <li>
+                            当选择“任一正则匹配时即认为职位匹配”规则时，如果你留空某个输入框，表示任何职位一定不匹配这个条件。
+                          </li>
+                        </ul>
+                        <b>请注意</b>，如果<span color-orange>三个输入框均留空</span
+                        >，无论上方“职位名称/类型/描述 正则匹配筛选逻辑”配置是什么，都表示<span
+                          color-orange
+                          >列表中出现的任意职位都将认为同时匹配这三个条件（即不根据职位名称/类型/描述进行筛选）</span
+                        >。<br />
+                        因此，可以按照如下场景填写你对于期望职位的筛选条件：
+                        <ul style="margin-top: 4px; margin-bottom: 4px">
+                          <li>
+                            如果你只考虑工作类型，请填写“职位类型正则”输入框，其余两个输入框清空。这可以确保求职方向基本正确。
+                          </li>
+                          <li>
+                            如果你着重关注职位描述，请填写“职位描述正则”，其余两个输入框酌情填写。
+                          </li>
+                          <li>
+                            如果你想开聊列表里的推荐的任意职位，不根据职位名称/类型/描述进行筛选，请清空这三个输入框。
+                          </li>
+                        </ul>
+                        <div>
+                          你可以在右侧"职位详情筛选模板"选择一个模板，并在选中模板基础上尝试修改
+                        </div>
+                        <div>
+                          <b>“职位类型正则”填写过程中请注意</b
+                          >，“职位类型”是由Boss直聘预定义好的一系列职位分类，因此<b>请按照这个分类来编写正则</b>。<br />
+                          这个分类可以在此找到：<br />
+                          <img w-400px src="../resources/job-type-source-entry.png" />
+                        </div>
+                        <div>
+                          关于误伤/误投的排查，<a
+                            href="javascript:;"
+                            style="color: var(--el-color-primary)"
+                            @click.prevent="handleHowToFillDetailFilterClick"
+                            >请参阅这个链接</a
+                          >
+                        </div>
+                      </div>
+                    </template>
+                    <el-button
+                      type="text"
+                      font-size-12px
+                      :style="{
+                        width: 'fit-content',
+                        padding: '0',
+                        height: 'auto',
+                        position: 'relative',
+                        top: '6px'
+                      }"
+                      ><span><QuestionFilled w-1em h-1em mr2px /></span
+                      >如下三个输入框工作机制是怎样的？怎样填写？误伤/误投如何排查？</el-button
+                    >
+                  </el-tooltip>
+                  <div></div>
+                  <el-form-item mb0 prop="expectJobNameRegExpStr">
+                    <div font-size-12px>职位名称正则（不区分大小写）</div>
+                    <el-input
+                      v-model="formContent.expectJobNameRegExpStr"
+                      type="textarea"
+                      :placeholder="getJobDetailRegExpMatchLogicConfig().inputPlaceholderText"
+                      :autosize="{ minRows: 2 }"
+                      max-h-6lh
+                      @blur="
+                        formContent.expectJobNameRegExpStr =
+                          formContent.expectJobNameRegExpStr?.trim() ?? ''
+                      "
+                    />
+                  </el-form-item>
+                  <div
+                    mb0px
+                    font-size-12px
+                    flex
+                    flex-justify-center
+                    fw-800
+                    flex-self-start
+                    position-relative
+                    style="top: 42px"
+                  >
+                    {{ getJobDetailRegExpMatchLogicConfig().logicText }}
+                  </div>
+                  <el-form-item mb0 prop="expectJobTypeRegExpStr">
+                    <div ref="jobDetailRegExpSectionEl" font-size-12px>
+                      职位类型正则（推荐填写，不区分大小写）
+                    </div>
+                    <el-input
+                      v-model="formContent.expectJobTypeRegExpStr"
+                      type="textarea"
+                      :placeholder="getJobDetailRegExpMatchLogicConfig().inputPlaceholderText"
+                      :autosize="{ minRows: 2 }"
+                      max-h-6lh
+                      @blur="
+                        formContent.expectJobTypeRegExpStr =
+                          formContent.expectJobTypeRegExpStr?.trim() ?? ''
+                      "
+                    />
+                  </el-form-item>
+                  <div
+                    mb0px
+                    font-size-12px
+                    flex
+                    flex-justify-center
+                    fw-800
+                    flex-self-start
+                    position-relative
+                    style="top: 42px"
+                  >
+                    {{ getJobDetailRegExpMatchLogicConfig().logicText }}
+                  </div>
+                  <el-form-item mb0 prop="expectJobDescRegExpStr">
+                    <div font-size-12px>职位描述正则（不区分大小写）</div>
+                    <el-input
+                      v-model="formContent.expectJobDescRegExpStr"
+                      type="textarea"
+                      :placeholder="getJobDetailRegExpMatchLogicConfig().inputPlaceholderText"
+                      :autosize="{ minRows: 2 }"
+                      max-h-6lh
+                      @blur="
+                        formContent.expectJobDescRegExpStr =
+                          formContent.expectJobDescRegExpStr?.trim() ?? ''
+                      "
+                    />
+                  </el-form-item>
+                </div>
               </div>
               <div
+                v-if="!isJobDetailRegExpEmpty()"
                 :style="{
-                  display: 'grid',
-                  gridTemplateColumns: '1.25fr 0.75fr',
-                  gap: '10px 0',
-                  width: '100%',
-                  alignItems: 'end'
+                  width: '400px',
+                  borderLeft: '1px solid #f0f0f0',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
                 }"
               >
+                <div class="mt10px lh-2em font-size-12px">
+                  当前职位名称/类型/描述不符合投递条件时：
+                </div>
                 <el-form-item mb0>
                   <el-select
                     v-model="formContent.jobNotMatchStrategy"
@@ -663,9 +837,17 @@
                     >
                   </el-select>
                 </el-form-item>
-                <div />
               </div>
-            </template>
+              <div
+                v-else
+                :style="{
+                  width: '400px',
+                  borderLeft: '1px solid transparent',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
+                }"
+              />
+            </div>
           </div>
           <div class="h-1px bg-#f0f0f0" mt16px mb16px />
           <div mt16px>
@@ -717,39 +899,6 @@
             </div>
           </div>
         </el-card>
-        <el-card class="config-section">
-          <el-form-item prop="filter" mb0>
-            <div font-size-16px>
-              职位备选筛选条件
-              <el-tooltip
-                effect="light"
-                placement="bottom-start"
-                @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
-              >
-                <template #content>
-                  <ul m0 line-height-1.5em w-400px pl2em>
-                    <li>当前求职期望无合适职位时，自动更改Boss直聘页面上的筛选条件，查找新工作</li>
-                  </ul>
-                </template>
-                <el-button type="text" font-size-12px
-                  ><span><QuestionFilled w-1em h-1em mr2px /></span
-                  >这个配置是如何工作的？</el-button
-                >
-              </el-tooltip>
-            </div>
-            <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
-            <div font-size-12px>
-              当前组合条件数：{{
-                currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
-              }}
-              <span
-                v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 20"
-                class="color-orange"
-                >不建议选择太多组合条件</span
-              >
-            </div>
-          </el-form-item>
-        </el-card>
       </el-form>
     </div>
     <div class="bg-#f8f8f8 pb10px pt10px">
@@ -777,19 +926,31 @@ import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
-import { calculateTotalCombinations } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
-import { gtagRenderer } from '@renderer/utils/gtag'
+import {
+  calculateTotalCombinations,
+  checkAnyCombineBossRecommendFilterHasCondition
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
   MarkAsNotSuitOp,
   StrategyScopeOptionWhenMarkJobNotMatch,
-  SalaryCalculateWay
+  SalaryCalculateWay,
+  JobDetailRegExpMatchLogic
 } from '@geekgeekrun/sqlite-plugin/src/enums'
 import { debounce } from 'lodash-es'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
+import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
+
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'gascwb-config',
+    ...params
+  })
+}
 
 const router = useRouter()
 
@@ -819,12 +980,45 @@ const formContent = ref({
   expectWorkExpList: [],
   expectWorkExpNotMatchStrategy: MarkAsNotSuitOp.NO_OP,
   strategyScopeOptionWhenMarkJobWorkExpNotMatch:
-    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+    StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB,
+  jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY,
+
+  isSkipEmptyConditionForCombineRecommendJobFilter: false,
+  __jobSourceList: formatJobSourceConfigToFormValue([
+    {
+      type: 'expect',
+      enabled: true
+    }
+  ])
+})
+
+const anyCombineBossRecommendFilterHasCondition = computed(() => {
+  return checkAnyCombineBossRecommendFilterHasCondition(
+    formContent.value.anyCombineRecommendJobFilter
+  )
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
-  return calculateTotalCombinations(formContent.value.anyCombineRecommendJobFilter)
+  return calculateTotalCombinations(
+    formContent.value.anyCombineRecommendJobFilter,
+    anyCombineBossRecommendFilterHasCondition.value
+      ? !formContent.value.isSkipEmptyConditionForCombineRecommendJobFilter
+      : true
+  )
 })
+watch(
+  () => currentAnyCombineRecommendJobFilterCombinationCount.value,
+  (v) => {
+    const allCountMap = {}
+    Object.entries(formContent.value.anyCombineRecommendJobFilter).forEach(([k, v]) => {
+      allCountMap[k + 'Length'] = v?.length
+    })
+    gtagRenderer('any_combine_rjfc_count', {
+      combinedAllCount: v,
+      ...allCountMap
+    })
+  }
+)
 
 const unwatchAnyCombineRecommendJobFilter = ref<null | (() => void)>(null)
 onBeforeUnmount(() => {
@@ -919,8 +1113,17 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
     res.config['boss.json'].strategyScopeOptionWhenMarkJobWorkExpNotMatch ??
     StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+  formContent.value.jobDetailRegExpMatchLogic =
+    res.config['boss.json'].jobDetailRegExpMatchLogic ?? JobDetailRegExpMatchLogic.EVERY
+  formContent.value.isSkipEmptyConditionForCombineRecommendJobFilter =
+    res.config['boss.json'].isSkipEmptyConditionForCombineRecommendJobFilter ?? false
+  formContent.value.__jobSourceList = formatJobSourceConfigToFormValue(
+    res.config['boss.json'].jobSourceList || []
+  )
 })
 
+const jobSourceFormItemSectionEl = ref()
+const jobDetailRegExpSectionEl = ref()
 const formRules = {
   expectJobNameRegExpStr: {
     validator(_, value, cb) {
@@ -935,6 +1138,7 @@ const formRules = {
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
+        jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
         gtagRenderer('invalid_reg_exp_for_expect_job_name')
       }
     }
@@ -952,6 +1156,7 @@ const formRules = {
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
+        jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
         gtagRenderer('invalid_reg_exp_for_expect_job_type')
       }
     }
@@ -969,8 +1174,40 @@ const formRules = {
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
+        jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
         gtagRenderer('invalid_reg_exp_for_expect_job_desc')
       }
+    }
+  },
+  __jobSourceList: {
+    trigger: null,
+    validator(_, value, cb) {
+      if (!Array.isArray(value)) {
+        cb()
+        return
+      }
+      if (value.every((it) => !it.enabled)) {
+        cb(new Error(`将上方任一来源设置为“启用”后才能继续`))
+        return
+      }
+      const configMap = {}
+      for (const config of value) {
+        if (configMap[config.type]) {
+          continue
+        }
+        configMap[config.type] = config
+      }
+      if (
+        !configMap.expect.enabled &&
+        !configMap.recommend.enabled &&
+        configMap.search.enabled &&
+        !configMap.search?.children?.some((it) => it.enabled && it.keyword?.trim())
+      ) {
+        cb(new Error(`将上方任一来源设置为“启用”后才能继续`))
+        jobSourceFormItemSectionEl.value?.scrollIntoViewIfNeeded()
+        return
+      }
+      cb()
     }
   }
 }
@@ -991,7 +1228,12 @@ const handleSubmit = async () => {
     console.log(err)
     return
   }
-  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  const clonedFormContent = JSON.parse(JSON.stringify(formContent.value))
+  clonedFormContent.jobSourceList = formatJobSourceFormValueToConfig(
+    clonedFormContent.__jobSourceList
+  )
+  delete clonedFormContent.__jobSourceList
+  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(clonedFormContent))
   mittBus.emit('auto-start-chat-with-boss-config-saved')
   router.replace({
     path: '/geekAutoStartChatWithBoss/prepareRun',
@@ -1016,7 +1258,12 @@ const handleSave = async () => {
     console.log(err)
     return
   }
-  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
+  const clonedFormContent = JSON.parse(JSON.stringify(formContent.value))
+  clonedFormContent.jobSourceList = formatJobSourceFormValueToConfig(
+    clonedFormContent.__jobSourceList
+  )
+  delete clonedFormContent.__jobSourceList
+  await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(clonedFormContent))
   mittBus.emit('auto-start-chat-with-boss-config-saved')
   ElMessage.success('配置保存成功')
   gtagRenderer('config_saved')
@@ -1081,7 +1328,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '',
       expectJobTypeRegExpStr: '',
-      expectJobDescRegExpStr: ''
+      expectJobDescRegExpStr: '',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1089,7 +1337,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '前端|H5|FE',
       expectJobTypeRegExpStr: '前端开发|javascript',
-      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5'
+      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1097,7 +1346,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '\\bJava\\b',
       expectJobTypeRegExpStr: '\\bJava\\b',
-      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo'
+      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1105,7 +1355,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '员工关系|劳动关系|SSC|人力资源|人资',
       expectJobTypeRegExpStr: '员工关系|人力资源',
-      expectJobDescRegExpStr: '社保|考勤|入职|离职'
+      expectJobDescRegExpStr: '社保|考勤|入职|离职',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   },
   {
@@ -1113,7 +1364,8 @@ const expectJobFilterTemplateList = [
     config: {
       expectJobNameRegExpStr: '招聘|招聘HR|招聘专员|招聘顾问|招聘专家|Recruiter|人力资源|人资',
       expectJobTypeRegExpStr: '招聘|人力资源|猎头顾问',
-      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头'
+      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
     }
   }
 ]
@@ -1150,6 +1402,17 @@ const strategyScopeOptionWhenMarkJobNotMatch = [
   {
     name: '仅和“公司白名单”匹配的职位',
     value: StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
+  }
+]
+
+const jobDetailRegExpMatchLogicOptions = [
+  {
+    name: '“且”模式 - 所有正则匹配时才认为职位匹配',
+    value: JobDetailRegExpMatchLogic.EVERY
+  },
+  {
+    name: '“或”模式 - 任一正则匹配时即认为职位匹配',
+    value: JobDetailRegExpMatchLogic.SOME
   }
 ]
 
@@ -1275,6 +1538,87 @@ function handleHowToFillDetailFilterClick() {
     'https://linux.do/t/topic/640626/74?u=geekgeekrun'
   )
 }
+
+function isJobDetailRegExpEmpty() {
+  return [
+    formContent.value.expectJobDescRegExpStr,
+    formContent.value.expectJobNameRegExpStr,
+    formContent.value.expectJobTypeRegExpStr
+  ]
+    .map((it) => Boolean(it?.trim()))
+    .every((it) => it === false)
+}
+
+function getJobDetailRegExpMatchLogicConfig() {
+  const result = {
+    logicText: '-',
+    inputPlaceholderText: '-'
+  }
+  if (formContent.value.jobDetailRegExpMatchLogic === JobDetailRegExpMatchLogic.EVERY) {
+    Object.assign(result, {
+      logicText: '且',
+      inputPlaceholderText: 'true'
+    })
+  }
+  if (formContent.value.jobDetailRegExpMatchLogic === JobDetailRegExpMatchLogic.SOME) {
+    Object.assign(result, {
+      logicText: '或',
+      inputPlaceholderText: 'false'
+    })
+  }
+
+  if (isJobDetailRegExpEmpty()) {
+    result.inputPlaceholderText = 'true'
+  }
+  return result
+}
+
+function formatJobSourceConfigToFormValue(config = []) {
+  const typeToNameKey = {
+    recommend: '推荐列表中的职位',
+    expect: '根据设置的求职期望推荐的职位',
+    search: '通过搜索找到的职位'
+  }
+  const isInitEmpty = !config?.length
+  config = config.filter((it) => Object.hasOwn(typeToNameKey, it.type))
+
+  const addedSet = new Set()
+  const tempArr = []
+  config.forEach((it) => {
+    if (!Object.hasOwn(typeToNameKey, it.type)) {
+      return
+    }
+    tempArr.push(it)
+    addedSet.add(it.type)
+  })
+  config = tempArr
+  Object.keys(typeToNameKey).forEach((k) => {
+    if (addedSet.has(k)) {
+      return
+    }
+    // handle init value
+    tempArr.push({
+      type: k,
+      enabled: isInitEmpty && k === 'expect'
+    })
+    addedSet.add(k)
+  })
+
+  return config.map((outerItem) => {
+    return {
+      ...outerItem,
+      label: typeToNameKey[outerItem.type]
+    }
+  })
+}
+
+function formatJobSourceFormValueToConfig(formValue = []) {
+  return formValue.map((it) => {
+    it = { ...it }
+    delete it.label
+    return it
+  })
+}
 </script>
 
 <style scoped lang="scss">
@@ -1325,12 +1669,6 @@ function handleHowToFillDetailFilterClick() {
     --el-slider-button-size: 18px;
   }
 }
-.job-detail-filter-wrap {
-  transition: 0.2s ease margin-bottom;
-  &:has(.el-form-item__error) {
-    margin-bottom: 40px;
-  }
-}
 </style>
 
 <style lang="scss">
@@ -1338,6 +1676,30 @@ function handleHowToFillDetailFilterClick() {
   .el-form-item__error.el-form-item__error {
     font-size: 12px;
     line-height: 1.2em;
+  }
+  .job-detail-filter-wrap .el-form-item__error {
+    position: static;
+    word-break: break-word;
+  }
+  .job-source-form-item {
+    margin-bottom: 0;
+    .job-source-drag-orderer {
+      margin-top: 10px;
+      background-color: #fff;
+      padding: 20px;
+      border: 1px solid var(--el-card-border-color);
+      border-radius: 4px;
+    }
+    &.is-error {
+      margin-bottom: 18px;
+      .el-input__wrapper {
+        box-shadow: 0 0 0 1px var(--el-border-color) inset;
+      }
+      .job-source-drag-orderer {
+        background-color: var(--el-color-danger-light-9);
+        border: 1px solid var(--el-color-danger);
+      }
+    }
   }
 }
 </style>

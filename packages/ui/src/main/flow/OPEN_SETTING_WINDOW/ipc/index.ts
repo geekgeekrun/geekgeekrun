@@ -149,6 +149,16 @@ export default function initIpc() {
       bossConfig.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
         payload.strategyScopeOptionWhenMarkJobWorkExpNotMatch
     }
+    if (hasOwn(payload, 'jobDetailRegExpMatchLogic')) {
+      bossConfig.jobDetailRegExpMatchLogic = payload.jobDetailRegExpMatchLogic
+    }
+    if (hasOwn(payload, 'isSkipEmptyConditionForCombineRecommendJobFilter')) {
+      bossConfig.isSkipEmptyConditionForCombineRecommendJobFilter =
+        payload.isSkipEmptyConditionForCombineRecommendJobFilter
+    }
+    if (hasOwn(payload, 'jobSourceList')) {
+      bossConfig.jobSourceList = payload.jobSourceList
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 

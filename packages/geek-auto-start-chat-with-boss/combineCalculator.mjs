@@ -90,7 +90,7 @@ export function* combineFiltersWithConstraintsGenerator(selectedFilters) {
 //#region get count of combinations
 
 // 计算符合限制条件的组合数量
-export function calculateTotalCombinations(selectedFilters) {
+export function calculateTotalCombinations(selectedFilters, includeEmptyCondition) {
   const {
     salaryList = [],
     experienceList = [],
@@ -106,8 +106,21 @@ export function calculateTotalCombinations(selectedFilters) {
   const scaleComb = combineWithZero(scaleList, 0, scaleList.length) // Scale: 0 个或更多
   const industryComb = combineWithZero(industryList, 0, 3) // Industry: 0-3 个
 
-  return [salaryComb, experienceComb, degreeComb, scaleComb, industryComb].reduce((accu, cur) => {
+  let result = [salaryComb, experienceComb, degreeComb, scaleComb, industryComb].reduce((accu, cur) => {
     return accu * cur.length
   }, 1)
+  if (!includeEmptyCondition) {
+    result -= 1
+  }
+  return result
 }
 //#endregion
+
+export function checkAnyCombineBossRecommendFilterHasCondition(value) {
+  if (!Object.keys(value ?? {}).length) {
+    return false
+  }
+  return Object.keys(value).some((k) => {
+    return !!value[k]?.length
+  })
+}

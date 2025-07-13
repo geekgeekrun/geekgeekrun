@@ -23,3 +23,14 @@ export enum SalaryCalculateWay {
   MONTH_SALARY = 1,
   ANNUAL_PACKAGE = 2,
 }
+
+export enum JobDetailRegExpMatchLogic {
+  EVERY = 1,
+  SOME = 2,
+}
+
+export enum JobSource {
+  expect = 1,
+  recommend = 2,
+  search = 3,
+}

@@ -231,10 +231,15 @@ import {
   RECHAT_CONTENT_SOURCE,
   RECHAT_LLM_FALLBACK
 } from '../../../../common/enums/auto-start-chat'
-import { gtagRenderer } from '@renderer/utils/gtag'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import mittBus from '../../utils/mitt'
 import { QuestionFilled } from '@element-plus/icons-vue'
-
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'rnrr-config',
+    ...params
+  })
+}
 const router = useRouter()
 const formContent = ref({
   autoReminder: {

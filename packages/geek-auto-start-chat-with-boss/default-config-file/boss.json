@@ -6,6 +6,7 @@
     "scaleList": [],
     "industryList": []
   },
+  "isSkipEmptyConditionForCombineRecommendJobFilter": false,
   "expectJobRegExpStr": "",
   "jobNotMatchStrategy": 1,
   "jobNotActiveStrategy": 1,
@@ -13,6 +14,7 @@
   "expectCityList": [],
   "expectCityNotMatchStrategy": 3,
   "strategyScopeOptionWhenMarkJobCityNotMatch": 2,
+  "jobDetailRegExpMatchLogic": 1,
   "autoReminder": {
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,
@@ -21,5 +23,11 @@
     "recentMessageQuantityForLlm": 8,
     "rechatLlmFallback": 1,
     "onlyRemindBossWithExpectJobType": true
-  }
+  },
+  "jobSourceList": [
+    {
+      "type": "expect",
+      "enabled": true
+    }
+  ]
 }

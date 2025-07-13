@@ -1,4 +1,4 @@
-import { MarkAsNotSuitOp, MarkAsNotSuitReason } from "../enums";
+import { JobSource, MarkAsNotSuitOp, MarkAsNotSuitReason } from "../enums";
 import { requireTypeorm } from "../utils/module-loader";
 import { ChatStartupFrom } from "./ChatStartupLog";
 const { Entity, Column, PrimaryGeneratedColumn } = requireTypeorm()
@@ -41,4 +41,9 @@ export class MarkAsNotSuitLog {
     nullable: true
   })
   autoStartupChatRecordId?: number;
+
+  @Column({
+    nullable: true
+  })
+  jobSource?: JobSource;
 }

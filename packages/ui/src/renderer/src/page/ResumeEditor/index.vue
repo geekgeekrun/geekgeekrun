@@ -322,10 +322,17 @@
 import { ElForm, ElButton, ElAlert, ElMessageBox } from 'element-plus'
 import { ref, onMounted, computed } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
-import { gtagRenderer } from '@renderer/utils/gtag'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { type ResumeContent, resumeContentEnoughDetect } from '../../../../common/utils/resume'
 
 const formRef = ref<InstanceType<typeof ElForm>>()
+
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'resume-editor',
+    ...params
+  })
+}
 
 const getEmptyFormContent = () => {
   const o: any = {

@@ -109,8 +109,14 @@ import { ElForm, ElMessage } from 'element-plus'
 import { ref, onUnmounted, onMounted } from 'vue'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
 import { useRouter } from 'vue-router'
-import { gtagRenderer } from '@renderer/utils/gtag'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'cookie-assistant',
+    ...params
+  })
+}
 const router = useRouter()
 const cookieInvalid = ref(false)
 

@@ -245,7 +245,7 @@ export async function saveChatStartupRecord(
   ds: DataSource,
   _jobInfo,
   { encryptUserId },
-  { autoStartupChatRecordId = undefined, chatStartupFrom = undefined } = {}
+  { autoStartupChatRecordId = undefined, chatStartupFrom = undefined, jobSource = undefined } = {}
 ) {
   const { jobInfo } = _jobInfo;
 
@@ -256,7 +256,8 @@ export async function saveChatStartupRecord(
     encryptCurrentUserId: encryptUserId,
     encryptJobId: jobInfo.encryptId,
     autoStartupChatRecordId,
-    chatStartupFrom
+    chatStartupFrom,
+    jobSource,
   }
   Object.assign(chatStartupLog, chatStartupLogPayload)
 
@@ -270,7 +271,7 @@ export async function saveMarkAsNotSuitRecord(
   ds: DataSource,
   _jobInfo,
   { encryptUserId },
-  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined, markOp = undefined } = {}
+  { autoStartupChatRecordId = undefined, markFrom = undefined, extInfo = undefined, markReason = undefined, markOp = undefined, jobSource = undefined } = {}
 ) {
   const { jobInfo } = _jobInfo;
 
@@ -284,7 +285,8 @@ export async function saveMarkAsNotSuitRecord(
     markFrom,
     markReason,
     extInfo: extInfo ? JSON.stringify(extInfo) : undefined,
-    markOp
+    markOp,
+    jobSource,
   }
   Object.assign(markAsNotSuitLog, markAsNotSuitLogPayload)
 
@@ -333,9 +335,33 @@ export async function getNotSuitMarkRecordsInLastSomeDays (ds: DataSource, days 
   const result = await repo.findBy({
     date: Raw(alias => `DATE(${alias}) >= DATE('${
       new Date(
-        Number(new Date()) - 7 * 24 * 60 * 60 * 1000
+        Number(new Date()) - days * 24 * 60 * 60 * 1000
       ).toISOString()
     }')`)
+  })
+  return result
+}
+
+export async function getChatStartupRecordsInLastSomeDays (ds: DataSource, days = 0) {
+  const repo = ds.getRepository(ChatStartupLog)
+  const result = await repo.findBy({
+    date: Raw(alias => `DATE(${alias}) >= DATE('${
+      new Date(
+        Number(new Date()) - days * 24 * 60 * 60 * 1000
+      ).toISOString()
+    }')`)
+  })
+  return result
+}
+
+export async function getBossIdsByJobIds (ds: DataSource, jobIds: string[] = []) {
+  const repo = ds.getRepository(JobInfo)
+  const result = await repo.find({
+    where: jobIds.map(
+      id => ({
+        encryptJobId: id
+      })
+    )
   })
   return result
 }
