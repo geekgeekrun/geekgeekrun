@@ -28,3 +28,9 @@ export enum JobDetailRegExpMatchLogic {
   EVERY = 1,
   SOME = 2,
 }
+
+export enum JobSource {
+  expect = 1,
+  recommend = 2,
+  search = 3,
+}

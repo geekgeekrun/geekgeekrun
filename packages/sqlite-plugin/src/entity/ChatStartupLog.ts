@@ -1,3 +1,4 @@
+import { JobSource } from "../enums";
 import { requireTypeorm } from "../utils/module-loader";
 const { Entity, Column, PrimaryGeneratedColumn } = requireTypeorm()
 
@@ -29,4 +30,9 @@ export class ChatStartupLog {
     nullable: true
   })
   autoStartupChatRecordId?: number;
+
+  @Column({
+    nullable: true
+  })
+  jobSource?: JobSource;
 }

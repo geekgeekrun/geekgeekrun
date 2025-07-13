@@ -37,6 +37,7 @@ import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-Upd
 import { MarkAsNotSuitOp, MarkAsNotSuitReason } from "./enums";
 import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/1746092370665-AddColumnForMarkAsNotSuitLog";
 import { Init1000000000000 } from "./migrations/1000000000000-Init";
+import { AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526 } from "./migrations/1752380078526-AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog";
 
 export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
@@ -72,6 +73,7 @@ export function initDb(dbFilePath) {
       UpdateChatStartupLogTable1729182577167,
       UpdateBossInfoTable1732032381304,
       AddColumnForMarkAsNotSuitLog1746092370665,
+      AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526
     ],
     migrationsRun: true
   });
