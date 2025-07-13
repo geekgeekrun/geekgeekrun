@@ -930,7 +930,7 @@ import {
   calculateTotalCombinations,
   checkAnyCombineBossRecommendFilterHasCondition
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
-import { gtagRenderer } from '@renderer/utils/gtag'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
@@ -944,6 +944,13 @@ import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
+
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'gascwb-config',
+    ...params
+  })
+}
 
 const router = useRouter()
 

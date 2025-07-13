@@ -87,13 +87,22 @@
 <script lang="ts" setup>
 import { ElCheckbox, ElCheckboxGroup, ElMessage } from 'element-plus'
 import { ref, onMounted, onBeforeMount } from 'vue';
-import { gtagRenderer } from '@renderer/utils/gtag'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'first-run-agreement',
+    ...params
+  })
+}
 const electron = window.electron
 
 const readmeItemCheckStatusList = ref<number[]>([])
 
-const handleCancel = () => {
+const handleCancel = async () => {
+  gtagRenderer('cancel_clicked')
+  await sleep(500)
   electron.ipcRenderer.invoke('exit-app-immediately')
 }
 
