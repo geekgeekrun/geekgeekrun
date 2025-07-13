@@ -4,6 +4,10 @@ import {
   readStorageFile,
   writeStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import {
+  RECOMMEND_JOB_ENTRY_SELECTOR,
+  USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
 import {
   saveJobInfoFromRecommendPage,
@@ -13,7 +17,7 @@ import {
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { MarkAsNotSuitReason, JobSource } from '@geekgeekrun/sqlite-plugin/dist/enums'
 
 import fs from 'node:fs'
 import { Target } from 'puppeteer'
@@ -37,6 +41,49 @@ const attachRequestsListener = async (target: Target) => {
   const page = await target.page()
   if (!page) {
     return
+  }
+  async function getCurrentJobSource() {
+    const methodMap = {
+      async recommend() {
+        return await page.evaluate(
+          ({ RECOMMEND_JOB_ENTRY_SELECTOR }) => {
+            return document.querySelector(RECOMMEND_JOB_ENTRY_SELECTOR).classList.contains('active')
+          },
+          {
+            RECOMMEND_JOB_ENTRY_SELECTOR
+          }
+        )
+      },
+      async expect() {
+        return await page.evaluate(
+          ({ USER_SET_EXPECT_JOB_ENTRIES_SELECTOR }) => {
+            return [...document.querySelectorAll(USER_SET_EXPECT_JOB_ENTRIES_SELECTOR)].some((el) =>
+              el.classList.contains('active')
+            )
+          },
+          {
+            USER_SET_EXPECT_JOB_ENTRIES_SELECTOR
+          }
+        )
+      },
+      async search() {
+        const elHandle = await page.$(`.page-jobs-main`)
+        const currentKeyWord = await elHandle?.evaluate((el) => {
+          return el?.__vue__?.formData?.query
+        })
+        return !!currentKeyWord
+      }
+    }
+    for (const [type, func] of Object.entries(methodMap)) {
+      try {
+        if (await func()) {
+          return type
+        }
+      } catch (err) {
+        console.error('encounter error when get job source')
+      }
+    }
+    return null
   }
 
   page.on('response', async (response) => {
@@ -81,7 +128,7 @@ const attachRequestsListener = async (target: Target) => {
       const reasonCodeToTextMap = await readStorageFile(
         'job-not-suit-reason-code-to-text-cache.json'
       )
-
+      const jobSource = await getCurrentJobSource()
       const markDetail = {
         markFrom: ChatStartupFrom.ManuallyFromRecommendList,
         extInfo: {
@@ -90,12 +137,14 @@ const attachRequestsListener = async (target: Target) => {
             text: reasonCodeToTextMap[chosenCode]
           }
         },
-        markReason: MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON
+        markReason: MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON,
+        jobSource: JobSource[jobSource]
       }
       gtag('job_marked_as_not_suit', {
         markFrom: markDetail.markFrom,
         bossActiveTimeDesc: currentJobData?.bossInfo?.activeTimeDesc,
-        encryptJobId: currentJobData?.jobInfo?.encryptId
+        encryptJobId: currentJobData?.jobInfo?.encryptId,
+        jobSource: JobSource[jobSource]
       })
       if (reasonCodeToTextMap[chosenCode]?.includes('活跃度低')) {
         markDetail.markReason = MarkAsNotSuitReason.BOSS_INACTIVE
@@ -131,9 +180,11 @@ const attachRequestsListener = async (target: Target) => {
       const currentUserInfo = await page.evaluate(
         'document.querySelector(".job-detail-box").__vue__.$store.state.userInfo'
       )
+      const jobSource = await getCurrentJobSource()
       gtag('new_chat_startup', {
         chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList,
-        encryptJobId: currentJobData?.jobInfo?.encryptId
+        encryptJobId: currentJobData?.jobInfo?.encryptId,
+        jobSource: JobSource[jobSource]
       })
       await saveChatStartupRecord(
         await dbInitPromise,
@@ -142,7 +193,8 @@ const attachRequestsListener = async (target: Target) => {
           encryptUserId: currentUserInfo.encryptUserId
         },
         {
-          chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList
+          chatStartupFrom: ChatStartupFrom.ManuallyFromRecommendList,
+          jobSource: JobSource[jobSource]
         }
       )
     } else if (

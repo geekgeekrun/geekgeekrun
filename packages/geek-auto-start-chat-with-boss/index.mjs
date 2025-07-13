@@ -21,7 +21,12 @@ import { default as jobFilterConditions } from './internal-config/job-filter-con
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
 import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay, JobDetailRegExpMatchLogic, JobSource } from '@geekgeekrun/sqlite-plugin/dist/enums'
-import { activeDescList } from './constant.mjs'
+import {
+  activeDescList,
+  RECOMMEND_JOB_ENTRY_SELECTOR,
+  USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
+  SEARCH_BOX_SELECTOR,
+} from './constant.mjs'
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
@@ -533,10 +538,6 @@ async function toRecommendPage (hooks) {
       await closeButtonProxy.click()
     }
   }
-
-  const RECOMMEND_JOB_ENTRY_SELECTOR = `.c-expect-select a[ka="jobs_recommend_tab_click"]`
-  const USER_SET_EXPECT_JOB_ENTRIES_SELECTOR = `.c-expect-select .expect-list .expect-item`
-  const SEARCH_BOX_SELECTOR = `.c-search-input .search-input-box`
 
   const computedSourceList = []
   for (const source of normalizedJobSource) {
