@@ -186,6 +186,12 @@ Boss不明原因已读不回？简历就是投不出去？
 - 请在Boss直聘上自行**屏蔽您不期望投递的公司**；如果您不希望您当前公司其它具有招聘账号的员工看到您在Boss直聘上活跃，请**在Boss直聘上屏蔽当前公司及与之关联的公司**。
 - 本程序经历过了多次测试，理论上来说大部分情况下可以正常运行，但可能也会出现测试用例覆盖不到位，导致程序不按预期运行的情况；如果您有顾虑，建议通过VMware Workstation/Fusion、Oracle VirtualBox、Microsoft Hyper-V等虚拟化技术运行本程序。如果您在使用过程中遇上程序未按照预期执行的情况，请[点击这里](https://github.com/geekgeekrun/geekgeekrun/issues/new)进行反馈。
 
+## 想联系作者？想反馈使用体验上的问题？想找求职搭子？
+
+![QQ Group QRCode](https://github.com/user-attachments/assets/67560948-467b-44f5-a3e3-c8713255d8b7)
+
+欢迎进群聊天（刚建的群，人有点少，大胆聊就好）
+
 --------
 
 以上
