@@ -188,7 +188,8 @@ Boss不明原因已读不回？简历就是投不出去？
 
 ## 想联系作者？想反馈使用体验上的问题？想找求职搭子？
 
-![QQ Group QRCode](https://github.com/user-attachments/assets/67560948-467b-44f5-a3e3-c8713255d8b7)
+<img width="360" alt="QQ Group QRCode" src="https://github.com/user-attachments/assets/67560948-467b-44f5-a3e3-c8713255d8b7" />
+
 
 欢迎进群聊天（刚建的群，人有点少，大胆聊就好）
 
