@@ -175,6 +175,9 @@ export default class SqlitePlugin {
           }
           const last30DayChatStartupRecords = (await getChatStartupRecordsInLastSomeDays(ds, 30)) ?? [];
           const chattedJobIds = last30DayChatStartupRecords.map(it => it.encryptJobId)
+          if (chattedJobIds.length === 0) {
+            return
+          }
           const chattedBossIds = ((await getBossIdsByJobIds(ds, chattedJobIds)) ?? []).map(it => it.encryptBossId)
           for (const id of chattedBossIds) {
             blockBossNotNewChat.add(id)
