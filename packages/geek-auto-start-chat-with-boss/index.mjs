@@ -251,33 +251,43 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
     await writeStorageFile('job-not-suit-reason-code-to-text-cache.json', reasonCodeToTextMap)
     await sleepWithRandomDelay(2000)
     const chooseReasonDialogProxy = await(async() => {
-      const alls = await page.$$('.zp-dialog-wrap.zp-feedback-dialog.v-transfer-dom')
+      const alls = await page.$$('.zp-dialog-wrap.zp-feedback-dialog')
       return alls?.[alls.length - 1]
     })()
     let isOptionChosen = false
     if (chooseReasonDialogProxy) {
       switch (reasonCode) {
         case MarkAsNotSuitReason.BOSS_INACTIVE: {
-          const bossNotActiveOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`)
-          if (bossNotActiveOptionProxy) {
-            await bossNotActiveOptionProxy.click()
+          const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
+          if (opProxy) {
+            await opProxy.click()
             isOptionChosen = true
-          } else {
-            const recruitStoppedOptionProxy = await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`)
-            if (recruitStoppedOptionProxy) {
-              await recruitStoppedOptionProxy.click()
-              isOptionChosen = true
-            }
           }
           break
         }
         case MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT:
-        case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT:
-        case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
+        case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="同城距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="距离远"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
+          if (opProxy) {
+            await opProxy.click()
+            isOptionChosen = true
+          }
+          break
+        }
+        case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
+          const opProxy = (await chooseReasonDialogProxy.$(`xpath///*[contains(@class,'zp-type-item')][contains(@title, "薪资")]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
           if (opProxy) {
             await opProxy.click()
             isOptionChosen = true
@@ -286,7 +296,9 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         }
         case MarkAsNotSuitReason.JOB_NOT_SUIT:
         default: {
-          const jobNotSuitOptionProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`)) ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+          const jobNotSuitOptionProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
           if (jobNotSuitOptionProxy) {
             await jobNotSuitOptionProxy.click()
             isOptionChosen = true
