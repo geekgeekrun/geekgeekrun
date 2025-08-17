@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { type DataSource } from "typeorm";
 import { requireTypeorm } from "./utils/module-loader";
-import fs from 'node:fs'
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";

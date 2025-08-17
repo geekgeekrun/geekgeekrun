@@ -523,6 +523,11 @@ async function toRecommendPage (hooks) {
   ) {
     throw new Error("ACCESS_IS_DENIED")
   }
+
+  await page.waitForFunction(({ recommendJobPageUrl }) => {
+    return location.href.startsWith(recommendJobPageUrl) && document.readyState === 'complete'
+  }, undefined, { recommendJobPageUrl })
+
   hooks.pageLoaded?.call()
 
   let userInfoResponse = await userInfoPromise
@@ -535,20 +540,6 @@ async function toRecommendPage (hooks) {
     throw new Error("LOGIN_STATUS_INVALID")
   } else {
     await storeStorage(page).catch(() => void 0)
-  }
-
-  // check set security question tip modal
-  let setSecurityQuestionTipModelProxy = await page.$('.dialog-wrap.dialog-account-safe')
-  if (
-    setSecurityQuestionTipModelProxy
-  ) {
-    await sleep(1000)
-    setSecurityQuestionTipModelProxy = await page.$('.dialog-wrap.dialog-account-safe')
-    const closeButtonProxy = await setSecurityQuestionTipModelProxy?.$('.close')
-
-    if (setSecurityQuestionTipModelProxy && closeButtonProxy) {
-      await closeButtonProxy.click()
-    }
   }
 
   const computedSourceList = []
@@ -640,6 +631,26 @@ async function toRecommendPage (hooks) {
 
   let currentSourceIndex = 0
   afterPageLoad: while (true) {
+    // check set security question tip modal
+    let setSecurityQuestionTipModelProxy
+    try {
+      setSecurityQuestionTipModelProxy = await page.waitForSelector('.dialog-wrap.dialog-account-safe', { timeout: 3 * 1000 })
+    }
+    catch(err) {
+      console.log(`cannot find set security question tip modal, just continue`)
+    }
+    if (
+      setSecurityQuestionTipModelProxy
+    ) {
+      await sleep(1000)
+      setSecurityQuestionTipModelProxy = await page.$('.dialog-wrap.dialog-account-safe')
+      const closeButtonProxy = await setSecurityQuestionTipModelProxy?.$('.close')
+
+      if (setSecurityQuestionTipModelProxy && closeButtonProxy) {
+        await closeButtonProxy.click()
+      }
+    }
+
     let expectJobList
     iterateFilterCondition: for (
       const filterCondition of combineFiltersWithConstraintsGenerator(
