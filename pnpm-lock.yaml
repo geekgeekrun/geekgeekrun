@@ -129,6 +129,9 @@ importers:
       electron-updater:
         specifier: ^6.1.7
         version: 6.1.7
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
@@ -226,9 +229,6 @@ importers:
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.0
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
@@ -4570,7 +4570,6 @@ packages:
 
   /lodash-es@4.17.21:
     resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
-    dev: true
 
   /lodash-unified@1.0.3(@types/lodash-es@4.17.12)(lodash-es@4.17.21)(lodash@4.17.21):
     resolution: {integrity: sha512-WK9qSozxXOD7ZJQlpSqOT+om2ZfcT4yO+03FuzAHD0wF6S0l0090LRPDx3vhTTLZ8cFKpBn+IOcVXK6qOcIlfQ==}
