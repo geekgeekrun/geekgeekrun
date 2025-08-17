@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { type DataSource } from "typeorm";
 import { requireTypeorm } from "./utils/module-loader";
-import fs from 'node:fs'
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
@@ -38,6 +37,7 @@ import { MarkAsNotSuitOp, MarkAsNotSuitReason } from "./enums";
 import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/1746092370665-AddColumnForMarkAsNotSuitLog";
 import { Init1000000000000 } from "./migrations/1000000000000-Init";
 import { AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526 } from "./migrations/1752380078526-AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog";
+const lodashImportPromise = import('lodash-es')
 
 export function initDb(dbFilePath) {
   const { DataSource } = requireTypeorm()
@@ -175,7 +175,16 @@ export default class SqlitePlugin {
           }
           const last30DayChatStartupRecords = (await getChatStartupRecordsInLastSomeDays(ds, 30)) ?? [];
           const chattedJobIds = last30DayChatStartupRecords.map(it => it.encryptJobId)
-          const chattedBossIds = ((await getBossIdsByJobIds(ds, chattedJobIds)) ?? []).map(it => it.encryptBossId)
+          if (chattedJobIds.length === 0) {
+            return
+          }
+          const { chunk } = await lodashImportPromise
+          const chattedJobIdChunks = chunk(chattedJobIds, 200)
+          const chattedBossIds = [];
+          for (const chattedJobIdChunk of chattedJobIdChunks) {
+            const chattedBossIdChunk = ((await getBossIdsByJobIds(ds, chattedJobIdChunk)) ?? []).map(it => it.encryptBossId)
+            chattedBossIds.push(...chattedBossIdChunk)
+          }
           for (const id of chattedBossIds) {
             blockBossNotNewChat.add(id)
           }
