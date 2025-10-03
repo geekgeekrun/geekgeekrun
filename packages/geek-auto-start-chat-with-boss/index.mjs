@@ -271,8 +271,8 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         case MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT:
         case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="距离远"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
           if (opProxy) {
@@ -282,10 +282,10 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
           break
         }
         case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
-          const opProxy = (await chooseReasonDialogProxy.$(`xpath///*[contains(@class,'zp-type-item')][contains(@title, "薪资")]`))
+          const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title*="薪资"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="距离远"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
           if (opProxy) {
@@ -296,11 +296,11 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         }
         case MarkAsNotSuitReason.JOB_NOT_SUIT:
         default: {
-          const jobNotSuitOptionProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`))
+          const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
-          if (jobNotSuitOptionProxy) {
-            await jobNotSuitOptionProxy.click()
+          if (opProxy) {
+            await opProxy.click()
             isOptionChosen = true
           }
           break
@@ -807,7 +807,7 @@ async function toRecommendPage (hooks) {
                   if (expectSalaryHigh && salaryData.high > expectSalaryHigh) {
                     return false
                   }
-                  if (expectSalaryLow && salaryData.low < expectSalaryLow) {
+                  if (expectSalaryLow && salaryData.high < expectSalaryLow) {
                     return false
                   }
                 } else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
@@ -815,7 +815,7 @@ async function toRecommendPage (hooks) {
                   if (expectSalaryHigh && (salaryData.high * salaryDataMonth) / 10 > expectSalaryHigh) {
                     return false
                   }
-                  if (expectSalaryLow && (salaryData.low * salaryDataMonth) / 10 < expectSalaryLow) {
+                  if (expectSalaryLow && (salaryData.high * salaryDataMonth) / 10 < expectSalaryLow) {
                     return false
                   }
                 }
@@ -985,7 +985,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark boss inactive failed`, err)
                         }
                       }
                     },
@@ -1021,7 +1022,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job city not suit failed`, err)
                         }
                       }
                     },
@@ -1057,7 +1059,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job work exp not suit failed`, err)
                         }
                       }
                     },
@@ -1094,7 +1097,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job detail not suit failed`, err)
                         }
                       }
                     },
@@ -1133,7 +1137,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job salary not suit failed`, err)
                         }
                       }
                     }
@@ -1256,7 +1261,9 @@ async function toRecommendPage (hooks) {
               await storeStorage(page).catch(() => void 0)
               throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
             } else {
-              console.error(res)
+              console.error(
+                JSON.stringify(res, null, 2)
+              )
               throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
             }
           } else {
