@@ -1193,6 +1193,12 @@ async function toRecommendPage (hooks) {
                     await notSuitConditionHandleMap[markOnLocalDbCondition]()
                     continue continueFind
                   }
+                  // 3.
+                  const noOpCondition = Object.keys(notSuitReasonIdToStrategyMap).find(k => notSuitReasonIdToStrategyMap[k] === MarkAsNotSuitOp.NO_OP)
+                  if (noOpCondition) {
+                    await notSuitConditionHandleMap[noOpCondition]()
+                    continue continueFind
+                  }
                   // #endregion
                   if (
                     // test company again - when allow list not include target company, just skip
@@ -1255,18 +1261,7 @@ async function toRecommendPage (hooks) {
           );
           const res = await addFriendResponse.json()
 
-          if (res.code !== 0) {
-            // startup chat error, may the chance of today has used out
-            if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
-              await storeStorage(page).catch(() => void 0)
-              throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
-            } else {
-              console.error(
-                JSON.stringify(res, null, 2)
-              )
-              throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
-            }
-          } else {
+          if (res.code === 0) {
             await hooks.newChatStartup?.promise(
               targetJobData,
               {
@@ -1281,6 +1276,28 @@ async function toRecommendPage (hooks) {
             const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
             await closeDialogButtonProxy.click()
             await sleepWithRandomDelay(2000)
+          }
+          // TODO:
+          // else if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && /还剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)) {
+          //   debugger
+          // }
+          else if (
+            res.zpData.bizCode === 1 &&
+            res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && 
+            (
+              res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试` ||
+              /明天再来/.test(res.zpData.bizData?.chatRemindDialog?.content)
+            )
+          ) {
+            // startup chat error, may the chance of today has used out
+            await storeStorage(page).catch(() => void 0)
+            throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
+          }
+          else {
+            console.error(
+              JSON.stringify(res, null, 2)
+            )
+            throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
           }
           // #endregion
         } catch (err) {
