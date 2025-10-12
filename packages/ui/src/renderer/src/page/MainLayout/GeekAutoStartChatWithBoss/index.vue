@@ -22,7 +22,7 @@
             <div w-full>
               <div ref="jobSourceFormItemSectionEl" font-size-16px>
                 <div>
-                  职位来源及其查找顺序
+                  你想投递Boss直聘上哪些列表里的职位？
                   <el-tooltip
                     effect="light"
                     placement="bottom-start"
@@ -41,7 +41,7 @@
                 </div>
               </div>
               <div font-size-12px>
-                拖放条目前方的手柄以调整职位来源查找顺序；点击条目前方的开关以启用/禁用对应的职位来源
+                拖放条目前方的手柄以调整职位列表查找顺序；点击条目前方的开关以启用/禁用对应的职位列表
               </div>
               <JobSourceDragOrderer
                 v-model="formContent.__jobSourceList"
@@ -49,11 +49,9 @@
               />
             </div>
           </el-form-item>
-        </el-card>
-        <el-card class="config-section">
-          <el-form-item prop="filter">
+          <el-form-item prop="filter" mt18px>
             <div font-size-16px>
-              职位筛选条件
+              你希望Boss直聘为你展示什么样的职位？
               <el-tooltip
                 effect="light"
                 placement="bottom-start"
@@ -582,9 +580,7 @@
               </div>
             </div>
           </div>
-        </el-card>
-        <el-card class="config-section">
-          <el-form-item mb0>
+          <el-form-item mb0 mt20px>
             <div font-size-16px>职位详情筛选条件</div>
           </el-form-item>
           <div>
