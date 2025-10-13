@@ -108,7 +108,18 @@ const isSalaryFilterEnabled = expectSalaryLow || expectSalaryHigh
 const strategyScopeOptionWhenMarkSalaryNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkSalaryNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
 // work exp
-const expectWorkExpList = readConfigFile('boss.json').expectWorkExpList ?? []
+let expectWorkExpList = readConfigFile('boss.json').expectWorkExpList ?? []
+const expectWorkExpListSet = new Set(expectWorkExpList)
+if (
+  expectWorkExpListSet.has('应届生') ||
+  expectWorkExpListSet.has('在校生')
+) {
+  expectWorkExpListSet.delete('应届生')
+  expectWorkExpListSet.delete('在校生')
+  expectWorkExpListSet.add('在校/应届')
+}
+expectWorkExpList = Array.from(expectWorkExpListSet)
+
 const expectWorkExpNotMatchStrategy = readConfigFile('boss.json').expectWorkExpNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const strategyScopeOptionWhenMarkJobWorkExpNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobWorkExpNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
