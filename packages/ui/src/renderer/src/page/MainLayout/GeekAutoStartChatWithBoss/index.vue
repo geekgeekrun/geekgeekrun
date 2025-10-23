@@ -613,7 +613,12 @@
                     <el-icon class="el-icon--right"><arrow-down /></el-icon
                   ></el-button>
                   <template #dropdown>
-                    <el-dropdown-menu>
+                    <el-dropdown-menu
+                      :style="{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr 1fr'
+                      }"
+                    >
                       <el-dropdown-item
                         v-for="item in expectJobFilterTemplateList"
                         :key="item.name"
@@ -940,6 +945,7 @@ import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
+import expectJobFilterTemplateList from './expectJobFilterTemplateList'
 
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {
@@ -1318,53 +1324,6 @@ function handleExpectCompanyTemplateClicked(item) {
   formContent.value.expectCompanies = item.value
 }
 
-const expectJobFilterTemplateList = [
-  {
-    name: '不限职位（随便投）',
-    config: {
-      expectJobNameRegExpStr: '',
-      expectJobTypeRegExpStr: '',
-      expectJobDescRegExpStr: '',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '研发 - 前端开发工程师',
-    config: {
-      expectJobNameRegExpStr: '前端|H5|FE',
-      expectJobTypeRegExpStr: '前端开发|javascript',
-      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '研发 - Java',
-    config: {
-      expectJobNameRegExpStr: '\\bJava\\b',
-      expectJobTypeRegExpStr: '\\bJava\\b',
-      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '人力 - 员工关系',
-    config: {
-      expectJobNameRegExpStr: '员工关系|劳动关系|SSC|人力资源|人资',
-      expectJobTypeRegExpStr: '员工关系|人力资源',
-      expectJobDescRegExpStr: '社保|考勤|入职|离职',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '人力 - 招聘',
-    config: {
-      expectJobNameRegExpStr: '招聘|招聘HR|招聘专员|招聘顾问|招聘专家|Recruiter|人力资源|人资',
-      expectJobTypeRegExpStr: '招聘|人力资源|猎头顾问',
-      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  }
-]
 function handleExpectJobFilterTemplateClicked(item) {
   gtagRenderer('expect_job_filter_tpl_clicked', {
     name: item.name
