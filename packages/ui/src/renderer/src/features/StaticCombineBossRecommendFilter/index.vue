@@ -4,7 +4,22 @@
       >添加条件</el-button
     >
     <div class="job-combo-filter" mt-8px>
-      <el-table size="small" :data="props.modelValue" border :style="{ maxWidth: '100%' }">
+      <el-table
+        size="small"
+        :data="props.modelValue"
+        border
+        :style="{ maxWidth: '100%' }"
+        :row-style="
+          ({ row }) => {
+            return {
+              backgroundColor:
+                duplicatedMap.get(getStaticCombineFilterKey(row))?.length > 1
+                  ? '#fcd4b7'
+                  : 'transparent'
+            }
+          }
+        "
+      >
         <template #empty>
           <div lh-1.5em>
             列表中没有条件，将仅使用默认的“初始空条件”为您筛选职位<br />
@@ -149,6 +164,17 @@
         </el-table-column>
       </el-table>
     </div>
+    <div
+      v-if="
+        Array.from(duplicatedMap.values()).some((it) => {
+          return it.length > 1
+        })
+      "
+      color-orange
+      font-size-12px
+    >
+      列表中被橙色高亮的条件存在重复项，相关重复项将被合并，运行时遍历顺序以第一次出现为准
+    </div>
   </div>
 </template>
 
@@ -156,7 +182,9 @@
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import industryFilterExemption from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
-import { PropType } from 'vue'
+import { computed, PropType } from 'vue'
+
+import { getStaticCombineFilterKey } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 
 const props = defineProps({
   modelValue: {
@@ -210,6 +238,18 @@ function removeCondition(index) {
   props.modelValue?.splice(index, 1)
   // gtagRenderer('resume_work_exp_removed')
 }
+const duplicatedMap = computed(() => {
+  const map = new Map()
+  for (const condition of props.modelValue ?? []) {
+    const key = getStaticCombineFilterKey(condition)
+    if (!map.has(key)) {
+      map.set(key, [])
+    }
+    const arr = map.get(key)
+    arr.push(condition)
+  }
+  return map
+})
 </script>
 
 <style lang="scss" scoped>

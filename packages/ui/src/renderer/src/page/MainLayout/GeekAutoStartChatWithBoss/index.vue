@@ -961,7 +961,8 @@ import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBo
 import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import {
   calculateTotalCombinations,
-  checkAnyCombineBossRecommendFilterHasCondition
+  checkAnyCombineBossRecommendFilterHasCondition,
+  formatStaticCombineFilters
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
@@ -1039,11 +1040,12 @@ const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
   if (
     formContent.value.combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE
   ) {
-    const count = formContent.value.staticCombineRecommendJobFilterConditions.length
-    if (!count) {
+    if (!formContent.value.staticCombineRecommendJobFilterConditions?.length) {
       return 1
     }
-    return count
+    return formatStaticCombineFilters(
+      formContent.value.staticCombineRecommendJobFilterConditions
+    )?.filter(Boolean).length
   }
   return calculateTotalCombinations(
     formContent.value.anyCombineRecommendJobFilter,

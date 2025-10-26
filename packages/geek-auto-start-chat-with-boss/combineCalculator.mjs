@@ -125,8 +125,26 @@ export function checkAnyCombineBossRecommendFilterHasCondition(value) {
   })
 }
 
-export function formatStaticCombineFilters(staticCombineRecommendJobFilterConditions) {
-  const result = staticCombineRecommendJobFilterConditions.map((condition) => {
+export function getStaticCombineFilterKey(condition) {
+  const kAsO = {}
+  for (const key of Object.keys(condition ?? []).sort()) {
+    if (condition[key] === null || condition[key] === undefined) {
+      continue
+    }
+    kAsO[key] = condition[key]
+  }
+  return JSON.stringify(kAsO)
+}
+
+export function formatStaticCombineFilters(rawStaticCombineRecommendJobFilterConditions) {
+  rawStaticCombineRecommendJobFilterConditions = JSON.parse(JSON.stringify(rawStaticCombineRecommendJobFilterConditions))
+  const map = new Map()
+  for (const condition of rawStaticCombineRecommendJobFilterConditions ?? []) {    
+    const key = getStaticCombineFilterKey(condition)
+    map.set(key, condition)
+  }
+  const conditions = Array.from(map.values())
+  const result = conditions.map((condition) => {
     return {
       salaryList: condition.salary ? [condition.salary] : [],
       experienceList: condition.experience ? [condition.experience] : [],
