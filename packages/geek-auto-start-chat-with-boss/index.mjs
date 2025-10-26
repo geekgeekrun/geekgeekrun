@@ -15,12 +15,21 @@ import { readConfigFile, writeStorageFile, ensureConfigFileExist, readStorageFil
 import {
   calculateTotalCombinations,
   combineFiltersWithConstraintsGenerator,
-  checkAnyCombineBossRecommendFilterHasCondition
+  checkAnyCombineBossRecommendFilterHasCondition,
+  formatStaticCombineFilters,
 } from './combineCalculator.mjs'
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay, JobDetailRegExpMatchLogic, JobSource } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import {
+  MarkAsNotSuitReason,
+  MarkAsNotSuitOp,
+  StrategyScopeOptionWhenMarkJobNotMatch,
+  SalaryCalculateWay,
+  JobDetailRegExpMatchLogic,
+  JobSource,
+  CombineRecommendJobFilterType
+} from '@geekgeekrun/sqlite-plugin/dist/enums'
 import {
   activeDescList,
   RECOMMEND_JOB_ENTRY_SELECTOR,
@@ -85,8 +94,10 @@ const bossCookies = readStorageFile('boss-cookies.json')
 const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
+const combineRecommendJobFilterType = readConfigFile('boss.json').combineRecommendJobFilterType ?? CombineRecommendJobFilterType.ANY_COMBINE
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
+const staticCombineRecommendJobFilterConditions = readConfigFile('boss.json').staticCombineRecommendJobFilterConditions ?? []
 let isSkipEmptyConditionForCombineRecommendJobFilter = readConfigFile('boss.json').isSkipEmptyConditionForCombineRecommendJobFilter
 if (!checkAnyCombineBossRecommendFilterHasCondition(anyCombineRecommendJobFilter)) {
   isSkipEmptyConditionForCombineRecommendJobFilter = false
@@ -662,11 +673,13 @@ async function toRecommendPage (hooks) {
       }
     }
 
+    const filterConditions =
+      combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE
+        ? formatStaticCombineFilters(staticCombineRecommendJobFilterConditions)
+          : combineFiltersWithConstraintsGenerator(anyCombineRecommendJobFilter)
     let expectJobList
     iterateFilterCondition: for (
-      const filterCondition of combineFiltersWithConstraintsGenerator(
-        anyCombineRecommendJobFilter
-      )
+      const filterCondition of filterConditions
     ) {
       findInCurrentFilterCondition: while(true) {
         await sleepWithRandomDelay(2500)
@@ -691,11 +704,17 @@ async function toRecommendPage (hooks) {
             break
           }
         }
-
         if (
-          isSkipEmptyConditionForCombineRecommendJobFilter &&
-          Object.keys(filterCondition).length &&
-          Object.keys(filterCondition).every(k => !filterCondition[k]?.length)
+          (
+            combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE && filterCondition === null
+          )
+          ||
+          (
+            combineRecommendJobFilterType === CombineRecommendJobFilterType.ANY_COMBINE &&
+            isSkipEmptyConditionForCombineRecommendJobFilter &&
+            Object.keys(filterCondition).length &&
+            Object.keys(filterCondition).every(k => !filterCondition[k]?.length)
+          )
         ) {
           sleep(4000)
           continue iterateFilterCondition

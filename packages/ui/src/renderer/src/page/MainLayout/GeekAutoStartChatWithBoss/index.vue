@@ -49,60 +49,91 @@
               />
             </div>
           </el-form-item>
-          <el-form-item prop="filter" mt18px>
-            <div font-size-16px>
-              你希望Boss直聘为你展示什么样的职位？
-              <el-tooltip
-                effect="light"
-                placement="bottom-start"
-                @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
-              >
-                <template #content>
-                  <ul m0 line-height-1.5em w-540px pl2em>
-                    <li>
-                      这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
-                      <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
-                    </li>
-                    <li color-orange>
-                      建议不要筛选过多条件，否则最终组合数会成为一个很大的数字。这将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率
-                    </li>
-                  </ul>
-                </template>
-                <el-button type="text" font-size-12px
-                  ><span><QuestionFilled w-1em h-1em mr2px /></span
-                  >这个配置是如何工作的？</el-button
+          <el-form-item prop="filter" mt18px mb0px w-full>
+            <div flex-1>
+              <div font-size-16px>
+                你希望Boss直聘为你筛选出什么样的职位？
+                <el-tooltip
+                  effect="light"
+                  placement="bottom-start"
+                  @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
                 >
-              </el-tooltip>
+                  <template #content>
+                    <ul m0 line-height-1.5em w-540px pl2em>
+                      <li>
+                        这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
+                        <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
+                      </li>
+                      <li color-orange>
+                        建议不要筛选过多条件，否则最终组合数会成为一个很大的数字。这将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率
+                      </li>
+                    </ul>
+                  </template>
+                  <el-button type="text" font-size-12px
+                    ><span><QuestionFilled w-1em h-1em mr2px /></span
+                    >这个配置是如何工作的？</el-button
+                  >
+                </el-tooltip>
+              </div>
+              <div>
+                <div>
+                  <div font-size-12px>筛选条件遍历方式</div>
+                  <el-select v-model="formContent.combineRecommendJobFilterType" w-320px>
+                    <el-option
+                      v-for="op in combineRecommendJobFilterTypeOptions"
+                      :key="op.value"
+                      :value="op.value"
+                      :label="op.name"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </div>
+                <div
+                  v-if="
+                    formContent.combineRecommendJobFilterType ===
+                    CombineRecommendJobFilterType.STATIC_COMBINE
+                  "
+                  mt8px
+                >
+                  <StaticCombineBossRecommendFilter
+                    v-model="formContent.staticCombineRecommendJobFilterConditions"
+                  />
+                </div>
+                <div v-else mt8px>
+                  <AnyCombineBossRecommendFilter
+                    v-model="formContent.anyCombineRecommendJobFilter"
+                  />
+                  <div mb0>
+                    <el-checkbox
+                      v-if="anyCombineBossRecommendFilterHasCondition"
+                      v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
+                      @change="
+                        (v) => {
+                          gtagRenderer('is_skip_empty_condition_4crjf_changed', { v })
+                        }
+                      "
+                    >
+                      <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
+                    </el-checkbox>
+                    <el-checkbox v-else :model-value="false" disabled>
+                      <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
+                    </el-checkbox>
+                  </div>
+                </div>
+              </div>
+              <div font-size-12px>
+                当前组合条件数：{{
+                  currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
+                }}
+                <span
+                  v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 5"
+                  class="color-orange"
+                  >不建议选择太多组合条件 -
+                  否则将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率</span
+                >
+              </div>
             </div>
-            <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
           </el-form-item>
-          <el-form-item prop="filter" mb0>
-            <el-checkbox
-              v-if="anyCombineBossRecommendFilterHasCondition"
-              v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
-              @change="
-                (v) => {
-                  gtagRenderer('is_skip_empty_condition_4crjf_changed', { v })
-                }
-              "
-            >
-              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
-            </el-checkbox>
-            <el-checkbox v-else :model-value="false" disabled>
-              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
-            </el-checkbox>
-          </el-form-item>
-          <div font-size-12px mt10px>
-            当前组合条件数：{{
-              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
-            }}
-            <span
-              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 5"
-              class="color-orange"
-              >不建议选择太多组合条件 -
-              否则将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率</span
-            >
-          </div>
         </el-card>
         <!-- <el-form-item
           label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
@@ -926,6 +957,7 @@ import { ElForm, ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
+import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBossRecommendFilter/index.vue'
 import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import {
   calculateTotalCombinations,
@@ -935,6 +967,7 @@ import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
+  CombineRecommendJobFilterType,
   MarkAsNotSuitOp,
   StrategyScopeOptionWhenMarkJobNotMatch,
   SalaryCalculateWay,
@@ -960,6 +993,8 @@ const formContent = ref({
   dingtalkRobotAccessToken: '',
   expectCompanies: '',
   anyCombineRecommendJobFilter: {},
+  combineRecommendJobFilterType: 1,
+  staticCombineRecommendJobFilterConditions: [],
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
   expectJobDescRegExpStr: '',
@@ -1001,6 +1036,15 @@ const anyCombineBossRecommendFilterHasCondition = computed(() => {
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
+  if (
+    formContent.value.combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE
+  ) {
+    const count = formContent.value.staticCombineRecommendJobFilterConditions.length
+    if (!count) {
+      return 1
+    }
+    return count
+  }
   return calculateTotalCombinations(
     formContent.value.anyCombineRecommendJobFilter,
     anyCombineBossRecommendFilterHasCondition.value
@@ -1047,6 +1091,12 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
       deep: true
     }
   )
+  formContent.value.combineRecommendJobFilterType =
+    res.config['boss.json']?.combineRecommendJobFilterType ?? 1
+  formContent.value.staticCombineRecommendJobFilterConditions = res.config['boss.json']
+    ?.staticCombineRecommendJobFilterConditions?.length
+    ? res.config['boss.json'].staticCombineRecommendJobFilterConditions
+    : []
   if (
     res.config['boss.json']?.expectJobRegExpStr &&
     typeof res.config['boss.json']?.expectJobNameRegExpStr === 'undefined' &&
@@ -1574,6 +1624,17 @@ function formatJobSourceFormValueToConfig(formValue = []) {
     return it
   })
 }
+
+const combineRecommendJobFilterTypeOptions = [
+  {
+    name: '使用自由组合条件进行遍历',
+    value: 1
+  },
+  {
+    name: '使用固定组合条件进行遍历',
+    value: 2
+  }
+]
 </script>
 
 <style scoped lang="scss">

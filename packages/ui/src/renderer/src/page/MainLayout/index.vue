@@ -1,6 +1,6 @@
 <template>
   <div class="flex h100vh">
-    <div class="flex flex-col w200px pt30px pl30px aside-nav of-hidden">
+    <div class="flex flex-col min-w200px w200px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
         <RouterLink to="./GeekAutoStartChatWithBoss">
           Boss炸弹

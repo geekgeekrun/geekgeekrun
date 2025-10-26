@@ -124,3 +124,17 @@ export function checkAnyCombineBossRecommendFilterHasCondition(value) {
     return !!value[k]?.length
   })
 }
+
+export function formatStaticCombineFilters(staticCombineRecommendJobFilterConditions) {
+  const result = staticCombineRecommendJobFilterConditions.map((condition) => {
+    return {
+      salaryList: condition.salary ? [condition.salary] : [],
+      experienceList: condition.experience ? [condition.experience] : [],
+      degreeList: condition.degree ? [condition.degree] : [],
+      scaleList: condition.scale ? [condition.scale] : [],
+      industryList: condition.industry ? [condition.industry] : []
+    }
+  })
+  result.unshift(null)
+  return result
+}
