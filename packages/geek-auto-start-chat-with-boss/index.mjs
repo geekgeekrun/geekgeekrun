@@ -370,7 +370,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   try {
     if (expectJobNameRegExpStr.trim()) {
       const regExp = new RegExp(expectJobNameRegExpStr, 'i')
-      isJobNameSuit = regExp.test(jobInfo.jobName)
+      isJobNameSuit = regExp.test(jobInfo.jobName?.replace(/\n/g, '') ?? '')
     }
   } catch {
   }
@@ -378,7 +378,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   try {
     if (expectJobTypeRegExpStr.trim()) {
       const regExp = new RegExp(expectJobTypeRegExpStr, 'i')
-      isJobTypeSuit = regExp.test(jobInfo.positionName)
+      isJobTypeSuit = regExp.test(jobInfo.positionName?.replace(/\n/g, '') ?? '')
     }
   } catch {
   }
@@ -386,7 +386,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   try {
     if (expectJobDescRegExpStr.trim()) {
       const regExp = new RegExp(expectJobDescRegExpStr, 'i')
-      isJobDescSuit = regExp.test(jobInfo.postDescription)
+      isJobDescSuit = regExp.test(jobInfo.postDescription?.replace(/\n/g, '') ?? '')
     }
   } catch {
   }

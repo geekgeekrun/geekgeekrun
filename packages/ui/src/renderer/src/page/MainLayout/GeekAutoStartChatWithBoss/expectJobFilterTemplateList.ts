@@ -35,12 +35,23 @@ const expectJobFilterTemplateList = [
   },
   {
     type: '互联网/AI',
-    name: '前端开发工程师、JavaScript',
+    name: '前端开发工程师',
     config: {
       expectJobNameRegExpStr: '前端|H5|\\bFE\\b',
       expectJobTypeRegExpStr: '前端开发|javascript',
       expectJobDescRegExpStr: '前端|vue|react|node|\\bjs\\b|javascript|H5',
       jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
+    }
+  },
+  {
+    type: '互联网/AI',
+    name: '前端开发工程师（不考虑外包、兼职）',
+    config: {
+      expectJobNameRegExpStr: '^(?=.*(前端|H5|\\bFE\\b))(?!.*(?:外包|驻场|外派|兼职|短期))',
+      expectJobTypeRegExpStr: '前端开发|javascript',
+      expectJobDescRegExpStr:
+        '^(?=.*(前端|vue|react|node|\\bjs\\b|javascript|H5))(?!.*(?:外包|驻场|外派|兼职|短期))',
+      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY
     }
   },
   {
@@ -193,7 +204,7 @@ const expectJobFilterTemplateList = [
       expectJobNameRegExpStr: '招聘|高招|Recruiter|HR|人力|人资|人事',
       expectJobTypeRegExpStr: '招聘|猎头|人力',
       expectJobDescRegExpStr:
-        '招聘|高招|Recruiter|简历|面试|人才引进|Mapping|人才画像|offer|猎头|内推|外推|猎聘|Boss|拉勾|前程无忧|智联|58同城|领英|LinkedIn|ATS|人才库|Moka|北森|iTenant|倍罗|大易|伯乐',
+        '招聘|高招|Recruiter|简历|面试|人才引进|Mapping|人才画像|offer|猎头|内推|外推|猎聘|Boss|拉勾|前程无忧|智联|58同城|领英|LinkedIn|ATS|人才库|Moka|北森|iTenant|倍罗|大易',
       jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY
     }
   },
