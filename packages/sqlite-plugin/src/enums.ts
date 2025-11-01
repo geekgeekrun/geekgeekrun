@@ -34,3 +34,8 @@ export enum JobSource {
   recommend = 2,
   search = 3,
 }
+
+export enum CombineRecommendJobFilterType {
+  ANY_COMBINE = 1,
+  STATIC_COMBINE = 2,
+}

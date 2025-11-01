@@ -159,6 +159,13 @@ export default function initIpc() {
     if (hasOwn(payload, 'jobSourceList')) {
       bossConfig.jobSourceList = payload.jobSourceList
     }
+    if (hasOwn(payload, 'combineRecommendJobFilterType')) {
+      bossConfig.combineRecommendJobFilterType = payload.combineRecommendJobFilterType
+    }
+    if (hasOwn(payload, 'staticCombineRecommendJobFilterConditions')) {
+      bossConfig.staticCombineRecommendJobFilterConditions =
+        payload.staticCombineRecommendJobFilterConditions
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
