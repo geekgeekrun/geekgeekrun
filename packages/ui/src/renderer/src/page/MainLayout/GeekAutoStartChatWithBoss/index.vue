@@ -78,7 +78,15 @@
               <div>
                 <div>
                   <div font-size-12px>筛选条件遍历方式</div>
-                  <el-select v-model="formContent.combineRecommendJobFilterType" w-320px>
+                  <el-select
+                    v-model="formContent.combineRecommendJobFilterType"
+                    w-320px
+                    @change="
+                      (v) => {
+                        gtagRenderer('crjf_type_changed', { v })
+                      }
+                    "
+                  >
                     <el-option
                       v-for="op in combineRecommendJobFilterTypeOptions"
                       :key="op.value"
@@ -1180,6 +1188,7 @@ const jobSourceFormItemSectionEl = ref()
 const jobDetailRegExpSectionEl = ref()
 const formRules = {
   expectJobNameRegExpStr: {
+    trigger: 'blur',
     validator(_, value, cb) {
       if (!value) {
         cb()
@@ -1188,16 +1197,17 @@ const formRules = {
       }
       try {
         new RegExp(value, 'ig')
-        gtagRenderer('valid_reg_exp_for_expect_job_name')
+        gtagRenderer('valid_reg_exp_for_expect_job_name', { v: value })
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
         jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
-        gtagRenderer('invalid_reg_exp_for_expect_job_name')
+        gtagRenderer('invalid_reg_exp_for_expect_job_name', { v: value })
       }
     }
   },
   expectJobTypeRegExpStr: {
+    trigger: 'blur',
     validator(_, value, cb) {
       if (!value) {
         cb()
@@ -1206,16 +1216,17 @@ const formRules = {
       }
       try {
         new RegExp(value, 'ig')
-        gtagRenderer('valid_reg_exp_for_expect_job_type')
+        gtagRenderer('valid_reg_exp_for_expect_job_type', { v: value })
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
         jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
-        gtagRenderer('invalid_reg_exp_for_expect_job_type')
+        gtagRenderer('invalid_reg_exp_for_expect_job_type', { v: value })
       }
     }
   },
   expectJobDescRegExpStr: {
+    trigger: 'blur',
     validator(_, value, cb) {
       if (!value) {
         cb()
@@ -1224,12 +1235,12 @@ const formRules = {
       }
       try {
         new RegExp(value, 'ig')
-        gtagRenderer('valid_reg_exp_for_expect_job_desc')
+        gtagRenderer('valid_reg_exp_for_expect_job_desc', { v: value })
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
         jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
-        gtagRenderer('invalid_reg_exp_for_expect_job_desc')
+        gtagRenderer('invalid_reg_exp_for_expect_job_desc', { v: value })
       }
     }
   },
@@ -1269,8 +1280,14 @@ const formRules = {
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
   gtagRenderer('save_config_and_launch_clicked', {
-    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,
+    expect_job_name_reg_exp_str: formContent.value?.expectJobNameRegExpStr,
+    expect_job_type_reg_exp_str: formContent.value?.expectJobTypeRegExpStr,
+    expect_job_desc_reg_exp_str: formContent.value?.expectJobDescRegExpStr,
+    crjf_type: formContent.value?.combineRecommendJobFilterType,
+    crjf_cc: currentAnyCombineRecommendJobFilterCombinationCount.value?.toLocaleString?.()
   })
+  // remove the obsolete filter - expectJobRegExpStr
   formContent.value.expectJobRegExpStr = undefined
   try {
     await formRef.value!.validate()
