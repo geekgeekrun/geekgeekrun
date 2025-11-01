@@ -1,7 +1,7 @@
 {
-  "version": "0.9.5",
-  "buildVersion": 21,
-  "buildTime": 1762010113824,
-  "buildHash": "7a1ae48aa701506e0b6b65af1b81299116012857",
+  "version": "0.10.0",
+  "buildVersion": 22,
+  "buildTime": 1762011916681,
+  "buildHash": "c3dc75b503fe567e0a1a9755a557ce2f4695c9ab",
   "name": "geekgeekrun-ui"
 }
