@@ -148,7 +148,7 @@
         <el-table-column :resizable="false" label="公司规模" prop="scale">
           <template #default="{ row }">
             <el-select
-              v-model="row.scaleList"
+              v-model="row.scale"
               :disabled="row.___itemType === 'empty-condition-placeholder'"
               clearable
               size="small"
@@ -203,6 +203,14 @@ const props = defineProps({
     type: Boolean
   }
 })
+
+// fix for misspell of scale property.
+for (const condition of props.modelValue) {
+  if ((condition as any).scaleList && !condition.scale) {
+    condition.scale = (condition as any).scaleList
+    delete (condition as any).scaleList
+  }
+}
 
 function getNewConditionItem() {
   return {
