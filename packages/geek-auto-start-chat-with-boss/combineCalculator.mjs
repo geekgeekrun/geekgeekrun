@@ -153,6 +153,14 @@ export function formatStaticCombineFilters(rawStaticCombineRecommendJobFilterCon
       industryList: condition.industry ? [condition.industry] : []
     }
   })
-  result.unshift(null)
+  if (!result.length) {
+    result.push({
+      salaryList: [],
+      experienceList: [],
+      degreeList: [],
+      scaleList: [],
+      industryList: []
+    })
+  }
   return result
 }

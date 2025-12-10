@@ -535,10 +535,11 @@ async function toRecommendPage (hooks) {
     }).then((res) => {
       return res.json()
     })
-  await Promise.all([
-    page.goto(recommendJobPageUrl, { timeout: 120 * 1000 }),
-    page.waitForNavigation(),
-  ])
+  page.goto(recommendJobPageUrl, { timeout: 1 * 1000 }).catch(e => { void e })
+  await sleep(3000)
+  await page.waitForFunction(() => {
+    return document.readyState === 'complete'
+  }, { timeout: 120 * 1000 })
   if (
     page.url().startsWith('https://www.zhipin.com/web/common/403.html') ||
     page.url().startsWith('https://www.zhipin.com/web/common/error.html')
