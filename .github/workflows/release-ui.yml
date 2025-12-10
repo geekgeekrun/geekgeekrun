@@ -60,7 +60,7 @@ jobs:
     strategy:
       matrix:
         platform:
-          - os: macos-13 # for x64 build
+          - os: macos-14 # for x64 build
             arch: x64
           - os: macos-14 # for arm64 build
             arch: arm64
