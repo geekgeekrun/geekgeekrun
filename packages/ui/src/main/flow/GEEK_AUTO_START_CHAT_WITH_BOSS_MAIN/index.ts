@@ -1,5 +1,5 @@
 import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/index.mjs'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
 import {
   readConfigFile,
@@ -121,6 +121,11 @@ const runAutoChat = async () => {
     } catch (err) {
       if (err instanceof Error) {
         if (err.message.includes('LOGIN_STATUS_INVALID')) {
+          await dialog.showMessageBox({
+            type: `error`,
+            message: `登录状态无效`,
+            detail: `请重新登录Boss直聘`
+          })
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
           break
         }
