@@ -1280,19 +1280,21 @@ async function toRecommendPage (hooks) {
           //#region click the chat button
           await startChatButtonProxy.click()
 
-          const addFriendResponse = await page.waitForResponse(
-            response => {
-              if (
-                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json') && response.url().includes(`jobId=${targetJobData.jobInfo.encryptId}`)
-              ) {
-                return true
+          const waitAddFriendResponse = async () => {
+            const addFriendResponse = await page.waitForResponse(
+              response => {
+                if (
+                  response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json') && response.url().includes(`jobId=${targetJobData.jobInfo.encryptId}`)
+                ) {
+                  return true
+                }
+                return false
               }
-              return false
-            }
-          );
-          const res = await addFriendResponse.json()
-
-          if (res.code === 0) {
+            );
+            const res = await addFriendResponse.json()
+            return res
+          }
+          const waitAndHandleChatSuccess = async () => {
             await hooks.newChatStartup?.promise(
               targetJobData,
               {
@@ -1308,28 +1310,37 @@ async function toRecommendPage (hooks) {
             await closeDialogButtonProxy.click()
             await sleepWithRandomDelay(2000)
           }
-          // TODO:
-          // else if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && /还剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)) {
-          //   debugger
-          // }
-          else if (
-            res.zpData.bizCode === 1 &&
-            res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && 
-            (
-              res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试` ||
-              /明天再来/.test(res.zpData.bizData?.chatRemindDialog?.content)
-            )
-          ) {
-            // startup chat error, may the chance of today has used out
-            await storeStorage(page).catch(() => void 0)
-            throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
+          const handleAddFriendResponse = async (res) => {
+            if (res.code === 0) {
+              await waitAndHandleChatSuccess()
+            }
+            else if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && /剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)) {
+              const confirmButton = await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn')
+              await confirmButton.click()
+              const nextRes = await waitAddFriendResponse()
+              await handleAddFriendResponse(nextRes)
+            }
+            else if (
+              res.zpData.bizCode === 1 &&
+              res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && 
+              (
+                res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试` ||
+                /明天再来/.test(res.zpData.bizData?.chatRemindDialog?.content)
+              )
+            ) {
+              // startup chat error, may the chance of today has used out
+              await storeStorage(page).catch(() => void 0)
+              throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
+            }
+            else {
+              console.error(
+                JSON.stringify(res, null, 2)
+              )
+              throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
+            }
           }
-          else {
-            console.error(
-              JSON.stringify(res, null, 2)
-            )
-            throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
-          }
+          const res = await waitAddFriendResponse()
+          await handleAddFriendResponse(res)
           // #endregion
         } catch (err) {
           if (err instanceof Error) {
