@@ -1314,8 +1314,21 @@ async function toRecommendPage (hooks) {
             if (res.code === 0) {
               await waitAndHandleChatSuccess()
             }
-            else if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && /剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)) {
+            else if (
+              res.zpData.bizCode === 1 &&
+              res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 &&
+              /剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)
+            ) {
               const confirmButton = await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn')
+              await confirmButton.click()
+              const nextRes = await waitAddFriendResponse()
+              await handleAddFriendResponse(nextRes)
+            }
+            else if (
+              res.zpData.bizCode === 1 &&
+              /猎头/.test(res.zpData.bizData?.chatRemindDialog?.content)
+            ) {
+              const confirmButton = await page.waitForSelector(`xpath///*[contains(@class, "chat-block-dialog")]//*[contains(@class, "chat-block-footer")]//*[contains(text(), "继续")]`)
               await confirmButton.click()
               const nextRes = await waitAddFriendResponse()
               await handleAddFriendResponse(nextRes)
