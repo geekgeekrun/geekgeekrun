@@ -37,6 +37,7 @@ import {
   SEARCH_BOX_SELECTOR,
 } from './constant.mjs'
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
+import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
   arr.forEach(option => {
@@ -738,6 +739,9 @@ async function toRecommendPage (hooks) {
           );
           await storeStorage(page).catch(() => void 0)
           await sleepWithRandomDelay(2000)
+          await waitForSageTimeOrJustContinue({
+            tag: 'afterJobSourceChosen'
+          })
         }
         await sleepWithRandomDelay(1500)
         await setFilterCondition(filterCondition)
@@ -931,7 +935,9 @@ async function toRecommendPage (hooks) {
                     }
                   }
                   requestNextPagePromiseWithResolver = null
-
+                  await waitForSageTimeOrJustContinue({
+                    tag: 'afterJobListPageFetched'
+                  })
                   await sleep(5000)
                   await updateJobListData()
                   tempTargetJobIndexToCheckDetail = getTempTargetJobIndexToCheckDetail()
@@ -975,6 +981,9 @@ async function toRecommendPage (hooks) {
                     );
                     await sleepWithRandomDelay(2000)
                   }
+                  await waitForSageTimeOrJustContinue({
+                    tag: 'afterJobDetailFetched'
+                  })
                   targetJobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
                   selectedJobData = await page.evaluate('document.querySelector(".page-jobs-main").__vue__.currentJob')
                   // save the job detail info
@@ -1002,6 +1011,9 @@ async function toRecommendPage (hooks) {
                       }
                       else if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked'
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1040,6 +1052,9 @@ async function toRecommendPage (hooks) {
                       }
                       else if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked'
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1077,6 +1092,9 @@ async function toRecommendPage (hooks) {
                       }
                       else if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked'
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1114,6 +1132,9 @@ async function toRecommendPage (hooks) {
                       }
                       else if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked'
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1154,6 +1175,9 @@ async function toRecommendPage (hooks) {
                       }
                       else if (expectSalaryNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked'
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1271,6 +1295,9 @@ async function toRecommendPage (hooks) {
               reject(err)
             }
           })
+          await waitForSageTimeOrJustContinue({
+            tag: 'beforeJobChatStartup'
+          })
           await sleepWithRandomDelay(1000)
           const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
 
@@ -1319,6 +1346,9 @@ async function toRecommendPage (hooks) {
               res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 &&
               /剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)
             ) {
+              await waitForSageTimeOrJustContinue({
+                tag: 'beforeJobChatStartupAfterTwiceConfirm'
+              })
               const confirmButton = await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn')
               await confirmButton.click()
               const nextRes = await waitAddFriendResponse()
@@ -1328,6 +1358,9 @@ async function toRecommendPage (hooks) {
               res.zpData.bizCode === 1 &&
               /猎头/.test(res.zpData.bizData?.chatRemindDialog?.content)
             ) {
+              await waitForSageTimeOrJustContinue({
+                tag: 'beforeJobChatStartupAfterTwiceConfirm'
+              })
               const confirmButton = await page.waitForSelector(`xpath///*[contains(@class, "chat-block-dialog")]//*[contains(@class, "chat-block-footer")]//*[contains(text(), "继续")]`)
               await confirmButton.click()
               const nextRes = await waitAddFriendResponse()
