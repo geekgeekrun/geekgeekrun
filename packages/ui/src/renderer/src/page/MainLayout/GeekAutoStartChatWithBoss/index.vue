@@ -19,7 +19,15 @@
           <div>
             <div font-size-16px>摸鱼模式</div>
             <div mt12px>
-              <el-checkbox v-model="formContent.isSageTimeEnabled">启用摸鱼模式</el-checkbox>
+              <el-checkbox
+                v-model="formContent.isSageTimeEnabled"
+                @change="
+                  (v) => {
+                    gtagRenderer('sage_t_enable_changed', { v })
+                  }
+                ">
+                启用摸鱼模式
+              </el-checkbox>
             </div>
             <div pl-1.5em font-size-14px>
               <div>
@@ -33,6 +41,11 @@
                     :min="1"
                     :disabled="!formContent.isSageTimeEnabled"
                     controls-position="right"
+                    @change="
+                      (v) => {
+                        gtagRenderer('sage_t_op_times_changed', { v })
+                      }
+                    "
                   />
                 </el-form-item>
                 次时，暂停运行
@@ -45,6 +58,11 @@
                     :min="0"
                     :disabled="!formContent.isSageTimeEnabled"
                     controls-position="right"
+                    @change="
+                      (v) => {
+                        gtagRenderer('sage_t_pause_minute_changed', { v })
+                      }
+                    "
                   />
                 </el-form-item>
                 分钟；之后继续运行并重新计次，循环整个过程
@@ -1377,7 +1395,12 @@ const handleSubmit = async () => {
     expect_job_type_reg_exp_str: formContent.value?.expectJobTypeRegExpStr,
     expect_job_desc_reg_exp_str: formContent.value?.expectJobDescRegExpStr,
     crjf_type: formContent.value?.combineRecommendJobFilterType,
-    crjf_cc: currentAnyCombineRecommendJobFilterCombinationCount.value?.toLocaleString?.()
+    crjf_cc: currentAnyCombineRecommendJobFilterCombinationCount.value?.toLocaleString?.(),
+    sage_t_config: JSON.stringify({
+      isEnabled: formContent.value.isSageTimeEnabled,
+      pauseMinute: formContent.value.sageTimePauseMinute,
+      opTimes: formContent.value.sageTimeOpTimes
+    })
   })
   // remove the obsolete filter - expectJobRegExpStr
   formContent.value.expectJobRegExpStr = undefined
@@ -1408,7 +1431,17 @@ const handleSubmit = async () => {
 }
 const handleSave = async () => {
   gtagRenderer('save_config_clicked', {
-    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,
+    expect_job_name_reg_exp_str: formContent.value?.expectJobNameRegExpStr,
+    expect_job_type_reg_exp_str: formContent.value?.expectJobTypeRegExpStr,
+    expect_job_desc_reg_exp_str: formContent.value?.expectJobDescRegExpStr,
+    crjf_type: formContent.value?.combineRecommendJobFilterType,
+    crjf_cc: currentAnyCombineRecommendJobFilterCombinationCount.value?.toLocaleString?.(),
+    sage_t_config: JSON.stringify({
+      isEnabled: formContent.value.isSageTimeEnabled,
+      pauseMinute: formContent.value.sageTimePauseMinute,
+      opTimes: formContent.value.sageTimeOpTimes
+    })
   })
   normalizeExpectCompanies()
   try {
