@@ -17,7 +17,25 @@
             </div>
           </el-form-item>
           <div>
-            <div font-size-16px>摸鱼模式</div>
+            <div font-size-16px>
+              摸鱼模式
+              <el-tooltip
+                effect="light"
+                placement="bottom-start"
+                @show="gtagRenderer('tooltip_show_about_sage_t')"
+              >
+                <template #content>
+                  <div>
+                    本程序运行较长时间后，Boss直聘会对账号进行风控，导致本程序不能继续执行。<br />
+                    为此，加入摸鱼模式。通过此配置，主动减慢本程序的运行速度，降低潜在的被风控监测到的概率。<br />
+                  </div>
+                </template>
+                <el-button type="text" font-size-12px
+                  ><span><QuestionFilled w-1em h-1em mr2px /></span
+                  >这个配置会对本程序运行过程造成什么影响？</el-button
+                >
+              </el-tooltip>
+            </div>
             <div mt12px>
               <el-checkbox
                 v-model="formContent.isSageTimeEnabled"
