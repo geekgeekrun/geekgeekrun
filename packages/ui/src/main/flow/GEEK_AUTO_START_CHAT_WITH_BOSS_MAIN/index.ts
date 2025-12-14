@@ -94,7 +94,9 @@ const runAutoChat = async () => {
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo']),
-    encounterEmptyRecommendJobList: new AsyncSeriesHook(['args'])
+    encounterEmptyRecommendJobList: new AsyncSeriesHook(['args']),
+    sageTimeEnter: new AsyncSeriesHook(['args']),
+    sageTimeExit: new AsyncSeriesHook(['args'])
   }
   initPlugins(hooks)
 

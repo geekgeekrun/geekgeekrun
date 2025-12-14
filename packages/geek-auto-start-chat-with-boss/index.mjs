@@ -740,7 +740,8 @@ async function toRecommendPage (hooks) {
           await storeStorage(page).catch(() => void 0)
           await sleepWithRandomDelay(2000)
           await waitForSageTimeOrJustContinue({
-            tag: 'afterJobSourceChosen'
+            tag: 'afterJobSourceChosen',
+            hooks
           })
         }
         await sleepWithRandomDelay(1500)
@@ -936,7 +937,8 @@ async function toRecommendPage (hooks) {
                   }
                   requestNextPagePromiseWithResolver = null
                   await waitForSageTimeOrJustContinue({
-                    tag: 'afterJobListPageFetched'
+                    tag: 'afterJobListPageFetched',
+                    hooks
                   })
                   await sleep(5000)
                   await updateJobListData()
@@ -982,7 +984,8 @@ async function toRecommendPage (hooks) {
                     await sleepWithRandomDelay(2000)
                   }
                   await waitForSageTimeOrJustContinue({
-                    tag: 'afterJobDetailFetched'
+                    tag: 'afterJobDetailFetched',
+                    hooks
                   })
                   targetJobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
                   selectedJobData = await page.evaluate('document.querySelector(".page-jobs-main").__vue__.currentJob')
@@ -1012,7 +1015,8 @@ async function toRecommendPage (hooks) {
                       else if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
                           await waitForSageTimeOrJustContinue({
-                            tag: 'beforeJobNotSuitMarked'
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
                           })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
                           await hooks.jobMarkedAsNotSuit.promise(
@@ -1053,7 +1057,8 @@ async function toRecommendPage (hooks) {
                       else if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
                           await waitForSageTimeOrJustContinue({
-                            tag: 'beforeJobNotSuitMarked'
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
                           })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
@@ -1093,7 +1098,8 @@ async function toRecommendPage (hooks) {
                       else if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
                           await waitForSageTimeOrJustContinue({
-                            tag: 'beforeJobNotSuitMarked'
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
                           })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
@@ -1133,7 +1139,8 @@ async function toRecommendPage (hooks) {
                       else if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
                           await waitForSageTimeOrJustContinue({
-                            tag: 'beforeJobNotSuitMarked'
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
                           })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
@@ -1176,7 +1183,8 @@ async function toRecommendPage (hooks) {
                       else if (expectSalaryNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
                           await waitForSageTimeOrJustContinue({
-                            tag: 'beforeJobNotSuitMarked'
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
                           })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
@@ -1296,7 +1304,8 @@ async function toRecommendPage (hooks) {
             }
           })
           await waitForSageTimeOrJustContinue({
-            tag: 'beforeJobChatStartup'
+            tag: 'beforeJobChatStartup',
+            hooks
           })
           await sleepWithRandomDelay(1000)
           const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
@@ -1347,7 +1356,8 @@ async function toRecommendPage (hooks) {
               /剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)
             ) {
               await waitForSageTimeOrJustContinue({
-                tag: 'beforeJobChatStartupAfterTwiceConfirm'
+                tag: 'beforeJobChatStartupAfterTwiceConfirm',
+                hooks
               })
               const confirmButton = await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn')
               await confirmButton.click()
@@ -1359,7 +1369,8 @@ async function toRecommendPage (hooks) {
               /猎头/.test(res.zpData.bizData?.chatRemindDialog?.content)
             ) {
               await waitForSageTimeOrJustContinue({
-                tag: 'beforeJobChatStartupAfterTwiceConfirm'
+                tag: 'beforeJobChatStartupAfterTwiceConfirm',
+                hooks
               })
               const confirmButton = await page.waitForSelector(`xpath///*[contains(@class, "chat-block-dialog")]//*[contains(@class, "chat-block-footer")]//*[contains(text(), "继续")]`)
               await confirmButton.click()

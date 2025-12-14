@@ -23,7 +23,8 @@ if (parseFloat(sageTimePauseMinute) === 0) {
 let totalEnabledTimes = 0
 let recordedOpCount = 0
 export const waitForSageTimeOrJustContinue = async ({
-  tag
+  tag,
+  hooks,
 } = {}) => {
   if (!isSageTimeEnabled) {
     return
@@ -32,8 +33,18 @@ export const waitForSageTimeOrJustContinue = async ({
   if (recordedOpCount > sageTimeOpTimes) {
     totalEnabledTimes++
     console.log(`[SageTime${tagText}] 请求已达限制，开启；当前记录次数 ${recordedOpCount}；第 ${totalEnabledTimes} 次开启`)
+    await hooks?.sageTimeEnter?.promise({
+      tag,
+      totalEnabledTimes,
+      recordedOpCount,
+    })
     await sleep(sageTimePauseMinute * 60 * 1000)
     console.log(`[SageTime${tagText}] 请求限制已解除，关闭；当前记录次数 ${recordedOpCount}；第 ${totalEnabledTimes} 次关闭`)
+    await hooks?.sageTimeExit?.promise({
+      tag,
+      totalEnabledTimes,
+      recordedOpCount,
+    })
     recordedOpCount = 0
   }
   else {
