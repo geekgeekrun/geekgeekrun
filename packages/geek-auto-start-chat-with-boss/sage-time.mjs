@@ -9,12 +9,12 @@ isSageTimeEnabled = isSageTimeEnabled ?? true
 sageTimeOpTimes =
   isNaN(parseInt(sageTimeOpTimes)) ||
   parseInt(sageTimeOpTimes) < 1
-    ? 50
+    ? 100
     : parseInt(sageTimeOpTimes)
 sageTimePauseMinute =
   isNaN(parseFloat(sageTimePauseMinute)) ||
   parseFloat(sageTimePauseMinute) < 0
-    ? 5
+    ? 15
     : parseFloat(sageTimePauseMinute)
 if (parseFloat(sageTimePauseMinute) === 0) {
   isSageTimeEnabled = false

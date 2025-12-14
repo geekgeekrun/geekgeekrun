@@ -28,6 +28,7 @@
                   <div>
                     本程序运行较长时间后，Boss直聘会对账号进行风控，导致本程序不能继续执行。<br />
                     为此，加入摸鱼模式。通过此配置，主动减慢本程序的运行速度，降低潜在的被风控监测到的概率。<br />
+                    你可以自定义开启摸鱼模式的频率 - 默认为操作100次后，暂停运行15分钟。
                   </div>
                 </template>
                 <el-button type="text" font-size-12px
@@ -36,19 +37,24 @@
                 >
               </el-tooltip>
             </div>
-            <div mt12px>
+            <div>
               <el-checkbox
                 v-model="formContent.isSageTimeEnabled"
                 @change="
                   (v) => {
                     gtagRenderer('sage_t_enable_changed', { v })
                   }
-                ">
+                "
+              >
                 启用摸鱼模式
               </el-checkbox>
             </div>
             <div pl-1.5em font-size-14px>
-              <div>
+              <div
+                :style="{
+                  color: formContent.isSageTimeEnabled ? '' : '#aaa'
+                }"
+              >
                 当如下行为的次数总计达
                 <el-form-item mb0 inline-block prop="sageTimeOpTimes">
                   <el-input-number
@@ -83,7 +89,7 @@
                     "
                   />
                 </el-form-item>
-                分钟；之后继续运行并重新计次，循环整个过程
+                分钟：
                 <ul
                   pl-1em
                   mb0
@@ -100,8 +106,8 @@
                   <li>职位被标记不合适</li>
                   <li>职位被开聊</li>
                 </ul>
+                <div mt14px>之后继续运行并重新计次，循环整个过程</div>
               </div>
-
             </div>
           </div>
         </el-card>
@@ -1125,8 +1131,8 @@ const formContent = ref({
     }
   ]),
   isSageTimeEnabled: true,
-  sageTimeOpTimes: 50,
-  sageTimePauseMinute: 5
+  sageTimeOpTimes: 100,
+  sageTimePauseMinute: 15
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -1277,12 +1283,12 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.sageTimeOpTimes =
     isNaN(parseInt(res.config['boss.json'].sageTimeOpTimes)) ||
     parseInt(res.config['boss.json'].sageTimeOpTimes) < 1
-      ? 50
+      ? 100
       : parseInt(res.config['boss.json'].sageTimeOpTimes)
   formContent.value.sageTimePauseMinute =
     isNaN(parseFloat(res.config['boss.json'].sageTimePauseMinute)) ||
     parseFloat(res.config['boss.json'].sageTimePauseMinute) < 0
-      ? 5
+      ? 15
       : parseFloat(res.config['boss.json'].sageTimePauseMinute)
 })
 

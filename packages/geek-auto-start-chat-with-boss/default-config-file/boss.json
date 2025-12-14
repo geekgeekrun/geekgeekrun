@@ -31,5 +31,8 @@
       "type": "expect",
       "enabled": true
     }
-  ]
+  ],
+  "isSageTimeEnabled": true,
+  "sageTimeOpTimes": 100,
+  "sageTimePauseMinute": 15
 }
