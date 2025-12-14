@@ -8,7 +8,7 @@
     <div class="form-wrap geek-auto-start-run-with-boss">
       <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
         <el-card class="config-section">
-          <el-form-item mb0>
+          <el-form-item>
             <div>
               <div font-size-16px>BOSS直聘 Cookie</div>
               <el-button size="small" type="primary" @click="handleClickLaunchLogin"
@@ -16,6 +16,58 @@
               >
             </div>
           </el-form-item>
+          <div>
+            <div font-size-16px>摸鱼模式</div>
+            <div mt12px>
+              <el-checkbox v-model="formContent.isSageTimeEnabled">启用摸鱼模式</el-checkbox>
+            </div>
+            <div pl-1.5em font-size-14px>
+              <div>
+                当如下行为的次数总计达
+                <el-form-item mb0 inline-block prop="sageTimeOpTimes">
+                  <el-input-number
+                    v-model="formContent.sageTimeOpTimes"
+                    :step="1"
+                    step-strictly
+                    :precision="0"
+                    :min="1"
+                    :disabled="!formContent.isSageTimeEnabled"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                次时，暂停运行
+                <el-form-item mb0 inline-block prop="sageTimePauseMinute">
+                  <el-input-number
+                    v-model="formContent.sageTimePauseMinute"
+                    :step="0.5"
+                    step-strictly
+                    :precision="1"
+                    :min="0"
+                    :disabled="!formContent.isSageTimeEnabled"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                分钟；之后继续运行并重新计次，循环整个过程
+                <ul
+                  pl-1em
+                  mb0
+                  mt14px
+                  :style="{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr',
+                    lineHeight: '1.5em'
+                  }"
+                >
+                  <li>职位来源变更</li>
+                  <li>职位列表滚动后发生加载</li>
+                  <li>职位详情加载</li>
+                  <li>职位被标记不合适</li>
+                  <li>职位被开聊</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
         </el-card>
         <el-card class="config-section">
           <el-form-item class="job-source-form-item" prop="__jobSourceList">
@@ -1035,7 +1087,10 @@ const formContent = ref({
       type: 'expect',
       enabled: true
     }
-  ])
+  ]),
+  isSageTimeEnabled: true,
+  sageTimeOpTimes: 50,
+  sageTimePauseMinute: 5
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -1182,6 +1237,17 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.__jobSourceList = formatJobSourceConfigToFormValue(
     res.config['boss.json'].jobSourceList || []
   )
+  formContent.value.isSageTimeEnabled = res.config['boss.json'].isSageTimeEnabled ?? true
+  formContent.value.sageTimeOpTimes =
+    isNaN(parseInt(res.config['boss.json'].sageTimeOpTimes)) ||
+    parseInt(res.config['boss.json'].sageTimeOpTimes) < 1
+      ? 50
+      : parseInt(res.config['boss.json'].sageTimeOpTimes)
+  formContent.value.sageTimePauseMinute =
+    isNaN(parseFloat(res.config['boss.json'].sageTimePauseMinute)) ||
+    parseFloat(res.config['boss.json'].sageTimePauseMinute) < 0
+      ? 5
+      : parseFloat(res.config['boss.json'].sageTimePauseMinute)
 })
 
 const jobSourceFormItemSectionEl = ref()
@@ -1270,6 +1336,32 @@ const formRules = {
       ) {
         cb(new Error(`将上方任一来源设置为“启用”后才能继续`))
         jobSourceFormItemSectionEl.value?.scrollIntoViewIfNeeded()
+        return
+      }
+      cb()
+    }
+  },
+  sageTimeOpTimes: {
+    validator(_, value, cb) {
+      if (!formContent.value.isSageTimeEnabled) {
+        cb()
+        return
+      }
+      if (value < 1 || isNaN(parseInt(value))) {
+        cb(new Error(`最小值为1，请重试`))
+        return
+      }
+      cb()
+    }
+  },
+  sageTimePauseMinute: {
+    validator(_, value, cb) {
+      if (!formContent.value.isSageTimeEnabled) {
+        cb()
+        return
+      }
+      if (value < 0 || isNaN(parseFloat(value))) {
+        cb(new Error(`最小值为0，请重试`))
         return
       }
       cb()
