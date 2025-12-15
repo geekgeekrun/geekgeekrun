@@ -370,7 +370,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   let isJobNameSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobNameRegExpStr.trim()) {
-      const regExp = new RegExp(expectJobNameRegExpStr, 'i')
+      const regExp = new RegExp(expectJobNameRegExpStr, 'im')
       isJobNameSuit = regExp.test(jobInfo.jobName?.replace(/\n/g, '') ?? '')
     }
   } catch {
@@ -378,7 +378,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   let isJobTypeSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobTypeRegExpStr.trim()) {
-      const regExp = new RegExp(expectJobTypeRegExpStr, 'i')
+      const regExp = new RegExp(expectJobTypeRegExpStr, 'im')
       isJobTypeSuit = regExp.test(jobInfo.positionName?.replace(/\n/g, '') ?? '')
     }
   } catch {
@@ -386,7 +386,7 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   let isJobDescSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobDescRegExpStr.trim()) {
-      const regExp = new RegExp(expectJobDescRegExpStr, 'i')
+      const regExp = new RegExp(expectJobDescRegExpStr, 'im')
       isJobDescSuit = regExp.test(jobInfo.postDescription?.replace(/\n/g, '') ?? '')
     }
   } catch {
