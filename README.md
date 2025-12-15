@@ -14,7 +14,7 @@
 ### Boss炸弹
 扩列神器！按照你所设置的求职偏好，自动开聊推荐职位列表中的匹配的Boss。可以帮你开聊推荐列表中的职位、根据设置的求职期望推荐的职位以及根据你设置的关键词通过搜索找到的职位；可以通过拖拽的方式自定义搜索顺序哦~
 
-<img width="1280" height="2474" alt="Snipaste_2025-07-15_13-05-35" src="https://github.com/user-attachments/assets/30308ec2-1e3b-4a8f-b3fe-7d205394578d" />
+<img width="1309" alt="image" src="https://github.com/user-attachments/assets/fda33e53-347b-453d-a791-5a1dcd506605" />
 
 
 #### 匹配步骤
