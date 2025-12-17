@@ -1,4 +1,5 @@
 {
+  "combineRecommendJobFilterType": 1,
   "anyCombineRecommendJobFilter": {
     "salaryList": [],
     "experienceList": [],
@@ -6,6 +7,7 @@
     "scaleList": [],
     "industryList": []
   },
+  "staticCombineRecommendJobFilterConditions": [],
   "isSkipEmptyConditionForCombineRecommendJobFilter": false,
   "expectJobRegExpStr": "",
   "jobNotMatchStrategy": 1,
@@ -29,5 +31,8 @@
       "type": "expect",
       "enabled": true
     }
-  ]
+  ],
+  "isSageTimeEnabled": true,
+  "sageTimeOpTimes": 100,
+  "sageTimePauseMinute": 15
 }

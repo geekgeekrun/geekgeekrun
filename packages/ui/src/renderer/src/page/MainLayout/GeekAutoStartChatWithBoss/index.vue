@@ -8,7 +8,7 @@
     <div class="form-wrap geek-auto-start-run-with-boss">
       <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
         <el-card class="config-section">
-          <el-form-item mb0>
+          <el-form-item>
             <div>
               <div font-size-16px>BOSS直聘 Cookie</div>
               <el-button size="small" type="primary" @click="handleClickLaunchLogin"
@@ -16,13 +16,107 @@
               >
             </div>
           </el-form-item>
+          <div>
+            <div font-size-16px>
+              摸鱼模式
+              <el-tooltip
+                effect="light"
+                placement="bottom-start"
+                @show="gtagRenderer('tooltip_show_about_sage_t')"
+              >
+                <template #content>
+                  <div>
+                    本程序运行较长时间后，Boss直聘会对账号进行风控，导致本程序不能继续执行。<br />
+                    为此，加入摸鱼模式。通过此配置，主动减慢本程序的运行速度，降低潜在的被风控监测到的概率。<br />
+                    你可以自定义开启摸鱼模式的频率 - 默认为操作100次后，暂停运行15分钟。
+                  </div>
+                </template>
+                <el-button type="text" font-size-12px
+                  ><span><QuestionFilled w-1em h-1em mr2px /></span
+                  >这个配置会对本程序运行过程造成什么影响？</el-button
+                >
+              </el-tooltip>
+            </div>
+            <div>
+              <el-checkbox
+                v-model="formContent.isSageTimeEnabled"
+                @change="
+                  (v) => {
+                    gtagRenderer('sage_t_enable_changed', { v })
+                  }
+                "
+              >
+                启用摸鱼模式
+              </el-checkbox>
+            </div>
+            <div pl-1.5em font-size-14px>
+              <div
+                :style="{
+                  color: formContent.isSageTimeEnabled ? '' : '#aaa'
+                }"
+              >
+                当如下行为的次数总计达
+                <el-form-item mb0 inline-block prop="sageTimeOpTimes">
+                  <el-input-number
+                    v-model="formContent.sageTimeOpTimes"
+                    :step="1"
+                    step-strictly
+                    :precision="0"
+                    :min="1"
+                    :disabled="!formContent.isSageTimeEnabled"
+                    controls-position="right"
+                    @change="
+                      (v) => {
+                        gtagRenderer('sage_t_op_times_changed', { v })
+                      }
+                    "
+                  />
+                </el-form-item>
+                次时，暂停运行
+                <el-form-item mb0 inline-block prop="sageTimePauseMinute">
+                  <el-input-number
+                    v-model="formContent.sageTimePauseMinute"
+                    :step="0.5"
+                    step-strictly
+                    :precision="1"
+                    :min="0"
+                    :disabled="!formContent.isSageTimeEnabled"
+                    controls-position="right"
+                    @change="
+                      (v) => {
+                        gtagRenderer('sage_t_pause_minute_changed', { v })
+                      }
+                    "
+                  />
+                </el-form-item>
+                分钟：
+                <ul
+                  pl-1em
+                  mb0
+                  mt14px
+                  :style="{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr',
+                    lineHeight: '1.5em'
+                  }"
+                >
+                  <li>职位来源变更</li>
+                  <li>职位列表滚动后发生加载</li>
+                  <li>职位详情加载</li>
+                  <li>职位被标记不合适</li>
+                  <li>职位被开聊</li>
+                </ul>
+                <div mt14px>之后继续运行并重新计次，循环整个过程</div>
+              </div>
+            </div>
+          </div>
         </el-card>
         <el-card class="config-section">
           <el-form-item class="job-source-form-item" prop="__jobSourceList">
             <div w-full>
               <div ref="jobSourceFormItemSectionEl" font-size-16px>
                 <div>
-                  职位来源及其查找顺序
+                  你想投递Boss直聘上哪些列表里的职位？
                   <el-tooltip
                     effect="light"
                     placement="bottom-start"
@@ -41,7 +135,7 @@
                 </div>
               </div>
               <div font-size-12px>
-                拖放条目前方的手柄以调整职位来源查找顺序；点击条目前方的开关以启用/禁用对应的职位来源
+                拖放条目前方的手柄以调整职位列表查找顺序；点击条目前方的开关以启用/禁用对应的职位列表
               </div>
               <JobSourceDragOrderer
                 v-model="formContent.__jobSourceList"
@@ -49,62 +143,99 @@
               />
             </div>
           </el-form-item>
-        </el-card>
-        <el-card class="config-section">
-          <el-form-item prop="filter">
-            <div font-size-16px>
-              职位筛选条件
-              <el-tooltip
-                effect="light"
-                placement="bottom-start"
-                @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
-              >
-                <template #content>
-                  <ul m0 line-height-1.5em w-540px pl2em>
-                    <li>
-                      这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
-                      <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
-                    </li>
-                    <li color-orange>
-                      建议不要筛选过多条件，否则最终组合数会成为一个很大的数字。这将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率
-                    </li>
-                  </ul>
-                </template>
-                <el-button type="text" font-size-12px
-                  ><span><QuestionFilled w-1em h-1em mr2px /></span
-                  >这个配置是如何工作的？</el-button
+          <el-form-item prop="filter" mt18px mb0px w-full>
+            <div flex-1>
+              <div font-size-16px>
+                你希望Boss直聘为你筛选出什么样的职位？
+                <el-tooltip
+                  effect="light"
+                  placement="bottom-start"
+                  @show="gtagRenderer('tooltip_show_about_wrongly_mark_not_suit')"
                 >
-              </el-tooltip>
+                  <template #content>
+                    <ul m0 line-height-1.5em w-540px pl2em>
+                      <li>
+                        这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
+                        <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
+                      </li>
+                      <li color-orange>
+                        建议不要筛选过多条件，否则最终组合数会成为一个很大的数字。这将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率
+                      </li>
+                    </ul>
+                  </template>
+                  <el-button type="text" font-size-12px
+                    ><span><QuestionFilled w-1em h-1em mr2px /></span
+                    >这个配置是如何工作的？</el-button
+                  >
+                </el-tooltip>
+              </div>
+              <div>
+                <div>
+                  <div font-size-12px>筛选条件遍历方式</div>
+                  <el-select
+                    v-model="formContent.combineRecommendJobFilterType"
+                    w-320px
+                    @change="
+                      (v) => {
+                        gtagRenderer('crjf_type_changed', { v })
+                      }
+                    "
+                  >
+                    <el-option
+                      v-for="op in combineRecommendJobFilterTypeOptions"
+                      :key="op.value"
+                      :value="op.value"
+                      :label="op.name"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </div>
+                <div
+                  v-if="
+                    formContent.combineRecommendJobFilterType ===
+                    CombineRecommendJobFilterType.STATIC_COMBINE
+                  "
+                  mt8px
+                >
+                  <StaticCombineBossRecommendFilter
+                    v-model="formContent.staticCombineRecommendJobFilterConditions"
+                  />
+                </div>
+                <div v-else mt8px>
+                  <AnyCombineBossRecommendFilter
+                    v-model="formContent.anyCombineRecommendJobFilter"
+                  />
+                  <div mb0>
+                    <el-checkbox
+                      v-if="anyCombineBossRecommendFilterHasCondition"
+                      v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
+                      @change="
+                        (v) => {
+                          gtagRenderer('is_skip_empty_condition_4crjf_changed', { v })
+                        }
+                      "
+                    >
+                      <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
+                    </el-checkbox>
+                    <el-checkbox v-else :model-value="false" disabled>
+                      <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
+                    </el-checkbox>
+                  </div>
+                </div>
+              </div>
+              <div font-size-12px>
+                当前组合条件数：{{
+                  currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
+                }}
+                <span
+                  v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 5"
+                  class="color-orange"
+                  >不建议选择太多组合条件 -
+                  否则将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率</span
+                >
+              </div>
             </div>
-            <AnyCombineBossRecommendFilter v-model="formContent.anyCombineRecommendJobFilter" />
           </el-form-item>
-          <el-form-item prop="filter" mb0>
-            <el-checkbox
-              v-if="anyCombineBossRecommendFilterHasCondition"
-              v-model="formContent.isSkipEmptyConditionForCombineRecommendJobFilter"
-              @change="
-                (v) => {
-                  gtagRenderer('is_skip_empty_condition_4crjf_changed', { v })
-                }
-              "
-            >
-              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
-            </el-checkbox>
-            <el-checkbox v-else :model-value="false" disabled>
-              <span font-size-12px>跳过初始空条件，直接使用设置的条件查找职位</span>
-            </el-checkbox>
-          </el-form-item>
-          <div font-size-12px mt10px>
-            当前组合条件数：{{
-              currentAnyCombineRecommendJobFilterCombinationCount.toLocaleString()
-            }}
-            <span
-              v-if="currentAnyCombineRecommendJobFilterCombinationCount >= 5"
-              class="color-orange"
-              >不建议选择太多组合条件 -
-              否则将在当前职位中尝试太多筛选条件，不能及时进入下一个职位，且会增加命中风控的概率</span
-            >
-          </div>
         </el-card>
         <!-- <el-form-item
           label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
@@ -582,9 +713,7 @@
               </div>
             </div>
           </div>
-        </el-card>
-        <el-card class="config-section">
-          <el-form-item mb0>
+          <el-form-item mb0 mt20px>
             <div font-size-16px>职位详情筛选条件</div>
           </el-form-item>
           <div>
@@ -617,7 +746,12 @@
                     <el-icon class="el-icon--right"><arrow-down /></el-icon
                   ></el-button>
                   <template #dropdown>
-                    <el-dropdown-menu>
+                    <el-dropdown-menu
+                      :style="{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr 1fr'
+                      }"
+                    >
                       <el-dropdown-item
                         v-for="item in expectJobFilterTemplateList"
                         :key="item.name"
@@ -925,15 +1059,18 @@ import { ElForm, ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
+import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBossRecommendFilter/index.vue'
 import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import {
   calculateTotalCombinations,
-  checkAnyCombineBossRecommendFilterHasCondition
+  checkAnyCombineBossRecommendFilterHasCondition,
+  formatStaticCombineFilters
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
+  CombineRecommendJobFilterType,
   MarkAsNotSuitOp,
   StrategyScopeOptionWhenMarkJobNotMatch,
   SalaryCalculateWay,
@@ -944,6 +1081,7 @@ import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
+import expectJobFilterTemplateList from './expectJobFilterTemplateList'
 
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {
@@ -958,6 +1096,8 @@ const formContent = ref({
   dingtalkRobotAccessToken: '',
   expectCompanies: '',
   anyCombineRecommendJobFilter: {},
+  combineRecommendJobFilterType: 1,
+  staticCombineRecommendJobFilterConditions: [],
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
   expectJobDescRegExpStr: '',
@@ -989,7 +1129,10 @@ const formContent = ref({
       type: 'expect',
       enabled: true
     }
-  ])
+  ]),
+  isSageTimeEnabled: true,
+  sageTimeOpTimes: 100,
+  sageTimePauseMinute: 15
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -999,6 +1142,16 @@ const anyCombineBossRecommendFilterHasCondition = computed(() => {
 })
 
 const currentAnyCombineRecommendJobFilterCombinationCount = computed(() => {
+  if (
+    formContent.value.combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE
+  ) {
+    if (!formContent.value.staticCombineRecommendJobFilterConditions?.length) {
+      return 1
+    }
+    return formatStaticCombineFilters(
+      formContent.value.staticCombineRecommendJobFilterConditions
+    )?.filter(Boolean).length
+  }
   return calculateTotalCombinations(
     formContent.value.anyCombineRecommendJobFilter,
     anyCombineBossRecommendFilterHasCondition.value
@@ -1045,6 +1198,12 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
       deep: true
     }
   )
+  formContent.value.combineRecommendJobFilterType =
+    res.config['boss.json']?.combineRecommendJobFilterType ?? 1
+  formContent.value.staticCombineRecommendJobFilterConditions = res.config['boss.json']
+    ?.staticCombineRecommendJobFilterConditions?.length
+    ? res.config['boss.json'].staticCombineRecommendJobFilterConditions
+    : []
   if (
     res.config['boss.json']?.expectJobRegExpStr &&
     typeof res.config['boss.json']?.expectJobNameRegExpStr === 'undefined' &&
@@ -1120,12 +1279,24 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.__jobSourceList = formatJobSourceConfigToFormValue(
     res.config['boss.json'].jobSourceList || []
   )
+  formContent.value.isSageTimeEnabled = res.config['boss.json'].isSageTimeEnabled ?? true
+  formContent.value.sageTimeOpTimes =
+    isNaN(parseInt(res.config['boss.json'].sageTimeOpTimes)) ||
+    parseInt(res.config['boss.json'].sageTimeOpTimes) < 1
+      ? 100
+      : parseInt(res.config['boss.json'].sageTimeOpTimes)
+  formContent.value.sageTimePauseMinute =
+    isNaN(parseFloat(res.config['boss.json'].sageTimePauseMinute)) ||
+    parseFloat(res.config['boss.json'].sageTimePauseMinute) < 0
+      ? 15
+      : parseFloat(res.config['boss.json'].sageTimePauseMinute)
 })
 
 const jobSourceFormItemSectionEl = ref()
 const jobDetailRegExpSectionEl = ref()
 const formRules = {
   expectJobNameRegExpStr: {
+    trigger: 'blur',
     validator(_, value, cb) {
       if (!value) {
         cb()
@@ -1134,16 +1305,17 @@ const formRules = {
       }
       try {
         new RegExp(value, 'ig')
-        gtagRenderer('valid_reg_exp_for_expect_job_name')
+        gtagRenderer('valid_reg_exp_for_expect_job_name', { v: value })
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
         jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
-        gtagRenderer('invalid_reg_exp_for_expect_job_name')
+        gtagRenderer('invalid_reg_exp_for_expect_job_name', { v: value })
       }
     }
   },
   expectJobTypeRegExpStr: {
+    trigger: 'blur',
     validator(_, value, cb) {
       if (!value) {
         cb()
@@ -1152,16 +1324,17 @@ const formRules = {
       }
       try {
         new RegExp(value, 'ig')
-        gtagRenderer('valid_reg_exp_for_expect_job_type')
+        gtagRenderer('valid_reg_exp_for_expect_job_type', { v: value })
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
         jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
-        gtagRenderer('invalid_reg_exp_for_expect_job_type')
+        gtagRenderer('invalid_reg_exp_for_expect_job_type', { v: value })
       }
     }
   },
   expectJobDescRegExpStr: {
+    trigger: 'blur',
     validator(_, value, cb) {
       if (!value) {
         cb()
@@ -1170,12 +1343,12 @@ const formRules = {
       }
       try {
         new RegExp(value, 'ig')
-        gtagRenderer('valid_reg_exp_for_expect_job_desc')
+        gtagRenderer('valid_reg_exp_for_expect_job_desc', { v: value })
         cb()
       } catch (err) {
         cb(new Error(`正则无效：${err?.message}`))
         jobDetailRegExpSectionEl.value?.scrollIntoViewIfNeeded()
-        gtagRenderer('invalid_reg_exp_for_expect_job_desc')
+        gtagRenderer('invalid_reg_exp_for_expect_job_desc', { v: value })
       }
     }
   },
@@ -1209,14 +1382,51 @@ const formRules = {
       }
       cb()
     }
+  },
+  sageTimeOpTimes: {
+    validator(_, value, cb) {
+      if (!formContent.value.isSageTimeEnabled) {
+        cb()
+        return
+      }
+      if (value < 1 || isNaN(parseInt(value))) {
+        cb(new Error(`最小值为1，请重试`))
+        return
+      }
+      cb()
+    }
+  },
+  sageTimePauseMinute: {
+    validator(_, value, cb) {
+      if (!formContent.value.isSageTimeEnabled) {
+        cb()
+        return
+      }
+      if (value < 0 || isNaN(parseFloat(value))) {
+        cb(new Error(`最小值为0，请重试`))
+        return
+      }
+      cb()
+    }
   }
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const handleSubmit = async () => {
   gtagRenderer('save_config_and_launch_clicked', {
-    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,
+    expect_job_name_reg_exp_str: formContent.value?.expectJobNameRegExpStr,
+    expect_job_type_reg_exp_str: formContent.value?.expectJobTypeRegExpStr,
+    expect_job_desc_reg_exp_str: formContent.value?.expectJobDescRegExpStr,
+    crjf_type: formContent.value?.combineRecommendJobFilterType,
+    crjf_cc: currentAnyCombineRecommendJobFilterCombinationCount.value?.toLocaleString?.(),
+    sage_t_config: JSON.stringify({
+      isEnabled: formContent.value.isSageTimeEnabled,
+      pauseMinute: formContent.value.sageTimePauseMinute,
+      opTimes: formContent.value.sageTimeOpTimes
+    })
   })
+  // remove the obsolete filter - expectJobRegExpStr
   formContent.value.expectJobRegExpStr = undefined
   try {
     await formRef.value!.validate()
@@ -1245,7 +1455,17 @@ const handleSubmit = async () => {
 }
 const handleSave = async () => {
   gtagRenderer('save_config_clicked', {
-    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
+    has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,
+    expect_job_name_reg_exp_str: formContent.value?.expectJobNameRegExpStr,
+    expect_job_type_reg_exp_str: formContent.value?.expectJobTypeRegExpStr,
+    expect_job_desc_reg_exp_str: formContent.value?.expectJobDescRegExpStr,
+    crjf_type: formContent.value?.combineRecommendJobFilterType,
+    crjf_cc: currentAnyCombineRecommendJobFilterCombinationCount.value?.toLocaleString?.(),
+    sage_t_config: JSON.stringify({
+      isEnabled: formContent.value.isSageTimeEnabled,
+      pauseMinute: formContent.value.sageTimePauseMinute,
+      opTimes: formContent.value.sageTimeOpTimes
+    })
   })
   normalizeExpectCompanies()
   try {
@@ -1322,53 +1542,6 @@ function handleExpectCompanyTemplateClicked(item) {
   formContent.value.expectCompanies = item.value
 }
 
-const expectJobFilterTemplateList = [
-  {
-    name: '不限职位（随便投）',
-    config: {
-      expectJobNameRegExpStr: '',
-      expectJobTypeRegExpStr: '',
-      expectJobDescRegExpStr: '',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '研发 - 前端开发工程师',
-    config: {
-      expectJobNameRegExpStr: '前端|H5|FE',
-      expectJobTypeRegExpStr: '前端开发|javascript',
-      expectJobDescRegExpStr: '前端|vue|react|node|js|javascript|H5',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '研发 - Java',
-    config: {
-      expectJobNameRegExpStr: '\\bJava\\b',
-      expectJobTypeRegExpStr: '\\bJava\\b',
-      expectJobDescRegExpStr: '\\bJava\\b|JVM|消息队列|MQ|MySQL|Nginx|Redis|Dubbo',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '人力 - 员工关系',
-    config: {
-      expectJobNameRegExpStr: '员工关系|劳动关系|SSC|人力资源|人资',
-      expectJobTypeRegExpStr: '员工关系|人力资源',
-      expectJobDescRegExpStr: '社保|考勤|入职|离职',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  },
-  {
-    name: '人力 - 招聘',
-    config: {
-      expectJobNameRegExpStr: '招聘|招聘HR|招聘专员|招聘顾问|招聘专家|Recruiter|人力资源|人资',
-      expectJobTypeRegExpStr: '招聘|人力资源|猎头顾问',
-      expectJobDescRegExpStr: '简历筛选|面试安排|offer|猎头',
-      jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.SOME
-    }
-  }
-]
 function handleExpectJobFilterTemplateClicked(item) {
   gtagRenderer('expect_job_filter_tpl_clicked', {
     name: item.name
@@ -1619,6 +1792,17 @@ function formatJobSourceFormValueToConfig(formValue = []) {
     return it
   })
 }
+
+const combineRecommendJobFilterTypeOptions = [
+  {
+    name: '使用自由组合条件进行遍历',
+    value: 1
+  },
+  {
+    name: '使用固定组合条件进行遍历',
+    value: 2
+  }
+]
 </script>
 
 <style scoped lang="scss">

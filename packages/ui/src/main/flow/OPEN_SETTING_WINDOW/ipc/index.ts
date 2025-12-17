@@ -159,6 +159,22 @@ export default function initIpc() {
     if (hasOwn(payload, 'jobSourceList')) {
       bossConfig.jobSourceList = payload.jobSourceList
     }
+    if (hasOwn(payload, 'combineRecommendJobFilterType')) {
+      bossConfig.combineRecommendJobFilterType = payload.combineRecommendJobFilterType
+    }
+    if (hasOwn(payload, 'staticCombineRecommendJobFilterConditions')) {
+      bossConfig.staticCombineRecommendJobFilterConditions =
+        payload.staticCombineRecommendJobFilterConditions
+    }
+    if (hasOwn(payload, 'isSageTimeEnabled')) {
+      bossConfig.isSageTimeEnabled = payload.isSageTimeEnabled
+    }
+    if (hasOwn(payload, 'sageTimeOpTimes')) {
+      bossConfig.sageTimeOpTimes = payload.sageTimeOpTimes
+    }
+    if (hasOwn(payload, 'sageTimePauseMinute')) {
+      bossConfig.sageTimePauseMinute = payload.sageTimePauseMinute
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 

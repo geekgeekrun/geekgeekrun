@@ -31,5 +31,11 @@ export default class GtagPlugin {
     hooks.encounterEmptyRecommendJobList.tap('GtagPlugin', ({ pageQuery }) => {
       gtag('encounter_empty_rec_job_list', { pageQuery })
     })
+    hooks.sageTimeEnter.tap('GtagPlugin', ({ tag, totalEnabledTimes, recordedOpCount }) => {
+      gtag('sage_time_enter', { tag, totalEnabledTimes, recordedOpCount })
+    })
+    hooks.sageTimeExit.tap('GtagPlugin', ({ tag, totalEnabledTimes, recordedOpCount }) => {
+      gtag('sage_time_exit', { tag, totalEnabledTimes, recordedOpCount })
+    })
   }
 }

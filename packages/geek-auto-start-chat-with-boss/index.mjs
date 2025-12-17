@@ -15,12 +15,21 @@ import { readConfigFile, writeStorageFile, ensureConfigFileExist, readStorageFil
 import {
   calculateTotalCombinations,
   combineFiltersWithConstraintsGenerator,
-  checkAnyCombineBossRecommendFilterHasCondition
+  checkAnyCombineBossRecommendFilterHasCondition,
+  formatStaticCombineFilters,
 } from './combineCalculator.mjs'
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
-import { MarkAsNotSuitReason, MarkAsNotSuitOp, StrategyScopeOptionWhenMarkJobNotMatch, SalaryCalculateWay, JobDetailRegExpMatchLogic, JobSource } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import {
+  MarkAsNotSuitReason,
+  MarkAsNotSuitOp,
+  StrategyScopeOptionWhenMarkJobNotMatch,
+  SalaryCalculateWay,
+  JobDetailRegExpMatchLogic,
+  JobSource,
+  CombineRecommendJobFilterType
+} from '@geekgeekrun/sqlite-plugin/dist/enums'
 import {
   activeDescList,
   RECOMMEND_JOB_ENTRY_SELECTOR,
@@ -28,6 +37,7 @@ import {
   SEARCH_BOX_SELECTOR,
 } from './constant.mjs'
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
+import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
   arr.forEach(option => {
@@ -85,8 +95,10 @@ const bossCookies = readStorageFile('boss-cookies.json')
 const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
+const combineRecommendJobFilterType = readConfigFile('boss.json').combineRecommendJobFilterType ?? CombineRecommendJobFilterType.ANY_COMBINE
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
+const staticCombineRecommendJobFilterConditions = readConfigFile('boss.json').staticCombineRecommendJobFilterConditions ?? []
 let isSkipEmptyConditionForCombineRecommendJobFilter = readConfigFile('boss.json').isSkipEmptyConditionForCombineRecommendJobFilter
 if (!checkAnyCombineBossRecommendFilterHasCondition(anyCombineRecommendJobFilter)) {
   isSkipEmptyConditionForCombineRecommendJobFilter = false
@@ -108,7 +120,18 @@ const isSalaryFilterEnabled = expectSalaryLow || expectSalaryHigh
 const strategyScopeOptionWhenMarkSalaryNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkSalaryNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
 // work exp
-const expectWorkExpList = readConfigFile('boss.json').expectWorkExpList ?? []
+let expectWorkExpList = readConfigFile('boss.json').expectWorkExpList ?? []
+const expectWorkExpListSet = new Set(expectWorkExpList)
+if (
+  expectWorkExpListSet.has('应届生') ||
+  expectWorkExpListSet.has('在校生')
+) {
+  expectWorkExpListSet.delete('应届生')
+  expectWorkExpListSet.delete('在校生')
+  expectWorkExpListSet.add('在校/应届')
+}
+expectWorkExpList = Array.from(expectWorkExpListSet)
+
 const expectWorkExpNotMatchStrategy = readConfigFile('boss.json').expectWorkExpNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const strategyScopeOptionWhenMarkJobWorkExpNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobWorkExpNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
@@ -271,8 +294,8 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         case MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT:
         case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="距离远"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
           if (opProxy) {
@@ -282,10 +305,10 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
           break
         }
         case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
-          const opProxy = (await chooseReasonDialogProxy.$(`xpath///*[contains(@class,'zp-type-item')][contains(@title, "薪资")]`))
+          const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title*="薪资"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="距离远"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="公司不感兴趣"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
           if (opProxy) {
@@ -296,11 +319,11 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         }
         case MarkAsNotSuitReason.JOB_NOT_SUIT:
         default: {
-          const jobNotSuitOptionProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`))
+          const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="职位"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
-          if (jobNotSuitOptionProxy) {
-            await jobNotSuitOptionProxy.click()
+          if (opProxy) {
+            await opProxy.click()
             isOptionChosen = true
           }
           break
@@ -347,24 +370,24 @@ export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
   let isJobNameSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobNameRegExpStr.trim()) {
-      const regExp = new RegExp(expectJobNameRegExpStr, 'i')
-      isJobNameSuit = regExp.test(jobInfo.jobName)
+      const regExp = new RegExp(expectJobNameRegExpStr, 'im')
+      isJobNameSuit = regExp.test(jobInfo.jobName?.replace(/\n/g, '') ?? '')
     }
   } catch {
   }
   let isJobTypeSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobTypeRegExpStr.trim()) {
-      const regExp = new RegExp(expectJobTypeRegExpStr, 'i')
-      isJobTypeSuit = regExp.test(jobInfo.positionName)
+      const regExp = new RegExp(expectJobTypeRegExpStr, 'im')
+      isJobTypeSuit = regExp.test(jobInfo.positionName?.replace(/\n/g, '') ?? '')
     }
   } catch {
   }
   let isJobDescSuit = matchLogic === JobDetailRegExpMatchLogic.SOME ? false : true
   try {
     if (expectJobDescRegExpStr.trim()) {
-      const regExp = new RegExp(expectJobDescRegExpStr, 'i')
-      isJobDescSuit = regExp.test(jobInfo.postDescription)
+      const regExp = new RegExp(expectJobDescRegExpStr, 'im')
+      isJobDescSuit = regExp.test(jobInfo.postDescription?.replace(/\n/g, '') ?? '')
     }
   } catch {
   }
@@ -513,10 +536,11 @@ async function toRecommendPage (hooks) {
     }).then((res) => {
       return res.json()
     })
-  await Promise.all([
-    page.goto(recommendJobPageUrl, { timeout: 120 * 1000 }),
-    page.waitForNavigation(),
-  ])
+  page.goto(recommendJobPageUrl, { timeout: 1 * 1000 }).catch(e => { void e })
+  await sleep(3000)
+  await page.waitForFunction(() => {
+    return document.readyState === 'complete'
+  }, { timeout: 120 * 1000 })
   if (
     page.url().startsWith('https://www.zhipin.com/web/common/403.html') ||
     page.url().startsWith('https://www.zhipin.com/web/common/error.html')
@@ -651,11 +675,13 @@ async function toRecommendPage (hooks) {
       }
     }
 
+    const filterConditions =
+      combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE
+        ? formatStaticCombineFilters(staticCombineRecommendJobFilterConditions)
+          : combineFiltersWithConstraintsGenerator(anyCombineRecommendJobFilter)
     let expectJobList
     iterateFilterCondition: for (
-      const filterCondition of combineFiltersWithConstraintsGenerator(
-        anyCombineRecommendJobFilter
-      )
+      const filterCondition of filterConditions
     ) {
       findInCurrentFilterCondition: while(true) {
         await sleepWithRandomDelay(2500)
@@ -680,11 +706,17 @@ async function toRecommendPage (hooks) {
             break
           }
         }
-
         if (
-          isSkipEmptyConditionForCombineRecommendJobFilter &&
-          Object.keys(filterCondition).length &&
-          Object.keys(filterCondition).every(k => !filterCondition[k]?.length)
+          (
+            combineRecommendJobFilterType === CombineRecommendJobFilterType.STATIC_COMBINE && filterCondition === null
+          )
+          ||
+          (
+            combineRecommendJobFilterType === CombineRecommendJobFilterType.ANY_COMBINE &&
+            isSkipEmptyConditionForCombineRecommendJobFilter &&
+            Object.keys(filterCondition).length &&
+            Object.keys(filterCondition).every(k => !filterCondition[k]?.length)
+          )
         ) {
           sleep(4000)
           continue iterateFilterCondition
@@ -707,6 +739,10 @@ async function toRecommendPage (hooks) {
           );
           await storeStorage(page).catch(() => void 0)
           await sleepWithRandomDelay(2000)
+          await waitForSageTimeOrJustContinue({
+            tag: 'afterJobSourceChosen',
+            hooks
+          })
         }
         await sleepWithRandomDelay(1500)
         await setFilterCondition(filterCondition)
@@ -807,7 +843,7 @@ async function toRecommendPage (hooks) {
                   if (expectSalaryHigh && salaryData.high > expectSalaryHigh) {
                     return false
                   }
-                  if (expectSalaryLow && salaryData.low < expectSalaryLow) {
+                  if (expectSalaryLow && salaryData.high < expectSalaryLow) {
                     return false
                   }
                 } else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
@@ -815,7 +851,7 @@ async function toRecommendPage (hooks) {
                   if (expectSalaryHigh && (salaryData.high * salaryDataMonth) / 10 > expectSalaryHigh) {
                     return false
                   }
-                  if (expectSalaryLow && (salaryData.low * salaryDataMonth) / 10 < expectSalaryLow) {
+                  if (expectSalaryLow && (salaryData.high * salaryDataMonth) / 10 < expectSalaryLow) {
                     return false
                   }
                 }
@@ -900,7 +936,10 @@ async function toRecommendPage (hooks) {
                     }
                   }
                   requestNextPagePromiseWithResolver = null
-
+                  await waitForSageTimeOrJustContinue({
+                    tag: 'afterJobListPageFetched',
+                    hooks
+                  })
                   await sleep(5000)
                   await updateJobListData()
                   tempTargetJobIndexToCheckDetail = getTempTargetJobIndexToCheckDetail()
@@ -944,6 +983,10 @@ async function toRecommendPage (hooks) {
                     );
                     await sleepWithRandomDelay(2000)
                   }
+                  await waitForSageTimeOrJustContinue({
+                    tag: 'afterJobDetailFetched',
+                    hooks
+                  })
                   targetJobData = await page.evaluate('document.querySelector(".job-detail-box").__vue__.data')
                   selectedJobData = await page.evaluate('document.querySelector(".page-jobs-main").__vue__.currentJob')
                   // save the job detail info
@@ -971,6 +1014,10 @@ async function toRecommendPage (hooks) {
                       }
                       else if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.BOSS_INACTIVE)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -985,7 +1032,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark boss inactive failed`, err)
                         }
                       }
                     },
@@ -1008,6 +1056,10 @@ async function toRecommendPage (hooks) {
                       }
                       else if (expectCityNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_CITY_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1021,7 +1073,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job city not suit failed`, err)
                         }
                       }
                     },
@@ -1044,6 +1097,10 @@ async function toRecommendPage (hooks) {
                       }
                       else if (expectWorkExpNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1057,7 +1114,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job work exp not suit failed`, err)
                         }
                       }
                     },
@@ -1080,6 +1138,10 @@ async function toRecommendPage (hooks) {
                       }
                       else if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1094,7 +1156,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job detail not suit failed`, err)
                         }
                       }
                     },
@@ -1119,6 +1182,10 @@ async function toRecommendPage (hooks) {
                       }
                       else if (expectSalaryNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
                         try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
                           const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT)
                           await hooks.jobMarkedAsNotSuit.promise(
                             targetJobData,
@@ -1133,7 +1200,8 @@ async function toRecommendPage (hooks) {
                               jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
                             }
                           )
-                        } catch {
+                        } catch(err) {
+                          console.log(`mark job salary not suit failed`, err)
                         }
                       }
                     }
@@ -1188,6 +1256,12 @@ async function toRecommendPage (hooks) {
                     await notSuitConditionHandleMap[markOnLocalDbCondition]()
                     continue continueFind
                   }
+                  // 3.
+                  const noOpCondition = Object.keys(notSuitReasonIdToStrategyMap).find(k => notSuitReasonIdToStrategyMap[k] === MarkAsNotSuitOp.NO_OP)
+                  if (noOpCondition) {
+                    await notSuitConditionHandleMap[noOpCondition]()
+                    continue continueFind
+                  }
                   // #endregion
                   if (
                     // test company again - when allow list not include target company, just skip
@@ -1229,6 +1303,10 @@ async function toRecommendPage (hooks) {
               reject(err)
             }
           })
+          await waitForSageTimeOrJustContinue({
+            tag: 'beforeJobChatStartup',
+            hooks
+          })
           await sleepWithRandomDelay(1000)
           const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
 
@@ -1238,28 +1316,21 @@ async function toRecommendPage (hooks) {
           //#region click the chat button
           await startChatButtonProxy.click()
 
-          const addFriendResponse = await page.waitForResponse(
-            response => {
-              if (
-                response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json') && response.url().includes(`jobId=${targetJobData.jobInfo.encryptId}`)
-              ) {
-                return true
+          const waitAddFriendResponse = async () => {
+            const addFriendResponse = await page.waitForResponse(
+              response => {
+                if (
+                  response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/friend/add.json') && response.url().includes(`jobId=${targetJobData.jobInfo.encryptId}`)
+                ) {
+                  return true
+                }
+                return false
               }
-              return false
-            }
-          );
-          const res = await addFriendResponse.json()
-
-          if (res.code !== 0) {
-            // startup chat error, may the chance of today has used out
-            if (res.zpData.bizCode === 1 && res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试`) {
-              await storeStorage(page).catch(() => void 0)
-              throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
-            } else {
-              console.error(res)
-              throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
-            }
-          } else {
+            );
+            const res = await addFriendResponse.json()
+            return res
+          }
+          const waitAndHandleChatSuccess = async () => {
             await hooks.newChatStartup?.promise(
               targetJobData,
               {
@@ -1275,6 +1346,58 @@ async function toRecommendPage (hooks) {
             await closeDialogButtonProxy.click()
             await sleepWithRandomDelay(2000)
           }
+          const handleAddFriendResponse = async (res) => {
+            if (res.code === 0) {
+              await waitAndHandleChatSuccess()
+            }
+            else if (
+              res.zpData.bizCode === 1 &&
+              res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 &&
+              /剩\d+次沟通机会/.test(res.zpData.bizData?.chatRemindDialog?.content)
+            ) {
+              await waitForSageTimeOrJustContinue({
+                tag: 'beforeJobChatStartupAfterTwiceConfirm',
+                hooks
+              })
+              const confirmButton = await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn')
+              await confirmButton.click()
+              const nextRes = await waitAddFriendResponse()
+              await handleAddFriendResponse(nextRes)
+            }
+            else if (
+              res.zpData.bizCode === 1 &&
+              /猎头/.test(res.zpData.bizData?.chatRemindDialog?.content)
+            ) {
+              await waitForSageTimeOrJustContinue({
+                tag: 'beforeJobChatStartupAfterTwiceConfirm',
+                hooks
+              })
+              const confirmButton = await page.waitForSelector(`xpath///*[contains(@class, "chat-block-dialog")]//*[contains(@class, "chat-block-footer")]//*[contains(text(), "继续")]`)
+              await confirmButton.click()
+              const nextRes = await waitAddFriendResponse()
+              await handleAddFriendResponse(nextRes)
+            }
+            else if (
+              res.zpData.bizCode === 1 &&
+              res.zpData.bizData?.chatRemindDialog?.blockLevel === 0 && 
+              (
+                res.zpData.bizData?.chatRemindDialog?.content === `今日沟通人数已达上限，请明天再试` ||
+                /明天再来/.test(res.zpData.bizData?.chatRemindDialog?.content)
+              )
+            ) {
+              // startup chat error, may the chance of today has used out
+              await storeStorage(page).catch(() => void 0)
+              throw new Error('STARTUP_CHAT_ERROR_DUE_TO_TODAY_CHANCE_HAS_USED_OUT')
+            }
+            else {
+              console.error(
+                JSON.stringify(res, null, 2)
+              )
+              throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
+            }
+          }
+          const res = await waitAddFriendResponse()
+          await handleAddFriendResponse(res)
           // #endregion
         } catch (err) {
           if (err instanceof Error) {
