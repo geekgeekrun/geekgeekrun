@@ -6,18 +6,24 @@ import {
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import {
   RECOMMEND_JOB_ENTRY_SELECTOR,
-  USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
+  USER_SET_EXPECT_JOB_ENTRIES_SELECTOR
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
 import {
   saveJobInfoFromRecommendPage,
   saveChatStartupRecord,
   saveMarkAsNotSuitRecord,
-  saveChatMessageRecord
+  saveChatMessageRecord,
+  saveJobHireStatusRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { MarkAsNotSuitReason, JobSource } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import {
+  MarkAsNotSuitReason,
+  JobSource,
+  JobHireStatus
+} from '@geekgeekrun/sqlite-plugin/dist/enums'
+import cheerio from 'cheerio'
 
 import fs from 'node:fs'
 import { Target } from 'puppeteer'
@@ -42,6 +48,74 @@ const attachRequestsListener = async (target: Target) => {
   if (!page) {
     return
   }
+
+  function handleJobDetailPage({ encryptJobId } = { encryptJobId: null }) {
+    Promise.resolve()
+      .then(async () => {
+        if (!encryptJobId) {
+          return
+        }
+        try {
+          await page.waitForFunction(
+            ({ encryptJobId }) => {
+              return (
+                location.href.startsWith(`https://www.zhipin.com/job_detail/${encryptJobId}`) &&
+                document.readyState === 'complete'
+              )
+            },
+            undefined,
+            { encryptJobId }
+          )
+          const htmlContent = await page.content()
+          if (htmlContent) {
+            const $ = cheerio.load(htmlContent)
+            const [jobBannerEl] = $('#main .job-banner') ?? []
+            if (!jobBannerEl) {
+              console.log(`access might be blocked`)
+              if (
+                htmlContent.includes(`您访问的页面不存在`) ||
+                location.href === `https://www.zhipin.com/`
+              ) {
+                await saveJobHireStatusRecord(await dbInitPromise, {
+                  encryptJobId,
+                  hireStatus: JobHireStatus.DELETED,
+                  lastSeenDate: new Date()
+                })
+              }
+            } else {
+              const [jobStatusTextEl] = $('#main .job-banner .job-status') ?? []
+              if (jobStatusTextEl) {
+                const jobStatusText = $(jobStatusTextEl).text()?.trim() ?? ''
+                if ([`职位已关闭`].includes(jobStatusText)) {
+                  await saveJobHireStatusRecord(await dbInitPromise, {
+                    encryptJobId,
+                    hireStatus: JobHireStatus.CLOSED,
+                    lastSeenDate: new Date()
+                  })
+                } else {
+                  await saveJobHireStatusRecord(await dbInitPromise, {
+                    encryptJobId,
+                    hireStatus: JobHireStatus.HIRING,
+                    lastSeenDate: new Date()
+                  })
+                }
+              }
+            }
+          }
+        } catch {
+          //
+        }
+      })
+      .catch(() => void 0)
+  }
+
+  if (page.url().match(/^https:\/\/www.zhipin.com\/job_detail\/(.+)\.html/)) {
+    const encryptJobId = page.url().match(/^https:\/\/www.zhipin.com\/job_detail\/(.+)\.html/)?.[1]
+    if (encryptJobId) {
+      handleJobDetailPage({ encryptJobId })
+    }
+  }
+
   async function getCurrentJobSource() {
     const methodMap = {
       async recommend() {
@@ -87,12 +161,24 @@ const attachRequestsListener = async (target: Target) => {
   }
 
   page.on('response', async (response) => {
-    if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
+    if (response.url().match(/^https:\/\/www.zhipin.com\/job_detail\/(.+)\.html/)) {
+      const encryptJobId = response
+        .url()
+        .match(/^https:\/\/www.zhipin.com\/job_detail\/(.+)\.html/)?.[1]
+      if (encryptJobId) {
+        handleJobDetailPage({ encryptJobId })
+      }
+    } else if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
       const data = await response.json()
 
       console.log(data)
       if (data.code === 0) {
         await saveJobInfoFromRecommendPage(await dbInitPromise, data.zpData)
+        await saveJobHireStatusRecord(await dbInitPromise, {
+          encryptJobId: data.zpData.jobInfo.encryptId,
+          hireStatus: JobHireStatus.HIRING,
+          lastSeenDate: new Date()
+        })
       }
     } else if (
       response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/negativefeedback/reasons.json')
@@ -243,11 +329,15 @@ const attachRequestsListener = async (target: Target) => {
           )
         )?.filter(messageForSaveFilter) ?? []
 
-      const chatRecordList = rawChatRecordList.map(it => {
+      const chatRecordList = rawChatRecordList.map((it) => {
         const mappedItem = {} as InstanceType<typeof ChatMessageRecord>
         mappedItem.mid = it.mid
-        mappedItem.encryptFromUserId = it.isSelf ? currentUserInfo.encryptUserId : bossInfo.encryptBossId
-        mappedItem.encryptToUserId = it.isSelf ? bossInfo.encryptBossId : currentUserInfo.encryptUserId
+        mappedItem.encryptFromUserId = it.isSelf
+          ? currentUserInfo.encryptUserId
+          : bossInfo.encryptBossId
+        mappedItem.encryptToUserId = it.isSelf
+          ? bossInfo.encryptBossId
+          : currentUserInfo.encryptUserId
         mappedItem.style = it.isSelf ? 'sent' : 'received'
         mappedItem.type = it.type
         mappedItem.time = it.time ? new Date(it.time) : null

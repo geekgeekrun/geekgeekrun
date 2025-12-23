@@ -39,3 +39,9 @@ export enum CombineRecommendJobFilterType {
   ANY_COMBINE = 1,
   STATIC_COMBINE = 2,
 }
+
+export enum JobHireStatus {
+  HIRING = 1,
+  CLOSED = 2,
+  DELETED = 3,
+}

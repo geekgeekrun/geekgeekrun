@@ -11,6 +11,7 @@
   "author": "geekgeekrun",
   "license": "ISC",
   "dependencies": {
+    "cheerio": "1.0.0-rc.12",
     "dayjs": "^1.11.10",
     "json5": "^2.2.3",
     "minimist": "^1.2.8",

@@ -20,6 +20,7 @@ import { VCompanyLibrary } from "./entity/VCompanyLibrary"
 import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
 import { ChatMessageRecord } from './entity/ChatMessageRecord'
 import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
+import { JobHireStatusRecord } from './entity/JobHireStatusRecord'
 
 import sqlite3 from 'sqlite3';
 import {
@@ -28,15 +29,17 @@ import {
   saveMarkAsNotSuitRecord,
   getNotSuitMarkRecordsInLastSomeDays,
   getChatStartupRecordsInLastSomeDays,
-  getBossIdsByJobIds
+  getBossIdsByJobIds,
+  saveJobHireStatusRecord
 } from "./handlers";
 import { UpdateChatStartupLogTable1729182577167 } from "./migrations/1729182577167-UpdateChatStartupLogTable";
 import minimist from 'minimist'
 import { UpdateBossInfoTable1732032381304 } from "./migrations/1732032381304-UpdateBossInfoTable";
-import { MarkAsNotSuitOp, MarkAsNotSuitReason } from "./enums";
+import { JobHireStatus, MarkAsNotSuitOp, MarkAsNotSuitReason } from "./enums";
 import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/1746092370665-AddColumnForMarkAsNotSuitLog";
 import { Init1000000000000 } from "./migrations/1000000000000-Init";
 import { AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526 } from "./migrations/1752380078526-AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog";
+import { AddJobHireStatusTable1766466476822 } from "./migrations/1766466476822-AddJobHireStatusTable";
 const lodashImportPromise = import('lodash-es')
 
 export function initDb(dbFilePath) {
@@ -67,13 +70,15 @@ export function initDb(dbFilePath) {
       VMarkAsNotSuitLog,
       ChatMessageRecord,
       LlmModelUsageRecord,
+      JobHireStatusRecord,
     ],
     migrations: [
       Init1000000000000,
       UpdateChatStartupLogTable1729182577167,
       UpdateBossInfoTable1732032381304,
       AddColumnForMarkAsNotSuitLog1746092370665,
-      AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526
+      AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526,
+      AddJobHireStatusTable1766466476822
     ],
     migrationsRun: true
   });
@@ -195,6 +200,15 @@ export default class SqlitePlugin {
     hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async (_jobInfo) => {
       const ds = await this.initPromise;
       await saveJobInfoFromRecommendPage(ds, _jobInfo);
+    });
+
+    hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async ({ jobInfo }) => {
+      const ds = await this.initPromise;
+      return await saveJobHireStatusRecord(ds, {
+        encryptJobId: jobInfo.encryptId,
+        hireStatus: JobHireStatus.HIRING,
+        lastSeenDate: new Date()
+      });
     });
 
     hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo, { chatStartupFrom = ChatStartupFrom.AutoFromRecommendList, jobSource = undefined } = {}) => {

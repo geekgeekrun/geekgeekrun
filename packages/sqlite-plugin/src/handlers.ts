@@ -11,6 +11,7 @@ import { JobInfoChangeLog } from "./entity/JobInfoChangeLog";
 import { MarkAsNotSuitLog } from "./entity/MarkAsNotSuitLog";
 import { ChatMessageRecord } from "./entity/ChatMessageRecord";
 import { LlmModelUsageRecord } from "./entity/LlmModelUsageRecord";
+import { JobHireStatusRecord } from "./entity/JobHireStatusRecord";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -364,4 +365,13 @@ export async function getBossIdsByJobIds (ds: DataSource, jobIds: string[] = [])
     )
   })
   return result
+}
+
+export async function saveJobHireStatusRecord(
+  ds: DataSource,
+  record: JobHireStatusRecord
+) {
+  const jobHireStatusRecordRepository = ds.getRepository(JobHireStatusRecord);
+  await jobHireStatusRecordRepository.save(record);
+  return
 }
