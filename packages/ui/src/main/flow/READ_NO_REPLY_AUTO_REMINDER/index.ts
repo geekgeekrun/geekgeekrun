@@ -201,7 +201,9 @@ const mainLoop = async () => {
         (rechatLimitDay && it.updateTime
           ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
           : true) &&
-        ((((it.lastIsSelf && it.lastMsgStatus === MsgStatus.HAS_READ) ||
+        ((((it.lastIsSelf &&
+          it.lastMsgStatus === MsgStatus.HAS_READ &&
+          !it.lastText.includes('你撤回了')) ||
           canNotConfirmIfHasReadMsgTemplateList.some((regExp) => regExp.test(it.lastText))) &&
           !it.unreadCount) ||
           (!it.lastIsSelf && it.lastText === '开场问题，期待你的回答'))
