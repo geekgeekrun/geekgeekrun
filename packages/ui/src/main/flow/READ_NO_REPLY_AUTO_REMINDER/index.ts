@@ -3,6 +3,7 @@ import { MsgStatus, type ChatListItem } from './types'
 import { Browser, Page } from 'puppeteer'
 import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
+import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait.mjs'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { app, dialog } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
@@ -11,7 +12,11 @@ import {
   readConfigFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord'
-import { saveChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/handlers'
+import {
+  saveChatMessageRecord,
+  getJobHireStatusRecord,
+  saveJobHireStatusRecord
+} from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
@@ -19,6 +24,9 @@ import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import { RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
 import gtag from '../../utils/gtag'
+import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
+import dayjs from 'dayjs'
+import cheerio from 'cheerio'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -102,6 +110,88 @@ async function saveCurrentChatRecord(page) {
   })
 
   await saveChatMessageRecord(ds, chatRecordList)
+}
+
+async function checkJobIsClosed() {
+  const encryptJobId = await pageMapByName.boss!.evaluate(() => {
+    return document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$.encryptJobId
+  })
+  if (!encryptJobId) {
+    return false
+  }
+  let isJobClosed = false
+  let record = await getJobHireStatusRecord(await dbInitPromise, encryptJobId)
+  // not seen before, or last seen more than 6 hours ago
+  // fetch new status
+  if (
+    !record ||
+    (record.hireStatus === JobHireStatus.HIRING &&
+      Date.now() - Number(dayjs(record.lastSeenDate)) > 6 * 60 * 60 * 1000)
+  ) {
+    const positionNameElHandle = await pageMapByName.boss!.$(
+      `#main .chat-conversation [ka="geek_chat_job_detail"] .right-content`
+    )
+    if (!positionNameElHandle) {
+      return false
+    }
+    positionNameElHandle.click()
+    try {
+      const targetPage = await waitForPage(pageMapByName.boss!.browser(), async (page) => {
+        const url = page.url()
+        if (
+          url.startsWith(`https://www.zhipin.com/job_detail/${encryptJobId}`) &&
+          (await page.evaluate(() => document.readyState === 'complete'))
+        ) {
+          return true
+        }
+        return false
+      })
+      const htmlContent = await targetPage.content()
+      if (htmlContent) {
+        const $ = cheerio.load(htmlContent)
+        const [jobBannerEl] = $('#main .job-banner') ?? []
+        if (!jobBannerEl) {
+          console.log(`access might be blocked`)
+          if (
+            htmlContent.includes(`您访问的页面不存在`) ||
+            location.href === `https://www.zhipin.com/`
+          ) {
+            await saveJobHireStatusRecord(await dbInitPromise, {
+              encryptJobId,
+              hireStatus: JobHireStatus.DELETED,
+              lastSeenDate: new Date()
+            })
+          }
+        } else {
+          const [jobStatusTextEl] = $('#main .job-banner .job-status') ?? []
+          if (jobStatusTextEl) {
+            const jobStatusText = $(jobStatusTextEl).text()?.trim() ?? ''
+            if ([`职位已关闭`].includes(jobStatusText)) {
+              await saveJobHireStatusRecord(await dbInitPromise, {
+                encryptJobId,
+                hireStatus: JobHireStatus.CLOSED,
+                lastSeenDate: new Date()
+              })
+            } else {
+              await saveJobHireStatusRecord(await dbInitPromise, {
+                encryptJobId,
+                hireStatus: JobHireStatus.HIRING,
+                lastSeenDate: new Date()
+              })
+            }
+          }
+        }
+      }
+      targetPage.close().catch(() => void 0)
+    } catch (err) {
+      console.log(`checkJobIsClosed error: ${err}`)
+    }
+    record = await getJobHireStatusRecord(await dbInitPromise, encryptJobId)
+  }
+  if (record.hireStatus !== JobHireStatus.HIRING) {
+    isJobClosed = true
+  }
+  return isJobClosed
 }
 
 let browser: null | Browser = null
@@ -303,7 +393,9 @@ const mainLoop = async () => {
       )?.filter(messageForSaveFilter) ?? []
 
     const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
+    const isJobClosed = await checkJobIsClosed()
     if (
+      !isJobClosed &&
       isExpectJobTypeMatch &&
       historyMessageList[historyMessageList.length - 1].isSelf &&
       historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&

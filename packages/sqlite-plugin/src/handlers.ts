@@ -375,3 +375,16 @@ export async function saveJobHireStatusRecord(
   await jobHireStatusRecordRepository.save(record);
   return
 }
+
+export async function getJobHireStatusRecord(
+  ds: DataSource,
+  encryptJobId: string
+) {
+  const repo = ds.getRepository(JobHireStatusRecord)
+  const result = await repo.findOne({
+    where: {
+      encryptJobId
+    }
+  })
+  return result
+}

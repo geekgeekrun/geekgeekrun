@@ -34,7 +34,10 @@ export async function launchBoss(browser: Browser) {
   }
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
   try {
-    await Promise.all([page.goto(bossChatUiUrl, { timeout: 0 }), page.waitForNavigation()])
+    await Promise.all([
+      page.goto(bossChatUiUrl, { timeout: 0 }),
+      page.waitForNavigation({ timeout: 120 * 1000 })
+    ])
   } catch (error) {
     if (error?.message?.startsWith('net::ERR_INTERNET_DISCONNECTED')) {
       throw new Error('ERR_INTERNET_DISCONNECTED')
