@@ -1,0 +1,25 @@
+{
+  "name": "@geekgeekrun/pm",
+  "version": "0.0.1",
+  "description": "Electron多进程架构",
+  "main": "main.js",
+  "scripts": {
+    "start:daemon": "electron ./daemon",
+    "dev:daemon": "electron ./daemon --dev",
+    "start:worker": "electron ./worker",
+    "dev:worker": "electron ./worker --dev"
+  },
+  "keywords": [
+    "electron",
+    "multi-process"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "28.2.0"
+  },
+  "dependencies": {
+    "JSONStream": "^1.3.5",
+    "split2": "^4.2.0"
+  }
+}
