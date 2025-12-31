@@ -45,6 +45,10 @@ const runMode = commandlineArgs['mode'];
       runEntry()
       break
     }
+    case 'launchDaemon': {
+      await import('./flow/LAUNCH_DAEMON')
+      break
+    }
     default: {
       const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
       openSettingWindow()

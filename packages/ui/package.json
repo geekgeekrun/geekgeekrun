@@ -35,6 +35,7 @@
     "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
     "@geekgeekrun/sqlite-plugin": "workspace:*",
     "@geekgeekrun/utils": "workspace:*",
+    "@geekgeekrun/pm": "workspace:*",
     "JSONStream": "^1.3.5",
     "diff": "^7.0.0",
     "electron-updater": "^6.1.7",
