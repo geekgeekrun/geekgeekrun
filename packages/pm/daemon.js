@@ -48,19 +48,21 @@ const server = net.createServer((socket) => {
       return; // 跳过空行
     }
     
+    let _callbackUuid
     try {
       const message = JSON.parse(trimmedLine);
+      _callbackUuid = message._callbackUuid
       handleMessage(socket, message);
     } catch (parseError) {
       console.error('解析JSON消息失败:', parseError.message);
       console.error('原始数据:', trimmedLine.substring(0, 100)); // 只打印前100个字符
-      sendResponse(socket, message, { error: '无效的JSON格式', details: parseError.message });
+      sendResponse(socket, _callbackUuid, { error: '无效的JSON格式', details: parseError.message });
     }
   });
 
   splitStream.on('error', (err) => {
     console.error('split2 流处理错误:', err);
-    sendResponse(socket, message, { error: '流处理失败' });
+    sendResponse(socket, null, { error: '流处理失败' });
   });
 
   socket.on('error', (err) => {
@@ -84,6 +86,7 @@ const server = net.createServer((socket) => {
 // 处理消息
 function handleMessage(socket, message) {
   console.log('收到消息:', message);
+  const _callbackUuid = message._callbackUuid
 
   // 工具进程注册消息
   if (message.type === 'worker-register') {
@@ -92,7 +95,7 @@ function handleMessage(socket, message) {
     // 检查是否在停止列表中（防止竞态条件）
     if (stoppedWorkers.has(workerId)) {
       console.log(`工具进程 ${workerId} 尝试注册，但已被标记为停止，拒绝注册`);
-      sendResponse(socket, message, { 
+      sendResponse(socket, _callbackUuid, { 
         error: `工具进程 ${workerId} 已被停止`,
         shouldExit: true // 通知子进程应该退出
       });
@@ -103,7 +106,7 @@ function handleMessage(socket, message) {
     if (workerInfo) {
       workerInfo.socket = socket;
       console.log(`工具进程 ${workerId} 已注册TCP连接`);
-      sendResponse(socket, message, { 
+      sendResponse(socket, _callbackUuid, { 
         success: true, 
         type: 'worker-registered',
         message: `工具进程 ${workerId} 连接已注册`
@@ -120,7 +123,7 @@ function handleMessage(socket, message) {
       if (!stoppedWorkers.has(workerId)) {
         console.log(`工具进程 ${workerId} 尝试注册，但workerInfo不存在`);
       }
-      sendResponse(socket, message, { 
+      sendResponse(socket, _callbackUuid, { 
         error: `工具进程 ${workerId} 未找到`,
         shouldExit: true
       });
@@ -133,7 +136,7 @@ function handleMessage(socket, message) {
     const workerId = message.workerId;
     const shouldExit = stoppedWorkers.has(workerId) || !workers.has(workerId);
     
-    sendResponse(socket, message, {
+    sendResponse(socket, _callbackUuid, {
       type: 'check-should-exit-response',
       workerId: workerId,
       shouldExit: shouldExit
@@ -164,7 +167,7 @@ function handleMessage(socket, message) {
         workerInfo.lastHeartbeat = Date.now();
       }
     } else {
-      sendResponse(socket, message, { error: '未注册的工具进程连接' });
+      sendResponse(socket, _callbackUuid, { error: '未注册的工具进程连接' });
     }
     return;
   }
@@ -189,7 +192,7 @@ function handleMessage(socket, message) {
         args,
         env
       });
-      sendResponse(socket, message, {
+      sendResponse(socket, _callbackUuid, {
         success: true, 
         message: `工具进程 ${message.workerId} 已启动`,
         workerId: message.workerId 
@@ -198,7 +201,7 @@ function handleMessage(socket, message) {
 
     case 'stop-worker':
       stopWorker(message.workerId);
-      sendResponse(socket, message, { 
+      sendResponse(socket, _callbackUuid, { 
         success: true, 
         message: `工具进程 ${message.workerId} 已停止`,
         workerId: message.workerId 
@@ -207,7 +210,7 @@ function handleMessage(socket, message) {
 
     case 'get-status':
       const status = getWorkersStatus();
-      sendResponse(socket, message, { 
+      sendResponse(socket, _callbackUuid, { 
         success: true, 
         type: 'status',
         workers: status 
@@ -215,7 +218,7 @@ function handleMessage(socket, message) {
       break;
 
     default:
-      sendResponse(socket, message, { error: '未知的消息类型' });
+      sendResponse(socket, _callbackUuid, { error: '未知的消息类型' });
   }
 }
 
@@ -403,11 +406,11 @@ function broadcastToGUI(message) {
 }
 
 // 发送响应
-function sendResponse(socket, request, response) {
+function sendResponse(socket, _callbackUuid, response) {
   try {
     socket.write(JSON.stringify({
       ...response,
-      _callbackUuid: request?._callbackUuid
+      _callbackUuid
     }) + '\n');
   } catch (e) {
     console.error('发送响应失败:', e);
