@@ -5,7 +5,8 @@ import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
-import { connectToDaemon, launchDaemon } from './attach-daemon'
+import { launchDaemon } from './launch-daemon'
+import { connectToDaemon } from './connect-to-daemon'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 export function openSettingWindow() {
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?

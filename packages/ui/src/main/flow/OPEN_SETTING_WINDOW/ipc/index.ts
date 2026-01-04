@@ -52,6 +52,7 @@ import {
 import { RequestSceneEnum } from '../../../features/llm-request-log'
 import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
+import { sendToDaemon } from '../connect-to-daemon'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -200,17 +201,9 @@ export default function initIpc() {
 
   // const currentExecutablePath = app.getPath('exe')
   // console.log(currentExecutablePath)
-  ipcMain.handle('prepare-run-geek-auto-start-chat-with-boss', async () => {
-    mainWindow?.webContents.send('locating-puppeteer-executable')
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    if (!puppeteerExecutable) {
-      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    }
-    mainWindow?.webContents.send('puppeteer-executable-is-located')
-  })
 
   let subProcessOfPuppeteer: ChildProcess | null = null
-  ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
+  ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
     if (subProcessOfPuppeteer) {
       return
     }
@@ -222,49 +215,79 @@ export default function initIpc() {
       ...process.env,
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
-    subProcessOfPuppeteer = childProcess.spawn(
-      process.argv[0],
-      [
-        process.argv[1],
-        `--mode=geekAutoStartWithBossDaemon`,
-        `--mode-to-daemon=geekAutoStartWithBossMain`
-      ],
+    // ipcMain.emit(
+    //   'start-worker',
+    //   ev,
+    //   {
+    //     workerId: 'geekAutoStartWithBossMain',
+    //     command: process.argv[0],
+    //     args: [
+    //       process.argv[1],
+    //       `--mode=geekAutoStartWithBossMain`
+    //     ],
+    //     env: subProcessEnv
+    //   }
+    // )
+
+    await sendToDaemon(
       {
-        env: subProcessEnv,
-        stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+        type: 'start-worker',
+        workerId: 'geekAutoStartWithBossMain',
+        command: process.argv[0],
+        args: [
+          process.argv[1],
+          `--mode=geekAutoStartWithBossMain`
+        ],
+        env: subProcessEnv
+      },
+      {
+        needCallback: true
       }
     )
-    // console.log(subProcessOfPuppeteer)
-    return new Promise((resolve, reject) => {
-      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
-        const data = raw
-        switch (data.type) {
-          case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
-            resolve(data)
-            break
-          }
-          case 'LOGIN_STATUS_INVALID': {
-            await sleep(500)
-            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-            return
-          }
-          default: {
-            return
-          }
-        }
-      })
 
-      subProcessOfPuppeteer!.once('exit', (exitCode) => {
-        subProcessOfPuppeteer = null
-        if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
-          // means cannot find downloaded puppeteer
-          reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-        } else {
-          mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
-        }
-      })
-    })
-    // TODO:
+    // subProcessOfPuppeteer = childProcess.spawn(
+    //   process.argv[0],
+    //   [
+    //     process.argv[1],
+    //     `--mode=geekAutoStartWithBossDaemon`,
+    //     `--mode-to-daemon=geekAutoStartWithBossMain`
+    //   ],
+    //   {
+    //     env: subProcessEnv,
+    //     stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+    //   }
+    // )
+    // // console.log(subProcessOfPuppeteer)
+    // return new Promise((resolve, reject) => {
+    //   subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
+    //     const data = raw
+    //     switch (data.type) {
+    //       case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
+    //         resolve(data)
+    //         break
+    //       }
+    //       case 'LOGIN_STATUS_INVALID': {
+    //         await sleep(500)
+    //         mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
+    //         return
+    //       }
+    //       default: {
+    //         return
+    //       }
+    //     }
+    //   })
+
+    //   subProcessOfPuppeteer!.once('exit', (exitCode) => {
+    //     subProcessOfPuppeteer = null
+    //     if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
+    //       // means cannot find downloaded puppeteer
+    //       reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
+    //     } else {
+    //       mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
+    //     }
+    //   })
+    // })
+    // // TODO:
   })
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {

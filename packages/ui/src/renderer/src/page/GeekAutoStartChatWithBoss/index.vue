@@ -9,18 +9,7 @@ const route = useRoute()
 
 const currentStatus = ref('')
 onMounted(() => {
-  const promise = electron.ipcRenderer.invoke('prepare-run-geek-auto-start-chat-with-boss')
-  const handleLocatingPuppeteerExecutable = () => {
-    currentStatus.value = 'locating-puppeteer-executable'
-  }
-  electron.ipcRenderer.once('locating-puppeteer-executable', handleLocatingPuppeteerExecutable)
-  onUnmounted(() => {
-    electron.ipcRenderer.removeListener(
-      'locating-puppeteer-executable',
-      handleLocatingPuppeteerExecutable
-    )
-  })
-
+  const promise = Promise.resolve()
   promise
     .then(() => {
       switch (route.query.flow) {
