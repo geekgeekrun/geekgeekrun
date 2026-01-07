@@ -15,7 +15,6 @@ import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
 import { getAnyAvailablePuppeteerExecutable } from '../../../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
 import { mainWindow } from '../../../window/mainWindow'
 import {
@@ -52,7 +51,7 @@ import {
 import { RequestSceneEnum } from '../../../features/llm-request-log'
 import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
-import { sendToDaemon } from '../connect-to-daemon'
+import { daemonEE, sendToDaemon } from '../connect-to-daemon'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -199,36 +198,20 @@ export default function initIpc() {
     return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
   })
 
-  // const currentExecutablePath = app.getPath('exe')
-  // console.log(currentExecutablePath)
-
-  let subProcessOfPuppeteer: ChildProcess | null = null
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
-    if (subProcessOfPuppeteer) {
-      return
-    }
     const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
     if (!puppeteerExecutable) {
       return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
     }
     const subProcessEnv = {
       ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath,
+      GEEKGEEKRUND_NO_RESTART_EXIT_CODE: [
+        AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE,
+        AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID,
+        AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE
+      ].join(',')
     }
-    // ipcMain.emit(
-    //   'start-worker',
-    //   ev,
-    //   {
-    //     workerId: 'geekAutoStartWithBossMain',
-    //     command: process.argv[0],
-    //     args: [
-    //       process.argv[1],
-    //       `--mode=geekAutoStartWithBossMain`
-    //     ],
-    //     env: subProcessEnv
-    //   }
-    // )
-
     await sendToDaemon(
       {
         type: 'start-worker',
@@ -244,108 +227,83 @@ export default function initIpc() {
         needCallback: true
       }
     )
-
-    // subProcessOfPuppeteer = childProcess.spawn(
-    //   process.argv[0],
-    //   [
-    //     process.argv[1],
-    //     `--mode=geekAutoStartWithBossDaemon`,
-    //     `--mode-to-daemon=geekAutoStartWithBossMain`
-    //   ],
-    //   {
-    //     env: subProcessEnv,
-    //     stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
-    //   }
-    // )
-    // // console.log(subProcessOfPuppeteer)
-    // return new Promise((resolve, reject) => {
-    //   subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
-    //     const data = raw
-    //     switch (data.type) {
-    //       case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
-    //         resolve(data)
-    //         break
-    //       }
-    //       case 'LOGIN_STATUS_INVALID': {
-    //         await sleep(500)
-    //         mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-    //         return
-    //       }
-    //       default: {
-    //         return
-    //       }
-    //     }
-    //   })
-
-    //   subProcessOfPuppeteer!.once('exit', (exitCode) => {
-    //     subProcessOfPuppeteer = null
-    //     if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
-    //       // means cannot find downloaded puppeteer
-    //       reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    //     } else {
-    //       mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
-    //     }
-    //   })
-    // })
-    // // TODO:
+    daemonEE.on('message', function handler (message) {
+      if (message.workerId !== 'geekAutoStartWithBossMain') {
+        return
+      }
+      if (message.type === 'worker-exited') {
+        switch(message.code) {
+          case AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE: {
+            mainWindow?.webContents.send('need-to-check-runtime-dependencies')
+            daemonEE.off('message', handler)
+            break
+          }
+          case AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID: {
+            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
+            daemonEE.off('message', handler)
+            break
+          }
+          case AUTO_CHAT_ERROR_EXIT_CODE.NORMAL: {
+            daemonEE.off('message', handler)
+            break
+          }
+        }
+      }
+    })
   })
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
-    if (subProcessOfPuppeteer) {
-      return
-    }
     const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
     if (!puppeteerExecutable) {
       return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
     }
     const subProcessEnv = {
       ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath,
+      GEEKGEEKRUND_NO_RESTART_EXIT_CODE: [
+        AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE,
+        AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID,
+        AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE
+      ].join(',')
     }
-    subProcessOfPuppeteer = childProcess.spawn(
-      process.argv[0],
-      [process.argv[1], `--mode=readNoReplyAutoReminder`],
+    await sendToDaemon(
       {
-        env: subProcessEnv,
-        stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+        type: 'start-worker',
+        workerId: 'readNoReplyAutoReminder',
+        command: process.argv[0],
+        args: [
+          process.argv[1],
+          `--mode=readNoReplyAutoReminder`
+        ],
+        env: subProcessEnv
+      },
+      {
+        needCallback: true
       }
     )
-    // console.log(subProcessOfPuppeteer)
-    return new Promise((resolve, reject) => {
-      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
-        const data = raw
-        switch (data.type) {
-          case 'LOGIN_STATUS_INVALID': {
-            await sleep(500)
+    daemonEE.on('message', function handler (message) {
+      if (message.workerId !== 'readNoReplyAutoReminder') {
+        return
+      }
+      if (message.type === 'worker-exited') {
+        switch(message.code) {
+          case AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE: {
+            mainWindow?.webContents.send('need-to-check-runtime-dependencies')
+            daemonEE.off('message', handler)
+            break
+          }
+          case AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID: {
             mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-            return
+            daemonEE.off('message', handler)
+            break
           }
-          case 'ERR_INTERNET_DISCONNECTED': {
-            mainWindow?.webContents.send('toast-message', {
-              type: 'error',
-              message: '联网失败，请检查网络连接'
-            })
-            return
-          }
-          default: {
-            return
+          case AUTO_CHAT_ERROR_EXIT_CODE.NORMAL: {
+            daemonEE.off('message', handler)
+            break
           }
         }
-      })
-
-      subProcessOfPuppeteer!.once('exit', (exitCode) => {
-        subProcessOfPuppeteer = null
-        if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
-          // means cannot find downloaded puppeteer
-          reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-        } else {
-          mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
-        }
-      })
-
-      resolve(true)
+      }
     })
-    // TODO:
   })
 
   ipcMain.handle('check-dependencies', async () => {
@@ -408,14 +366,56 @@ export default function initIpc() {
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
-    subProcessOfPuppeteer?.kill()
-    setTimeout(() => {
-      try {
-        subProcessOfPuppeteer?.kill('SIGKILL')
-      } catch {
-        //
+    const p = new Promise(resolve => {
+      daemonEE.on('message', function handler (message) {
+        if (message.workerId !== 'geekAutoStartWithBossMain') {
+          return
+        }
+        if (message.type === 'worker-exited') {
+          daemonEE.off('message', handler)
+          resolve(undefined)
+        }
+      })
+    })
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId: 'geekAutoStartWithBossMain',
+      },
+      {
+        needCallback: true
       }
-    }, 1000)
+    )
+
+    await p
+    mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
+  })
+
+  ipcMain.handle('stop-read-no-reply-auto-reminder', async () => {
+    mainWindow?.webContents.send('read-no-reply-auto-reminder-stopping')
+    const p = new Promise(resolve => {
+      daemonEE.on('message', function handler (message) {
+        if (message.workerId !== 'readNoReplyAutoReminder') {
+          return
+        }
+        if (message.type === 'worker-exited') {
+          daemonEE.off('message', handler)
+          resolve(undefined)
+        }
+      })
+    })
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId: 'readNoReplyAutoReminder',
+      },
+      {
+        needCallback: true
+      }
+    )
+
+    await p
+    mainWindow?.webContents.send('read-no-reply-auto-reminder-stopped')
   })
 
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null

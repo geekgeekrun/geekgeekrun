@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { DAEMON_PORT } from "./daemon-config";
+import { EventEmitter } from "node:events";
 
 const net = require('net');
 const split2 = require('split2');
 const { app } = require('electron');
 
 let daemonClient = null;
+export const daemonEE = new EventEmitter()
 const waitForCallbackTaskMap = new Map()
 
 // 连接到守护进程
@@ -13,6 +15,7 @@ export function connectToDaemon() {
   daemonClient = new net.Socket();
   daemonClient.connect(DAEMON_PORT, 'localhost', () => {
     console.log('已连接到守护进程');
+    daemonEE.emit('connect')
     // 通知渲染进程连接成功
     // if (mainWindow) {
     //     mainWindow.webContents.send('daemon-connected');
@@ -27,6 +30,8 @@ export function connectToDaemon() {
     }
     try {
       const message = JSON.parse(trimmedLine);
+      daemonEE.emit('message', message)
+      // FIXME:
       console.log('收到守护进程消息:', message);
       if (
         message._callbackUuid
@@ -59,6 +64,7 @@ export function connectToDaemon() {
 
   daemonClient.on('error', (err) => {
     console.error('守护进程连接错误:', err);
+    daemonEE.emit('error', err)
     // 尝试重连
     setTimeout(() => {
       if (daemonClient.destroyed) {
@@ -69,6 +75,7 @@ export function connectToDaemon() {
 
   daemonClient.on('close', () => {
     console.log('守护进程连接已关闭');
+    daemonEE.emit('close')
     // 尝试重连
     setTimeout(() => {
       connectToDaemon();

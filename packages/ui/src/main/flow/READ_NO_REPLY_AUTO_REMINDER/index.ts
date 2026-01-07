@@ -4,7 +4,6 @@ import { Browser, Page } from 'puppeteer'
 import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait.mjs'
-import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { app, dialog } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import {
@@ -18,15 +17,14 @@ import {
   saveJobHireStatusRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import * as fs from 'fs'
-import { pipeWriteRegardlessError } from '../utils/pipe'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
-import { RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
+import { AUTO_CHAT_ERROR_EXIT_CODE, RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
 import gtag from '../../utils/gtag'
 import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
+import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -444,10 +442,6 @@ const mainLoop = async () => {
   }
 }
 
-let isParentProcessDisconnect = false
-process.once('disconnect', () => {
-  isParentProcessDisconnect = true
-})
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
@@ -457,19 +451,22 @@ const rerunInterval = (() => {
   return v
 })()
 
-let pipe
-try {
-  pipe = fs.createWriteStream(null, { fd: 3 })
-} catch {
-  console.warn('pipe is not available')
+async function checkShouldExit () {
+  const shouldExitResponse = await sendToDaemon(
+    {
+      type: 'check-should-exit',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
+    },
+    {
+      needCallback: true
+    }
+  )
+  return shouldExitResponse?.shouldExit
 }
 export async function runEntry() {
-  process.on('disconnect', () => {
-    app.exit()
-  })
+  connectToDaemon()
   app.dock?.hide()
-
-  while (!isParentProcessDisconnect) {
+  while (true) {
     try {
       await mainLoop()
     } catch (err) {
@@ -479,31 +476,45 @@ export async function runEntry() {
       } catch {
         //
       }
-      // handle error
-      if (
-        err instanceof Error &&
-        ['LOGIN_STATUS_INVALID', 'ACCESS_IS_DENIED', 'ERR_INTERNET_DISCONNECTED'].includes(
-          err.message
-        )
-      ) {
-        pipeWriteRegardlessError(
-          pipe,
-          JSON.stringify({
-            type: err.message
-          }) + '\r\n'
-        )
-        process.exit(1)
+      const shouldExit = await checkShouldExit()
+      if (shouldExit) {
+        app.exit()
+        return
       }
-      if (err instanceof Error && err.message === 'CANNOT_FIND_A_USABLE_MODEL') {
-        gtag('cannot_find_a_usable_model')
-        await dialog.showMessageBox({
-          type: 'error',
-          message:
-            '未找到可以使用的模型，请确定您所配置的模型均可使用。重启本程序或许可以解决这个问题',
-          buttons: ['退出']
-        })
-        process.exit(0)
-        break;
+      // handle error
+      if (err instanceof Error) {
+        if (err.message.includes('LOGIN_STATUS_INVALID')) {
+          await dialog.showMessageBox({
+            type: `error`,
+            message: `登录状态无效`,
+            detail: `请重新登录Boss直聘`
+          })
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
+          break
+        }
+        if (err.message.includes('ERR_INTERNET_DISCONNECTED')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ERR_INTERNET_DISCONNECTED)
+          break
+        }
+        if (err.message.includes('ACCESS_IS_DENIED')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ACCESS_IS_DENIED)
+          break
+        }
+        if (err.message.includes(`Could not find Chrome`) || err.message.includes(`no executable was found`)) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
+          break
+        }
+        if (err.message === 'CANNOT_FIND_A_USABLE_MODEL') {
+          gtag('cannot_find_a_usable_model')
+          await dialog.showMessageBox({
+            type: 'error',
+            message:
+              '未找到可以使用的模型，请确定您所配置的模型均可使用。重启本程序或许可以解决这个问题',
+            buttons: ['退出']
+          })
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE)
+          break;
+        }
       }
     } finally {
       pageMapByName['boss'] = null
@@ -514,8 +525,6 @@ export async function runEntry() {
   process.exit(0)
 }
 
-attachListenerForKillSelfOnParentExited()
-
 process.once('uncaughtException', (error) => {
   console.error('uncaughtException', error)
   process.exit(1)
@@ -523,6 +532,10 @@ process.once('uncaughtException', (error) => {
 process.once('unhandledRejection', (error) => {
   console.log('unhandledRejection', error)
   process.exit(1)
+})
+
+process.once('disconnect', () => {
+  process.exit(0)
 })
 
 async function storeStorage(page) {

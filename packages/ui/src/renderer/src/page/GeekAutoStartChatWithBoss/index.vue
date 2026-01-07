@@ -6,6 +6,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
 const route = useRoute()
+const { ipcRenderer } = electron
 
 const currentStatus = ref('')
 onMounted(() => {
@@ -39,5 +40,14 @@ onMounted(() => {
       }
       console.error(err)
     })
+})
+
+const needToCheckRuntimeDependenciesHandler = () => {
+  router.replace('/')
+}
+
+ipcRenderer.on('need-to-check-runtime-dependencies', needToCheckRuntimeDependenciesHandler)
+onUnmounted(() => {
+  ipcRenderer.removeListener('need-to-check-runtime-dependencies', needToCheckRuntimeDependenciesHandler)
 })
 </script>

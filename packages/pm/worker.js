@@ -137,7 +137,7 @@ function sendToDaemon(message) {
 function handleDaemonMessage(message) {
   if (message.type === 'worker-registered') {
     console.log(`[工具进程 ${workerId}] 连接已注册到守护进程`);
-  } else if (message.type === 'check-should-exit-response') {
+  } else if (message.type === 'check-should-exit') {
     // 处理是否应该退出的查询响应
     if (message.shouldExit) {
       console.log(`[工具进程 ${workerId}] 守护进程指示应该退出，正在退出...`);

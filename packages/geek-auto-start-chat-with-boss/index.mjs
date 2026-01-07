@@ -1494,7 +1494,10 @@ export async function closeBrowserWindow () {
   browser?.close()
   const browserProcess = browser?.process()
   if (browserProcess) {
-    process.kill(browserProcess.pid)
+    try {
+      process.kill(browserProcess.pid)
+    }
+    catch {}
   }
   browser = null
   page = null

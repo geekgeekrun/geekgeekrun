@@ -14,13 +14,6 @@ const runMode = commandlineArgs['mode'];
       waitForProcessHandShakeAndRunAutoChat()
       break
     }
-    case 'geekAutoStartWithBossDaemon': {
-      const { runAutoChatWithDaemon } = await import(
-        './flow/GEEK_AUTO_START_CHAT_WITH_BOSS_DAEMON/index'
-      )
-      runAutoChatWithDaemon()
-      break
-    }
     case 'checkAndDownloadDependenciesForInit': {
       const { checkAndDownloadDependenciesForInit } = await import(
         './flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/index'

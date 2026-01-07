@@ -16,7 +16,7 @@ import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerF
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
 import GtagPlugin from '../../utils/gtag/GtagPlugin'
-import { connectToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 const rerunInterval = (() => {
@@ -36,10 +36,18 @@ const initPlugins = (hooks) => {
   new GtagPlugin().apply(hooks)
 }
 
-let isParentProcessDisconnect = false
-process.once('disconnect', () => {
-  isParentProcessDisconnect = true
-})
+async function checkShouldExit () {
+  const shouldExitResponse = await sendToDaemon(
+    {
+      type: 'check-should-exit',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
+    },
+    {
+      needCallback: true
+    }
+  )
+  return shouldExitResponse?.shouldExit
+}
 
 const runAutoChat = async () => {
   const { initPuppeteer, mainLoop, closeBrowserWindow, autoStartChatEventBus } = await import(
@@ -118,7 +126,7 @@ const runAutoChat = async () => {
     // )
   })
 
-  while (![isParentProcessDisconnect].includes(true)) {
+  while (true) {
     try {
       await mainLoop(hooks)
     } catch (err) {
@@ -140,9 +148,18 @@ const runAutoChat = async () => {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ACCESS_IS_DENIED)
           break
         }
+        if (err.message.includes(`Could not find Chrome`) || err.message.includes(`no executable was found`)) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
+          break
+        }
       }
       closeBrowserWindow?.()
       console.error(err)
+      const shouldExit = await checkShouldExit()
+      if (shouldExit) {
+        app.exit()
+        return
+      }
       console.log(
         `[Run core main] An internal error is caught, and browser will be restarted in ${rerunInterval}ms.`
       )
