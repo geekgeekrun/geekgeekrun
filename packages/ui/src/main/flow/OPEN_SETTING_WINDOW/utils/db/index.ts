@@ -102,3 +102,10 @@ export const getJobHistoryByEncryptId = async (encryptJobId) => {
   })
   return res
 }
+
+export const saveAndGetCurrentRunRecord = async () => {
+  const res = await createWorkerPromise({
+    type: 'saveAndGetCurrentRunRecord'
+  })
+  return res
+}

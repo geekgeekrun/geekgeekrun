@@ -23,7 +23,8 @@ import {
   getCompanyLibrary,
   getJobLibrary,
   getJobHistoryByEncryptId,
-  getMarkAsNotSuitRecord
+  getMarkAsNotSuitRecord,
+  saveAndGetCurrentRunRecord,
 } from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
 import { pipeWriteRegardlessError } from '../../utils/pipe'
@@ -203,6 +204,7 @@ export default function initIpc() {
     if (!puppeteerExecutable) {
       return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
     }
+    const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
     const subProcessEnv = {
       ...process.env,
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath,
@@ -219,7 +221,8 @@ export default function initIpc() {
         command: process.argv[0],
         args: [
           process.argv[1],
-          `--mode=geekAutoStartWithBossMain`
+          `--mode=geekAutoStartWithBossMain`,
+          `--run-record-id=${currentRunRecord?.id || 0}`
         ],
         env: subProcessEnv
       },
@@ -257,6 +260,7 @@ export default function initIpc() {
     if (!puppeteerExecutable) {
       return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
     }
+    const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
     const subProcessEnv = {
       ...process.env,
       PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath,
@@ -273,7 +277,8 @@ export default function initIpc() {
         command: process.argv[0],
         args: [
           process.argv[1],
-          `--mode=readNoReplyAutoReminder`
+          `--mode=readNoReplyAutoReminder`,
+          `--run-record-id=${currentRunRecord?.id || 0}`
         ],
         env: subProcessEnv
       },
