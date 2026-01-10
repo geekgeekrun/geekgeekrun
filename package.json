@@ -15,9 +15,10 @@
     "dayjs": "^1.11.10",
     "json5": "^2.2.3",
     "minimist": "^1.2.8",
-    "puppeteer": "20.1.0",
+    "puppeteer": "24.19.0",
     "puppeteer-extra": "3.3.6",
     "puppeteer-extra-plugin-stealth": "2.11.2",
+    "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",
     "rimraf": "^3.0.2",
     "tapable": "^2.2.1"
   },

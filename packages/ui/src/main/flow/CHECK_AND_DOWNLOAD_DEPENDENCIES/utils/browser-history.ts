@@ -8,6 +8,8 @@ export interface BrowserInfo {
   executablePath: string
 }
 
+const CONFIG_VSERION = 2
+
 const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
 export const lastUsedBrowserRecordFilePath = path.join(
   runtimeFolderPath,
@@ -28,8 +30,13 @@ export const getLastUsedAndAvailableBrowser = async (): Promise<BrowserInfo | nu
   }
   try {
     const fileContent = (await fsPromise.readFile(lastUsedBrowserRecordFilePath)).toString()
-    const [path, browser] = fileContent.split('\n').map((it) => it.trim())
-    if (!path || !fs.existsSync(path)) {
+    const [path, browser, configVersion] = fileContent.split('\n').map((it) => it.trim())
+    if (
+      !path ||
+      !fs.existsSync(path) ||
+      !Number(configVersion) ||
+      Number(configVersion) < CONFIG_VSERION
+    ) {
       await removeLastUsedAndAvailableBrowserPath()
       return null
     }
@@ -57,7 +64,7 @@ export const saveLastUsedAndAvailableBrowserInfo = async (browserInfo: BrowserIn
     }
     await fsPromise.writeFile(
       lastUsedBrowserRecordFilePath,
-      [browserInfo.executablePath, browserInfo.browser].join('\n')
+      [browserInfo.executablePath, browserInfo.browser, CONFIG_VSERION].join('\n')
     )
   } catch {
     console.warn('lastUsedBrowserRecordFile write error')

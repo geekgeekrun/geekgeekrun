@@ -16,7 +16,7 @@ const getPuppeteerManagerModule = async () => {
   return puppeteerManager
 }
 
-const EXPECT_CHROMIUM_BUILD_ID = '113.0.5672.63'
+const EXPECT_CHROMIUM_BUILD_ID = '139.0.7258.154'
 const cacheDir = path.join(os.homedir(), '.geekgeekrun', 'cache')
 
 const getExpectCachedPuppeteerExecutable = async (): Promise<BrowserInfo> => {

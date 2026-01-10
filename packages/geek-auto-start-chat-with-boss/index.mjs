@@ -73,21 +73,26 @@ export const autoStartChatEventBus = new EventEmitter()
  */
 let puppeteer
 let StealthPlugin
+let LaodengPlugin
 export async function initPuppeteer () {
   // production
   const importResult = await Promise.all(
     [
       import('puppeteer-extra'),
-      import('puppeteer-extra-plugin-stealth')
+      import('puppeteer-extra-plugin-stealth'),
+      import('@geekgeekrun/puppeteer-extra-plugin-laodeng')
     ]
   )
   puppeteer = importResult[0].default
   StealthPlugin = importResult[1].default
+  LaodengPlugin = importResult[2].default
   puppeteer.use(StealthPlugin())
+  puppeteer.use(LaodengPlugin())
 
   return {
     puppeteer,
-    StealthPlugin
+    StealthPlugin,
+    LaodengPlugin
   }
 }
 
@@ -1472,6 +1477,7 @@ export async function mainLoop (hooks) {
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)
     await page.bringToFront()
+    // __GGR_INJECT_ANTI_ANTI_DEBUGGER__
     await hooks.mainFlowWillLaunch?.promise({
       jobNotMatchStrategy,
       jobNotActiveStrategy,
