@@ -151,9 +151,7 @@ jobs:
           merge-multiple: true
 
       - name: Display structure of downloaded files
-        run: |
-          ls -llR geekgeekrun-ui@${{ github.sha }}
-          echo ${{ secrets.GGR_ACTION_SECRET }}
+        run: ls -llR geekgeekrun-ui@${{ github.sha }}
 
       - name: Create release for public
         uses: ncipollo/release-action@v1
