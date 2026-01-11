@@ -1,9 +1,5 @@
 name: Release UI
 
-permissions:
-  contents: write    # required to create releases and push tags
-  packages: write    # optional — needed if you publish packages or upload package-related assets
-
 on:
   push:
     # Sequence of patterns matched against refs/tags
@@ -161,7 +157,7 @@ jobs:
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
           tag: ${{ github.ref }}
-          token: ${{ secrets.GGR_ACTION_SECRET }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           body: TODO New Release.
 
       - name: Create release for private
@@ -172,5 +168,5 @@ jobs:
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
           tag: ${{ github.ref }}
-          token: ${{ secrets.GGR_ACTION_SECRET }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           body: TODO New Release.
