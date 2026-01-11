@@ -153,10 +153,10 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -llR geekgeekrun-ui@${{ github.sha }}
 
-      - name: Create release for private
+      - name: Create release for public
         uses: ncipollo/release-action@v1
         with:
-          repo: geekgeekrun/ggr
+          repo: geekgeekrun/geekgeekrun
           prerelease: true
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
@@ -164,10 +164,10 @@ jobs:
           token: ${{ secrets.GGR_ACTION_SECRET }}
           body: TODO New Release.
 
-      - name: Create release for public
+      - name: Create release for private
         uses: ncipollo/release-action@v1
         with:
-          repo: geekgeekrun/geekgeekrun
+          repo: geekgeekrun/ggr
           prerelease: true
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
