@@ -161,7 +161,7 @@ jobs:
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
           tag: ${{ github.ref }}
-          token: ${{ secrets.GH_ACTION_SECRET }}
+          token: ${{ secrets.GGR_ACTION_SECRET }}
           body: TODO New Release.
 
       - name: Create release for public
@@ -172,5 +172,5 @@ jobs:
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
           tag: ${{ github.ref }}
-          token: ${{ secrets.GH_ACTION_SECRET }}
+          token: ${{ secrets.GGR_ACTION_SECRET }}
           body: TODO New Release.
