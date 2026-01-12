@@ -9,7 +9,6 @@ import {
   removeLastUsedAndAvailableBrowserPath
 } from '../browser-history'
 import gtag from '../../../../utils/gtag'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs';
 
 const getPuppeteerManagerModule = async () => {
   const puppeteerManager = await import('@puppeteer/browsers')
@@ -65,32 +64,19 @@ export const checkAndDownloadPuppeteerExecutable = async (
     } catch {
       throw new Error('USER_CANCEL_DOWNLOAD_PUPPETEER')
     }
-    let restRetriedTime = 10
-    while (restRetriedTime > 0) {
-      try {
-        // maybe the exist installation is broken.
-        await puppeteerManager.uninstall({
-          cacheDir,
-          buildId: EXPECT_CHROMIUM_BUILD_ID,
-          browser: puppeteerManager.Browser.CHROME
-        })
-        installedBrowser = await puppeteerManager.install({
-          browser: puppeteerManager.Browser.CHROME,
-          cacheDir,
-          buildId: EXPECT_CHROMIUM_BUILD_ID,
-          downloadProgressCallback: options.downloadProgressCallback,
-          baseUrl: `https://registry.npmmirror.com/-/binary/chrome-for-testing`
-        })
-        break
-      }
-      catch (err) {
-        restRetriedTime--
-        await sleep(5000)
-      }
-    }
-    if (!installedBrowser) {
-      throw new Error(`浏览器下载失败`)
-    }
+    // maybe the exist installation is broken.
+    await puppeteerManager.uninstall({
+      cacheDir,
+      buildId: EXPECT_CHROMIUM_BUILD_ID,
+      browser: puppeteerManager.Browser.CHROME
+    })
+    installedBrowser = await puppeteerManager.install({
+      browser: puppeteerManager.Browser.CHROME,
+      cacheDir,
+      buildId: EXPECT_CHROMIUM_BUILD_ID,
+      downloadProgressCallback: options.downloadProgressCallback,
+      baseUrl: `https://registry.npmmirror.com/-/binary/chrome-for-testing`
+    })
   } else {
     gtag('use_installed_browser')
     installedBrowser = (
@@ -116,16 +102,16 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   if (lastUsedOne) {
     return lastUsedOne
   }
-  // // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
-  // try {
-  //   const existedOne = await findAndLocateUserInstalledChromiumExecutableSync()
-  //   await saveLastUsedAndAvailableBrowserInfo(existedOne)
-  //   // save its path
-  //   return existedOne
-  // } catch (err) {
-  //   console.error(err)
-  //   console.log('no existed browser path found')
-  // }
+  // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
+  try {
+    const existedOne = await findAndLocateUserInstalledChromiumExecutableSync()
+    await saveLastUsedAndAvailableBrowserInfo(existedOne)
+    // save its path
+    return existedOne
+  } catch (err) {
+    console.error(err)
+    console.log('no existed browser path found')
+  }
   // find existed browser - the fallback one
   if (await checkCachedPuppeteerExecutable()) {
     const cachedOne = await getExpectCachedPuppeteerExecutable()
@@ -144,7 +130,7 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
   const findChrome: typeof import('find-chrome-bin').findChrome = (await import('find-chrome-bin'))
     .findChrome
   const targetBrowser = await findChrome({
-    min: exceptChromiumMainVersion
+    min: exceptChromiumMainVersion + 1
   })
   if (!targetBrowser?.executablePath) {
     throw new Error('NO_EXPECT_CHROMIUM_FOUND')
