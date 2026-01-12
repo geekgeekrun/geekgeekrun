@@ -102,16 +102,16 @@ export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo 
   if (lastUsedOne) {
     return lastUsedOne
   }
-  // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
-  try {
-    const existedOne = await findAndLocateUserInstalledChromiumExecutableSync()
-    await saveLastUsedAndAvailableBrowserInfo(existedOne)
-    // save its path
-    return existedOne
-  } catch (err) {
-    console.error(err)
-    console.log('no existed browser path found')
-  }
+  // // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
+  // try {
+  //   const existedOne = await findAndLocateUserInstalledChromiumExecutableSync()
+  //   await saveLastUsedAndAvailableBrowserInfo(existedOne)
+  //   // save its path
+  //   return existedOne
+  // } catch (err) {
+  //   console.error(err)
+  //   console.log('no existed browser path found')
+  // }
   // find existed browser - the fallback one
   if (await checkCachedPuppeteerExecutable()) {
     const cachedOne = await getExpectCachedPuppeteerExecutable()
