@@ -9,6 +9,7 @@ import {
   removeLastUsedAndAvailableBrowserPath
 } from '../browser-history'
 import gtag from '../../../../utils/gtag'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs';
 
 const getPuppeteerManagerModule = async () => {
   const puppeteerManager = await import('@puppeteer/browsers')
@@ -64,19 +65,32 @@ export const checkAndDownloadPuppeteerExecutable = async (
     } catch {
       throw new Error('USER_CANCEL_DOWNLOAD_PUPPETEER')
     }
-    // maybe the exist installation is broken.
-    await puppeteerManager.uninstall({
-      cacheDir,
-      buildId: EXPECT_CHROMIUM_BUILD_ID,
-      browser: puppeteerManager.Browser.CHROME
-    })
-    installedBrowser = await puppeteerManager.install({
-      browser: puppeteerManager.Browser.CHROME,
-      cacheDir,
-      buildId: EXPECT_CHROMIUM_BUILD_ID,
-      downloadProgressCallback: options.downloadProgressCallback,
-      baseUrl: `https://registry.npmmirror.com/-/binary/chrome-for-testing`
-    })
+    let restRetriedTime = 10
+    while (restRetriedTime > 0) {
+      try {
+        // maybe the exist installation is broken.
+        await puppeteerManager.uninstall({
+          cacheDir,
+          buildId: EXPECT_CHROMIUM_BUILD_ID,
+          browser: puppeteerManager.Browser.CHROME
+        })
+        installedBrowser = await puppeteerManager.install({
+          browser: puppeteerManager.Browser.CHROME,
+          cacheDir,
+          buildId: EXPECT_CHROMIUM_BUILD_ID,
+          downloadProgressCallback: options.downloadProgressCallback,
+          baseUrl: `https://registry.npmmirror.com/-/binary/chrome-for-testing`
+        })
+        break
+      }
+      catch (err) {
+        restRetriedTime--
+        await sleep(5000)
+      }
+    }
+    if (!installedBrowser) {
+      throw new Error(`浏览器下载失败`)
+    }
   } else {
     gtag('use_installed_browser')
     installedBrowser = (
