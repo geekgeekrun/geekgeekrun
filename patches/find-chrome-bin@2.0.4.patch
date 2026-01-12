@@ -1,0 +1,23 @@
+diff --git a/src/win32/index.js b/src/win32/index.js
+index 53e2279e4a0c51dfe0725100005fafed2c6537a5..d9de7840e2ad0bfe625e6067cc764cee220035f1 100644
+--- a/src/win32/index.js
++++ b/src/win32/index.js
+@@ -15,12 +15,13 @@ export function findChromeBinaryOnWin32(canary) {
+   ].filter(Boolean)
+ 
+   let result
+-
+-  prefixes.forEach(prefix => {
++  for (const prefix of prefixes) {
+     let chromePath = join(prefix, suffix)
+-    if (canAccess(chromePath)) result = chromePath
+-  })
+-
++    if (canAccess(chromePath)) {
++      result = chromePath
++      break
++    }
++  }
+   return result
+ }
+ 
