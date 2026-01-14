@@ -30,9 +30,8 @@ export async function main() {
   const { puppeteer } = await initPuppeteer()
   const browser = await puppeteer.launch({
     headless: false,
-    args: [
-      `--load-extension=${editThisCookieExtensionPath}`
-    ]
+    pipe: true,
+    enableExtensions: [editThisCookieExtensionPath]
   })
 
   const closeAttachedSet = new WeakSet()

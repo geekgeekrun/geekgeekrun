@@ -16,7 +16,7 @@ const getPuppeteerManagerModule = async () => {
   return puppeteerManager
 }
 
-const EXPECT_CHROMIUM_BUILD_ID = '113.0.5672.63'
+const EXPECT_CHROMIUM_BUILD_ID = '139.0.7258.154'
 const cacheDir = path.join(os.homedir(), '.geekgeekrun', 'cache')
 
 const getExpectCachedPuppeteerExecutable = async (): Promise<BrowserInfo> => {
@@ -130,7 +130,7 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
   const findChrome: typeof import('find-chrome-bin').findChrome = (await import('find-chrome-bin'))
     .findChrome
   const targetBrowser = await findChrome({
-    min: exceptChromiumMainVersion
+    min: exceptChromiumMainVersion + 1
   })
   if (!targetBrowser?.executablePath) {
     throw new Error('NO_EXPECT_CHROMIUM_FOUND')
