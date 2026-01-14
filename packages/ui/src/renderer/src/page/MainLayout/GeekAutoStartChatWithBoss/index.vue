@@ -1049,12 +1049,15 @@
         <el-button @click="handleSave">仅保存配置</el-button>
         <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
       </div>
+      <div>
+        <el-button @click="handleStopButtonClick">结束任务</el-button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch, nextTick } from 'vue'
+import { computed, onBeforeUnmount, ref, watch, nextTick, onUnmounted } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
@@ -1445,13 +1448,28 @@ const handleSubmit = async () => {
   delete clonedFormContent.__jobSourceList
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(clonedFormContent))
   mittBus.emit('auto-start-chat-with-boss-config-saved')
-  router.replace({
-    path: '/geekAutoStartChatWithBoss/prepareRun',
-    query: { flow: 'geek-auto-start-chat-with-boss' }
-  })
   gtagRenderer('config_saved_and_launch_auto_start_chat', {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken
   })
+
+  try {
+    await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
+      gtagRenderer('gascwb_cannot_run_for_corrupt')
+      ElMessage.error({
+        message: `核心组件损坏，正在尝试修复`
+      })
+      router.replace('/')
+    }
+    console.error(err)
+    gtagRenderer('gascwb_cannot_run_for_unknown_error', { err })
+  }
+
+  // {
+  //   path: '/geekAutoStartChatWithBoss/prepareRun',
+  //   query: { flow: 'geek-auto-start-chat-with-boss' }
+  // }
 }
 const handleSave = async () => {
   gtagRenderer('save_config_clicked', {
@@ -1803,6 +1821,22 @@ const combineRecommendJobFilterTypeOptions = [
     value: 2
   }
 ]
+
+const needToCheckRuntimeDependenciesHandler = () => {
+  router.replace('/')
+}
+electron.ipcRenderer.on('need-to-check-runtime-dependencies', needToCheckRuntimeDependenciesHandler)
+onUnmounted(() => {
+  electron.ipcRenderer.removeListener(
+    'need-to-check-runtime-dependencies',
+    needToCheckRuntimeDependenciesHandler
+  )
+})
+
+const handleStopButtonClick = async () => {
+  gtagRenderer('gascwb_stop_button_clicked')
+  electron.ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
+}
 </script>
 
 <style scoped lang="scss">

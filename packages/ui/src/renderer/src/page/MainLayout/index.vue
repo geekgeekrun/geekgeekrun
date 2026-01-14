@@ -2,6 +2,7 @@
   <div class="flex h100vh">
     <div class="flex flex-col min-w200px w200px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
+        <RouterLink to="./TaskManager">任务管理</RouterLink>
         <RouterLink to="./GeekAutoStartChatWithBoss">
           Boss炸弹
           <el-tooltip
@@ -136,7 +137,7 @@
         </div>
       </div>
     </div>
-    <RouterView v-slot="{ Component }" class="flex-1">
+    <RouterView v-slot="{ Component }" class="flex-1 of-hidden">
       <KeepAlive>
         <component :is="Component" />
       </KeepAlive>
@@ -151,7 +152,7 @@ import { TopRight, QuestionFilled } from '@element-plus/icons-vue'
 import useBuildInfo from '@renderer/hooks/useBuildInfo'
 import { debounce } from 'lodash-es'
 import { gtagRenderer } from '@renderer/utils/gtag'
-import { useUpdateStore } from '../../store/index'
+import { useUpdateStore, useTaskManagerStore } from '../../store/index'
 
 const router = useRouter()
 const unmountedCbs: Array<InstanceType<typeof Function>> = []
@@ -217,6 +218,9 @@ function handleViewNewReleaseClick() {
   gtagRenderer('click_view_release_form_nav')
   electron.ipcRenderer.send('open-external-link', updateStore.availableNewRelease!.releasePageUrl)
 }
+
+const taskManagerStore = useTaskManagerStore()
+void taskManagerStore
 </script>
 
 <style lang="scss" scoped>

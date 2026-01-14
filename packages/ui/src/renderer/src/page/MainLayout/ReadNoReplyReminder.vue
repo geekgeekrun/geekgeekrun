@@ -219,6 +219,9 @@
       <el-form-item class="last-form-item">
         <el-button type="primary" @click="handleSubmit">开始提醒</el-button>
       </el-form-item>
+      <div>
+        <el-button @click="handleStopButtonClick">结束任务</el-button>
+      </div>
     </el-form>
   </div>
 </template>
@@ -471,10 +474,25 @@ const handleSubmit = async () => {
     }
   }
   gtagRenderer('run_read_no_reply_reminder_launched')
-  router.replace({
-    path: '/geekAutoStartChatWithBoss/prepareRun',
-    query: { flow: 'read-no-reply-reminder' }
-  })
+
+  try {
+    await electron.ipcRenderer.invoke('run-read-no-reply-auto-reminder')
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
+      gtagRenderer('rnrr_cannot_run_for_corrupt')
+      ElMessage.error({
+        message: `核心组件损坏，正在尝试修复`
+      })
+      router.replace('/')
+    }
+    console.error(err)
+    gtagRenderer('rnrr_cannot_run_for_unknown_error', { err })
+  }
+
+  // {
+  //   path: '/geekAutoStartChatWithBoss/prepareRun',
+  //   query: { flow: 'read-no-reply-reminder' }
+  // }
 }
 function handleThrottleIntervalMinutesBlur() {
   if (formContent.value.autoReminder.throttleIntervalMinutes < 3) {
@@ -558,6 +576,22 @@ async function handleTestEffectClicked() {
   electron.ipcRenderer.send('test-llm-config-effect', {
     autoReminderConfig: JSON.parse(JSON.stringify(formContent.value.autoReminder))
   })
+}
+
+const needToCheckRuntimeDependenciesHandler = () => {
+  router.replace('/')
+}
+electron.ipcRenderer.on('need-to-check-runtime-dependencies', needToCheckRuntimeDependenciesHandler)
+onUnmounted(() => {
+  electron.ipcRenderer.removeListener(
+    'need-to-check-runtime-dependencies',
+    needToCheckRuntimeDependenciesHandler
+  )
+})
+
+const handleStopButtonClick = async () => {
+  gtagRenderer('rnrr_stop_button_clicked')
+  electron.ipcRenderer.invoke('stop-read-no-reply-auto-reminder')
 }
 </script>
 

@@ -129,16 +129,6 @@ export function sendToDaemon(message, {
 //   sendToDaemon({ type: 'start-worker', workerId, command, args, env });
 // });
 
-// // IPC处理：停止工具进程
-// ipcMain.on('stop-worker', (event, workerId) => {
-//   sendToDaemon({ type: 'stop-worker', workerId });
-// });
-
-// // IPC处理：获取所有工具进程状态
-// ipcMain.on('get-workers-status', () => {
-//   sendToDaemon({ type: 'get-status' });
-// });
-
 app.on('window-all-closed', () => {
   if (daemonClient) {
     daemonClient.destroy();

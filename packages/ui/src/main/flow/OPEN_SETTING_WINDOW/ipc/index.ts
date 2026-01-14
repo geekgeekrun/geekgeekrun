@@ -423,6 +423,31 @@ export default function initIpc() {
     mainWindow?.webContents.send('read-no-reply-auto-reminder-stopped')
   })
 
+  ipcMain.handle('get-task-manager-list', async () => {
+    const result = await sendToDaemon(
+      {
+        type: 'get-status'
+      },
+      {
+        needCallback: true
+      }
+    )
+    return result
+  })
+
+  // IPC处理：停止工具进程
+  ipcMain.handle('stop-task', async (_, workerId) => {
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId
+      },
+      {
+        needCallback: true
+      }
+    )
+  })
+
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
   ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
     try {

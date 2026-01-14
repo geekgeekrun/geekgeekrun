@@ -162,10 +162,10 @@ function handleMessage(socket, message) {
         timestamp: Date.now()
       });
       
-      // 如果是心跳，更新最后心跳时间
-      if (message.type === 'worker-heartbeat') {
-        workerInfo.lastHeartbeat = Date.now();
-      }
+      // // 如果是心跳，更新最后心跳时间
+      // if (message.type === 'worker-heartbeat') {
+      //   workerInfo.lastHeartbeat = Date.now();
+      // }
     } else {
       sendResponse(socket, _callbackUuid, { error: '未注册的工具进程连接' });
     }
@@ -328,9 +328,10 @@ function startWorker({ workerId, command, args, env }, restartCount = 0) {
     status: 'running',
     startTime: Date.now(),
     restartCount, // 使用传入的重启次数
-    socket: null, // 工具进程的TCP连接，稍后由工具进程注册
-    lastHeartbeat: null,
+    // socket: null, // 工具进程的TCP连接，稍后由工具进程注册
+    // lastHeartbeat: null,
     command,
+    args,
     env,
     workerId,
   }
@@ -388,8 +389,11 @@ function getWorkersStatus() {
       status: workerInfo.status,
       uptime: Date.now() - workerInfo.startTime,
       restartCount: workerInfo.restartCount || 0,
-      connected: workerInfo.socket !== null && !workerInfo.socket.destroyed,
-      lastHeartbeat: workerInfo.lastHeartbeat
+      // connected: workerInfo.socket !== null && !workerInfo.socket.destroyed,
+      // lastHeartbeat: workerInfo.lastHeartbeat,
+      command: workerInfo.command,
+      args: workerInfo.args,
+      pid: workerInfo.process?.pid
     });
   }
   return status;

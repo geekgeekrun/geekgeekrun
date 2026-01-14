@@ -44,6 +44,13 @@ const routes: Array<RouteRecordRaw> = [
     redirect: '/main-layout/GeekAutoStartChatWithBoss',
     children: [
       {
+        path: 'taskManager',
+        component: () => import('@renderer/page/MainLayout/TaskManager.vue'),
+        meta: {
+          title: '任务管理'
+        }
+      },
+      {
         path: 'GeekAutoStartChatWithBoss',
         component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss/index.vue'),
         meta: {
