@@ -8,6 +8,9 @@ patchedDependencies:
   find-chrome-bin@2.0.4:
     hash: hlvcqc4im4z7xkxtwwtz6sdzui
     path: patches/find-chrome-bin@2.0.4.patch
+  puppeteer-extra-plugin-anonymize-ua@2.4.6:
+    hash: 5bafoxpvwneq2ywcyjznkii37m
+    path: patches/puppeteer-extra-plugin-anonymize-ua@2.4.6.patch
 
 importers:
 
@@ -34,6 +37,9 @@ importers:
       puppeteer-extra:
         specifier: 3.3.6
         version: 3.3.6(puppeteer@24.19.0)
+      puppeteer-extra-plugin-anonymize-ua:
+        specifier: 2.4.6
+        version: 2.4.6(patch_hash=5bafoxpvwneq2ywcyjznkii37m)(puppeteer-extra@3.3.6)
       puppeteer-extra-plugin-stealth:
         specifier: 2.11.2
         version: 2.11.2(puppeteer-extra@3.3.6)
@@ -269,7 +275,7 @@ importers:
         specifier: ^9.20.1
         version: 9.20.1(eslint@8.56.0)
       find-chrome-bin:
-        specifier: ^2.0.4
+        specifier: 2.0.4
         version: 2.0.4(patch_hash=hlvcqc4im4z7xkxtwwtz6sdzui)
       js-yaml:
         specifier: ^4.1.0
@@ -1889,7 +1895,7 @@ packages:
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.3
-      semver: 7.6.0
+      semver: 7.7.3
       ts-api-utils: 1.2.1(typescript@5.3.3)
       typescript: 5.3.3
     transitivePeerDependencies:
@@ -1909,7 +1915,7 @@ packages:
       '@typescript-eslint/types': 6.21.0
       '@typescript-eslint/typescript-estree': 6.21.0(typescript@5.3.3)
       eslint: 8.56.0
-      semver: 7.6.0
+      semver: 7.7.3
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -5590,6 +5596,26 @@ packages:
       - supports-color
       - utf-8-validate
     dev: false
+
+  /puppeteer-extra-plugin-anonymize-ua@2.4.6(patch_hash=5bafoxpvwneq2ywcyjznkii37m)(puppeteer-extra@3.3.6):
+    resolution: {integrity: sha512-EasOjKpPYFn72Yk7/RXM2q/CDrdPzjTnx8GfHPrwVmhcnh8Ull1DnONP73KZFF2bdwhitaQ3zRZ0yI1yFM2rzQ==}
+    engines: {node: '>=8'}
+    peerDependencies:
+      playwright-extra: '*'
+      puppeteer-extra: '*'
+    peerDependenciesMeta:
+      playwright-extra:
+        optional: true
+      puppeteer-extra:
+        optional: true
+    dependencies:
+      debug: 4.4.3
+      puppeteer-extra: 3.3.6(puppeteer@24.19.0)
+      puppeteer-extra-plugin: 3.2.3(playwright-extra@4.3.6)(puppeteer-extra@3.3.6)
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+    patched: true
 
   /puppeteer-extra-plugin-stealth@2.11.2(puppeteer-extra@3.3.6):
     resolution: {integrity: sha512-bUemM5XmTj9i2ZerBzsk2AN5is0wHMNE6K0hXBzBXOzP5m5G3Wl0RHhiqKeHToe/uIH8AoZiGhc1tCkLZQPKTQ==}

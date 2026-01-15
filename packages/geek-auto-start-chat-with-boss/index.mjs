@@ -74,25 +74,29 @@ export const autoStartChatEventBus = new EventEmitter()
 let puppeteer
 let StealthPlugin
 let LaodengPlugin
+let AnonymizeUaPlugin
 export async function initPuppeteer () {
   // production
   const importResult = await Promise.all(
     [
       import('puppeteer-extra'),
       import('puppeteer-extra-plugin-stealth'),
-      import('@geekgeekrun/puppeteer-extra-plugin-laodeng')
+      import('@geekgeekrun/puppeteer-extra-plugin-laodeng'),
+      import('puppeteer-extra-plugin-anonymize-ua')
     ]
   )
   puppeteer = importResult[0].default
   StealthPlugin = importResult[1].default
   LaodengPlugin = importResult[2].default
+  AnonymizeUaPlugin = importResult[3].default
   puppeteer.use(StealthPlugin())
   puppeteer.use(LaodengPlugin())
-
+  puppeteer.use(AnonymizeUaPlugin())
   return {
     puppeteer,
     StealthPlugin,
-    LaodengPlugin
+    LaodengPlugin,
+    AnonymizeUaPlugin
   }
 }
 

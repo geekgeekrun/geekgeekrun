@@ -1,0 +1,39 @@
+diff --git a/index.js b/index.js
+index 746525753e19878c0d4711e023e02a77eb5ecf8a..a5c323eb19311235df43c5ae9e0025b7bd1da25d 100644
+--- a/index.js
++++ b/index.js
+@@ -21,6 +21,7 @@ const { PuppeteerExtraPlugin } = require('puppeteer-extra-plugin')
+  * )
+  * const browser = await puppeteer.launch()
+  */
++
+ class Plugin extends PuppeteerExtraPlugin {
+   constructor(opts = {}) {
+     super(opts)
+@@ -38,7 +39,7 @@ class Plugin extends PuppeteerExtraPlugin {
+     }
+   }
+ 
+-  async onPageCreated(page) {
++  async handler (page) {
+     let ua = await page.browser().userAgent()
+     if (this.opts.stripHeadless) {
+       ua = ua.replace('HeadlessChrome/', 'Chrome/')
+@@ -52,6 +53,17 @@ class Plugin extends PuppeteerExtraPlugin {
+     this.debug('new ua', ua)
+     await page.setUserAgent(ua)
+   }
++
++  async onBrowser(browser) {
++    const pages = await browser.pages()
++    for (const page of pages) {
++      await this.handler(page)
++    }
++  }
++
++  async onPageCreated(page) {
++    await this.handler(page)
++  }
+ }
+ 
+ module.exports = function(pluginConfig) {
