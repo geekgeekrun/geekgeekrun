@@ -97,6 +97,25 @@ export default class SqlitePlugin {
   userInfo = null
 
   apply(hooks) {
+    hooks.pageGotten.tap(
+      'SqlitePlugin',
+      (page) => {
+        page.on('response', async (response) => {
+          const ds = await this.initPromise;
+          if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
+            const data = await response.json()
+            if (data.code === 0) {
+              await saveJobInfoFromRecommendPage(await ds, data.zpData)
+              await saveJobHireStatusRecord(await ds, {
+                encryptJobId: data.zpData.jobInfo.encryptId,
+                hireStatus: JobHireStatus.HIRING,
+                lastSeenDate: new Date()
+              })
+            }
+          }
+        })
+      }
+    )
     hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
       async (userInfoResponse) => {
