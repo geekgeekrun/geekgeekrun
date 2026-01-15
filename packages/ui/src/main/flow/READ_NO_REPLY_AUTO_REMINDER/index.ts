@@ -24,8 +24,9 @@ import gtag from '../../utils/gtag'
 import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
-import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { connectToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
+import { checkShouldExit } from '../../utils/worker'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -462,18 +463,6 @@ const rerunInterval = (() => {
   return v
 })()
 
-async function checkShouldExit () {
-  const shouldExitResponse = await sendToDaemon(
-    {
-      type: 'check-should-exit',
-      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
-    },
-    {
-      needCallback: true
-    }
-  )
-  return shouldExitResponse?.shouldExit
-}
 export async function runEntry() {
   connectToDaemon()
   app.dock?.hide()

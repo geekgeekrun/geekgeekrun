@@ -16,8 +16,9 @@ import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerF
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
 import GtagPlugin from '../../utils/gtag/GtagPlugin'
-import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { connectToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 import { PeriodPushCurrentPageScreenshotPlugin } from '../../utils/screenshot'
+import { checkShouldExit } from '../../utils/worker'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 const rerunInterval = (() => {
@@ -36,19 +37,6 @@ const initPlugins = (hooks) => {
   new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
   new GtagPlugin().apply(hooks)
   new PeriodPushCurrentPageScreenshotPlugin().apply(hooks)
-}
-
-async function checkShouldExit () {
-  const shouldExitResponse = await sendToDaemon(
-    {
-      type: 'check-should-exit',
-      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
-    },
-    {
-      needCallback: true
-    }
-  )
-  return shouldExitResponse?.shouldExit
 }
 
 const runAutoChat = async () => {

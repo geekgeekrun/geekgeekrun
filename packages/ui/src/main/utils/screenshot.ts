@@ -1,4 +1,5 @@
 import { sendToDaemon } from "../flow/OPEN_SETTING_WINDOW/connect-to-daemon"
+import { checkShouldExit } from "./worker"
 
 export const SCREENSHOT_INTERVAL_MS = 2500
 
@@ -41,6 +42,10 @@ export class PeriodPushCurrentPageScreenshotPlugin {
               return
             }
             if (page.isClosed()) {
+              return
+            }
+            const shouldExit = await checkShouldExit()
+            if (shouldExit) {
               return
             }
             await pushCurrentPageScreenshot(page)

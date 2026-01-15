@@ -91,7 +91,7 @@ export async function initPuppeteer () {
   AnonymizeUaPlugin = importResult[3].default
   puppeteer.use(StealthPlugin())
   puppeteer.use(LaodengPlugin())
-  puppeteer.use(AnonymizeUaPlugin())
+  puppeteer.use(AnonymizeUaPlugin({ makeWindows: false }))
   return {
     puppeteer,
     StealthPlugin,
