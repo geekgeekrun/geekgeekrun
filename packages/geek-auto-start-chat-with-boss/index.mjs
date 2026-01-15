@@ -1468,8 +1468,9 @@ export async function mainLoop (hooks) {
         height: 900 - 140,
       }
     })
-    hooks.puppeteerLaunched?.call()
+    hooks.puppeteerLaunched?.call(browser)
     page = (await browser.pages())[0]
+    hooks.pageGotten?.call(page)
     //set cookies
     hooks.cookieWillSet?.call(bossCookies)
     for(let i = 0; i < bossCookies.length; i++){

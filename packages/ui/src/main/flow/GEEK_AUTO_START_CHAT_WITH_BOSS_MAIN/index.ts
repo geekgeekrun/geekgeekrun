@@ -17,6 +17,7 @@ import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
 import GtagPlugin from '../../utils/gtag/GtagPlugin'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { PeriodPushCurrentPageScreenshotPlugin } from '../../utils/screenshot'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 const rerunInterval = (() => {
@@ -34,6 +35,7 @@ const initPlugins = (hooks) => {
   new DingtalkPlugin(dingTalkAccessToken).apply(hooks)
   new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
   new GtagPlugin().apply(hooks)
+  new PeriodPushCurrentPageScreenshotPlugin().apply(hooks)
 }
 
 async function checkShouldExit () {
@@ -91,7 +93,8 @@ const runAutoChat = async () => {
   }
 
   const hooks = {
-    puppeteerLaunched: new SyncHook(),
+    puppeteerLaunched: new SyncHook(['browser']),
+    pageGotten: new SyncHook(['page']),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),

@@ -47,7 +47,8 @@ const main = async () => {
   }
   const hooks = {
     daemonInitialized: new AsyncSeriesHook(),
-    puppeteerLaunched: new SyncHook(),
+    puppeteerLaunched: new SyncHook(['browser']),
+    pageGotten: new SyncHook(['page']),
     pageLoaded: new SyncHook(),
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),

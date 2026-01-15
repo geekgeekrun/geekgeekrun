@@ -1,9 +1,20 @@
 <template>
-  <div class="task-item" flex>
+  <el-card class="task-item">
     <div>
-      <img height="160" width="256" />
+      <div flex flex-col position-relative>
+        <div>
+          <el-button type="danger" size="small" @click="stopTask(task.workerId)">结束任务</el-button>
+        </div>
+        <img block :src="task.screenshot" height="190" width="360" />
+        <div position-absolute bottom-0 right-0 font-size-12px :style="{
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          color: '#fff',
+          padding: '2px 4px 2px 6px',
+          borderRadius: '8px 0 0 0'
+        }">{{ task.screenshotAt ? dayjs(task.screenshotAt).format('YYYY-MM-DD HH:mm:ss') : ' - ' }}</div>
+      </div>
     </div>
-    <div ml-40px>
+    <div ml-30px>
       <dl>
         <dt>workerId</dt>
         <dd>{{ task.workerId }}</dd>
@@ -28,12 +39,12 @@
         <dt>PID</dt>
         <dd>{{ task.pid }}</dd>
       </dl>
-      <el-button type="danger" @click="stopTask(task.workerId)">结束任务</el-button>
     </div>
-  </div>
+  </el-card>
 </template>
 
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { PropType } from 'vue'
 
 defineProps({
@@ -50,8 +61,13 @@ const stopTask = async (workerId: string) => {
 
 <style lang="scss" scoped>
 .task-item {
+  width: 1000px;
+  margin: 0 auto;
   font-size: 14px;
   overflow: hidden;
+  ::v-deep(.el-card__body) {
+    display: flex;
+  }
   dl {
     margin: 0;
     display: flex;
@@ -63,6 +79,7 @@ const stopTask = async (workerId: string) => {
       flex: 0 0 6em;
     }
     dd {
+      word-break: break-all;
     }
   }
 }

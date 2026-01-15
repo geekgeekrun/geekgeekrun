@@ -25,6 +25,7 @@ import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -47,6 +48,16 @@ const dbInitPromise = initDb(getPublicDbFilePath())
 export const pageMapByName: {
   boss?: Page | null
 } = {}
+
+async function periodPushCurrentPageScreenshot () {
+  try {
+    await pushCurrentPageScreenshot(pageMapByName.boss)
+    setTimeout(periodPushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS)
+  }
+  catch {}
+}
+
+periodPushCurrentPageScreenshot()
 
 async function saveCurrentChatRecord(page) {
   const userInfo = await page.evaluate(

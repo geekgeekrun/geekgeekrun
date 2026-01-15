@@ -30,7 +30,7 @@ const path = require('path');
 const split2 = require('split2');
 
 const PORT = 12345;
-const workers = new Map(); // workerId -> { process, status, restartCount, socket }
+const workers = new Map(); // workerId -> { process, status, restartCount, socket, latestScreenshot, latestScreenshotAt }
 const guiClients = new Set(); // GUI客户端连接集合
 const stoppedWorkers = new Set(); // 被用户主动停止的workerId集合，用于防止竞态条件
 const pidToProcessInfoMap = new Map()
@@ -148,12 +148,11 @@ function handleMessage(socket, message) {
     return;
   }
 
-  // 工具进程发送的消息（数据、心跳等）
-  if (message.type === 'worker-message' || message.type === 'worker-heartbeat' || message.type === 'worker-data') {
-    const workerId = message.workerId;
-    const workerInfo = workers.get(workerId);
-    
-    if (workerInfo && workerInfo.socket === socket) {
+  // 工具进程发送的消息（数据、心跳、截图等）
+  const workerId = message.workerId;
+  const workerInfo = workers.get(workerId);
+  switch (message.type) {
+    case 'worker-message': {
       // 转发工具进程消息到GUI客户端
       broadcastToGUI({
         type: 'worker-message',
@@ -161,15 +160,20 @@ function handleMessage(socket, message) {
         data: message.data || message,
         timestamp: Date.now()
       });
-      
-      // // 如果是心跳，更新最后心跳时间
-      // if (message.type === 'worker-heartbeat') {
-      //   workerInfo.lastHeartbeat = Date.now();
-      // }
-    } else {
-      sendResponse(socket, _callbackUuid, { error: '未注册的工具进程连接' });
+      break
     }
-    return;
+    case 'worker-screenshot': {
+      if (workerInfo && message.data && message.data.screenshot /* && workerInfo.socket === socket */) {
+        // 如果携带截图信息，则在守护进程内缓存一份，供 get-status 使用
+        try {
+          workerInfo.latestScreenshot = message.data.screenshot;
+          workerInfo.latestScreenshotAt = Date.now();
+        } catch (e) {
+          console.error('缓存 worker 截图信息失败:', e);
+        }
+      }
+      break
+    }
   }
 
   // GUI客户端的控制消息
@@ -393,7 +397,10 @@ function getWorkersStatus() {
       // lastHeartbeat: workerInfo.lastHeartbeat,
       command: workerInfo.command,
       args: workerInfo.args,
-      pid: workerInfo.process?.pid
+      pid: workerInfo.process?.pid,
+      // 最新截图（通常是 data URL 或 base64 字符串），以及截图时间
+      screenshot: workerInfo.latestScreenshot ?? null,
+      screenshotAt: workerInfo.latestScreenshotAt ?? null,
     });
   }
   return status;
