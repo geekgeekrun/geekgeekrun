@@ -30,8 +30,6 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
-    "@geekgeekrun/dingtalk-plugin": "workspace:*",
-    "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
     "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
     "@geekgeekrun/pm": "workspace:*",
     "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",
@@ -56,6 +54,8 @@
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@inquirer/prompts": "^7.0.1",
     "@inquirer/select": "^4.0.1",
+    "@geekgeekrun/dingtalk-plugin": "workspace:*",
+    "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
     "@puppeteer/browsers": "^2.11.0",
     "@rushstack/eslint-patch": "^1.7.1",
     "@types/lodash": "^4.17.23",
