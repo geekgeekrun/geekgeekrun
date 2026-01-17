@@ -1,5 +1,5 @@
-import { requireTypeorm } from "../utils/module-loader";
-const { ViewEntity, ViewColumn } = requireTypeorm();
+import * as typeorm from 'typeorm';
+const { ViewEntity, ViewColumn } = typeorm;
 @ViewEntity({
   expression: `SELECT
     company_info.*

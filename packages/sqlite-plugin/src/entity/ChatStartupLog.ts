@@ -1,6 +1,6 @@
 import { JobSource } from "../enums";
-import { requireTypeorm } from "../utils/module-loader";
-const { Entity, Column, PrimaryGeneratedColumn } = requireTypeorm()
+import * as typeorm from 'typeorm';
+const { Entity, Column, PrimaryGeneratedColumn } = typeorm
 
 export enum ChatStartupFrom {
   AutoFromRecommendList = null,

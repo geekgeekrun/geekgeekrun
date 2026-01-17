@@ -1079,7 +1079,7 @@ import {
   SalaryCalculateWay,
   JobDetailRegExpMatchLogic
 } from '@geekgeekrun/sqlite-plugin/src/enums'
-import { debounce } from 'lodash-es'
+import { debounce } from 'lodash'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'

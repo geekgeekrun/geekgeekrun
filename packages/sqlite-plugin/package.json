@@ -5,11 +5,13 @@
   "main": "dist/index.js",
   "dependencies": {
     "cli-highlight": "^2.1.11",
+    "lodash": "^4.17.21",
     "reflect-metadata": "^0.2.1",
     "sqlite3": "5.1.6",
     "typeorm": "0.3.11"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.23",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },

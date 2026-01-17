@@ -150,7 +150,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { TopRight, QuestionFilled } from '@element-plus/icons-vue'
 import useBuildInfo from '@renderer/hooks/useBuildInfo'
-import { debounce } from 'lodash-es'
+import { debounce } from 'lodash'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { useUpdateStore, useTaskManagerStore } from '../../store/index'
 

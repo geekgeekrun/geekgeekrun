@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { NewReleaseInfo } from '../../../common/types/update'
 import { ref } from 'vue'
-import { throttle } from 'lodash-es'
+import { throttle } from 'lodash'
 
 export const useUpdateStore = defineStore('update', () => {
   const availableNewRelease = ref<NewReleaseInfo | null>(null)

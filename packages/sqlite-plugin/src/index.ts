@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import { type DataSource } from "typeorm";
-import { requireTypeorm } from "./utils/module-loader";
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
@@ -40,10 +39,11 @@ import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/17460923
 import { Init1000000000000 } from "./migrations/1000000000000-Init";
 import { AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526 } from "./migrations/1752380078526-AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog";
 import { AddJobHireStatusTable1766466476822 } from "./migrations/1766466476822-AddJobHireStatusTable";
-const lodashImportPromise = import('lodash-es')
+import chunk from 'lodash/chunk'
+import * as typeorm from 'typeorm'
 
 export function initDb(dbFilePath) {
-  const { DataSource } = requireTypeorm()
+  const { DataSource } = typeorm
   const appDataSource = new DataSource({
     type: "sqlite",
     synchronize: false,
@@ -202,7 +202,6 @@ export default class SqlitePlugin {
           if (chattedJobIds.length === 0) {
             return
           }
-          const { chunk } = await lodashImportPromise
           const chattedJobIdChunks = chunk(chattedJobIds, 200)
           const chattedBossIds = [];
           for (const chattedJobIdChunk of chattedJobIdChunks) {

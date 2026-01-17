@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { random } from 'lodash-es'
+import { random } from 'lodash'
 
 const rowCount = 4
 const colCount = 6

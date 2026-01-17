@@ -1,5 +1,5 @@
-import { requireTypeorm } from "../utils/module-loader";
-const { Entity, PrimaryGeneratedColumn, Column, Index } = requireTypeorm()
+import * as typeorm from 'typeorm';
+const { Entity, PrimaryGeneratedColumn, Column, Index } = typeorm
 
 @Entity()
 @Index(["providerCompleteApiUrl", "model", "providerApiSecret"])

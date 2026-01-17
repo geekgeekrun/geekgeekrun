@@ -18,7 +18,7 @@
 
 <script lang="ts" setup>
 import { gtagRenderer } from '@renderer/utils/gtag'
-import debounce from 'lodash-es/debounce'
+import debounce from 'lodash/debounce'
 const { ipcRenderer } = electron
 
 const handleOpenChromeDownloadPage = debounce(
