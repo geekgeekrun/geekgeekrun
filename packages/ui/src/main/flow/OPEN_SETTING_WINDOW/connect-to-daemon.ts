@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { DAEMON_PORT } from "./daemon-config";
 import { EventEmitter } from "node:events";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 const net = require('net');
 const split2 = require('split2');
@@ -15,7 +16,11 @@ export async function connectToDaemon() {
   daemonClient = new net.Socket();
   let isConnected = false
   await new Promise((resolve, reject) => {
-    daemonClient.connect(DAEMON_PORT, 'localhost', () => {
+    const ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME
+    const ipcSocketPath = process.platform === 'win32' 
+      ? `\\\\.\\pipe\\${ipcSocketName}`
+      : path.join(tmpdir(), `${ipcSocketName}.sock`)
+    daemonClient.connect(ipcSocketPath, 'localhost', () => {
       isConnected = true
       console.log('已连接到守护进程');
       daemonEE.emit('connect')

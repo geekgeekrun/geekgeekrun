@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 const { app } = require('electron');
 const { spawn } = require('child_process');
 
@@ -27,6 +28,7 @@ export function launchDaemon() {
   // 启动守护进程
   async function startDaemon() {
     console.log('启动守护进程...');
+    process.env.GEEKGEEKRUND_PIPE_NAME = `geekgeekrun-d_${randomUUID()}`
     // 使用 Electron 可执行程序路径，如果没有则回退到 node
     const electronPath = process.execPath;
     console.log(`使用 Electron 路径: ${electronPath}`);

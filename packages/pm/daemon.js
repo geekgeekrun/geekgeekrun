@@ -29,10 +29,28 @@ const { spawn } = require('child_process');
 const path = require('path');
 const split2 = require('split2');
 const fs = require('fs')
+const { tmpdir } = require('os')
 
 const ipcWritePipe = fs.createWriteStream(null, { fd: 3 })
+let ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME
+if (!ipcSocketName) {
+  process.env.GEEKGEEKRUND_PIPE_NAME = `geekgeekrun-d_${randomUUID()}`
+  ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME
+}
+let ipcSocketPath
+if (process.platform === 'win32') {
+  ipcSocketPath = `\\\\.\\pipe\\${ipcSocketName}`
+}
+else {
+  ipcSocketPath = path.join(tmpdir(), `${ipcSocketName}.sock`)
+  fs.writeFileSync(ipcSocketPath, '')
+  // 设置权限（Unix）
+  fs.chmodSync(
+    ipcSocketPath,
+    0o777
+  )
+}
 
-const PORT = 12345;
 const workers = new Map(); // workerId -> { process, status, restartCount, socket, latestScreenshot, latestScreenshotAt }
 const guiClients = new Set(); // GUI客户端连接集合
 const stoppedWorkers = new Set(); // 被用户主动停止的workerId集合，用于防止竞态条件
@@ -459,8 +477,8 @@ new Promise((resolve, reject) => {
     )
     reject(err)
   })
-  server.listen(PORT, () => {
-    console.log(`守护进程服务器运行在端口 ${PORT}`);
+  server.listen(ipcSocketPath, () => {
+    console.log(`守护进程服务器运行在端口 ${ipcSocketPath}`);
     ipcWritePipe.write(
       JSON.stringify({ type: 'DAEMON_READY' }),
       (err) => void err
