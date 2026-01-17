@@ -28,6 +28,9 @@ const net = require('net');
 const { spawn } = require('child_process');
 const path = require('path');
 const split2 = require('split2');
+const fs = require('fs')
+
+const ipcWritePipe = fs.createWriteStream(null, { fd: 3 })
 
 const PORT = 12345;
 const workers = new Map(); // workerId -> { process, status, restartCount, socket, latestScreenshot, latestScreenshotAt }
@@ -88,6 +91,13 @@ const server = net.createServer((socket) => {
 function handleMessage(socket, message) {
   console.log('收到消息:', message);
   const _callbackUuid = message._callbackUuid
+  if (message.type === 'ping') {
+    sendResponse(socket, _callbackUuid, {
+      success: true, 
+      message: 'pong'
+    });
+    return
+  }
 
   // 工具进程注册消息
   if (message.type === 'worker-register') {
@@ -214,9 +224,8 @@ function handleMessage(socket, message) {
 
     case 'get-status':
       const status = getWorkersStatus();
-      sendResponse(socket, _callbackUuid, { 
+      sendResponse(socket, _callbackUuid, {
         success: true, 
-        type: 'status',
         workers: status 
       });
       break;
@@ -442,9 +451,23 @@ function sendResponse(socket, _callbackUuid, response) {
 }
 
 // 启动服务器
-server.listen(PORT, () => {
-  console.log(`守护进程服务器运行在端口 ${PORT}`);
-});
+new Promise((resolve, reject) => {
+  server.once('error', (err) => {
+    ipcWritePipe.write(
+      JSON.stringify({ type: 'DAEMON_FATAL', error: err }),
+      (err) => void err
+    )
+    reject(err)
+  })
+  server.listen(PORT, () => {
+    console.log(`守护进程服务器运行在端口 ${PORT}`);
+    ipcWritePipe.write(
+      JSON.stringify({ type: 'DAEMON_READY' }),
+      (err) => void err
+    )
+    resolve(true)
+  });
+})
 
 // 优雅关闭
 process.on('SIGTERM', () => {

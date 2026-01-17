@@ -5,8 +5,6 @@ import {
   readConfigFile,
   getPublicDbFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-
-import * as fs from 'fs'
 // import { pipeWriteRegardlessError } from '../utils/pipe'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
@@ -16,7 +14,7 @@ import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerF
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
 import GtagPlugin from '../../utils/gtag/GtagPlugin'
-import { connectToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 import { PeriodPushCurrentPageScreenshotPlugin } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
 const { default: SqlitePlugin } = SqlitePluginModule
@@ -48,26 +46,8 @@ const runAutoChat = async () => {
     app.exit()
   })
   app.dock?.hide()
-  let pipe: null | fs.WriteStream = null
-  try {
-    pipe = fs.createWriteStream(null, { fd: 3 })
-  } catch {
-    console.warn('pipe is not available')
-  }
-  // pipeWriteRegardlessError(
-  //   pipe,
-  //   JSON.stringify({
-  //     type: 'INITIALIZE_PUPPETEER'
-  //   }) + '\r\n'
-  // )
   try {
     await initPuppeteer()
-    // pipeWriteRegardlessError(
-    //   pipe,
-    //   JSON.stringify({
-    //     type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
-    //   }) + '\r\n'
-    // )
   } catch (err) {
     console.error(err)
     app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
@@ -101,20 +81,8 @@ const runAutoChat = async () => {
   initPlugins(hooks)
 
   gtag('run_auto_chat_with_boss_main_ready')
-  // pipeWriteRegardlessError(
-  //   pipe,
-  //   JSON.stringify({
-  //     type: 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED' //geek-auto-start-chat-with-boss-started
-  //   }) + '\r\n'
-  // )
 
   autoStartChatEventBus.once('LOGIN_STATUS_INVALID', () => {
-    // pipeWriteRegardlessError(
-    //   pipe,
-    //   JSON.stringify({
-    //     type: 'LOGIN_STATUS_INVALID' //geek-auto-start-chat-with-boss-started
-    //   }) + '\r\n'
-    // )
   })
 
   while (true) {
@@ -159,15 +127,16 @@ const runAutoChat = async () => {
   }
 }
 
-export const waitForProcessHandShakeAndRunAutoChat = () => {
-  // let pipe: null | fs.WriteStream = null
-  // try {
-  //   pipe = fs.createWriteStream(null, { fd: 3 })
-  // } catch {
-  //   console.error('pipe is not available')
-  //   app.exit(1)
-  // }
-  connectToDaemon()
+export const waitForProcessHandShakeAndRunAutoChat = async () => {
+  await connectToDaemon()
+  await sendToDaemon(
+    {
+      type: 'ping'
+    },
+    {
+      needCallback: true
+    }
+  )
   runAutoChat()
 }
 

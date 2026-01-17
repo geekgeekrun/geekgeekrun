@@ -11,76 +11,79 @@ export const daemonEE = new EventEmitter()
 const waitForCallbackTaskMap = new Map()
 
 // 连接到守护进程
-export function connectToDaemon() {
+export async function connectToDaemon() {
   daemonClient = new net.Socket();
-  daemonClient.connect(DAEMON_PORT, 'localhost', () => {
-    console.log('已连接到守护进程');
-    daemonEE.emit('connect')
-    // 通知渲染进程连接成功
-    // if (mainWindow) {
-    //     mainWindow.webContents.send('daemon-connected');
-    // }
-  });
-  // 使用 split2 按行分割流式数据，处理 JSONL 格式（每行一个 JSON）
-  const splitStream = split2();
-  daemonClient.pipe(splitStream).on('data', (line) => {
-    const trimmedLine = line.toString().trim();
-    if (!trimmedLine) {
-      return; // 跳过空行
-    }
-    try {
-      const message = JSON.parse(trimmedLine);
-      daemonEE.emit('message', message)
-      // FIXME:
-      console.log('收到守护进程消息:', message);
-      if (
-        message._callbackUuid
-      ) {
-        const callbackInfo = waitForCallbackTaskMap.get(message._callbackUuid)
-        if (callbackInfo) {
-          const isError = message._isError
-          if (isError) {
-            callbackInfo.reject(message)
-          }
-          else {
-            callbackInfo.resolve(message)
-          }
-          waitForCallbackTaskMap.delete(message._callbackUuid)
+  let isConnected = false
+  await new Promise((resolve, reject) => {
+    daemonClient.connect(DAEMON_PORT, 'localhost', () => {
+      isConnected = true
+      console.log('已连接到守护进程');
+      daemonEE.emit('connect')
+      // 使用 split2 按行分割流式数据，处理 JSONL 格式（每行一个 JSON）
+      const splitStream = split2();
+      daemonClient.pipe(splitStream).on('data', (line) => {
+        const trimmedLine = line.toString().trim();
+        if (!trimmedLine) {
+          return; // 跳过空行
         }
-      }
-      // 转发消息到渲染进程
+        try {
+          const message = JSON.parse(trimmedLine);
+          daemonEE.emit('message', message)
+          // FIXME:
+          console.log('收到守护进程消息:', message);
+          if (message._callbackUuid) {
+            const callbackInfo = waitForCallbackTaskMap.get(message._callbackUuid)
+            if (callbackInfo) {
+              const isError = message._isError
+              if (isError) {
+                callbackInfo.reject(message)
+              } else {
+                callbackInfo.resolve(message)
+              }
+              waitForCallbackTaskMap.delete(message._callbackUuid)
+            }
+          }
+          // 转发消息到渲染进程
+          // if (mainWindow) {
+          //     mainWindow.webContents.send('daemon-message', message);
+          // }
+        } catch (parseError) {
+          console.error('解析守护进程消息失败:', parseError.message);
+          console.error('原始数据:', trimmedLine.substring(0, 100));
+        }
+      });
+
+      splitStream.on('error', (err) => {
+        console.error('split2 流处理错误:', err);
+      });
+
+      daemonClient.on('close', () => {
+        if (!isConnected) {
+          return
+        }
+        console.log('守护进程连接已关闭');
+        daemonEE.emit('close')
+      });
+
+      resolve(true)
+      // 通知渲染进程连接成功
       // if (mainWindow) {
-      //     mainWindow.webContents.send('daemon-message', message);
+      //     mainWindow.webContents.send('daemon-connected');
       // }
-    } catch (parseError) {
-      console.error('解析守护进程消息失败:', parseError.message);
-      console.error('原始数据:', trimmedLine.substring(0, 100));
-    }
-  });
+    });
 
-  splitStream.on('error', (err) => {
-    console.error('split2 流处理错误:', err);
-  });
-
-  daemonClient.on('error', (err) => {
-    console.error('守护进程连接错误:', err);
-    daemonEE.emit('error', err)
-    // 尝试重连
-    setTimeout(() => {
-      if (daemonClient.destroyed) {
-        connectToDaemon();
+    daemonClient.on('close', () => {
+      if (isConnected) {
+        return
       }
-    }, 2000);
-  });
-
-  daemonClient.on('close', () => {
-    console.log('守护进程连接已关闭');
-    daemonEE.emit('close')
-    // 尝试重连
-    setTimeout(() => {
-      connectToDaemon();
-    }, 2000);
-  });
+      reject(new Error('连接到守护进程超时'))
+    });
+    daemonClient.on('error', (err) => {
+      console.error('守护进程连接错误:', err);
+      daemonEE.emit('error', err)
+      reject(err)
+    });
+  })
 }
 
 // 向守护进程发送消息

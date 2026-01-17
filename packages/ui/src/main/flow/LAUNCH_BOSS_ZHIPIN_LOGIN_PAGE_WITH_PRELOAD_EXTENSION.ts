@@ -21,12 +21,6 @@ export const launchBossZhipinLoginPageWithPreloadExtension = async () => {
   const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
   try {
     await initPuppeteer()
-    pipeWriteRegardlessError(
-      pipe,
-      JSON.stringify({
-        type: 'PUPPETEER_INITIALIZE_SUCCESSFULLY'
-      }) + '\r\n'
-    )
   } catch (err) {
     console.error(err)
     app.exit(1)

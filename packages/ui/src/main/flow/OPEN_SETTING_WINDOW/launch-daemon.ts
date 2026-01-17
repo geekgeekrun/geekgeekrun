@@ -1,5 +1,3 @@
-import { connectToDaemon } from "./connect-to-daemon";
-
 const { app } = require('electron');
 const { spawn } = require('child_process');
 
@@ -27,7 +25,7 @@ export function launchDaemon() {
   });
 
   // 启动守护进程
-  function startDaemon() {
+  async function startDaemon() {
     console.log('启动守护进程...');
     // 使用 Electron 可执行程序路径，如果没有则回退到 node
     const electronPath = process.execPath;
@@ -40,7 +38,7 @@ export function launchDaemon() {
         ? [process.argv[1], `--mode=launchDaemon`]
         : [`--mode=launchDaemon`],
       {
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
         detached: false,
         env: {
           ...process.env,
@@ -69,26 +67,26 @@ export function launchDaemon() {
       console.error(`守护进程错误: ${data}`);
     });
 
-    daemonProcess.on('exit', (code) => {
-      console.log(`守护进程退出，代码: ${code}`);
-      // 如果守护进程意外退出，尝试重启
-      if (code !== 0) {
-        setTimeout(() => {
-          console.log('尝试重启守护进程...');
-          startDaemon();
-        }, 2000);
-      }
-    });
-
-    // 等待守护进程启动后连接
-    setTimeout(() => {
-      connectToDaemon();
-    }, 1000);
+    return new Promise((resolve, reject) => {
+      daemonProcess.stdio[3].on('data', (rawData) => {
+        let data
+        try {
+          data = JSON.parse(rawData.toString())
+          if (data.type === 'DAEMON_READY') {
+            resolve(true)
+          }
+          else if (data.type === 'DAEMON_FATAL') {
+            reject(new Error(data.error))
+          }
+        }
+        catch (err) {
+          console.error('', err)
+        }
+      })
+    })
   }
 
   // 应用准备就绪
-  return app.whenReady().then(() => {
-    startDaemon();
-  });
+  return app.whenReady().then(() => startDaemon());
 }
 

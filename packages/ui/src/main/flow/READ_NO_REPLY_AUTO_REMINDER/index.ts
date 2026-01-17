@@ -24,7 +24,7 @@ import gtag from '../../utils/gtag'
 import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
-import { connectToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
 
@@ -464,8 +464,13 @@ const rerunInterval = (() => {
 })()
 
 export async function runEntry() {
-  connectToDaemon()
   app.dock?.hide()
+  await connectToDaemon()
+  await sendToDaemon({
+    type: 'ping'
+  }, {
+    needCallback: true
+  })
   while (true) {
     try {
       await mainLoop()
