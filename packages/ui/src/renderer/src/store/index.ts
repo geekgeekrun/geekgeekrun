@@ -25,7 +25,7 @@ export const useTaskManagerStore = defineStore('taskManager', () => {
   function getRunningTasks() {
     const { ipcRenderer } = electron
     ipcRenderer.invoke('get-task-manager-list').then(res => {
-      runningTasks.value = res
+      runningTasks.value = res.workers ?? []
     })
   }
   const throttledGetRunningTasks = throttle(getRunningTasks, 2000)

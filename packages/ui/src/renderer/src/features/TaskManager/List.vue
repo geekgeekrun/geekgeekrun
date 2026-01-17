@@ -14,5 +14,5 @@ import { computed } from 'vue'
 import TaskManagerItem from './Item.vue'
 
 const taskManagerStore = useTaskManagerStore()
-const runningTasks = computed(() => taskManagerStore.runningTasks?.workers || [])
+const runningTasks = computed(() => taskManagerStore.runningTasks || [])
 </script>
