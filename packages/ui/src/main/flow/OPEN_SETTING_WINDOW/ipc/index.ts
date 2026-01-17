@@ -36,11 +36,11 @@ import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/re
 import {
   getValidTemplate,
   requestNewMessageContent
-} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+} from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
   autoReminderPromptTemplateFileName,
   writeDefaultAutoRemindPrompt
-} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+} from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
   checkIsResumeContentValid,
   resumeContentEnoughDetect

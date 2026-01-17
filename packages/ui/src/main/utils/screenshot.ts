@@ -30,7 +30,7 @@ export async function pushCurrentPageScreenshot (page) {
       throw new Error(`PAGE_CLOSED`)
     }
     // 截图失败不应影响主流程
-    console.warn('[READ_NO_REPLY_AUTO_REMINDER] pushCurrentPageScreenshot error', err)
+    console.warn('[pushCurrentPageScreenshot] error', err)
   }
 }
 

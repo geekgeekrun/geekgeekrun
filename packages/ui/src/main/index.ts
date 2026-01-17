@@ -48,7 +48,7 @@ const runMode = commandlineArgs['mode'];
       break
     }
     case 'readNoReplyAutoReminderMain': {
-      const { runEntry } = await import('./flow/READ_NO_REPLY_AUTO_REMINDER/index')
+      const { runEntry } = await import('./flow/READ_NO_REPLY_AUTO_REMINDER_MAIN/index')
       runEntry()
       break
     }
