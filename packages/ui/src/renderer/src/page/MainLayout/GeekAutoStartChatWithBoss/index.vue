@@ -1062,7 +1062,7 @@
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay worker-id="geekAutoStartWithBossMain">
+      <RuningOverlay worker-id="geekAutoStartWithBossMain" :run-record-id="runRecordId">
         <template #op-buttons>
           <el-button @click="handleStopButtonClick">结束任务</el-button>
         </template>
@@ -1431,6 +1431,7 @@ const formRules = {
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
+const runRecordId = ref(null)
 const handleSubmit = async () => {
   gtagRenderer('save_config_and_launch_clicked', {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,
@@ -1469,7 +1470,8 @@ const handleSubmit = async () => {
   })
 
   try {
-    await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
+    const { runRecordId: rrId } = await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
+    runRecordId.value = rrId
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
       gtagRenderer('gascwb_cannot_run_for_corrupt')

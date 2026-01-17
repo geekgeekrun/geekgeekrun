@@ -10,13 +10,14 @@ import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPEND
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
-
+import minimist from 'minimist'
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import gtag from '../../utils/gtag'
 import GtagPlugin from '../../utils/gtag/GtagPlugin'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 import { PeriodPushCurrentPageScreenshotPlugin } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
+import { UserResponseInfoPlugin } from '../../features/boss-user-info-response-plugin'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 const rerunInterval = (() => {
@@ -35,15 +36,39 @@ const initPlugins = (hooks) => {
   new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
   new GtagPlugin().apply(hooks)
   new PeriodPushCurrentPageScreenshotPlugin().apply(hooks)
+  new UserResponseInfoPlugin().apply(hooks)
 }
 
+const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 const runAutoChat = async () => {
   app.dock?.hide()
   const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
   if (!puppeteerExecutable) {
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      data: {
+        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        step: {
+          id: 'puppeteer-executable-check',
+          status: 'rejected'
+        },
+        runRecordId
+      }
+    })
     app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
     return
   }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'puppeteer-executable-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
   process.env.PUPPETEER_EXECUTABLE_PATH = puppeteerExecutable.executablePath
   const { initPuppeteer, mainLoop, closeBrowserWindow, autoStartChatEventBus } = await import(
     '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
@@ -131,6 +156,17 @@ export const waitForProcessHandShakeAndRunAutoChat = async () => {
       needCallback: true
     }
   )
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'worker-launch',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
   runAutoChat()
 }
 

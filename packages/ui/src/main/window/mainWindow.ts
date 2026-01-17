@@ -3,6 +3,7 @@ import path from 'path'
 import { openDevTools } from '../commands'
 import { createFirstLaunchNoticeWindow } from './firstLaunchNoticeWindow'
 import { isFirstLaunchNoticeApproveFlagExist } from '../features/first-launch-notice-window'
+import { daemonEE } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
 export let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): BrowserWindow {
@@ -57,6 +58,11 @@ export function createMainWindow(): BrowserWindow {
 
   mainWindow!.once('closed', () => {
     mainWindow = null
+  })
+  daemonEE.on('message', (message) => {
+    if (message.type === 'worker-to-gui-message') {
+      mainWindow?.webContents?.send('worker-to-gui-message', message)
+    }
   })
   return mainWindow!
 }

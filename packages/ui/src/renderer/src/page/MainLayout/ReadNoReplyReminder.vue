@@ -228,7 +228,7 @@
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay worker-id="readNoReplyAutoReminderMain">
+      <RuningOverlay worker-id="readNoReplyAutoReminderMain" :run-record-id="runRecordId">
         <template #op-buttons>
           <el-button @click="handleStopButtonClick">结束任务</el-button>
         </template>
@@ -449,7 +449,7 @@ async function checkIsCanRun() {
 
   return true
 }
-
+const runRecordId = ref(null)
 const handleSubmit = async () => {
   gtagRenderer('run_read_no_reply_reminder_clicked', {
     throttle_interval_minutes: formContent.value.autoReminder.throttleIntervalMinutes,
@@ -488,7 +488,8 @@ const handleSubmit = async () => {
   gtagRenderer('run_read_no_reply_reminder_launched')
 
   try {
-    await electron.ipcRenderer.invoke('run-read-no-reply-auto-reminder')
+    const { runRecordId: rrId } = await electron.ipcRenderer.invoke('run-read-no-reply-auto-reminder')
+    runRecordId.value = rrId
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
       gtagRenderer('rnrr_cannot_run_for_corrupt')

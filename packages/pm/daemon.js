@@ -149,10 +149,10 @@ function handleMessage(socket, message) {
       }
       return
     }
-    case 'worker-message': {
+    case 'worker-to-gui-message': {
       // 转发工具进程消息到GUI客户端
       broadcastToGUI({
-        type: 'worker-message',
+        type: 'worker-to-gui-message',
         workerId: workerId,
         data: message.data || message,
         timestamp: Date.now()

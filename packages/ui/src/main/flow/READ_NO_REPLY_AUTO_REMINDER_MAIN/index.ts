@@ -28,6 +28,7 @@ import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to
 import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
+import minimist from 'minimist'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -249,12 +250,34 @@ const mainLoop = async () => {
   // #region
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
     writeStorageFile('boss-cookies.json', [])
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      data: {
+        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        step: {
+          id: 'login-status-check',
+          status: 'rejected'
+        },
+        runRecordId
+      }
+    })
     throw new Error('LOGIN_STATUS_INVALID')
   }
   if (
     currentPageUrl.startsWith('https://www.zhipin.com/web/common/403.html') ||
     currentPageUrl.startsWith('https://www.zhipin.com/web/common/error.html')
   ) {
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      data: {
+        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        step: {
+          id: 'login-status-check',
+          status: 'rejected'
+        },
+        runRecordId
+      }
+    })
     throw new Error('ACCESS_IS_DENIED')
   }
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/safe/verify-slider')) {
@@ -277,9 +300,31 @@ const mainLoop = async () => {
       })
     if (validateRes.code === 0) {
       await storeStorage(pageMapByName.boss)
+      sendToDaemon({
+        type: 'worker-to-gui-message',
+        data: {
+          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          step: {
+            id: 'login-status-check',
+            status: 'rejected'
+          },
+          runRecordId
+        }
+      })
       throw new Error('CAPTCHA_PASSED_AND_NEED_RESTART')
     }
   }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'login-status-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
   // #endregion
   // check set security question tip modal
   let setSecurityQuestionTipModelProxy = await pageMapByName.boss!.$(
@@ -478,19 +523,53 @@ const rerunInterval = (() => {
   return v
 })()
 
+const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export async function runEntry() {
   app.dock?.hide()
-  const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-  if (!puppeteerExecutable) {
-    throw new Error(`PUPPETEER_IS_NOT_EXECUTABLE`)
-  }
-  process.env.PUPPETEER_EXECUTABLE_PATH = puppeteerExecutable.executablePath
   await connectToDaemon()
   await sendToDaemon({
     type: 'ping'
   }, {
     needCallback: true
   })
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'worker-launch',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
+  const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+  if (!puppeteerExecutable) {
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      data: {
+        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        step: {
+          id: 'puppeteer-executable-check',
+          status: 'rejected'
+        },
+        runRecordId
+      }
+    })
+    throw new Error(`PUPPETEER_IS_NOT_EXECUTABLE`)
+  }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'puppeteer-executable-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
+  process.env.PUPPETEER_EXECUTABLE_PATH = puppeteerExecutable.executablePath
   while (true) {
     try {
       await mainLoop()

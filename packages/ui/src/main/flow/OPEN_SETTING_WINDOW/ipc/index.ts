@@ -202,7 +202,7 @@ export default function initIpc() {
 
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
     const mode = 'geekAutoStartWithBossMain'
-    await runCommon({ mode })
+    const { runRecordId } = await runCommon({ mode })
     daemonEE.on('message', function handler (message) {
       if (message.workerId !== mode) {
         return
@@ -226,11 +226,12 @@ export default function initIpc() {
         }
       }
     })
+    return { runRecordId }
   })
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
     const mode = 'readNoReplyAutoReminderMain'
-    await runCommon({ mode })
+    const { runRecordId } = await runCommon({ mode })
     daemonEE.on('message', function handler (message) {
       if (message.workerId !== mode) {
         return
@@ -254,6 +255,7 @@ export default function initIpc() {
         }
       }
     })
+    return { runRecordId }
   })
 
   ipcMain.handle('check-dependencies', async () => {

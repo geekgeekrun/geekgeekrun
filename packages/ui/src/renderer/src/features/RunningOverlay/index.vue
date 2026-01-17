@@ -6,8 +6,22 @@
     :close-on-press-escape="false"
     :show-close="false"
   >
+    <!-- v-if="stepsForRender.some(it => ['todo', 'pending', 'rejected'].includes(it.status))" -->
+    <div>
+      <ul m0 pl0>
+        <li list-style-none v-for="item in stepsForRender" flex justify-start pt4px pb4px>
+          <div>
+            <span v-if="item.status === 'todo'">🕐</span>
+            <span v-if="item.status === 'pending'">👉</span>
+            <span v-if="item.status === 'fulfilled'">✅</span>
+            <span v-if="item.status === 'rejected'">⛔️</span>
+          </div>
+          <span ml8px>{{ item.describe }}</span>
+        </li>
+      </ul>
+    </div>
     <div flex justify-between items-center w-full>
-      <div>任务运行中!</div>
+      <div>任务运行中</div>
       <div>
         <slot name="op-buttons" />
       </div>
@@ -17,20 +31,68 @@
 
 <script lang="ts" setup>
 import { useTaskManagerStore } from '@renderer/store'
-import { computed } from 'vue'
-
+import { getAutoStartChatSteps } from '../../../../common/prerequisite-step-by-step-check'
+import { computed, onUnmounted, ref, watch } from 'vue'
 const props = defineProps({
   workerId: {
     type: String
+  },
+  runRecordId: {
+    type: Number
   }
 })
-
 const taskManagerStore = useTaskManagerStore()
 const runingTaskInfo = computed(() => {
   return taskManagerStore.runningTasks?.find(it => {
     return it.workerId === props.workerId
   })
 })
+const steps = ref([])
+const stepsForRender = computed(() => {
+  const clonedSteps = JSON.parse(
+    JSON.stringify(steps.value)
+  )
+  
+  if (clonedSteps.some(it => it.status === 'rejected')) {
+    return clonedSteps
+  }
+  const lastFulfilledIndex = clonedSteps.findLastIndex(it => it.status === 'fulfilled')
+  if (lastFulfilledIndex + 1 < clonedSteps.length) {
+    clonedSteps[lastFulfilledIndex + 1].status = 'pending'
+  }
+  return clonedSteps
+})
+function fillEmptySteps () {
+  const arr = getAutoStartChatSteps()
+  arr.forEach(it => it.status = 'todo')
+  steps.value = arr
+}
+watch(
+  () => props.runRecordId,
+  fillEmptySteps,
+  {
+    immediate: true
+  }
+)
+
+const { ipcRenderer } = electron
+
+function messageHandler (ev, { data }) {
+  if (
+    data.type !== 'prerequisite-step-by-step-checkstep-by-step-check' ||
+    data.runRecordId !== props.runRecordId
+  ) {
+    return
+  }
+  const { id: stepId, status: stepStatus } = data.step
+  const targetStep = steps.value.find(it => it.id === stepId)
+  if (!targetStep) {
+    return
+  }
+  targetStep.status = stepStatus
+}
+const unListenMessage = ipcRenderer.on('worker-to-gui-message', messageHandler)
+onUnmounted(unListenMessage)
 </script>
 
 <style lang="scss">
