@@ -119,70 +119,36 @@ function handleMessage(socket, message) {
     });
     return
   }
-
-  // 工具进程注册消息
-  if (message.type === 'worker-register') {
-    const workerId = message.workerId;
-    
-    // 检查是否在停止列表中（防止竞态条件）
-    if (stoppedWorkers.has(workerId)) {
-      console.log(`工具进程 ${workerId} 尝试注册，但已被标记为停止，拒绝注册`);
-      sendResponse(socket, _callbackUuid, { 
-        error: `工具进程 ${workerId} 已被停止`,
-        shouldExit: true // 通知子进程应该退出
-      });
-      return;
+  if (message.type === 'gui-register') {
+    // GUI客户端的控制消息
+    // 标记为GUI客户端
+    if (!guiClients.has(socket)) {
+      guiClients.add(socket);
     }
-    
-    const workerInfo = workers.get(workerId);
-    if (workerInfo) {
-      workerInfo.socket = socket;
-      console.log(`工具进程 ${workerId} 已注册TCP连接`);
-      sendResponse(socket, _callbackUuid, { 
-        success: true, 
-        type: 'worker-registered',
-        message: `工具进程 ${workerId} 连接已注册`
-      });
-      // 通知GUI客户端
-      broadcastToGUI({
-        type: 'worker-connected',
-        workerId: workerId,
-        message: `工具进程 ${workerId} 已连接`
-      });
-    } else {
-      // 如果workerInfo不存在，但不在停止列表中，可能是进程启动但还未完全初始化
-      // 这种情况下也拒绝注册，让进程退出
-      if (!stoppedWorkers.has(workerId)) {
-        console.log(`工具进程 ${workerId} 尝试注册，但workerInfo不存在`);
-      }
-      sendResponse(socket, _callbackUuid, { 
-        error: `工具进程 ${workerId} 未找到`,
-        shouldExit: true
-      });
-    }
-    return;
-  }
-
-  // 工具进程查询是否应该退出
-  if (message.type === 'check-should-exit') {
-    const workerId = message.workerId;
-    const shouldExit = stoppedWorkers.has(workerId) || !workers.has(workerId);
-    
     sendResponse(socket, _callbackUuid, {
-      workerId: workerId,
-      shouldExit: shouldExit
+      success: true, 
     });
-    
-    if (shouldExit) {
-      console.log(`工具进程 ${workerId} 查询是否应该退出，返回: 是`);
-    }
     return;
   }
 
-  // 工具进程发送的消息（数据、心跳、截图等）
   const workerId = message.workerId;
   const workerInfo = workers.get(workerId);
   switch (message.type) {
+    // 从工具进程发送的消息（数据、心跳、截图等）
+    case 'check-should-exit': {
+      const workerId = message.workerId;
+      const shouldExit = stoppedWorkers.has(workerId) || !workers.has(workerId);
+      
+      sendResponse(socket, _callbackUuid, {
+        workerId: workerId,
+        shouldExit: shouldExit
+      });
+      
+      if (shouldExit) {
+        console.log(`工具进程 ${workerId} 查询是否应该退出，返回: 是`);
+      }
+      return
+    }
     case 'worker-message': {
       // 转发工具进程消息到GUI客户端
       broadcastToGUI({
@@ -191,7 +157,7 @@ function handleMessage(socket, message) {
         data: message.data || message,
         timestamp: Date.now()
       });
-      break
+      return
     }
     case 'worker-screenshot': {
       if (workerInfo && message.data && message.data.screenshot /* && workerInfo.socket === socket */) {
@@ -203,24 +169,21 @@ function handleMessage(socket, message) {
           console.error('缓存 worker 截图信息失败:', e);
         }
       }
-      break
+      return
     }
-  }
 
-  // GUI客户端的控制消息
-  // 标记为GUI客户端
-  if (!guiClients.has(socket)) {
-    guiClients.add(socket);
-  }
-
-  switch (message.type) {
-    case 'start-worker':
+    // 从GUI进程发送的消息（数据、心跳、截图等）
+    case 'start-worker': {
       const {
         workerId,
         command,
         args,
         env
       } = message
+      if (workers.has(workerId)) {
+        console.log(`工具进程 ${workerId} 已在运行`);
+        return;
+      }
       startWorker({
         workerId,
         command,
@@ -232,36 +195,36 @@ function handleMessage(socket, message) {
         message: `工具进程 ${message.workerId} 已启动`,
         workerId: message.workerId 
       });
-      break;
+      return
+    }
 
-    case 'stop-worker':
+    case 'stop-worker': {
       stopWorker(message.workerId);
       sendResponse(socket, _callbackUuid, { 
         success: true, 
         message: `工具进程 ${message.workerId} 已停止`,
         workerId: message.workerId 
       });
-      break;
+      return
+    }
 
-    case 'get-status':
+    case 'get-status': {
       const status = getWorkersStatus();
       sendResponse(socket, _callbackUuid, {
         success: true, 
         workers: status 
       });
-      break;
+      return
+    }
 
-    default:
+    default: {
       sendResponse(socket, _callbackUuid, { error: '未知的消息类型' });
+    }
   }
 }
 
 // 启动工具进程
 function startWorker({ workerId, command, args, env }, restartCount = 0) {
-  if (workers.has(workerId)) {
-    console.log(`工具进程 ${workerId} 已在运行`);
-    return;
-  }
   const noAutoRestartExitCodeSet = new Set([0]);
   (env.GEEKGEEKRUND_NO_AUTO_RESTART_EXIT_CODE ?? '')
     .split(',')
@@ -511,12 +474,4 @@ process.on('SIGINT', () => {
     console.log('守护进程已关闭');
     process.exit(0);
   });
-});
-
-// 捕获未处理的 EPIPE 错误
-process.on('uncaughtException', (err) => {
-  if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
-    return
-  }
-  throw err
 });

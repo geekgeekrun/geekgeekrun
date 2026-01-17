@@ -26,6 +26,9 @@ export async function pushCurrentPageScreenshot (page) {
       }
     })
   } catch (err) {
+    if (err?.message?.includes('Session closed')) {
+      throw new Error(`PAGE_CLOSED`)
+    }
     // 截图失败不应影响主流程
     console.warn('[READ_NO_REPLY_AUTO_REMINDER] pushCurrentPageScreenshot error', err)
   }
@@ -38,9 +41,6 @@ export class PeriodPushCurrentPageScreenshotPlugin {
       (page) => {
         async function periodPushCurrentPageScreenshot () {
           try {
-            if (!page) {
-              return
-            }
             if (page.isClosed()) {
               return
             }
@@ -48,7 +48,14 @@ export class PeriodPushCurrentPageScreenshotPlugin {
             if (shouldExit) {
               return
             }
-            await pushCurrentPageScreenshot(page)
+            try {
+              await pushCurrentPageScreenshot(page)
+            }
+            catch (err) {
+              if (err?.message?.includes(`PAGE_CLOSED`)) {
+                return
+              }
+            }
             setTimeout(periodPushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS)
           }
           catch {}

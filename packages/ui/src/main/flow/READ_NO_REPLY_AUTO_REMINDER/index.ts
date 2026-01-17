@@ -52,7 +52,21 @@ export const pageMapByName: {
 
 async function periodPushCurrentPageScreenshot () {
   try {
-    await pushCurrentPageScreenshot(pageMapByName.boss)
+    if (pageMapByName.boss?.isClosed()) {
+      return
+    }
+    const shouldExit = await checkShouldExit()
+    if (shouldExit) {
+      return
+    }
+    try {
+      await pushCurrentPageScreenshot(pageMapByName.boss)
+    }
+    catch (err) {
+      if (err?.message?.includes(`PAGE_CLOSED`)) {
+        return
+      }
+    }
     setTimeout(periodPushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS)
   }
   catch {}

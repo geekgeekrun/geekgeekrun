@@ -3,6 +3,15 @@ import { runCommon } from './features/run-common';
 import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon';
 import { connectToDaemon } from './flow/OPEN_SETTING_WINDOW/connect-to-daemon';
 import { randomUUID } from 'crypto';
+
+// 捕获未处理的 EPIPE 错误
+process.on('uncaughtException', (err) => {
+  if (err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_DESTROYED') {
+    return
+  }
+  throw err
+});
+
 const isUiDev = process.env.NODE_ENV === 'development'
 const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
 console.log(commandlineArgs)

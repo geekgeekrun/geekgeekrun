@@ -82,5 +82,13 @@ export function openSettingWindow() {
         needCallback: true
       }
     )
+    await sendToDaemon(
+      {
+        type: 'gui-register'
+      },
+      {
+        needCallback: true
+      }
+    )
   })
 }
