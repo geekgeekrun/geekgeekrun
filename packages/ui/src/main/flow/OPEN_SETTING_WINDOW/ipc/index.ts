@@ -53,6 +53,7 @@ import { RequestSceneEnum } from '../../../features/llm-request-log'
 import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
 import { daemonEE, sendToDaemon } from '../connect-to-daemon'
+import { runCommon } from '../../../features/run-common'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -200,38 +201,10 @@ export default function initIpc() {
   })
 
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    if (!puppeteerExecutable) {
-      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    }
-    const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath,
-      GEEKGEEKRUND_NO_RESTART_EXIT_CODE: [
-        AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE,
-        AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID,
-        AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE
-      ].join(',')
-    }
-    await sendToDaemon(
-      {
-        type: 'start-worker',
-        workerId: 'geekAutoStartWithBossMain',
-        command: process.argv[0],
-        args: [
-          process.argv[1],
-          `--mode=geekAutoStartWithBossMain`,
-          `--run-record-id=${currentRunRecord?.id || 0}`
-        ],
-        env: subProcessEnv
-      },
-      {
-        needCallback: true
-      }
-    )
+    const mode = 'geekAutoStartWithBossMain'
+    await runCommon({ mode })
     daemonEE.on('message', function handler (message) {
-      if (message.workerId !== 'geekAutoStartWithBossMain') {
+      if (message.workerId !== mode) {
         return
       }
       if (message.type === 'worker-exited') {
@@ -256,38 +229,10 @@ export default function initIpc() {
   })
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    if (!puppeteerExecutable) {
-      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    }
-    const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath,
-      GEEKGEEKRUND_NO_RESTART_EXIT_CODE: [
-        AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE,
-        AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID,
-        AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE
-      ].join(',')
-    }
-    await sendToDaemon(
-      {
-        type: 'start-worker',
-        workerId: 'readNoReplyAutoReminder',
-        command: process.argv[0],
-        args: [
-          process.argv[1],
-          `--mode=readNoReplyAutoReminder`,
-          `--run-record-id=${currentRunRecord?.id || 0}`
-        ],
-        env: subProcessEnv
-      },
-      {
-        needCallback: true
-      }
-    )
+    const mode = 'readNoReplyAutoReminderMain'
+    await runCommon({ mode })
     daemonEE.on('message', function handler (message) {
-      if (message.workerId !== 'readNoReplyAutoReminder') {
+      if (message.workerId !== mode) {
         return
       }
       if (message.type === 'worker-exited') {
@@ -400,7 +345,7 @@ export default function initIpc() {
     mainWindow?.webContents.send('read-no-reply-auto-reminder-stopping')
     const p = new Promise(resolve => {
       daemonEE.on('message', function handler (message) {
-        if (message.workerId !== 'readNoReplyAutoReminder') {
+        if (message.workerId !== 'readNoReplyAutoReminderMain') {
           return
         }
         if (message.type === 'worker-exited') {
@@ -412,7 +357,7 @@ export default function initIpc() {
     await sendToDaemon(
       {
         type: 'stop-worker',
-        workerId: 'readNoReplyAutoReminder',
+        workerId: 'readNoReplyAutoReminderMain',
       },
       {
         needCallback: true

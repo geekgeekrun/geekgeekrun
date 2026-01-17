@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import fs from "node:fs";
 
 const net = require('net');
 const split2 = require('split2');
@@ -20,6 +21,16 @@ export async function connectToDaemon() {
     const ipcSocketPath = process.platform === 'win32' 
       ? `\\\\.\\pipe\\${ipcSocketName}`
       : path.join(tmpdir(), `${ipcSocketName}.sock`)
+    if (process.platform !== 'win32' ) {
+      if (!fs.existsSync(ipcSocketPath)) {
+        fs.writeFileSync(ipcSocketPath, '')
+      }
+      // 设置权限（Unix）
+      fs.chmodSync(
+        ipcSocketPath,
+        0o777
+      )
+    }
     daemonClient.connect(ipcSocketPath, 'localhost', () => {
       isConnected = true
       console.log('已连接到守护进程');

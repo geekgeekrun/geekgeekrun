@@ -30,6 +30,7 @@ const path = require('path');
 const split2 = require('split2');
 const fs = require('fs')
 const { tmpdir } = require('os')
+const { randomUUID } = require('crypto')
 
 const ipcWritePipe = fs.createWriteStream(null, { fd: 3 })
 let ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME
@@ -43,7 +44,9 @@ if (process.platform === 'win32') {
 }
 else {
   ipcSocketPath = path.join(tmpdir(), `${ipcSocketName}.sock`)
-  fs.writeFileSync(ipcSocketPath, '')
+  if (!fs.existsSync(ipcSocketPath)) {
+    fs.writeFileSync(ipcSocketPath, '')
+  }
   // 设置权限（Unix）
   fs.chmodSync(
     ipcSocketPath,
@@ -259,11 +262,11 @@ function startWorker({ workerId, command, args, env }, restartCount = 0) {
     console.log(`工具进程 ${workerId} 已在运行`);
     return;
   }
-  const noRestartExitCodeSet = new Set([0]);
-  (env.GEEKGEEKRUND_NO_RESTART_EXIT_CODE ?? '')
+  const noAutoRestartExitCodeSet = new Set([0]);
+  (env.GEEKGEEKRUND_NO_AUTO_RESTART_EXIT_CODE ?? '')
     .split(',')
     .map(n => parseInt(n))
-    .forEach(n => noRestartExitCodeSet.add(n))
+    .forEach(n => noAutoRestartExitCodeSet.add(n))
 
   console.log(`启动工具进程: ${workerId}${restartCount > 0 ? ` (重启第${restartCount}次)` : ''}`);
   // 添加参数使工具进程在后台运行，不显示 UI
@@ -297,7 +300,7 @@ function startWorker({ workerId, command, args, env }, restartCount = 0) {
         workerInfo.socket.destroy();
       }
       
-      const shouldRestart = !noRestartExitCodeSet.has(code) // && code !== null;
+      const shouldRestart = !noAutoRestartExitCodeSet.has(code) // && code !== null;
       // 使用当前的 restartCount 加1，而不是从 workerInfo 中取（因为可能已经被删除）
       const restartCount = (workerInfo.restartCount || 0) + 1;
       
@@ -508,4 +511,12 @@ process.on('SIGINT', () => {
     console.log('守护进程已关闭');
     process.exit(0);
   });
+});
+
+// 捕获未处理的 EPIPE 错误
+process.on('uncaughtException', (err) => {
+  if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+    return
+  }
+  throw err
 });
