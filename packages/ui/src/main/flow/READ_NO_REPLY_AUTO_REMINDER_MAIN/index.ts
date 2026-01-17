@@ -27,6 +27,7 @@ import cheerio from 'cheerio'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
+import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -479,6 +480,11 @@ const rerunInterval = (() => {
 
 export async function runEntry() {
   app.dock?.hide()
+  const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+  if (!puppeteerExecutable) {
+    throw new Error(`PUPPETEER_IS_NOT_EXECUTABLE`)
+  }
+  process.env.PUPPETEER_EXECUTABLE_PATH = puppeteerExecutable.executablePath
   await connectToDaemon()
   await sendToDaemon({
     type: 'ping'
@@ -519,7 +525,7 @@ export async function runEntry() {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ACCESS_IS_DENIED)
           break
         }
-        if (err.message.includes(`Could not find Chrome`) || err.message.includes(`no executable was found`)) {
+        if (err.message.includes(`PUPPETEER_IS_NOT_EXECUTABLE`) || err.message.includes(`Could not find Chrome`) || err.message.includes(`no executable was found`)) {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
           break
         }

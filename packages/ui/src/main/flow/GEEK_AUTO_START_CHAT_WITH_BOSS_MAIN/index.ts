@@ -38,6 +38,13 @@ const initPlugins = (hooks) => {
 }
 
 const runAutoChat = async () => {
+  app.dock?.hide()
+  const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+  if (!puppeteerExecutable) {
+    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
+    return
+  }
+  process.env.PUPPETEER_EXECUTABLE_PATH = puppeteerExecutable.executablePath
   const { initPuppeteer, mainLoop, closeBrowserWindow, autoStartChatEventBus } = await import(
     '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
   )
@@ -45,20 +52,7 @@ const runAutoChat = async () => {
     closeBrowserWindow()
     app.exit()
   })
-  app.dock?.hide()
-  try {
-    await initPuppeteer()
-  } catch (err) {
-    console.error(err)
-    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
-    return
-  }
-
-  const isPuppeteerExecutable = !!(await getAnyAvailablePuppeteerExecutable())
-  if (!isPuppeteerExecutable) {
-    app.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
-    return
-  }
+  await initPuppeteer()
 
   const hooks = {
     puppeteerLaunched: new SyncHook(['browser']),
