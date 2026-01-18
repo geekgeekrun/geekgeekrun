@@ -2,7 +2,7 @@
   <div class="flex h100vh">
     <div class="flex flex-col min-w200px w200px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
-        <RouterLink to="./TaskManager">任务管理</RouterLink>
+        <RouterLink v-show="false" to="./TaskManager">任务管理</RouterLink>
         <RouterLink to="./GeekAutoStartChatWithBoss">
           Boss炸弹
           <el-tooltip
