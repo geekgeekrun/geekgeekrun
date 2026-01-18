@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     modal-class="runing-overlay__modal"
-    :model-value="runingTaskInfo"
+    :model-value="isDialogVisible"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     :show-close="false"
@@ -93,6 +93,16 @@ function messageHandler (ev, { data }) {
 }
 const unListenMessage = ipcRenderer.on('worker-to-gui-message', messageHandler)
 onUnmounted(unListenMessage)
+
+const isDialogVisible = ref(false)
+defineExpose({
+  show() {
+    isDialogVisible.value = true
+  },
+  hide() {
+    isDialogVisible.value = false
+  }
+})
 </script>
 
 <style lang="scss">
@@ -100,7 +110,11 @@ onUnmounted(unListenMessage)
   position: absolute;
   width: 100%;
   height: 100%;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(3px);
+
+  background-color: transparent;
+  background-image: radial-gradient(transparent 1px, #fff 1px);
+  background-size: 4px 4px;
   
   .el-overlay-dialog {
     position: absolute;

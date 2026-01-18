@@ -1062,9 +1062,9 @@
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay worker-id="geekAutoStartWithBossMain" :run-record-id="runRecordId">
+      <RuningOverlay worker-id="geekAutoStartWithBossMain" :run-record-id="runRecordId" ref="runningOverlayRef">
         <template #op-buttons>
-          <el-button @click="handleStopButtonClick">结束任务</el-button>
+          <el-button type="danger" plain @click="handleStopButtonClick" :loading="isStopButtonLoading">结束任务</el-button>
         </template>
       </RuningOverlay>
     </div>
@@ -1432,6 +1432,7 @@ const formRules = {
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const runRecordId = ref(null)
+const runningOverlayRef = ref(null)
 const handleSubmit = async () => {
   gtagRenderer('save_config_and_launch_clicked', {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,
@@ -1470,6 +1471,7 @@ const handleSubmit = async () => {
   })
 
   try {
+    runningOverlayRef.value?.show()
     const { runRecordId: rrId } = await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
     runRecordId.value = rrId
   } catch (err) {
@@ -1851,9 +1853,17 @@ onUnmounted(() => {
   )
 })
 
+const isStopButtonLoading = ref(false)
 const handleStopButtonClick = async () => {
   gtagRenderer('gascwb_stop_button_clicked')
-  electron.ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
+  isStopButtonLoading.value = true
+  try {
+    await electron.ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
+    runningOverlayRef.value?.hide()
+  }
+  finally {
+    isStopButtonLoading.value = false
+  }
 }
 </script>
 

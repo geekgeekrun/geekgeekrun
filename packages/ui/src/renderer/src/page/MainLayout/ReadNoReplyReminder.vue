@@ -228,9 +228,9 @@
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay worker-id="readNoReplyAutoReminderMain" :run-record-id="runRecordId">
+      <RuningOverlay worker-id="geekAutoStartWithBossMain" :run-record-id="runRecordId" ref="runningOverlayRef">
         <template #op-buttons>
-          <el-button @click="handleStopButtonClick">结束任务</el-button>
+          <el-button type="danger" plain @click="handleStopButtonClick" :loading="isStopButtonLoading">结束任务</el-button>
         </template>
       </RuningOverlay>
     </div>
@@ -450,6 +450,7 @@ async function checkIsCanRun() {
   return true
 }
 const runRecordId = ref(null)
+const runningOverlayRef = ref(null)
 const handleSubmit = async () => {
   gtagRenderer('run_read_no_reply_reminder_clicked', {
     throttle_interval_minutes: formContent.value.autoReminder.throttleIntervalMinutes,
@@ -488,6 +489,7 @@ const handleSubmit = async () => {
   gtagRenderer('run_read_no_reply_reminder_launched')
 
   try {
+    runningOverlayRef.value?.show()
     const { runRecordId: rrId } = await electron.ipcRenderer.invoke('run-read-no-reply-auto-reminder')
     runRecordId.value = rrId
   } catch (err) {
@@ -602,9 +604,17 @@ onUnmounted(() => {
   )
 })
 
+const isStopButtonLoading = ref(false)
 const handleStopButtonClick = async () => {
   gtagRenderer('rnrr_stop_button_clicked')
-  electron.ipcRenderer.invoke('stop-read-no-reply-auto-reminder')
+  isStopButtonLoading.value = true
+  try {
+    electron.ipcRenderer.invoke('stop-read-no-reply-auto-reminder')
+    runningOverlayRef.value?.hide()
+  }
+  finally {
+    isStopButtonLoading.value = false
+  }
 }
 </script>
 
