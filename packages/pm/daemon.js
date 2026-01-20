@@ -44,14 +44,11 @@ if (process.platform === 'win32') {
 }
 else {
   ipcSocketPath = path.join(tmpdir(), `${ipcSocketName}.sock`)
-  if (!fs.existsSync(ipcSocketPath)) {
+  if (process.platform === 'darwin' && !fs.existsSync(ipcSocketPath)) {
     fs.writeFileSync(ipcSocketPath, '')
+    // 设置权限（Unix）
+    fs.chmodSync(ipcSocketPath, 0o777)
   }
-  // 设置权限（Unix）
-  fs.chmodSync(
-    ipcSocketPath,
-    0o777
-  )
 }
 
 const workers = new Map(); // workerId -> { process, status, restartCount, socket, latestScreenshot, latestScreenshotAt }
@@ -443,13 +440,18 @@ new Promise((resolve, reject) => {
     )
     reject(err)
   })
-  server.listen(ipcSocketPath, () => {
+  server.listen(ipcSocketPath, (err) => {
     console.log(`守护进程服务器运行在端口 ${ipcSocketPath}`);
     ipcWritePipe.write(
       JSON.stringify({ type: 'DAEMON_READY' }),
       (err) => void err
     )
-    resolve(true)
+    if (!err) {
+      resolve(true)
+    }
+    else {
+      reject(err)
+    }
   });
 })
 

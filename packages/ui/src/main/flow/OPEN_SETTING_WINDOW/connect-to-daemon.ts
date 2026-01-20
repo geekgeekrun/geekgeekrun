@@ -18,18 +18,13 @@ export async function connectToDaemon() {
   let isConnected = false
   await new Promise((resolve, reject) => {
     const ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME
-    const ipcSocketPath = process.platform === 'win32' 
+    const ipcSocketPath = process.platform === 'win32'
       ? `\\\\.\\pipe\\${ipcSocketName}`
       : path.join(tmpdir(), `${ipcSocketName}.sock`)
-    if (process.platform !== 'win32' ) {
-      if (!fs.existsSync(ipcSocketPath)) {
-        fs.writeFileSync(ipcSocketPath, '')
-      }
+    if (process.platform === 'darwin' && !fs.existsSync(ipcSocketPath)) {
+      fs.writeFileSync(ipcSocketPath, '')
       // 设置权限（Unix）
-      fs.chmodSync(
-        ipcSocketPath,
-        0o777
-      )
+      fs.chmodSync(ipcSocketPath, 0o777)
     }
     daemonClient.connect(ipcSocketPath, 'localhost', () => {
       isConnected = true
