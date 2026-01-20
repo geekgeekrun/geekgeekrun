@@ -19,13 +19,8 @@ export async function connectToDaemon() {
   await new Promise((resolve, reject) => {
     const ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME
     const ipcSocketPath = process.platform === 'win32'
-      ? `\\\\.\\pipe\\${ipcSocketName}`
-      : path.join(tmpdir(), `${ipcSocketName}.sock`)
-    if (process.platform === 'darwin' && !fs.existsSync(ipcSocketPath)) {
-      fs.writeFileSync(ipcSocketPath, '')
-      // 设置权限（Unix）
-      fs.chmodSync(ipcSocketPath, 0o777)
-    }
+        ? `\\\\.\\pipe\\${ipcSocketName}`
+        : path.join(tmpdir(), `${ipcSocketName}.sock`)
     daemonClient.connect(ipcSocketPath, 'localhost', () => {
       isConnected = true
       console.log('已连接到守护进程');

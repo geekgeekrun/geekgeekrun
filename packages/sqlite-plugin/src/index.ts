@@ -21,7 +21,6 @@ import { ChatMessageRecord } from './entity/ChatMessageRecord'
 import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
 import { JobHireStatusRecord } from './entity/JobHireStatusRecord'
 
-import sqlite3 from 'sqlite3';
 import {
   saveChatStartupRecord,
   saveJobInfoFromRecommendPage,
@@ -45,12 +44,11 @@ import * as typeorm from 'typeorm'
 export function initDb(dbFilePath) {
   const { DataSource } = typeorm
   const appDataSource = new DataSource({
-    type: "sqlite",
+    type: "better-sqlite3",
     synchronize: false,
     logging: true,
     logger: "simple-console",
     database: dbFilePath,
-    driver: sqlite3, // The important line
     entities: [
       ChatStartupLog,
       BossInfo,
