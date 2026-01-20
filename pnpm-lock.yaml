@@ -156,12 +156,6 @@ importers:
       '@electron-toolkit/utils':
         specifier: ^3.0.0
         version: 3.0.0(electron@28.2.0)
-      '@geekgeekrun/dingtalk-plugin':
-        specifier: workspace:*
-        version: link:../dingtalk-plugin
-      '@geekgeekrun/geek-auto-start-chat-with-boss':
-        specifier: workspace:*
-        version: link:../geek-auto-start-chat-with-boss
       '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
         specifier: workspace:*
         version: link:../launch-bosszhipin-login-page-with-preload-extension
@@ -223,6 +217,12 @@ importers:
       '@electron-toolkit/tsconfig':
         specifier: ^1.0.1
         version: 1.0.1(@types/node@18.19.9)
+      '@geekgeekrun/dingtalk-plugin':
+        specifier: workspace:*
+        version: link:../dingtalk-plugin
+      '@geekgeekrun/geek-auto-start-chat-with-boss':
+        specifier: workspace:*
+        version: link:../geek-auto-start-chat-with-boss
       '@inquirer/prompts':
         specifier: ^7.0.1
         version: 7.0.1(@types/node@18.19.9)
