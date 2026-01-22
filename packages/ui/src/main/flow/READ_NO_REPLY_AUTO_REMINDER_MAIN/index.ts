@@ -52,29 +52,29 @@ export const pageMapByName: {
   boss?: Page | null
 } = {}
 
-async function periodPushCurrentPageScreenshot () {
-  try {
-    if (pageMapByName.boss?.isClosed()) {
-      return
-    }
-    const shouldExit = await checkShouldExit()
-    if (shouldExit) {
-      return
-    }
-    try {
-      await pushCurrentPageScreenshot(pageMapByName.boss)
-    }
-    catch (err) {
-      if (err?.message?.includes(`PAGE_CLOSED`)) {
-        return
-      }
-    }
-    setTimeout(periodPushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS)
-  }
-  catch {}
-}
+// async function periodPushCurrentPageScreenshot () {
+//   try {
+//     if (pageMapByName.boss?.isClosed()) {
+//       return
+//     }
+//     const shouldExit = await checkShouldExit()
+//     if (shouldExit) {
+//       return
+//     }
+//     try {
+//       await pushCurrentPageScreenshot(pageMapByName.boss)
+//     }
+//     catch (err) {
+//       if (err?.message?.includes(`PAGE_CLOSED`)) {
+//         return
+//       }
+//     }
+//     setTimeout(periodPushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS)
+//   }
+//   catch {}
+// }
 
-periodPushCurrentPageScreenshot()
+// periodPushCurrentPageScreenshot()
 
 async function saveCurrentChatRecord(page) {
   const userInfo = await page.evaluate(
