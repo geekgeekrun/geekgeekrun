@@ -18,6 +18,22 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/browserAssistant',
+    component: () => import('@renderer/page/BrowserAssistant/index.vue'),
+    meta: {
+      title: '浏览器助手'
+    },
+    children: [
+      {
+        path: '/downloadingDependencies',
+        component: () => import('@renderer/page/BrowserAssistant/page/DownloadingDependencies.vue'),
+        meta: {
+          title: '正在下载核心组件'
+        }
+      }
+    ]
+  },
+  {
     path: '/llmConfig',
     component: () => import('@renderer/page/LlmConfig/index.vue'),
     meta: {
@@ -136,16 +152,7 @@ const routes: Array<RouteRecordRaw> = [
     component: BootstrapSplash,
     meta: {
       title: '薪想事成'
-    },
-    children: [
-      {
-        path: '/downloadingDependencies',
-        component: () => import('@renderer/page/BootstrapSplash/page/DownloadingDependencies.vue'),
-        meta: {
-          title: '正在下载核心组件'
-        }
-      }
-    ]
+    }
   }
 ]
 

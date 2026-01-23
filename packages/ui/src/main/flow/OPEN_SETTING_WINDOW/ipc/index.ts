@@ -3,12 +3,10 @@ import path from 'path'
 import * as childProcess from 'node:child_process'
 import {
   ensureConfigFileExist,
-  ensureStorageFileExist,
   configFileNameList,
   readConfigFile,
   writeConfigFile,
   readStorageFile,
-  writeStorageFile,
   storageFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
@@ -54,6 +52,7 @@ import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
 import { daemonEE, sendToDaemon } from '../connect-to-daemon'
 import { runCommon } from '../../../features/run-common'
+import { loginWithCookieAssistant } from '../../../features/login-with-cookie-assistant'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -187,17 +186,6 @@ export default function initIpc() {
     }
 
     return await Promise.all(promiseArr)
-  })
-
-  ipcMain.handle('read-storage-file', async (ev, payload) => {
-    ensureStorageFileExist()
-    return await readStorageFile(payload.fileName)
-  })
-
-  ipcMain.handle('write-storage-file', async (ev, payload) => {
-    ensureStorageFileExist()
-
-    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
   })
 
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
@@ -393,56 +381,6 @@ export default function initIpc() {
         needCallback: true
       }
     )
-  })
-
-  let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
-  ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
-    try {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
-    } catch {
-      //
-    }
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
-    }
-    subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
-      process.argv[0],
-      [process.argv[1], `--mode=launchBossZhipinLoginPageWithPreloadExtension`],
-      {
-        env: subProcessEnv,
-        stdio: [null, null, null, 'pipe', 'ipc']
-      }
-    )
-    subProcessOfBossZhipinLoginPageWithPreloadExtension!.stdio[3]!.pipe(JSONStream.parse()).on(
-      'data',
-      (raw) => {
-        const data = raw
-        switch (data.type) {
-          case 'BOSS_ZHIPIN_COOKIE_COLLECTED': {
-            mainWindow?.webContents.send(data.type, data)
-            break
-          }
-          default: {
-            return
-          }
-        }
-      }
-    )
-
-    subProcessOfBossZhipinLoginPageWithPreloadExtension!.once('exit', () => {
-      mainWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
-      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
-    })
-  })
-  ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', async () => {
-    try {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
-    } catch {
-      //
-    } finally {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
-    }
   })
 
   ipcMain.handle('check-boss-zhipin-cookie-file', () => {
@@ -665,6 +603,15 @@ export default function initIpc() {
   ipcMain.handle('check-update', async () => {
     const newRelease = await checkUpdateForUi()
     return newRelease
+  })
+  ipcMain.handle('login-with-cookie-assistant', async () => {
+    return await loginWithCookieAssistant({
+      windowOption: {
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      }
+    })
   })
 
   ipcMain.handle('exit-app-immediately', () => {

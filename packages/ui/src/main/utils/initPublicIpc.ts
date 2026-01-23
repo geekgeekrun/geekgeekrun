@@ -2,6 +2,11 @@ import { BrowserWindow, ipcMain, shell } from 'electron'
 import gtag from './gtag'
 import buildInfo from '../../common/build-info.json'
 import os from 'node:os'
+import {
+  ensureStorageFileExist,
+  readStorageFile,
+  writeStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 export default function initPublicIpc() {
   ipcMain.on(
@@ -55,5 +60,15 @@ export default function initPublicIpc() {
         activate: true
       }
     )
+  })
+
+  ipcMain.handle('read-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+    return await readStorageFile(payload.fileName)
+  })
+
+  ipcMain.handle('write-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
   })
 }

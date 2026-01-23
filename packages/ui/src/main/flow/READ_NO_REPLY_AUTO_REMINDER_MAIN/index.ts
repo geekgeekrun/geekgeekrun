@@ -16,19 +16,29 @@ import {
   getJobHireStatusRecord,
   saveJobHireStatusRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
-import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import {
+  writeStorageFile,
+  readStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
-import { AUTO_CHAT_ERROR_EXIT_CODE, RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
+import {
+  AUTO_CHAT_ERROR_EXIT_CODE,
+  RECHAT_CONTENT_SOURCE,
+  RECHAT_LLM_FALLBACK
+} from '../../../common/enums/auto-start-chat'
 import gtag from '../../utils/gtag'
 import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
-import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
+// import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
 import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import minimist from 'minimist'
+import { checkCookieListFormat } from '../../../common/utils/cookie'
+import { loginWithCookieAssistant } from '../../features/login-with-cookie-assistant'
+import initPublicIpc from '../../utils/initPublicIpc'
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -232,6 +242,39 @@ const mainLoop = async () => {
       browser = null
     }
   }
+  let bossCookies = readStorageFile('boss-cookies.json')
+  let cookieCheckResult = checkCookieListFormat(bossCookies)
+  while (!cookieCheckResult) {
+    try {
+      await loginWithCookieAssistant()
+      bossCookies = readStorageFile('boss-cookies.json')
+      cookieCheckResult = checkCookieListFormat(bossCookies)
+    } catch (err) {
+      sendToDaemon({
+        type: 'worker-to-gui-message',
+        data: {
+          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          step: {
+            id: 'basic-cookie-check',
+            status: 'rejected'
+          },
+          runRecordId
+        }
+      })
+      throw new Error('LOGIN_STATUS_INVALID')
+    }
+  }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'basic-cookie-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
   const canNotConfirmIfHasReadMsgTemplateList = [
     'Boss还没查看你的消息',
     '你与该职位竞争者PK情况',
@@ -250,17 +293,6 @@ const mainLoop = async () => {
   // #region
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
     writeStorageFile('boss-cookies.json', [])
-    sendToDaemon({
-      type: 'worker-to-gui-message',
-      data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
-        step: {
-          id: 'login-status-check',
-          status: 'rejected'
-        },
-        runRecordId
-      }
-    })
     throw new Error('LOGIN_STATUS_INVALID')
   }
   if (
@@ -526,6 +558,8 @@ const rerunInterval = (() => {
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export async function runEntry() {
   app.dock?.hide()
+  await app.whenReady()
+  initPublicIpc()
   await connectToDaemon()
   await sendToDaemon({
     type: 'ping'
@@ -588,13 +622,29 @@ export async function runEntry() {
       // handle error
       if (err instanceof Error) {
         if (err.message.includes('LOGIN_STATUS_INVALID')) {
-          await dialog.showMessageBox({
-            type: `error`,
-            message: `登录状态无效`,
-            detail: `请重新登录Boss直聘`
-          })
-          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
-          break
+          try {
+            // popup login dialog, then update login status
+            await loginWithCookieAssistant()
+          } catch (err) {
+            await dialog.showMessageBox({
+              type: `error`,
+              message: `登录状态无效`,
+              detail: `请重新登录Boss直聘`
+            })
+            sendToDaemon({
+              type: 'worker-to-gui-message',
+              data: {
+                type: 'prerequisite-step-by-step-checkstep-by-step-check',
+                step: {
+                  id: 'login-status-check',
+                  status: 'rejected'
+                },
+                runRecordId
+              }
+            })
+            process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
+            break
+          }
         }
         if (err.message.includes('ERR_INTERNET_DISCONNECTED')) {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ERR_INTERNET_DISCONNECTED)
@@ -656,3 +706,8 @@ async function storeStorage(page) {
     writeStorageFile('boss-local-storage.json', localStorage)
   ])
 }
+
+process.on('SIGTERM', () => {
+  console.log('收到SIGTERM信号，正在退出')
+  process.exit(0)
+})

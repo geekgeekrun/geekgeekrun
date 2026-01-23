@@ -201,7 +201,7 @@ const handleEditThisCookieExtensionStoreLinkClick = () => {
 
 const handleCancel = () => {
   gtagRenderer('cancel_clicked')
-  router.replace('/main-layout')
+  window.close()
 }
 const handleSubmit = async () => {
   gtagRenderer('save_clicked')
@@ -212,7 +212,8 @@ const handleSubmit = async () => {
   })
   ElMessage.success('Boss直聘 Cookie 保存成功')
   gtagRenderer('save_cookie_done')
-  router.replace('/main-layout')
+
+  window.electron.ipcRenderer.send('cookie-saved')
 }
 
 const handleBossZhipinLoginPageClosed = () => {

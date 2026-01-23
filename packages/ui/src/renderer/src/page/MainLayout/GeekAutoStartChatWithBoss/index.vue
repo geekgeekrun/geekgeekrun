@@ -1001,7 +1001,7 @@
                   pr50px
                   pb30px
                   class="no-active-definition-text-slider"
-      
+
                   :format-tooltip="
                     (v) =>
                       typeof noActiveDefinitionMarks[v] === 'string'
@@ -1535,9 +1535,17 @@ const normalizeExpectCompanies = () => {
     .join(',')
 }
 
-const handleClickLaunchLogin = () => {
+const handleClickLaunchLogin = async () => {
   gtagRenderer('launch_login_clicked')
-  router.replace('/cookieAssistant')
+  try {
+    await electron.ipcRenderer.invoke('login-with-cookie-assistant')
+    ElMessage({
+      type: 'success',
+      message: 'Cookie 保存成功'
+    })
+  } catch {
+    //
+  }
 }
 const expectCompanyTemplateList = [
   {

@@ -164,26 +164,10 @@ onUnmounted(() => {
     } catch {}
   }
 })
-const goToCheckBossZhipinCookieFile = () => router.replace('/cookieAssistant')
-onMounted(() => {
-  electron.ipcRenderer.on('check-boss-zhipin-cookie-file', goToCheckBossZhipinCookieFile)
-})
-onUnmounted(() => {
-  electron.ipcRenderer.removeListener(
-    'check-boss-zhipin-cookie-file',
-    goToCheckBossZhipinCookieFile
-  )
-})
 ;(async () => {
   const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
   if (Object.values(checkDependenciesResult).includes(false)) {
     router.replace('/')
-    return
-  }
-
-  const isCookieFileValid = await electron.ipcRenderer.invoke('check-boss-zhipin-cookie-file')
-  if (!isCookieFileValid) {
-    router.replace('/cookieAssistant')
     return
   }
 })()
