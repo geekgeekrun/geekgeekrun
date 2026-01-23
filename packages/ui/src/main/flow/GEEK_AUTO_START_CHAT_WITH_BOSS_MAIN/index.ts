@@ -17,8 +17,14 @@ import GtagPlugin from '../../utils/gtag/GtagPlugin'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 // import { PeriodPushCurrentPageScreenshotPlugin } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
-import { UserResponseInfoPlugin } from '../../features/boss-user-info-response-plugin'
+import { CookieInvalidHandlePlugin } from '../../features/cookie-invalid-handle-plugin'
+import initPublicIpc from '../../utils/initPublicIpc'
 const { default: SqlitePlugin } = SqlitePluginModule
+
+process.on('SIGTERM', () => {
+  console.log('收到SIGTERM信号，正在退出')
+  process.exit(0)
+})
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -36,7 +42,7 @@ const initPlugins = (hooks) => {
   new SqlitePlugin(getPublicDbFilePath()).apply(hooks)
   new GtagPlugin().apply(hooks)
   // new PeriodPushCurrentPageScreenshotPlugin().apply(hooks)
-  new UserResponseInfoPlugin().apply(hooks)
+  new CookieInvalidHandlePlugin().apply(hooks)
 }
 
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
@@ -83,7 +89,7 @@ const runAutoChat = async () => {
     puppeteerLaunched: new SyncHook(['browser']),
     pageGotten: new SyncHook(['page']),
     pageLoaded: new SyncHook(),
-    cookieWillSet: new SyncHook(['cookies']),
+    cookieWillSet: new AsyncSeriesHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
     mainFlowWillLaunch: new AsyncSeriesHook(['args']),
     jobDetailIsGetFromRecommendList: new AsyncSeriesHook(['userInfo']),
@@ -147,6 +153,11 @@ const runAutoChat = async () => {
 }
 
 export const waitForProcessHandShakeAndRunAutoChat = async () => {
+  await app.whenReady()
+  app.on('window-all-closed', (e) => {
+    e.preventDefault()
+  })
+  initPublicIpc()
   await connectToDaemon()
   await sendToDaemon(
     {

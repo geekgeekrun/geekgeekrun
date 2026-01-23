@@ -2,11 +2,9 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import fs from "node:fs";
 
 const net = require('net');
 const split2 = require('split2');
-const { app } = require('electron');
 
 let daemonClient = null;
 export const daemonEE = new EventEmitter()
@@ -138,14 +136,6 @@ export function sendToDaemon(message, {
 //   sendToDaemon({ type: 'start-worker', workerId, command, args, env });
 // });
 
-app.on('window-all-closed', () => {
-  if (daemonClient) {
-    daemonClient.destroy();
-  }
-});
-
-app.on('before-quit', () => {
-  if (daemonClient) {
-    daemonClient.destroy();
-  }
-});
+export function closeDaemonClient() {
+  daemonClient?.destroy()
+}

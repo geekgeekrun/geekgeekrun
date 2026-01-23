@@ -14,7 +14,7 @@ export async function loginWithCookieAssistant({ windowOption } = {}) {
       if (processDone) {
         resolve(true)
       } else {
-        reject(new Error('User cancelled login'))
+        reject(new Error('USER_CANCELLED_LOGIN'))
       }
     })
   })

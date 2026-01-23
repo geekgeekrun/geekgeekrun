@@ -100,9 +100,6 @@ export async function initPuppeteer () {
   }
 }
 
-const bossCookies = readStorageFile('boss-cookies.json')
-const bossLocalStorage = readStorageFile('boss-local-storage.json')
-
 const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
 const combineRecommendJobFilterType = readConfigFile('boss.json').combineRecommendJobFilterType ?? CombineRecommendJobFilterType.ANY_COMBINE
 
@@ -1476,7 +1473,9 @@ export async function mainLoop (hooks) {
     page = (await browser.pages())[0]
     hooks.pageGotten?.call(page)
     //set cookies
-    hooks.cookieWillSet?.call(bossCookies)
+    const bossCookies = readStorageFile('boss-cookies.json')
+    const bossLocalStorage = readStorageFile('boss-local-storage.json')
+    await hooks.cookieWillSet?.promise(bossCookies)
     for(let i = 0; i < bossCookies.length; i++){
       await page.setCookie(bossCookies[i]);
     }

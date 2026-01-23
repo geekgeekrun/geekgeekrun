@@ -6,7 +6,7 @@ import initIpc from './ipc'
 import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
 import { launchDaemon } from './launch-daemon'
-import { connectToDaemon, sendToDaemon } from './connect-to-daemon'
+import { connectToDaemon, sendToDaemon, closeDaemonClient } from './connect-to-daemon'
 import { sleep } from "@geekgeekrun/utils/sleep.mjs"
 
 export function openSettingWindow() {
@@ -91,4 +91,6 @@ export function openSettingWindow() {
       }
     )
   })
+  app.on('window-all-closed', closeDaemonClient)
+  app.on('before-quit', closeDaemonClient)
 }
