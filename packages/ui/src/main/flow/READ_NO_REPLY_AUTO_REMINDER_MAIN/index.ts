@@ -40,6 +40,11 @@ import { checkCookieListFormat } from '../../../common/utils/cookie'
 import { loginWithCookieAssistant } from '../../features/login-with-cookie-assistant'
 import initPublicIpc from '../../utils/initPublicIpc'
 
+process.on('SIGTERM', () => {
+  console.log('收到SIGTERM信号，正在退出')
+  process.exit(0)
+})
+
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
 const rechatLimitDay = readConfigFile('boss.json').autoReminder?.rechatLimitDay ?? 21
@@ -293,7 +298,29 @@ const mainLoop = async () => {
   // #region
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
     writeStorageFile('boss-cookies.json', [])
-    throw new Error('LOGIN_STATUS_INVALID')
+    try {
+      // popup login dialog, then update login status
+      await loginWithCookieAssistant()
+    } catch (err) {
+      await dialog.showMessageBox({
+        type: `error`,
+        message: `登录状态无效`,
+        detail: `请重新登录Boss直聘`
+      })
+      sendToDaemon({
+        type: 'worker-to-gui-message',
+        data: {
+          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          step: {
+            id: 'login-status-check',
+            status: 'rejected'
+          },
+          runRecordId
+        }
+      })
+      throw new Error('LOGIN_STATUS_INVALID')
+    }
+    throw new Error('THROW_FOR_RETRY')
   }
   if (
     currentPageUrl.startsWith('https://www.zhipin.com/web/common/403.html') ||
@@ -559,6 +586,9 @@ const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export async function runEntry() {
   app.dock?.hide()
   await app.whenReady()
+  app.on('window-all-closed', (e) => {
+    e.preventDefault()
+  })
   initPublicIpc()
   await connectToDaemon()
   await sendToDaemon({
@@ -622,29 +652,8 @@ export async function runEntry() {
       // handle error
       if (err instanceof Error) {
         if (err.message.includes('LOGIN_STATUS_INVALID')) {
-          try {
-            // popup login dialog, then update login status
-            await loginWithCookieAssistant()
-          } catch (err) {
-            await dialog.showMessageBox({
-              type: `error`,
-              message: `登录状态无效`,
-              detail: `请重新登录Boss直聘`
-            })
-            sendToDaemon({
-              type: 'worker-to-gui-message',
-              data: {
-                type: 'prerequisite-step-by-step-checkstep-by-step-check',
-                step: {
-                  id: 'login-status-check',
-                  status: 'rejected'
-                },
-                runRecordId
-              }
-            })
-            process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
-            break
-          }
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
+          break
         }
         if (err.message.includes('ERR_INTERNET_DISCONNECTED')) {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ERR_INTERNET_DISCONNECTED)
@@ -706,8 +715,3 @@ async function storeStorage(page) {
     writeStorageFile('boss-local-storage.json', localStorage)
   ])
 }
-
-process.on('SIGTERM', () => {
-  console.log('收到SIGTERM信号，正在退出')
-  process.exit(0)
-})
