@@ -119,7 +119,7 @@
 
 <script lang="ts" setup>
 import { PropType, ref } from 'vue'
-import cityGroupData from '../../../../../../common/constant/cityGroup.json'
+import cityGroupData from '@geekgeekrun/geek-auto-start-chat-with-boss/cityGroup.mjs'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
 const props = defineProps({
