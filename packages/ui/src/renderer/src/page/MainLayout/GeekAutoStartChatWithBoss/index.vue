@@ -314,7 +314,47 @@
                     width: '100%'
                   }"
                 >
-                  <city-chooser v-model="formContent.expectCityList" />
+                  <city-chooser v-model="formContent.expectCityList">
+                    <template #default="{ modelValue, showDialog, clearValue }">
+                      <div v-if="modelValue?.length">
+                        <div>当前已选择城市：</div>
+                        <div flex flex-wrap gap-10px>
+                          <el-tag v-for="it in modelValue" :key="it">
+                            {{ it }}
+                          </el-tag>
+                        </div>
+                      </div>
+                      <div v-else>
+                        <div>当前未选择任何期望城市，将不会按照城市进行筛选</div>
+                      </div>
+                      <div
+                        line-height-1
+                        :style="{
+                          marginTop: modelValue?.length ? '10px' : ''
+                        }"
+                      >
+                        <el-button
+                          size="small"
+                          type="primary"
+                          @click="
+                            () => {
+                              // isDialogVisible = true
+                              showDialog()
+                              gtagRenderer('choose_city_entry_button_clicked')
+                            }
+                          "
+                          >选择城市</el-button
+                        >
+                        <el-button
+                          v-if="modelValue?.length"
+                          size="small"
+                          type="danger"
+                          @click="clearValue"
+                          >清空已选择的所有城市</el-button
+                        >
+                      </div>
+                    </template>
+                  </city-chooser>
                 </div>
               </el-form-item>
               <div
