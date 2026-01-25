@@ -16,7 +16,7 @@
     >
       <el-tabs v-model="activeTabName">
         <el-tab-pane
-          :style="{ height: '300px', overflow: 'auto' }"
+          :style="{ height: '260px', overflow: 'auto' }"
           label="热门城市"
           name="热门城市"
         >
@@ -95,19 +95,45 @@
         <div
           :style="{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: multiple ? 'end' : 'center',
             justifyContent: 'space-between'
           }"
         >
-          <div>
-            <el-button
-              v-if="selectedCities?.length"
-              type="danger"
-              @click="handleClearSelectedCitiesInDialog"
-              >清空已选择的所有城市</el-button
-            >
+          <div flex flex-1 mr12px text-left flex-col>
+            <template v-if="selectedCities?.length">
+              <div
+                flex
+                flex-items-center
+                font-size-14px
+                flex-0
+                ws-nowrap
+                :class="{ mb10px: multiple }"
+              >
+                <el-button
+                  v-if="multiple && selectedCities?.length"
+                  type="danger"
+                  size="small"
+                  @click="handleClearSelectedCitiesInDialog"
+                  >清空已选择的所有城市</el-button
+                >
+                <span ml6px font-size-13px class="color-#999">已选择：</span>
+                <el-tag v-if="!multiple" closable @close="selectedCities = null">{{
+                  selectedCities
+                }}</el-tag>
+              </div>
+              <div v-if="multiple" flex flex-1 flex-wrap gap-6px of-auto max-h-160px>
+                <el-tag
+                  v-for="(city, index) in selectedCities"
+                  :key="city"
+                  closable
+                  @close="(selectedCities ?? []).splice(index, 1)"
+                >
+                  {{ city }}</el-tag
+                >
+              </div>
+            </template>
           </div>
-          <div>
+          <div flex-0 ws-nowrap>
             <el-button @click="handleCancelClicked">取消</el-button>
             <el-button type="primary" @click="handleConfirmClicked">确定</el-button>
           </div>
