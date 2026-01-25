@@ -513,6 +513,7 @@ async function setFilterCondition (selectedFilters) {
       if (!filterDropdownCssList.includes('is-select') && !currentFilterConditions.length) {
         continue
       } else {
+        await filterDropdownProxy.scrollIntoView()
         const filterDropdownElBBox = await filterDropdownProxy.boundingBox()
         await page.mouse.move(
           filterDropdownElBBox.x + filterDropdownElBBox.width / 2,
@@ -572,6 +573,13 @@ async function setFilterCondition (selectedFilters) {
             } else {
               optionValue = conditionToCheck[j]
             }
+            await sleepWithRandomDelay(500)
+            await filterDropdownProxy.scrollIntoView()
+            const filterDropdownElBBox = await filterDropdownProxy.boundingBox()
+            await page.mouse.move(
+              filterDropdownElBBox.x + filterDropdownElBBox.width / 2,
+              filterDropdownElBBox.y + filterDropdownElBBox.height / 2,
+            )
             await sleepWithRandomDelay(500)
             const optionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${optionValue}"]`)
             if (!optionElProxy) {
@@ -750,9 +758,12 @@ async function toRecommendPage (hooks) {
         ? formatStaticCombineFilters(staticCombineRecommendJobFilterConditions)
           : combineFiltersWithConstraintsGenerator(anyCombineRecommendJobFilter)
     let expectJobList
+    let filterConditionIndex = -1
     iterateFilterCondition: for (
       const filterCondition of filterConditions
     ) {
+      filterConditionIndex++
+      console.log(`current filter condition index to apply: ${filterConditionIndex}`, JSON.stringify(filterCondition))
       findInCurrentFilterCondition: while(true) {
         await sleepWithRandomDelay(2500)
 
