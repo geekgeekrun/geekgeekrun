@@ -149,17 +149,6 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -llR geekgeekrun-ui@${{ github.sha }}
 
-      - name: Create release for private
-        uses: ncipollo/release-action@v1
-        with:
-          repo: ggr
-          prerelease: true
-          allowUpdates: true
-          artifacts: geekgeekrun-ui@${{ github.sha }}/*
-          tag: ${{ github.ref }}
-          token: ${{ secrets.GGR_ACTION_SECRET }}
-          body: TODO New Release.
-
       - name: Create release for public
         uses: ncipollo/release-action@v1
         with:
@@ -168,5 +157,5 @@ jobs:
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
           tag: ${{ github.ref }}
-          token: ${{ secrets.GGR_ACTION_SECRET }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           body: TODO New Release.
