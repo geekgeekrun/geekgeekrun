@@ -371,7 +371,8 @@ export async function launchBossSite() {
   const { puppeteer } = await initPuppeteer()
   const browser = await puppeteer.launch({
     headless: false,
-    args: [`--load-extension=${editThisCookieExtensionPath}`]
+    pipe: true,
+    enableExtensions: [editThisCookieExtensionPath]
   })
   let [page] = await browser.pages()
   for (let i = 0; i < bossCookies.length; i++) {

@@ -11,6 +11,7 @@ export enum DOWNLOAD_ERROR_EXIT_CODE {
 
 export const checkAndDownloadDependenciesForInit = async () => {
   process.on('disconnect', () => app.exit())
+  process.on('uncaughtException', () => app.exit(DOWNLOAD_ERROR_EXIT_CODE.DOWNLOAD_ERROR))
   app.dock?.hide()
   let pipe: null | fs.WriteStream = null
   try {

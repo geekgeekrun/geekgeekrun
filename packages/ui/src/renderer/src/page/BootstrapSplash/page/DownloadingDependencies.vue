@@ -11,9 +11,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onUnmounted, PropType } from 'vue'
+import { ref, onUnmounted, PropType, h } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { gtagRenderer } from '@renderer/utils/gtag'
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import FailMessage from './FailMessage.vue'
 
 const props = defineProps({
   dependenciesStatus: {
@@ -36,12 +38,24 @@ const downloadProcessExitCode = ref(0)
 const processDownloadBrowser = async () => {
   downloadProcessExitCode.value = 0
   browserDownloadPercentage.value = 0
-  try {
-    await electron.ipcRenderer.invoke('setup-dependencies')
-    browserDownloadPercentage.value = 100
-  } catch (err) {
-    downloadProcessExitCode.value = 1
-    throw err
+  let restRetriedTime = 2
+  while (restRetriedTime > 0) {
+    try {
+      try {
+        await electron.ipcRenderer.invoke('setup-dependencies')
+        browserDownloadPercentage.value = 100
+      } catch (err) {
+        downloadProcessExitCode.value = 1
+        throw err
+      }
+      break
+    } catch (err) {
+      restRetriedTime--
+      if (restRetriedTime === 0) {
+        throw err
+      }
+      await sleep(5000)
+    }
   }
 }
 
@@ -68,12 +82,13 @@ const processTasks = async () => {
       await p
     } catch {
       gtagRenderer('encounter_error_when_download_deps')
-      await ElMessageBox.confirm('需要重试吗？', '核心组件下载失败', {
+      await ElMessageBox.confirm(h(FailMessage), {
         closeOnClickModal: false,
         closeOnPressEscape: false,
         showClose: false,
         type: 'error',
-        cancelButtonText: '退出程序'
+        cancelButtonText: '退出程序',
+        confirmButtonText: '重试'
       })
         .then(() => {
           gtagRenderer('start_retry_download_deps')

@@ -130,7 +130,7 @@ export async function findAndLocateUserInstalledChromiumExecutableSync(): Promis
   const findChrome: typeof import('find-chrome-bin').findChrome = (await import('find-chrome-bin'))
     .findChrome
   const targetBrowser = await findChrome({
-    min: exceptChromiumMainVersion
+    min: exceptChromiumMainVersion + 1
   })
   if (!targetBrowser?.executablePath) {
     throw new Error('NO_EXPECT_CHROMIUM_FOUND')

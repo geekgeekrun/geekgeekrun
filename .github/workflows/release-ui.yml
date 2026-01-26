@@ -149,9 +149,10 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -llR geekgeekrun-ui@${{ github.sha }}
 
-      - name: Create release
+      - name: Create release for public
         uses: ncipollo/release-action@v1
         with:
+          repo: geekgeekrun
           prerelease: true
           allowUpdates: true
           artifacts: geekgeekrun-ui@${{ github.sha }}/*
