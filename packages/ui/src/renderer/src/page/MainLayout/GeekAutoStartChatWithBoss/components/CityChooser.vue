@@ -118,7 +118,19 @@
                 >
                 <template v-if="!multiple">
                   <span ml6px font-size-13px class="color-#999">已选择：</span>
-                  <el-tag closable @close="selectedCities = null">{{ selectedCities }}</el-tag>
+                  <el-tag
+                    closable
+                    @close="
+                      () => {
+                        selectedCities = null
+                        gtagRenderer('remove_selected_cities_in_dialog_clicked', {
+                          gtShowScene: props.gtShowScene,
+                          multiple: Boolean(multiple)
+                        })
+                      }
+                    "
+                    >{{ selectedCities }}</el-tag
+                  >
                 </template>
               </div>
               <div v-if="multiple" flex flex-1 flex-wrap gap-6px of-auto max-h-160px>
@@ -127,7 +139,15 @@
                   v-for="(city, index) in selectedCities"
                   :key="city"
                   closable
-                  @close="(selectedCities ?? []).splice(index, 1)"
+                  @close="
+                    () => {
+                      ;(selectedCities ?? []).splice(index, 1)
+                      gtagRenderer('remove_selected_cities_in_dialog_clicked', {
+                        gtShowScene: props.gtShowScene,
+                        multiple: Boolean(multiple)
+                      })
+                    }
+                  "
                 >
                   {{ city }}</el-tag
                 >
@@ -158,6 +178,9 @@ const props = defineProps({
   multiple: {
     type: Boolean,
     default: true
+  },
+  gtShowScene: {
+    type: String
   }
 })
 const emits = defineEmits(['update:modelValue'])
@@ -185,15 +208,16 @@ for (const group of cityGroup) {
 function handleDialogOpen() {
   activeTabName.value = '热门城市'
   selectedCities.value = props.multiple ? [...(props.modelValue ?? [])] : props.modelValue
-  gtagRenderer('choose_city_dialog_open')
+  gtagRenderer('choose_city_dialog_open', { gtShowScene: props.gtShowScene })
 }
 
 function handleCancelClicked() {
-  gtagRenderer('choose_city_cancel_button_clicked')
+  gtagRenderer('choose_city_cancel_button_clicked', { gtShowScene: props.gtShowScene })
   isDialogVisible.value = false
 }
 function handleConfirmClicked() {
   gtagRenderer('choose_city_confirm_button_clicked', {
+    gtShowScene: props.gtShowScene,
     value: Array.isArray(selectedCities.value)
       ? selectedCities.value.join(',')
       : selectedCities.value
@@ -206,15 +230,15 @@ function handleConfirmClicked() {
 }
 function handleDialogClosed() {
   selectedCities.value = props.multiple ? [] : null
-  gtagRenderer('choose_city_dialog_closed')
+  gtagRenderer('choose_city_dialog_closed', { gtShowScene: props.gtShowScene })
 }
 
 function handleClearSelectedCitiesInModelValue() {
   emits('update:modelValue', (selectedCities.value = props.multiple ? [] : null))
-  gtagRenderer('clear_selected_cities_in_mv_clicked')
+  gtagRenderer('clear_selected_cities_in_mv_clicked', { gtShowScene: props.gtShowScene })
 }
 function handleClearSelectedCitiesInDialog() {
   selectedCities.value = props.multiple ? [] : null
-  gtagRenderer('clear_selected_cities_in_dialog_clicked')
+  gtagRenderer('clear_selected_cities_in_dialog_clicked', { gtShowScene: props.gtShowScene })
 }
 </script>
