@@ -116,12 +116,13 @@
                   @click="handleClearSelectedCitiesInDialog"
                   >清空已选择的所有城市</el-button
                 >
-                <span ml6px font-size-13px class="color-#999">已选择：</span>
-                <el-tag v-if="!multiple" closable @close="selectedCities = null">{{
-                  selectedCities
-                }}</el-tag>
+                <template v-if="!multiple">
+                  <span ml6px font-size-13px class="color-#999">已选择：</span>
+                  <el-tag closable @close="selectedCities = null">{{ selectedCities }}</el-tag>
+                </template>
               </div>
               <div v-if="multiple" flex flex-1 flex-wrap gap-6px of-auto max-h-160px>
+                <span font-size-13px class="color-#999" flex items-center>已选择：</span>
                 <el-tag
                   v-for="(city, index) in selectedCities"
                   :key="city"
