@@ -16,7 +16,10 @@
         justify-between
         items-center
       >
-        <city-chooser v-model="modelValue.cityList">
+        <city-chooser
+          v-model="modelValue.cityList"
+          gt-show-scene="any-combine-boss-recommend-filter"
+        >
           <template #default="{ showDialog }">
             <div flex justify-between items-center>
               <div font-size-12px>

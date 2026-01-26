@@ -73,14 +73,18 @@
         </el-table-column>
         <el-table-column :resizable="false" label="城市" prop="city">
           <template #default="{ row }">
-            <city-chooser v-model="row.city" :multiple="false">
+            <city-chooser
+              v-model="row.city"
+              :multiple="false"
+              gt-show-scene="static-combine-boss-recommend-filter"
+            >
               <template #default="{ showDialog }">
                 <div flex justify-between items-center>
                   <div font-size-12px lh-1.2em>
                     <template v-if="row.city">{{ row.city }}</template>
                     <template v-else><i color-gray>未选择城市</i></template>
                   </div>
-                  <el-button size="small" @click="showDialog" pl4px pr4px>选择</el-button>
+                  <el-button size="small" pl4px pr4px @click="showDialog">选择</el-button>
                 </div>
               </template>
             </city-chooser>
