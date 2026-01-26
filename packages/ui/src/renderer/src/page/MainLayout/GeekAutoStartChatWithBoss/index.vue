@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="geek-auto-start-run-with-boss__wrap"
-  >
+  <div class="geek-auto-start-run-with-boss__wrap">
     <div
       class="main__wrap"
       :style="{
@@ -242,11 +240,11 @@
             </el-form-item>
           </el-card>
           <!-- <el-form-item
-            label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
-            prop="dingtalkRobotAccessToken"
-          >
-            <el-input v-model="formContent.dingtalkRobotAccessToken" />
-          </el-form-item> -->
+          label="钉钉机器人 AccessToken（用于记录开聊，请勿使用公司内部群）"
+          prop="dingtalkRobotAccessToken"
+        >
+          <el-input v-model="formContent.dingtalkRobotAccessToken" />
+        </el-form-item> -->
           <el-card class="config-section">
             <el-form-item mb0>
               <div font-size-16px>职位列表筛选条件</div>
@@ -271,7 +269,8 @@
                       <img block h-270px src="../resources/intro-of-job-entry.png" />
                     </template>
                     <el-button type="text" font-size-12px
-                      ><span><QuestionFilled w-1em h-1em mr2px /></span>公司信息UI位置图示</el-button
+                      ><span><QuestionFilled w-1em h-1em mr2px /></span
+                      >公司信息UI位置图示</el-button
                     >
                   </el-tooltip>
                 </div>
@@ -318,7 +317,47 @@
                       width: '100%'
                     }"
                   >
-                    <city-chooser v-model="formContent.expectCityList" />
+                    <city-chooser v-model="formContent.expectCityList">
+                      <template #default="{ modelValue, showDialog, clearValue }">
+                        <div v-if="modelValue?.length">
+                          <div>当前已选择城市：</div>
+                          <div flex flex-wrap gap-10px>
+                            <el-tag v-for="it in modelValue" :key="it">
+                              {{ it }}
+                            </el-tag>
+                          </div>
+                        </div>
+                        <div v-else>
+                          <div>当前未选择任何期望城市，将不会按照城市进行筛选</div>
+                        </div>
+                        <div
+                          line-height-1
+                          :style="{
+                            marginTop: modelValue?.length ? '10px' : ''
+                          }"
+                        >
+                          <el-button
+                            size="small"
+                            type="primary"
+                            @click="
+                              () => {
+                                // isDialogVisible = true
+                                showDialog()
+                                gtagRenderer('choose_city_entry_button_clicked')
+                              }
+                            "
+                            >选择城市</el-button
+                          >
+                          <el-button
+                            v-if="modelValue?.length"
+                            size="small"
+                            type="danger"
+                            @click="clearValue"
+                            >清空已选择的所有城市</el-button
+                          >
+                        </div>
+                      </template>
+                    </city-chooser>
                   </div>
                 </el-form-item>
                 <div
@@ -547,7 +586,10 @@
                                 <td>{{ m }}薪</td>
                               </tr>
                             </table>
-                            <div v-if="index !== 1" class="bg-#f0f0f0 w-2px flex-self-stretch"></div>
+                            <div
+                              v-if="index !== 1"
+                              class="bg-#f0f0f0 w-2px flex-self-stretch"
+                            ></div>
                           </template>
                         </div>
                       </div>
@@ -573,7 +615,8 @@
                     <el-select
                       v-model="formContent.expectSalaryNotMatchStrategy"
                       @change="
-                        (value) => gtagRenderer('expect_salary_not_match_strategy_changed', { value })
+                        (value) =>
+                          gtagRenderer('expect_salary_not_match_strategy_changed', { value })
                       "
                     >
                       <el-option
@@ -739,7 +782,8 @@
                       <img block h-270px src="../resources/intro-of-job-info.png" />
                     </template>
                     <el-button type="text" font-size-12px
-                      ><span><QuestionFilled w-1em h-1em mr2px /></span>如下各信息位置图示</el-button
+                      ><span><QuestionFilled w-1em h-1em mr2px /></span
+                      >如下各信息位置图示</el-button
                     >
                   </el-tooltip>
                 </div>
@@ -1001,7 +1045,6 @@
                   pr50px
                   pb30px
                   class="no-active-definition-text-slider"
-
                   :format-tooltip="
                     (v) =>
                       typeof noActiveDefinitionMarks[v] === 'string'
@@ -1062,9 +1105,19 @@
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay worker-id="geekAutoStartWithBossMain" :run-record-id="runRecordId" ref="runningOverlayRef">
+      <RuningOverlay
+        ref="runningOverlayRef"
+        worker-id="geekAutoStartWithBossMain"
+        :run-record-id="runRecordId"
+      >
         <template #op-buttons>
-          <el-button type="danger" plain @click="handleStopButtonClick" :loading="isStopButtonLoading">结束任务</el-button>
+          <el-button
+            type="danger"
+            plain
+            :loading="isStopButtonLoading"
+            @click="handleStopButtonClick"
+            >结束任务</el-button
+          >
         </template>
       </RuningOverlay>
     </div>
@@ -1472,7 +1525,9 @@ const handleSubmit = async () => {
 
   try {
     runningOverlayRef.value?.show()
-    const { runRecordId: rrId } = await electron.ipcRenderer.invoke('run-geek-auto-start-chat-with-boss')
+    const { runRecordId: rrId } = await electron.ipcRenderer.invoke(
+      'run-geek-auto-start-chat-with-boss'
+    )
     runRecordId.value = rrId
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
@@ -1868,8 +1923,7 @@ const handleStopButtonClick = async () => {
   try {
     await electron.ipcRenderer.invoke('stop-geek-auto-start-chat-with-boss')
     runningOverlayRef.value?.hide()
-  }
-  finally {
+  } finally {
     isStopButtonLoading.value = false
   }
 }

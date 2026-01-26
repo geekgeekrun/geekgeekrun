@@ -1,6 +1,7 @@
 {
   "combineRecommendJobFilterType": 1,
   "anyCombineRecommendJobFilter": {
+    "cityList": [],
     "salaryList": [],
     "experienceList": [],
     "degreeList": [],
