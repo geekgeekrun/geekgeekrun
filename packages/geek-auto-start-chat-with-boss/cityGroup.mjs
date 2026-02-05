@@ -1,4 +1,4 @@
-{
+export default {
   "code": 0,
   "message": "Success",
   "zpData": {

@@ -56,10 +56,11 @@ function combineWithZero(arr, min, max) {
 }
 
 export function* combineFiltersWithConstraintsGenerator(selectedFilters) {
-  const { salaryList, experienceList, degreeList, scaleList, industryList } =
+  const { cityList, salaryList, experienceList, degreeList, scaleList, industryList } =
     selectedFilters;
 
   // 生成符合限制条件的组合
+  const cityComb = combineWithZero(cityList, 0, 1) // Salary: 0-1 个
   const salaryComb = combineWithZero(salaryList, 0, 1) // Salary: 0-1 个
   const experienceComb = combineWithZero(experienceList, 0, experienceList.length) // Experience: 0 个或更多
   const degreeComb = combineWithZero(degreeList, 0, degreeList.length) // Degree: 0 个或更多
@@ -67,17 +68,20 @@ export function* combineFiltersWithConstraintsGenerator(selectedFilters) {
   const industryComb = combineWithZero(industryList, 0, 3) // Industry: 0-3 个
 
   // 通过迭代生成所有组合
-  for (const salary of salaryComb) {
-    for (const experience of experienceComb) {
-      for (const degree of degreeComb) {
-        for (const scale of scaleComb) {
-          for (const industry of industryComb) {
-            yield {
-              salaryList: salary,
-              experienceList: experience,
-              degreeList: degree,
-              scaleList: scale,
-              industryList: industry
+  for (const city of cityComb) {
+    for (const salary of salaryComb) {
+      for (const experience of experienceComb) {
+        for (const degree of degreeComb) {
+          for (const scale of scaleComb) {
+            for (const industry of industryComb) {
+              yield {
+                cityList: city,
+                salaryList: salary,
+                experienceList: experience,
+                degreeList: degree,
+                scaleList: scale,
+                industryList: industry
+              }
             }
           }
         }
@@ -92,6 +96,7 @@ export function* combineFiltersWithConstraintsGenerator(selectedFilters) {
 // 计算符合限制条件的组合数量
 export function calculateTotalCombinations(selectedFilters, includeEmptyCondition) {
   const {
+    cityList = [],
     salaryList = [],
     experienceList = [],
     degreeList = [],
@@ -100,13 +105,14 @@ export function calculateTotalCombinations(selectedFilters, includeEmptyConditio
   } = selectedFilters
 
   // 生成符合限制条件的组合
+  const cityComb = combineWithZero(cityList, 0, 1) // City: 0-1 个
   const salaryComb = combineWithZero(salaryList, 0, 1) // Salary: 0-1 个
   const experienceComb = combineWithZero(experienceList, 0, experienceList.length) // Experience: 0 个或更多
   const degreeComb = combineWithZero(degreeList, 0, degreeList.length) // Degree: 0 个或更多
   const scaleComb = combineWithZero(scaleList, 0, scaleList.length) // Scale: 0 个或更多
   const industryComb = combineWithZero(industryList, 0, 3) // Industry: 0-3 个
 
-  let result = [salaryComb, experienceComb, degreeComb, scaleComb, industryComb].reduce((accu, cur) => {
+  let result = [cityComb, salaryComb, experienceComb, degreeComb, scaleComb, industryComb].reduce((accu, cur) => {
     return accu * cur.length
   }, 1)
   if (!includeEmptyCondition) {
@@ -146,6 +152,7 @@ export function formatStaticCombineFilters(rawStaticCombineRecommendJobFilterCon
   const conditions = Array.from(map.values())
   const result = conditions.map((condition) => {
     return {
+      cityList: condition.city ? [condition.city] : [],
       salaryList: condition.salary ? [condition.salary] : [],
       experienceList: condition.experience ? [condition.experience] : [],
       degreeList: condition.degree ? [condition.degree] : [],
@@ -155,6 +162,7 @@ export function formatStaticCombineFilters(rawStaticCombineRecommendJobFilterCon
   })
   if (!result.length) {
     result.push({
+      cityList: [],
       salaryList: [],
       experienceList: [],
       degreeList: [],

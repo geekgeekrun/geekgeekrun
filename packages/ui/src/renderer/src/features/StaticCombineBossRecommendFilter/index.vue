@@ -71,6 +71,25 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column :resizable="false" label="城市" prop="city">
+          <template #default="{ row }">
+            <city-chooser
+              v-model="row.city"
+              :multiple="false"
+              gt-show-scene="static-combine-boss-recommend-filter"
+            >
+              <template #default="{ showDialog }">
+                <div flex justify-between items-center>
+                  <div font-size-12px lh-1.2em>
+                    <template v-if="row.city">{{ row.city }}</template>
+                    <template v-else><i color-gray>未选择城市</i></template>
+                  </div>
+                  <el-button size="small" pl4px pr4px @click="showDialog">选择</el-button>
+                </div>
+              </template>
+            </city-chooser>
+          </template>
+        </el-table-column>
         <el-table-column :resizable="false" label="薪资待遇" prop="salary">
           <template #default="{ row }">
             <el-select
@@ -183,6 +202,7 @@ import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-con
 import industryFilterExemption from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-industry-filter-exemption-20241002.json'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, PropType } from 'vue'
+import CityChooser from '@renderer/page/MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'
 
 import { getStaticCombineFilterKey } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 
