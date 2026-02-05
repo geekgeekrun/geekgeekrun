@@ -612,7 +612,7 @@ async function toRecommendPage (hooks) {
         return true
       }
       return false
-    }).then((res) => {
+    }, { timeout: 120 * 1000 }).then((res) => {
       return res.json()
     })
   page.goto(recommendJobPageUrl, { timeout: 1 * 1000 }).catch(e => { void e })
@@ -635,7 +635,7 @@ async function toRecommendPage (hooks) {
 
   let userInfoResponse = await userInfoPromise
   await hooks.userInfoResponse?.promise(userInfoResponse)
-  if (userInfoResponse.code !== 0) {
+  if (userInfoResponse?.code !== 0) {
     autoStartChatEventBus.emit('LOGIN_STATUS_INVALID', {
       userInfoResponse
     })

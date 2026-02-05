@@ -39,6 +39,9 @@ function combine(arr, min, max) {
 // 生成符合"0"限制的组合
 function combineWithZero(arr, min, max) {
   let combineResult;
+  if (!Array.isArray(arr)) {
+    arr = []
+  }
   if (arr.includes(0)) {
     // 如果包含 0，0不参与组合
     combineResult = [].concat(

@@ -117,7 +117,7 @@ export default class SqlitePlugin {
     hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
       async (userInfoResponse) => {
-        if (userInfoResponse.code !== 0) {
+        if (!userInfoResponse || userInfoResponse.code !== 0) {
           return;
         }
         const { zpData: userInfo } = userInfoResponse;
