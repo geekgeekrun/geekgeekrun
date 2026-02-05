@@ -24,7 +24,7 @@ import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import { RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
 import gtag from '../../utils/gtag'
-import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums';
+import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
 
@@ -136,16 +136,24 @@ async function checkJobIsClosed() {
     }
     positionNameElHandle.click()
     try {
-      const targetPage = await waitForPage(pageMapByName.boss!.browser(), async (page) => {
-        const url = page.url()
-        if (
-          url.startsWith(`https://www.zhipin.com/job_detail/${encryptJobId}`) &&
-          (await page.evaluate(() => document.readyState === 'complete'))
-        ) {
-          return true
-        }
-        return false
-      })
+      const targetPage = await waitForPage(
+        pageMapByName.boss!.browser(),
+        async (page) => {
+          const url = page.url()
+          if (
+            url.startsWith(`https://www.zhipin.com/job_detail/${encryptJobId}`) &&
+            (await page.evaluate(
+              () =>
+                !!document.querySelector('#main .job-banner') ||
+                !!document.documentElement.innerText?.includes(`您访问的页面不存在`)
+            ))
+          ) {
+            return true
+          }
+          return false
+        },
+        { timeout: 15 * 1000 }
+      )
       const htmlContent = await targetPage.content()
       if (htmlContent) {
         const $ = cheerio.load(htmlContent)
