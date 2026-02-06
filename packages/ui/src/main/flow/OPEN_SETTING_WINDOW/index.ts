@@ -71,9 +71,6 @@ export function openSettingWindow() {
   })
 
   whenReadyPromise.then(async () => {
-    await launchDaemon()
-    await sleep(2000)
-    await connectToDaemon()
     await sendToDaemon(
       {
         type: 'ping'

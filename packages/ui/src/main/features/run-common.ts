@@ -1,8 +1,10 @@
-import { AUTO_CHAT_ERROR_EXIT_CODE } from "../../common/enums/auto-start-chat"
-import { sendToDaemon } from "../flow/OPEN_SETTING_WINDOW/connect-to-daemon"
-import { saveAndGetCurrentRunRecord } from "../flow/OPEN_SETTING_WINDOW/utils/db"
+import { app } from 'electron'
+import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../common/enums/auto-start-chat'
+import { sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+import { saveAndGetCurrentRunRecord } from '../flow/OPEN_SETTING_WINDOW/utils/db'
 
-export async function runCommon ({ mode }) {
+export async function runCommon({ mode }) {
+  app.dock?.hide()
   const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
   const subProcessEnv = {
     ...process.env,
@@ -12,14 +14,10 @@ export async function runCommon ({ mode }) {
       AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE
     ].join(',')
   }
-  const args = process.env.NODE_ENV === 'development' ? [
-    process.argv[1],
-    `--mode=${mode}`,
-    `--run-record-id=${currentRunRecord?.id || 0}`
-  ] : [
-    `--mode=${mode}`,
-    `--run-record-id=${currentRunRecord?.id || 0}`
-  ]
+  const args =
+    process.env.NODE_ENV === 'development'
+      ? [process.argv[1], `--mode=${mode}`, `--run-record-id=${currentRunRecord?.id || 0}`]
+      : [`--mode=${mode}`, `--run-record-id=${currentRunRecord?.id || 0}`]
   await sendToDaemon(
     {
       type: 'start-worker',
@@ -32,7 +30,14 @@ export async function runCommon ({ mode }) {
       needCallback: true
     }
   )
-
+  ;['SIGINT', 'SIGTERM'].forEach((evName) => {
+    process.on(evName, () => {
+      sendToDaemon({
+        type: 'stop-worker',
+        workerId: mode
+      })
+    })
+  })
   return {
     runRecordId: currentRunRecord?.id
   }

@@ -1,8 +1,6 @@
 import minimist from 'minimist'
 import { runCommon } from './features/run-common';
-import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon';
-import { connectToDaemon } from './flow/OPEN_SETTING_WINDOW/connect-to-daemon';
-import { randomUUID } from 'crypto';
+import { ensureIpcPipeName, launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon';
 
 // 捕获未处理的 EPIPE 错误
 process.on('uncaughtException', (err) => {
@@ -60,21 +58,20 @@ const runMode = commandlineArgs['mode'];
 
     // #region user entry
     case 'geekAutoStartWithBoss': {
-      process.env.GEEKGEEKRUND_PIPE_NAME = `geekgeekrun-d_${randomUUID()}`
+      await ensureIpcPipeName()
       await launchDaemon()
-      await connectToDaemon()
       await runCommon({ mode: 'geekAutoStartWithBossMain' })
       break
     }
     case 'readNoReplyAutoReminder': {
-      process.env.GEEKGEEKRUND_PIPE_NAME = `geekgeekrun-d_${randomUUID()}`
+      await ensureIpcPipeName()
       await launchDaemon()
-      await connectToDaemon()
       await runCommon({ mode: 'readNoReplyAutoReminderMain' })
       break
     }
     default: {
-      process.env.GEEKGEEKRUND_PIPE_NAME = `geekgeekrun-d_${randomUUID()}`
+      await ensureIpcPipeName()
+      await launchDaemon()
       const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
       openSettingWindow()
       break

@@ -64,5 +64,8 @@ export function createMainWindow(): BrowserWindow {
       mainWindow?.webContents?.send('worker-to-gui-message', message)
     }
   })
+  daemonEE.on('error', (err) => {
+    console.log(err)
+  })
   return mainWindow!
 }

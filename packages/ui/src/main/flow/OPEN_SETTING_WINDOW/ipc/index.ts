@@ -306,7 +306,7 @@ export default function initIpc() {
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
-    const p = new Promise(resolve => {
+    const p = new Promise((resolve) => {
       daemonEE.on('message', function handler (message) {
         if (message.workerId !== 'geekAutoStartWithBossMain') {
           return
