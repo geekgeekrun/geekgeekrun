@@ -8,7 +8,10 @@ import { randomUUID } from 'node:crypto'
 import { connectToDaemon } from './connect-to-daemon'
 
 const isUiDev = process.env.NODE_ENV === 'development'
-export async function ensureIpcPipeName() {
+export async function ensureIpcPipeName({ isReset } = {}) {
+  if (isReset) {
+    await writeStorageFile('ipc-pipe-name', '', { isJson: false })
+  }
   let ipcPipeName = readStorageFile('ipc-pipe-name', { isJson: false })
   if (!ipcPipeName) {
     ipcPipeName = `geekgeekrun-d_${randomUUID()}`
@@ -20,10 +23,11 @@ export async function ensureIpcPipeName() {
 }
 
 export async function launchDaemon() {
+  let daemonProcess
   async function startDaemon() {
     console.log('启动守护进程...')
     // 添加参数使守护进程在后台运行，不显示 UI
-    const daemonProcess = spawn(
+    daemonProcess = spawn(
       process.argv[0],
       isUiDev ? [process.argv[1], `--mode=launchDaemon`] : [`--mode=launchDaemon`],
       {
@@ -59,11 +63,29 @@ export async function launchDaemon() {
       })
     })
   }
+  await ensureIpcPipeName()
   try {
     await connectToDaemon()
   } catch (err) {
+    let isDaemonLaunched = false
+    console.log('cannot connect to daemon, try to launch it', err)
     // 启动守护进程
-    await startDaemon()
-    await connectToDaemon()
+    try {
+      await startDaemon()
+      isDaemonLaunched = true
+    } catch (err) {
+      console.log('cannot launch to daemon, try to change port', err)
+      daemonProcess?.kill('SIGKILL')
+      await ensureIpcPipeName({ isReset: true })
+      try {
+        await startDaemon()
+        isDaemonLaunched = true
+      } catch (err) {
+        console.log('cannot launch to daemon, try to change port failed', err)
+      }
+    }
+    if (isDaemonLaunched) {
+      await connectToDaemon()
+    }
   }
 }

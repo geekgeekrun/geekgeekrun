@@ -1,6 +1,7 @@
 import minimist from 'minimist'
 import { runCommon } from './features/run-common';
-import { ensureIpcPipeName, launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon';
+import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon';
+import { app } from 'electron';
 
 // 捕获未处理的 EPIPE 错误
 process.on('uncaughtException', (err) => {
@@ -58,19 +59,25 @@ const runMode = commandlineArgs['mode'];
 
     // #region user entry
     case 'geekAutoStartWithBoss': {
-      await ensureIpcPipeName()
+      app.dock?.hide()
       await launchDaemon()
-      await runCommon({ mode: 'geekAutoStartWithBossMain' })
+      const { isAlreadyRunning } = await runCommon({ mode: 'geekAutoStartWithBossMain' })
+      if (isAlreadyRunning) {
+        process.exit(0)
+      }
       break
     }
     case 'readNoReplyAutoReminder': {
-      await ensureIpcPipeName()
+      app.dock?.hide()
       await launchDaemon()
-      await runCommon({ mode: 'readNoReplyAutoReminderMain' })
+      const { isAlreadyRunning } = await runCommon({ mode: 'readNoReplyAutoReminderMain' })
+      if (isAlreadyRunning) {
+        process.exit(0)
+      }
       break
     }
     default: {
-      await ensureIpcPipeName()
+      globalThis.GEEKGEEKRUN_PROCESS_ROLE = 'ui'
       await launchDaemon()
       const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
       openSettingWindow()

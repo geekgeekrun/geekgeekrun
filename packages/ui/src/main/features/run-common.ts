@@ -1,10 +1,37 @@
-import { app } from 'electron'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../common/enums/auto-start-chat'
-import { sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
 import { saveAndGetCurrentRunRecord } from '../flow/OPEN_SETTING_WINDOW/utils/db'
+import minimist from 'minimist'
 
 export async function runCommon({ mode }) {
-  app.dock?.hide()
+  await sendToDaemon(
+    {
+      type: 'user-process-register'
+    },
+    {
+      needCallback: true
+    }
+  )
+  const taskList = (
+    await sendToDaemon(
+      {
+        type: 'get-status'
+      },
+      {
+        needCallback: true
+      }
+    )
+  )?.workers
+  const runningTask = taskList?.find((it) => it.workerId === mode)
+  if (runningTask) {
+    const commandlineArgs = minimist(runningTask.args ?? [])
+    const runRecordId = Number(commandlineArgs['run-record-id'])
+    console.log('任务已在运行中')
+    return {
+      runRecordId,
+      isAlreadyRunning: true
+    }
+  }
   const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
   const subProcessEnv = {
     ...process.env,
@@ -30,13 +57,16 @@ export async function runCommon({ mode }) {
       needCallback: true
     }
   )
-  ;['SIGINT', 'SIGTERM'].forEach((evName) => {
-    process.on(evName, () => {
-      sendToDaemon({
-        type: 'stop-worker',
-        workerId: mode
-      })
-    })
+  daemonEE.on('message', (message) => {
+    if (message.type === 'worker-exited') {
+      if (
+        message.workerId === mode &&
+        !message.restarting &&
+        globalThis.GEEKGEEKRUN_PROCESS_ROLE !== 'ui'
+      ) {
+        process.exit(0)
+      }
+    }
   })
   return {
     runRecordId: currentRunRecord?.id

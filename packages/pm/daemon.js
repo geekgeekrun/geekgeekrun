@@ -43,9 +43,10 @@ const ipcSocketPath = process.platform === 'win32'
     : path.join(tmpdir(), `${ipcSocketName}.sock`)
 
 const workers = new Map(); // workerId -> { process, status, restartCount, socket, latestScreenshot, latestScreenshotAt }
-const guiClients = new Set(); // GUI客户端连接集合
+const userProcessClients = new Set(); // GUI客户端连接集合
 const stoppedWorkers = new Set(); // 被用户主动停止的workerId集合，用于防止竞态条件
 const pidToProcessInfoMap = new Map()
+const socketToWorkerIdSetMap = new WeakMap()
 
 // 创建TCP服务器
 const server = net.createServer((socket) => {
@@ -85,7 +86,7 @@ const server = net.createServer((socket) => {
   socket.on('close', () => {
     console.log('客户端已断开连接');
     // 清理GUI客户端连接
-    guiClients.delete(socket);
+    userProcessClients.delete(socket);
     // 清理工具进程连接
     for (const [workerId, workerInfo] of workers.entries()) {
       if (workerInfo.socket === socket) {
@@ -93,6 +94,10 @@ const server = net.createServer((socket) => {
         workerInfo.socket = null;
       }
     }
+    const workerIdSet = socketToWorkerIdSetMap.get(socket) || new Set()
+    ;[...workerIdSet].forEach(workerId => {
+      stopWorker(workerId);
+    })
   });
 });
 
@@ -107,11 +112,11 @@ function handleMessage(socket, message) {
     });
     return
   }
-  if (message.type === 'gui-register') {
+  if (message.type === 'user-process-register') {
     // GUI客户端的控制消息
     // 标记为GUI客户端
-    if (!guiClients.has(socket)) {
-      guiClients.add(socket);
+    if (!userProcessClients.has(socket)) {
+      userProcessClients.add(socket);
     }
     sendResponse(socket, _callbackUuid, {
       success: true, 
@@ -183,6 +188,17 @@ function handleMessage(socket, message) {
         message: `工具进程 ${message.workerId} 已启动`,
         workerId: message.workerId 
       });
+      let socketToWorkerIdSet = socketToWorkerIdSetMap.get(socket)
+      if (
+        !(socketToWorkerIdSet instanceof Set)
+      ) {
+        socketToWorkerIdSet = new Set()
+        socketToWorkerIdSetMap.set(
+          socket,
+          socketToWorkerIdSet
+        )
+      }
+      socketToWorkerIdSet.add(workerId)
       return
     }
 
@@ -398,13 +414,13 @@ function broadcastStatus() {
 
 // 广播消息给所有GUI客户端
 function broadcastToGUI(message) {
-  guiClients.forEach(socket => {
+  userProcessClients.forEach(socket => {
     if (!socket.destroyed) {
       try {
         sendResponse(socket, null, message);
       } catch (e) {
         console.error('广播消息失败:', e);
-        guiClients.delete(socket);
+        userProcessClients.delete(socket);
       }
     }
   });
