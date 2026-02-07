@@ -124,15 +124,19 @@ const formData = ref({
 
 const rules = {
   browserPath: {
-    validator: (_, value, callback) => {
+    validator: async (_, value, callback) => {
       if (!value?.trim()) {
         callback(new Error('请输入浏览器可执行文件路径'))
+        return
       }
-      // TODO: 检查文件是否存在
-      else {
+      const err = await ipcRenderer.invoke('check-executable-file', value)
+      if (err) {
+        callback(err?.message ?? '文件无效 - 未知原因')
+      } else {
         callback()
       }
-    }
+    },
+    trigger: 'blur'
   }
 }
 
