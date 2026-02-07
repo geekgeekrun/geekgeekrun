@@ -6,11 +6,13 @@ export async function loginWithCookieAssistant({ windowOption } = {}) {
     createCookieAssistantWindow({ ...windowOption })
 
     let processDone = false
-    ipcMain.once('cookie-saved', function handler() {
+    function handler() {
       processDone = true
       cookieAssistantWindow.close()
-    })
+    }
+    ipcMain.once('cookie-saved', handler)
     cookieAssistantWindow.once('closed', () => {
+      ipcMain.off('cookie-saved', handler)
       if (processDone) {
         resolve(true)
       } else {

@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import gtag from './gtag'
 import buildInfo from '../../common/build-info.json'
 import os from 'node:os'
@@ -70,5 +70,19 @@ export default function initPublicIpc() {
   ipcMain.handle('write-storage-file', async (ev, payload) => {
     ensureStorageFileExist()
     return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
+  })
+  ipcMain.handle('get-os-platform', () => {
+    return os.platform()
+  })
+  ipcMain.handle('choose-file', (ev, { fileChooserConfig }) => {
+    if (!fileChooserConfig) {
+      fileChooserConfig = {}
+    }
+    const win = BrowserWindow.fromWebContents(ev.sender)
+    if (!win) {
+      return dialog.showOpenDialog(fileChooserConfig)
+    } else {
+      return dialog.showOpenDialog(win, fileChooserConfig)
+    }
   })
 }

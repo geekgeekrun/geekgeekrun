@@ -7,11 +7,19 @@
         :model="formContent.autoReminder"
         label-position="top"
       >
-        <el-form-item label="BOSS直聘 Cookie">
-          <el-button size="small" type="primary" @click="handleClickLaunchLogin"
-            >编辑Cookie</el-button
-          >
-        </el-form-item>
+        <div flex>
+          <el-form-item label="BOSS直聘 Cookie">
+            <el-button size="small" type="primary" @click="handleClickLaunchLogin"
+              >编辑Cookie</el-button
+            >
+          </el-form-item>
+          <div w1px class="bg-#dee1e8" ml16px mr16px />
+          <el-form-item label="浏览器">
+            <el-button size="small" type="primary" @click="handleClickBrowserSetting"
+              >编辑浏览器设置</el-button
+            >
+          </el-form-item>
+        </div>
         <el-form-item>
           <div>
             <el-checkbox v-if="!expectJobTypeRegExpStr?.trim()" :model-value="false" disabled>
@@ -533,6 +541,18 @@ const handleClickLaunchLogin = async () => {
     ElMessage({
       type: 'success',
       message: 'Cookie 保存成功'
+    })
+  } catch {
+    //
+  }
+}
+const handleClickBrowserSetting = async () => {
+  gtagRenderer('browser_setting_clicked')
+  try {
+    await electron.ipcRenderer.invoke('config-with-browser-assistant')
+    ElMessage({
+      type: 'success',
+      message: '浏览器设置保存成功'
     })
   } catch {
     //

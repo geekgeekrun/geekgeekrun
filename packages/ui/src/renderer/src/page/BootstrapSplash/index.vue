@@ -27,25 +27,7 @@ const router = useRouter()
 
 onMounted(async () => {
   gtagRenderer('bootstrap_mounted')
-  // checkDependenciesResult.value = await electron.ipcRenderer.invoke('check-dependencies')
-  // downloadProcessWaitee.value = Promise.withResolvers()
-
-  // if (Object.values(checkDependenciesResult.value).includes(false)) {
-  //   gtagRenderer('dependencies_need_download')
-  //   router.replace('/downloadingDependencies')
-  // } else {
-  //   downloadProcessWaitee.value!.resolve()
-  // }
-
-  // downloadProcessWaitee.value!.promise.then(async () => {
-  //   const isCookieFileValid = await electron.ipcRenderer.invoke('check-boss-zhipin-cookie-file')
-  //   if (!isCookieFileValid) {
-  //     gtagRenderer('found_cookie_invalid_when_bootstrap')
-  //     router.replace('/cookieAssistant')
-  //   } else {
   await sleep(2000)
   router.replace('/main-layout')
-  //   }
-  // })
 })
 </script>

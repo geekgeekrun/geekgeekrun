@@ -9,6 +9,7 @@ import {
   removeLastUsedAndAvailableBrowserPath
 } from '../browser-history'
 import gtag from '../../../../utils/gtag'
+import { EXPECT_CHROMIUM_BUILD_ID } from '../../../../../common/constant'
 
 const getPuppeteerManagerModule = async () => {
   const puppeteerManager = await import('@puppeteer/browsers')
@@ -16,7 +17,6 @@ const getPuppeteerManagerModule = async () => {
   return puppeteerManager
 }
 
-const EXPECT_CHROMIUM_BUILD_ID = '139.0.7258.154'
 const cacheDir = path.join(os.homedir(), '.geekgeekrun', 'cache')
 
 const getExpectCachedPuppeteerExecutable = async (): Promise<BrowserInfo> => {
@@ -97,29 +97,36 @@ export const checkAndDownloadPuppeteerExecutable = async (
   return installedBrowser
 }
 
-export const getAnyAvailablePuppeteerExecutable = async (): Promise<BrowserInfo | null> => {
-  const lastUsedOne = await getLastUsedAndAvailableBrowser()
-  if (lastUsedOne) {
-    return lastUsedOne
+export const getAnyAvailablePuppeteerExecutable = async ({
+  ignoreCached = false,
+  noSave = false
+}: {
+  ignoreCached?: boolean
+  noSave?: boolean
+} = {}): Promise<BrowserInfo | null> => {
+  if (!ignoreCached) {
+    const lastUsedOne = await getLastUsedAndAvailableBrowser()
+    if (lastUsedOne) {
+      return lastUsedOne
+    }
+  }
+  // find existed browser - the fallback one
+  if (await checkCachedPuppeteerExecutable()) {
+    const cachedOne = await getExpectCachedPuppeteerExecutable()
+    !noSave && (await saveLastUsedAndAvailableBrowserInfo(cachedOne))
+
+    return cachedOne
   }
   // find existed browser - the one maybe actively installed by user or ship with os like Edge on windows
   try {
     const existedOne = await findAndLocateUserInstalledChromiumExecutableSync()
-    await saveLastUsedAndAvailableBrowserInfo(existedOne)
+    !noSave && (await saveLastUsedAndAvailableBrowserInfo(existedOne))
     // save its path
     return existedOne
   } catch (err) {
     console.error(err)
     console.log('no existed browser path found')
   }
-  // find existed browser - the fallback one
-  if (await checkCachedPuppeteerExecutable()) {
-    const cachedOne = await getExpectCachedPuppeteerExecutable()
-    await saveLastUsedAndAvailableBrowserInfo(cachedOne)
-
-    return cachedOne
-  }
-
   // if no one available, then return null and remove last used browser
   await removeLastUsedAndAvailableBrowserPath()
   return null

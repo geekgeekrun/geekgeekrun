@@ -53,6 +53,7 @@ import gtag from '../../../utils/gtag'
 import { daemonEE, sendToDaemon } from '../connect-to-daemon'
 import { runCommon } from '../../../features/run-common'
 import { loginWithCookieAssistant } from '../../../features/login-with-cookie-assistant'
+import { configWithBrowserAssistant } from '../../../features/config-with-browser-assistant'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -244,64 +245,6 @@ export default function initIpc() {
       }
     })
     return { runRecordId }
-  })
-
-  ipcMain.handle('check-dependencies', async () => {
-    const [anyAvailablePuppeteerExecutable] = await Promise.all([
-      getAnyAvailablePuppeteerExecutable()
-    ])
-    return {
-      puppeteerExecutableAvailable: !!anyAvailablePuppeteerExecutable
-    }
-  })
-
-  let subProcessOfCheckAndDownloadDependencies: ChildProcess | null = null
-  ipcMain.handle('setup-dependencies', async () => {
-    if (subProcessOfCheckAndDownloadDependencies) {
-      return
-    }
-    subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
-      process.argv[0],
-      [process.argv[1], `--mode=checkAndDownloadDependenciesForInit`],
-      {
-        stdio: [null, null, null, 'pipe', 'ipc']
-      }
-    )
-    return new Promise((resolve, reject) => {
-      subProcessOfCheckAndDownloadDependencies!.stdio[3]!.pipe(JSONStream.parse()).on(
-        'data',
-        (raw) => {
-          const data = raw
-          switch (data.type) {
-            case 'NEED_RESETUP_DEPENDENCIES':
-            case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-              mainWindow?.webContents.send(data.type, data)
-              break
-            }
-            case 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR': {
-              console.error(data)
-              break
-            }
-            default: {
-              return
-            }
-          }
-        }
-      )
-      subProcessOfCheckAndDownloadDependencies!.once('exit', (exitCode) => {
-        switch (exitCode) {
-          case 0: {
-            resolve(exitCode)
-            break
-          }
-          default: {
-            reject('PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR')
-            break
-          }
-        }
-        subProcessOfCheckAndDownloadDependencies = null
-      })
-    })
   })
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
@@ -606,6 +549,15 @@ export default function initIpc() {
   })
   ipcMain.handle('login-with-cookie-assistant', async () => {
     return await loginWithCookieAssistant({
+      windowOption: {
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      }
+    })
+  })
+  ipcMain.handle('config-with-browser-assistant', async () => {
+    return await configWithBrowserAssistant({
       windowOption: {
         parent: mainWindow!,
         modal: true,

@@ -146,7 +146,6 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { TopRight, QuestionFilled } from '@element-plus/icons-vue'
 import useBuildInfo from '@renderer/hooks/useBuildInfo'
@@ -154,23 +153,7 @@ import { debounce } from 'lodash'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { useUpdateStore, useTaskManagerStore } from '../../store/index'
 
-const router = useRouter()
-const unmountedCbs: Array<InstanceType<typeof Function>> = []
-onUnmounted(() => {
-  while (unmountedCbs.length) {
-    const fn = unmountedCbs.shift()!
-    try {
-      fn()
-    } catch {}
-  }
-})
-;(async () => {
-  const checkDependenciesResult = await electron.ipcRenderer.invoke('check-dependencies')
-  if (Object.values(checkDependenciesResult).includes(false)) {
-    router.replace('/')
-    return
-  }
-})()
+useRouter()
 
 const { buildInfo } = useBuildInfo()
 const handleFeedbackClick = () => {
