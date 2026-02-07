@@ -32,25 +32,20 @@ async function getEditThisCookieZipPath () {
   return editThisCookieZipPath
 }
 
+const APP_GEEKGEEKRUN_EDIT_VERSION = 1
 export async function ensureEditThisCookie () {
   let isNeedExtractEditThisCookie = false
-  const manifestFilePath = path.join(editThisCookieExtensionPath, 'manifest.json')
-  if (!fs.existsSync(
-    manifestFilePath
-  )) {
+  const GEEKGEEKRUN_EDIT_VERSION_FILE_PATH = path.join(editThisCookieExtensionPath, 'GEEKGEEKRUN_EDIT_VERSION')
+  let geekgeekrunEditVersion
+  try {
+    const fileContent = fs.readFileSync(GEEKGEEKRUN_EDIT_VERSION_FILE_PATH, { encoding: 'utf-8' })
+    geekgeekrunEditVersion = Number(fileContent) || 0
+  }
+  catch (err) {
+    geekgeekrunEditVersion = 0
+  }
+  if (geekgeekrunEditVersion < APP_GEEKGEEKRUN_EDIT_VERSION) {
     isNeedExtractEditThisCookie = true
-  } else {
-    let manifest
-    try {
-      manifest = JSON.parse(fs.readFileSync(manifestFilePath, { encoding: 'utf-8' }))
-      if (!manifest.manifest_version || manifest.manifest_version <= 2) {
-        isNeedExtractEditThisCookie = true
-      }
-    }
-    catch {
-      console.log(`未能获取到文件内容`)
-      isNeedExtractEditThisCookie = true
-    }
   }
 
   if (isNeedExtractEditThisCookie) {
