@@ -1,7 +1,7 @@
 import { ChildProcess } from 'child_process'
 import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import { getAnyAvailablePuppeteerExecutable } from '../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
+import { getAnyAvailablePuppeteerExecutable } from '../flow/DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import * as childProcess from 'node:child_process'
 import * as JSONStream from 'JSONStream'
 

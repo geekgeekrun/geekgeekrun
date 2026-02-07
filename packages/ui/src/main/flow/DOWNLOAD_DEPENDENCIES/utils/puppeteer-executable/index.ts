@@ -1,5 +1,3 @@
-import * as path from 'node:path'
-import * as os from 'node:os'
 import * as fs from 'node:fs'
 import type { InstalledBrowser } from '@puppeteer/browsers'
 import {
@@ -10,6 +8,7 @@ import {
 } from '../browser-history'
 import gtag from '../../../../utils/gtag'
 import { EXPECT_CHROMIUM_BUILD_ID } from '../../../../../common/constant'
+import { cacheDir } from '../../../../constant'
 
 const getPuppeteerManagerModule = async () => {
   const puppeteerManager = await import('@puppeteer/browsers')
@@ -17,7 +16,6 @@ const getPuppeteerManagerModule = async () => {
   return puppeteerManager
 }
 
-const cacheDir = path.join(os.homedir(), '.geekgeekrun', 'cache')
 
 const getExpectCachedPuppeteerExecutable = async (): Promise<BrowserInfo> => {
   const puppeteerManager = await getPuppeteerManagerModule()

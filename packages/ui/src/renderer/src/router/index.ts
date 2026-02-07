@@ -22,16 +22,14 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@renderer/page/BrowserAssistant/index.vue'),
     meta: {
       title: '浏览器助手'
-    },
-    children: [
-      {
-        path: '/downloadingDependencies',
-        component: () => import('@renderer/page/BrowserAssistant/page/DownloadingDependencies.vue'),
-        meta: {
-          title: '正在下载核心组件'
-        }
-      }
-    ]
+    }
+  },
+  {
+    path: '/browserDownloadProgress',
+    component: () => import('@renderer/page/BrowserDownloadProgress/index.vue'),
+    meta: {
+      title: '正在下载浏览器'
+    }
   },
   {
     path: '/llmConfig',

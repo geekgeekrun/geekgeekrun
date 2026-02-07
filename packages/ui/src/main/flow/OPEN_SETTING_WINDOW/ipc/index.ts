@@ -12,7 +12,7 @@ import {
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
-import { getAnyAvailablePuppeteerExecutable } from '../../../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
+import { getAnyAvailablePuppeteerExecutable } from '../../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
 import { mainWindow } from '../../../window/mainWindow'
 import {

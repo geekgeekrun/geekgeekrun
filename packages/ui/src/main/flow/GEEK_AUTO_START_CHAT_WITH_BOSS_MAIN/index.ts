@@ -6,7 +6,7 @@ import {
   getPublicDbFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 // import { pipeWriteRegardlessError } from '../utils/pipe'
-import { getAnyAvailablePuppeteerExecutable } from '../CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
+import { getAnyAvailablePuppeteerExecutable } from '../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'

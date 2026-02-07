@@ -1,7 +1,7 @@
 import minimist from 'minimist'
-import { runCommon } from './features/run-common';
-import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon';
-import { app } from 'electron';
+import { runCommon } from './features/run-common'
+import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon'
+import { app } from 'electron'
 
 // 捕获未处理的 EPIPE 错误
 process.on('uncaughtException', (err) => {
@@ -9,13 +9,13 @@ process.on('uncaughtException', (err) => {
     return
   }
   throw err
-});
+})
 
 const isUiDev = process.env.NODE_ENV === 'development'
 const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
 console.log(commandlineArgs)
 
-const runMode = commandlineArgs['mode'];
+const runMode = commandlineArgs['mode']
 
 ;(async () => {
   switch (runMode) {
@@ -27,11 +27,9 @@ const runMode = commandlineArgs['mode'];
       waitForProcessHandShakeAndRunAutoChat()
       break
     }
-    case 'checkAndDownloadDependenciesForInit': {
-      const { checkAndDownloadDependenciesForInit } = await import(
-        './flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/index'
-      )
-      checkAndDownloadDependenciesForInit()
+    case 'downloadDependenciesForInit': {
+      const { downloadDependenciesForInit } = await import('./flow/DOWNLOAD_DEPENDENCIES/index')
+      downloadDependenciesForInit()
       break
     }
     case 'launchBossZhipinLoginPageWithPreloadExtension': {

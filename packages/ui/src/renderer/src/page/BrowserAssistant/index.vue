@@ -32,11 +32,11 @@
                     <li>
                       方案一：通过本程序下载 Google Chrome for Testing
                       {{ EXPECT_CHROMIUM_BUILD_ID }} -
-                      <a href="javascript:;">点击此处</a
-                      >即可下载；这个浏览器由本程序独占，不会影响到当前的 Google Chrome
+                      <a href="javascript:;" @click="handleClickLaunchBrowserDownloader">点击此处</a
+                      >即可下载；这个浏览器仅供本程序使用，不会影响到当前 Google Chrome
                       安装。本程序开发过程中主要是使用这个浏览器测试的，<span color-orange
                         >可以保证兼容性</span
-                      >。但网络波动，有一定概率下载失败。如多次尝试后确实不能下载成功，请尝试方案二。<span
+                      >。网络波动，有一定概率下载失败；如多次尝试后确实不能下载成功，请尝试方案二。<span
                         color-orange
                         >（推荐）</span
                       >
@@ -54,7 +54,7 @@
                         >浏览器升级后某些功能不兼容导致本程序不能正确运行</span
                       >的问题。您可以<a href="javascript:;" @click="handleFeedbackClick"
                         >提交 Issue</a
-                      >来反馈新版本浏览器不能正常运行的问题，同时请再尝试方法一。
+                      >来反馈新版本浏览器不能正常运行的问题，同时请再尝试方案一。
                     </li>
                   </ul>
                 </div>
@@ -142,13 +142,19 @@ async function autoDetectPuppeteerExecutable() {
     noSave: true
   })
   if (!result) {
-    ElMessage.warning({
+    ElMessage({
       message: '未检测到可用浏览器的可执行文件',
-      type: 'warning'
+      type: 'warning',
+      grouping: true
     })
     return
   }
   formData.value.browserPath = result.executablePath
+  ElMessage({
+    message: '已找到可用浏览器，可执行文件路径已填入输入框',
+    type: 'success',
+    grouping: true
+  })
 }
 
 async function browserExecutableFile() {
@@ -177,7 +183,9 @@ function handleCancel() {
   gtagRenderer('cancel_clicked')
   window.close()
 }
+const formRef = ref()
 async function handleSave() {
+  await formRef.value.validate()
   await ipcRenderer.invoke('save-last-used-and-available-browser-info', {
     executablePath: formData.value.browserPath,
     browser: ''
@@ -187,6 +195,18 @@ async function handleSave() {
 const handleFeedbackClick = () => {
   gtagRenderer('goto_feedback_for_ba_clicked')
   electron.ipcRenderer.send('send-feed-back-to-github-issue')
+}
+const handleClickLaunchBrowserDownloader = async () => {
+  gtagRenderer('launch_browser_downloader_clicked')
+  const downloadedBrowserPath = await electron.ipcRenderer.invoke('download-browser-with-downloader')
+  if (downloadedBrowserPath) {
+    formData.value.browserPath = downloadedBrowserPath
+    ElMessage({
+      message: '浏览器下载成功，可执行文件路径已填入输入框',
+      type: 'success',
+      grouping: true
+    })
+  }
 }
 </script>
 
