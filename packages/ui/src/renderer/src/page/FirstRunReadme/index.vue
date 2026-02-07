@@ -129,7 +129,7 @@ const readmeItemCheckStatusList = ref<number[]>([])
 const handleCancel = async () => {
   gtagRenderer('cancel_clicked')
   await sleep(500)
-  electron.ipcRenderer.invoke('exit-app-immediately')
+  window.close()
 }
 
 const unreadItemsAfterClickSubmit = ref<Record<number, true>>({})
@@ -150,7 +150,7 @@ const handleSubmit = () => {
     }
     return
   }
-  electron.ipcRenderer.invoke('first-launch-notice-approve')
+  electron.ipcRenderer.send('first-launch-notice-approve')
   gtagRenderer('submit_done')
 }
 const handleReadmeItemCheckStatusListChange = (value: number[]) => {

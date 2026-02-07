@@ -19,7 +19,8 @@ const registerHandleWithWindow = (
 }
 
 export function createBrowserAssistantWindow(
-  opt?: Electron.BrowserWindowConstructorOptions
+  opt?: Electron.BrowserWindowConstructorOptions,
+  { autoFind } = {}
 ): BrowserWindow {
   // Create the browser window.
   if (browserAssistantWindow) {
@@ -45,11 +46,15 @@ export function createBrowserAssistantWindow(
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
+  let routePath = '#/browserAssistant'
+  if (autoFind) {
+    routePath = '#/browserAutoFind'
+  }
   if (process.env.NODE_ENV === 'development' && process.env['ELECTRON_RENDERER_URL']) {
-    browserAssistantWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/browserAssistant')
+    browserAssistantWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + routePath)
   } else {
     browserAssistantWindow.loadURL(
-      'file://' + path.join(__dirname, '../renderer/index.html') + '#/browserAssistant'
+      'file://' + path.join(__dirname, '../renderer/index.html') + routePath
     )
   }
 

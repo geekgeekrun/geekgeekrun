@@ -4,9 +4,9 @@ import {
   browserAssistantWindow
 } from '../window/browserAssistantWindow'
 
-export async function configWithBrowserAssistant({ windowOption } = {}) {
+export async function configWithBrowserAssistant({ windowOption, autoFind } = {}) {
   return new Promise((resolve, reject) => {
-    createBrowserAssistantWindow({ ...windowOption })
+    createBrowserAssistantWindow({ ...windowOption }, { autoFind })
 
     let processDone = false
     function handler() {

@@ -50,11 +50,14 @@
                         @click="autoDetectPuppeteerExecutable"
                         >自动检测</a
                       >按钮再次尝试。目前（2026.2.7）已知 Chrome 最新版本为 144.0.7559.133
-                      ，多数情况下本程序都可以正常工作，但由于浏览器会自动升级，版本不固定，可能存在<span color-orange
+                      ，多数情况下本程序都可以正常工作，但由于浏览器会自动升级，版本不固定，可能存在<span
+                        color-orange
                         >浏览器升级后某些功能不兼容导致本程序不能正确运行</span
-                      >的问题。您可以<a href="javascript:;" @click="handleFeedbackClick"
+                      >的问题。如果您确实遇到不能正常运行的问题，请<a
+                        href="javascript:;"
+                        @click="handleFeedbackClick"
                         >提交 Issue</a
-                      >来反馈新版本浏览器不能正常运行的问题，同时请再尝试方案一。
+                      >来反馈，同时请再尝试方案一。
                     </li>
                   </ul>
                 </div>
@@ -202,7 +205,9 @@ const handleFeedbackClick = () => {
 }
 const handleClickLaunchBrowserDownloader = async () => {
   gtagRenderer('launch_browser_downloader_clicked')
-  const downloadedBrowserPath = await electron.ipcRenderer.invoke('download-browser-with-downloader')
+  const downloadedBrowserPath = await electron.ipcRenderer.invoke(
+    'download-browser-with-downloader'
+  )
   if (downloadedBrowserPath) {
     formData.value.browserPath = downloadedBrowserPath
     ElMessage({

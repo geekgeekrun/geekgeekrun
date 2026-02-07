@@ -1,6 +1,5 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow } from 'electron'
 import path from 'path'
-import { createFirstLaunchNoticeApproveFlag } from '../features/first-launch-notice-window'
 
 export let firstLaunchNoticeWindow: BrowserWindow | null = null
 export function createFirstLaunchNoticeWindow(
@@ -41,11 +40,3 @@ export function createFirstLaunchNoticeWindow(
 
   return firstLaunchNoticeWindow!
 }
-
-export const initIpc = () => {
-  ipcMain.handle('first-launch-notice-approve', () => {
-    createFirstLaunchNoticeApproveFlag()
-    firstLaunchNoticeWindow?.close()
-  })
-}
-initIpc()

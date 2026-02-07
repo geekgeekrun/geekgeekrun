@@ -1,9 +1,14 @@
-import { BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { openDevTools } from '../commands'
-import { createFirstLaunchNoticeWindow } from './firstLaunchNoticeWindow'
-import { isFirstLaunchNoticeApproveFlagExist } from '../features/first-launch-notice-window'
+import {
+  createFirstLaunchNoticeApproveFlag,
+  isFirstLaunchNoticeApproveFlagExist,
+  waitForUserApproveAgreement
+} from '../features/first-launch-notice-window'
 import { daemonEE } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+import { getLastUsedAndAvailableBrowser } from '../flow/DOWNLOAD_DEPENDENCIES/utils/browser-history'
+import { configWithBrowserAssistant } from '../features/config-with-browser-assistant'
 export let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): BrowserWindow {
@@ -29,12 +34,34 @@ export function createMainWindow(): BrowserWindow {
     mainWindow.show()
   })
   mainWindow.on('ready-to-show', async () => {
-    !isFirstLaunchNoticeApproveFlagExist() &&
-      createFirstLaunchNoticeWindow({
-        parent: mainWindow!,
-        modal: true,
-        show: true
-      })
+    if (!isFirstLaunchNoticeApproveFlagExist()) {
+      try {
+        await waitForUserApproveAgreement({
+          windowOption: {
+            parent: mainWindow!,
+            modal: true,
+            show: true
+          }
+        })
+        createFirstLaunchNoticeApproveFlag()
+      } catch {
+        app.exit(0)
+        return
+      }
+    }
+    const lastBrowser = await getLastUsedAndAvailableBrowser()
+    if (!lastBrowser) {
+      try {
+        await configWithBrowserAssistant({
+          windowOption: {
+            parent: mainWindow!,
+            modal: true,
+            show: true
+          },
+          autoFind: true
+        })
+      } catch (err) {}
+    }
   })
   mainWindow.on('ready-to-show', async () => {
     process.env.NODE_ENV === 'development' &&

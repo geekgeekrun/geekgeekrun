@@ -25,6 +25,13 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/browserAutoFind',
+    component: () => import('@renderer/page/BrowserAutoFind/index.vue'),
+    meta: {
+      title: '浏览器助手 - 自动查找浏览器'
+    }
+  },
+  {
     path: '/browserDownloadProgress',
     component: () => import('@renderer/page/BrowserDownloadProgress/index.vue'),
     meta: {
