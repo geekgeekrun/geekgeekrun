@@ -1121,14 +1121,29 @@
         worker-id="geekAutoStartWithBossMain"
         :run-record-id="runRecordId"
       >
-        <template #op-buttons>
-          <el-button
-            type="danger"
-            plain
-            :loading="isStopButtonLoading"
-            @click="handleStopButtonClick"
-            >结束任务</el-button
-          >
+        <template #op-buttons="{ currentRunningStatus }">
+          <div>
+            <template v-if="currentRunningStatus === RUNNING_STATUS_ENUM.RUNNING">
+              <el-button
+                type="danger"
+                plain
+                :loading="isStopButtonLoading"
+                @click="handleStopButtonClick"
+                >结束任务</el-button
+              >
+            </template>
+            <template v-else>
+              <el-button
+                type="primary"
+                @click="
+                  () => {
+                    runningOverlayRef?.hide?.()
+                  }
+                "
+                >关闭</el-button
+              >
+            </template>
+          </div>
         </template>
       </RuningOverlay>
     </div>
@@ -1165,6 +1180,7 @@ import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-con
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
 import expectJobFilterTemplateList from './expectJobFilterTemplateList'
 import RuningOverlay from '@renderer/features/RunningOverlay/index.vue'
+import { RUNNING_STATUS_ENUM } from '../../../../../common/enums/auto-start-chat'
 
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {

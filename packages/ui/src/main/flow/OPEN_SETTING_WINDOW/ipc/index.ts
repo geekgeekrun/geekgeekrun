@@ -197,22 +197,7 @@ export default function initIpc() {
         return
       }
       if (message.type === 'worker-exited') {
-        switch(message.code) {
-          case AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE: {
-            mainWindow?.webContents.send('need-to-check-runtime-dependencies')
-            daemonEE.off('message', handler)
-            break
-          }
-          case AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID: {
-            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-            daemonEE.off('message', handler)
-            break
-          }
-          case AUTO_CHAT_ERROR_EXIT_CODE.NORMAL: {
-            daemonEE.off('message', handler)
-            break
-          }
-        }
+        mainWindow?.webContents.send('worker-exited', message)
       }
     })
     return { runRecordId }
@@ -226,22 +211,7 @@ export default function initIpc() {
         return
       }
       if (message.type === 'worker-exited') {
-        switch(message.code) {
-          case AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE: {
-            mainWindow?.webContents.send('need-to-check-runtime-dependencies')
-            daemonEE.off('message', handler)
-            break
-          }
-          case AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID: {
-            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-            daemonEE.off('message', handler)
-            break
-          }
-          case AUTO_CHAT_ERROR_EXIT_CODE.NORMAL: {
-            daemonEE.off('message', handler)
-            break
-          }
-        }
+        mainWindow?.webContents.send('worker-exited', message)
       }
     })
     return { runRecordId }

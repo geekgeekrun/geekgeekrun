@@ -236,9 +236,34 @@
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay worker-id="geekAutoStartWithBossMain" :run-record-id="runRecordId" ref="runningOverlayRef">
-        <template #op-buttons>
-          <el-button type="danger" plain @click="handleStopButtonClick" :loading="isStopButtonLoading">结束任务</el-button>
+      <RuningOverlay
+        ref="runningOverlayRef"
+        worker-id="readNoReplyAutoReminderMain"
+        :run-record-id="runRecordId"
+      >
+        <template #op-buttons="{ currentRunningStatus }">
+          <div>
+            <template v-if="currentRunningStatus === RUNNING_STATUS_ENUM.RUNNING">
+              <el-button
+                type="danger"
+                plain
+                :loading="isStopButtonLoading"
+                @click="handleStopButtonClick"
+                >结束任务</el-button
+              >
+            </template>
+            <template v-else>
+              <el-button
+                type="primary"
+                @click="
+                  () => {
+                    runningOverlayRef?.hide?.()
+                  }
+                "
+                >关闭</el-button
+              >
+            </template>
+          </div>
         </template>
       </RuningOverlay>
     </div>
@@ -251,7 +276,8 @@ import { dayjs, ElForm, ElMessage, ElMessageBox, ElSelect, ElOption } from 'elem
 import { useRouter } from 'vue-router'
 import {
   RECHAT_CONTENT_SOURCE,
-  RECHAT_LLM_FALLBACK
+  RECHAT_LLM_FALLBACK,
+  RUNNING_STATUS_ENUM
 } from '../../../../common/enums/auto-start-chat'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import mittBus from '../../utils/mitt'
@@ -498,7 +524,9 @@ const handleSubmit = async () => {
 
   try {
     runningOverlayRef.value?.show()
-    const { runRecordId: rrId } = await electron.ipcRenderer.invoke('run-read-no-reply-auto-reminder')
+    const { runRecordId: rrId } = await electron.ipcRenderer.invoke(
+      'run-read-no-reply-auto-reminder'
+    )
     runRecordId.value = rrId
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')) {
@@ -639,8 +667,7 @@ const handleStopButtonClick = async () => {
   try {
     electron.ipcRenderer.invoke('stop-read-no-reply-auto-reminder')
     runningOverlayRef.value?.hide()
-  }
-  finally {
+  } finally {
     isStopButtonLoading.value = false
   }
 }
