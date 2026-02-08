@@ -27,7 +27,14 @@ const router = useRouter()
 
 onMounted(async () => {
   gtagRenderer('bootstrap_mounted')
-  await sleep(2000)
-  router.replace('/main-layout')
+  await sleep(1500)
+  try {
+    await electron.ipcRenderer.invoke('pre-enter-setting-ui')
+  } catch (err) {
+    console.log('pre-enter-setting-ui error', err)
+  } finally {
+    await sleep(500)
+    router.replace('/main-layout')
+  }
 })
 </script>

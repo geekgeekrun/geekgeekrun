@@ -13,7 +13,6 @@ import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
 import { getAnyAvailablePuppeteerExecutable } from '../../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
-import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
 import { mainWindow } from '../../../window/mainWindow'
 import {
   getAutoStartChatRecord,
@@ -21,8 +20,7 @@ import {
   getCompanyLibrary,
   getJobLibrary,
   getJobHistoryByEncryptId,
-  getMarkAsNotSuitRecord,
-  saveAndGetCurrentRunRecord,
+  getMarkAsNotSuitRecord
 } from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
 import { pipeWriteRegardlessError } from '../../utils/pipe'
@@ -54,6 +52,12 @@ import { daemonEE, sendToDaemon } from '../connect-to-daemon'
 import { runCommon } from '../../../features/run-common'
 import { loginWithCookieAssistant } from '../../../features/login-with-cookie-assistant'
 import { configWithBrowserAssistant } from '../../../features/config-with-browser-assistant'
+import {
+  createFirstLaunchNoticeApproveFlag,
+  isFirstLaunchNoticeApproveFlagExist,
+  waitForUserApproveAgreement
+} from '../../../features/first-launch-notice-window'
+import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -192,7 +196,7 @@ export default function initIpc() {
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
     const mode = 'geekAutoStartWithBossMain'
     const { runRecordId } = await runCommon({ mode })
-    daemonEE.on('message', function handler (message) {
+    daemonEE.on('message', function handler(message) {
       if (message.workerId !== mode) {
         return
       }
@@ -206,7 +210,7 @@ export default function initIpc() {
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
     const mode = 'readNoReplyAutoReminderMain'
     const { runRecordId } = await runCommon({ mode })
-    daemonEE.on('message', function handler (message) {
+    daemonEE.on('message', function handler(message) {
       if (message.workerId !== mode) {
         return
       }
@@ -220,7 +224,7 @@ export default function initIpc() {
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
     const p = new Promise((resolve) => {
-      daemonEE.on('message', function handler (message) {
+      daemonEE.on('message', function handler(message) {
         if (message.workerId !== 'geekAutoStartWithBossMain') {
           return
         }
@@ -233,7 +237,7 @@ export default function initIpc() {
     await sendToDaemon(
       {
         type: 'stop-worker',
-        workerId: 'geekAutoStartWithBossMain',
+        workerId: 'geekAutoStartWithBossMain'
       },
       {
         needCallback: true
@@ -246,8 +250,8 @@ export default function initIpc() {
 
   ipcMain.handle('stop-read-no-reply-auto-reminder', async () => {
     mainWindow?.webContents.send('read-no-reply-auto-reminder-stopping')
-    const p = new Promise(resolve => {
-      daemonEE.on('message', function handler (message) {
+    const p = new Promise((resolve) => {
+      daemonEE.on('message', function handler(message) {
         if (message.workerId !== 'readNoReplyAutoReminderMain') {
           return
         }
@@ -260,7 +264,7 @@ export default function initIpc() {
     await sendToDaemon(
       {
         type: 'stop-worker',
-        workerId: 'readNoReplyAutoReminderMain',
+        workerId: 'readNoReplyAutoReminderMain'
       },
       {
         needCallback: true
@@ -534,6 +538,42 @@ export default function initIpc() {
         show: true
       }
     })
+  })
+
+  ipcMain.handle('pre-enter-setting-ui', async () => {
+    if (!isFirstLaunchNoticeApproveFlagExist()) {
+      try {
+        await waitForUserApproveAgreement({
+          windowOption: {
+            parent: mainWindow!,
+            modal: true,
+            show: true
+          }
+        })
+        createFirstLaunchNoticeApproveFlag()
+      } catch {
+        app.exit(0)
+        return
+      }
+    }
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      const lastBrowser = await getLastUsedAndAvailableBrowser()
+      if (!lastBrowser) {
+        try {
+          await configWithBrowserAssistant({
+            windowOption: {
+              parent: mainWindow!,
+              modal: true,
+              show: true
+            },
+            autoFind: true
+          })
+        } catch (err) {
+          void err
+        }
+      }
+    }
   })
 
   ipcMain.handle('exit-app-immediately', () => {
