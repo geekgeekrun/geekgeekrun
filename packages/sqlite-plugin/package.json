@@ -4,14 +4,15 @@
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
+    "better-sqlite3": "12.6.2",
     "cli-highlight": "^2.1.11",
     "lodash": "^4.17.21",
     "reflect-metadata": "^0.2.1",
-    "better-sqlite3": "12.6.2",
     "typeorm": "0.3.28"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.23",
+    "node-gyp": "^12.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
