@@ -15,7 +15,12 @@
           >
             <div flex flex-1>
               <el-input v-model="formData.browserPath" />
-              <el-button type="primary" @click="autoDetectPuppeteerExecutable">自动检测</el-button>
+              <el-button
+                type="primary"
+                :loading="isAutoDetectLoading"
+                @click="autoDetectPuppeteerExecutable"
+                >自动检测</el-button
+              >
               <el-button :style="{ marginLeft: 0 }" @click="browserExecutableFile">浏览</el-button>
             </div>
           </el-form-item>
@@ -47,6 +52,7 @@
                       Google Chrome
                       官方网站，找到浏览器下载页面来下载安装程序。下载完毕后，执行安装程序。安装完成后，点击上方<a
                         href="javascript:;"
+                        :loading="isAutoDetectLoading"
                         @click="autoDetectPuppeteerExecutable"
                         >自动检测</a
                       >按钮再次尝试。目前（2026.2.7）已知 Chrome 最新版本为 144.0.7559.133
@@ -99,7 +105,7 @@ import debounce from 'lodash/debounce'
 import { ElMessage } from 'element-plus'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { EXPECT_CHROMIUM_BUILD_ID } from '../../../../common/constant'
-
+import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 const { ipcRenderer } = electron
 useRouter()
 // const checkDependenciesResult = ref({})
@@ -143,25 +149,32 @@ const rules = {
   }
 }
 
+const isAutoDetectLoading = ref(false)
 async function autoDetectPuppeteerExecutable() {
-  const result = await ipcRenderer.invoke('get-any-available-puppeteer-executable', {
-    ignoreCached: true,
-    noSave: true
-  })
-  if (!result) {
+  isAutoDetectLoading.value = true
+  await sleep(50)
+  try {
+    const result = await ipcRenderer.invoke('get-any-available-puppeteer-executable', {
+      ignoreCached: true,
+      noSave: true
+    })
+    if (!result) {
+      ElMessage({
+        message: '未检测到可用浏览器的可执行文件',
+        type: 'warning',
+        grouping: true
+      })
+      return
+    }
+    formData.value.browserPath = result.executablePath
     ElMessage({
-      message: '未检测到可用浏览器的可执行文件',
-      type: 'warning',
+      message: '已找到可用浏览器，可执行文件路径已填入输入框',
+      type: 'success',
       grouping: true
     })
-    return
+  } finally {
+    isAutoDetectLoading.value = false
   }
-  formData.value.browserPath = result.executablePath
-  ElMessage({
-    message: '已找到可用浏览器，可执行文件路径已填入输入框',
-    type: 'success',
-    grouping: true
-  })
 }
 
 async function browserExecutableFile() {
