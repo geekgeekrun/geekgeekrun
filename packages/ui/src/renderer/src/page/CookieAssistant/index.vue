@@ -1,13 +1,8 @@
 <template>
   <div class="cookie-assistant-page">
     <div ml1em mt1em mb1em font-size-16px>Boss 登录助手</div>
-    <el-alert
-      v-if="cookieInvalid"
-      type="warning"
-      :closable="false"
-      title="需要获取您的Boss直聘Cookie才能继续"
-    >
-      由于您是首次使用本程序，或者您之前使用的Boss直聘账号登录状态失效，因此您需要重新获取登录凭证。
+    <el-alert v-if="cookieInvalid" type="warning" :closable="false">
+      由于您是首次使用本程序，或者您之前使用的Boss直聘账号登录状态失效，因此您需要重新获取登录凭证
     </el-alert>
     <div ml1em mt1em line-height-normal>
       如果您了解如何获取Cookie、了解有效的Cookie格式，可以直接在下方输入框中进行编辑。由于手动编辑较为麻烦，建议您打开已登录过Boss直聘的浏览器，使用<a
@@ -98,7 +93,7 @@
       </el-form-item>
     </el-form>
     <footer flex mt20px pb20px flex-justify-end>
-      <el-button v-if="!cookieInvalid" @click="handleCancel">取消</el-button>
+      <el-button @click="handleCancel">取消</el-button>
       <el-button type="primary" @click="handleSubmit">确定</el-button>
     </footer>
   </div>
