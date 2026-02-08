@@ -10,25 +10,6 @@
       <div class="form-wrap geek-auto-start-run-with-boss">
         <el-form ref="formRef" :model="formContent" label-position="top" :rules="formRules">
           <el-card class="config-section">
-            <div flex>
-              <el-form-item>
-                <div>
-                  <div font-size-14px>BOSS直聘 Cookie</div>
-                  <el-button size="small" type="primary" @click="handleClickLaunchLogin"
-                    >编辑Cookie</el-button
-                  >
-                </div>
-              </el-form-item>
-              <div w1px class="bg-#dee1e8" ml16px mr16px />
-              <el-form-item>
-                <div>
-                  <div font-size-14px>浏览器</div>
-                  <el-button size="small" type="primary" @click="handleClickBrowserSetting"
-                    >编辑浏览器设置</el-button
-                  >
-                </div>
-              </el-form-item>
-            </div>
             <div>
               <div font-size-14px>
                 摸鱼模式
@@ -1615,32 +1596,6 @@ const normalizeExpectCompanies = () => {
     .map((it) => it.trim())
     .filter(Boolean)
     .join(',')
-}
-
-const handleClickLaunchLogin = async () => {
-  gtagRenderer('launch_login_clicked')
-  try {
-    await electron.ipcRenderer.invoke('login-with-cookie-assistant')
-    ElMessage({
-      type: 'success',
-      message: 'Cookie 保存成功'
-    })
-  } catch {
-    //
-  }
-}
-
-const handleClickBrowserSetting = async () => {
-  gtagRenderer('browser_setting_clicked')
-  try {
-    await electron.ipcRenderer.invoke('config-with-browser-assistant')
-    ElMessage({
-      type: 'success',
-      message: '浏览器设置保存成功'
-    })
-  } catch {
-    //
-  }
 }
 
 const expectCompanyTemplateList = [

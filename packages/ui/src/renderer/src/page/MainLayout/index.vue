@@ -1,10 +1,10 @@
 <template>
   <div class="flex h100vh">
-    <div class="flex flex-col min-w200px w200px pt30px pl30px aside-nav of-hidden">
+    <div class="flex flex-col min-w250px w250px pt30px pl30px aside-nav of-hidden">
       <div class="nav-list flex-1 of-auto">
         <RouterLink v-show="false" to="./TaskManager">任务管理</RouterLink>
         <RouterLink to="./GeekAutoStartChatWithBoss">
-          Boss炸弹
+          自动开聊
           <el-tooltip
             placement="right"
             :enterable="false"
@@ -53,7 +53,7 @@
           </el-tooltip>
         </RouterLink>
         <RouterLink to="./ReadNoReplyReminder">
-          已读不回提醒器
+          已读不回自动复聊
           <el-tooltip
             placement="right"
             :enterable="false"
@@ -63,7 +63,7 @@
               <div w-480px>
                 <div>
                   Boss不明原因已读不回？简历就是投不出去？<br />
-                  已读不回提醒器，有事没事提醒一下已读不回的 Ta，助力把握每次机会
+                  已读不回自动复聊，提醒一下已读不回的 Boss，助力把握每次机会
                 </div>
                 <br />
                 <div>匹配逻辑</div>
@@ -85,11 +85,51 @@
             <QuestionFilled w-1em h-1em mr10px />
           </el-tooltip>
         </RouterLink>
-        <hr w180px />
-        <a href="javascript:void(0)" @click="handleLaunchBossSite">
-          手动逛Boss<TopRight w-1em h-1em mr10px />
+        <a href="javascript:void(0)" @click="handleClickLaunchBossLogin">
+          编辑登录凭据<TopRight w-1em h-1em mr10px />
         </a>
-        <hr w180px />
+        <a href="javascript:void(0)" @click="handleLaunchBossSite">
+          手动逛<TopRight w-1em h-1em mr10px />
+        </a>
+        <hr w230px />
+        <a href="javascript:void(0)" @click="handleClickBrowserSetting">
+          编辑浏览器偏好<TopRight w-1em h-1em mr10px />
+        </a>
+        <a href="javascript:void(0)" @click="handleClickConfigLlm">
+          配置大语言模型
+          <div>
+            <el-tooltip
+              placement="right"
+              :enterable="false"
+              @show="gtagRenderer('tooltip_show_for_rnrr_entry')"
+            >
+              <template #content>
+                <div class="font-size-12px">
+                  支持
+                  <span
+                    class="pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
+                    style="background-color: #3c4efd"
+                    >DeepSeek-V3</span
+                  >
+                  <span
+                    class="ml4px pl6px pr6px pt4px pb2px color-black border-rd-full font-size-0.8em"
+                    style="background-color: #fff"
+                    >GPT-4o mini</span
+                  >
+                  <span
+                    class="ml4px pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
+                    style="background-color: #462ac4"
+                    >Qwen2.5</span
+                  >
+                  模型<br />支持多个“服务商-模型”组合按权重搭配使用
+                </div>
+              </template>
+              <QuestionFilled w-1em h-1em mr10px />
+            </el-tooltip>
+            <TopRight w-1em h-1em mr10px />
+          </div>
+        </a>
+        <hr w230px />
         <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
         <RouterLink to="./MarkAsNotSuitRecord">标记不合适记录</RouterLink>
         <RouterLink to="./JobLibrary">职位库</RouterLink>
@@ -152,6 +192,7 @@ import useBuildInfo from '@renderer/hooks/useBuildInfo'
 import { debounce } from 'lodash'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { useUpdateStore, useTaskManagerStore } from '../../store/index'
+import { ElMessage } from 'element-plus'
 
 useRouter()
 
@@ -188,6 +229,41 @@ function handleViewNewReleaseClick() {
 
 const taskManagerStore = useTaskManagerStore()
 void taskManagerStore
+
+const handleClickLaunchBossLogin = async () => {
+  gtagRenderer('launch_login_clicked')
+  try {
+    await electron.ipcRenderer.invoke('login-with-cookie-assistant')
+    ElMessage({
+      type: 'success',
+      message: '登录凭据保存成功'
+    })
+  } catch {
+    //
+  }
+}
+
+const handleClickBrowserSetting = async () => {
+  gtagRenderer('browser_setting_clicked')
+  try {
+    await electron.ipcRenderer.invoke('config-with-browser-assistant')
+    ElMessage({
+      type: 'success',
+      message: '浏览器偏好保存成功'
+    })
+  } catch {
+    //
+  }
+}
+
+const handleClickConfigLlm = async () => {
+  gtagRenderer('config_llm_clicked')
+  try {
+    await electron.ipcRenderer.invoke('llm-config')
+  } catch (err) {
+    console.log(err)
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -198,9 +274,9 @@ void taskManagerStore
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 2.5em;
+      height: 2em;
       box-sizing: border-box;
-      padding-left: 2em;
+      padding-left: 1.5em;
       &.router-link-active {
         background-color: #fff;
         font-weight: 700;
