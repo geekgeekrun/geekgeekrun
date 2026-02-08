@@ -1,4 +1,4 @@
-import { ipcMain, shell, app } from 'electron'
+import { ipcMain, shell, app, dialog, BrowserWindow } from 'electron'
 import path from 'path'
 import * as childProcess from 'node:child_process'
 import {
@@ -328,7 +328,7 @@ export default function initIpc() {
 
   let subProcessOfOpenBossSiteDefer: null | PromiseWithResolvers<ChildProcess> = null
   let subProcessOfOpenBossSite: null | ChildProcess = null
-  ipcMain.handle('open-site-with-boss-cookie', async (_, data) => {
+  ipcMain.handle('open-site-with-boss-cookie', async (ev, data) => {
     const url = data.url
     if (
       !subProcessOfOpenBossSiteDefer ||
@@ -336,7 +336,31 @@ export default function initIpc() {
       subProcessOfOpenBossSite.killed
     ) {
       subProcessOfOpenBossSiteDefer = Promise.withResolvers()
-      const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+      let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+      if (!puppeteerExecutable) {
+        try {
+          const parent = BrowserWindow.fromWebContents(ev.sender) || undefined
+          await configWithBrowserAssistant({
+            autoFind: true,
+            windowOption: {
+              parent,
+              modal: !!parent,
+              show: true
+            }
+          })
+          puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+        } catch (error) {
+          //
+        }
+      }
+      if (!puppeteerExecutable) {
+        await dialog.showMessageBox({
+          type: `error`,
+          message: `未找到可用的浏览器`,
+          detail: `请重新运行本程序，按照提示安装、配置浏览器`
+        })
+        return
+      }
       const subProcessEnv = {
         ...process.env,
         PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath

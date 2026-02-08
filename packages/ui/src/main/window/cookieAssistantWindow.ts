@@ -1,9 +1,10 @@
 import { ChildProcess } from 'child_process'
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import path from 'path'
-import { getAnyAvailablePuppeteerExecutable } from '../flow/DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import * as childProcess from 'node:child_process'
 import * as JSONStream from 'JSONStream'
+import { getLastUsedAndAvailableBrowser } from '../flow/DOWNLOAD_DEPENDENCIES/utils/browser-history'
+import { configWithBrowserAssistant } from '../features/config-with-browser-assistant'
 
 export let cookieAssistantWindow: BrowserWindow | null = null
 export function createCookieAssistantWindow(
@@ -45,15 +46,40 @@ export function createCookieAssistantWindow(
   })
 
   let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
-  const launchHandler = async () => {
+  const launchHandler = async (ev) => {
     try {
       subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
     } catch {
       //
     }
+    let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+    if (!puppeteerExecutable) {
+      try {
+        const parent = BrowserWindow.fromWebContents(ev.sender) || undefined
+        await configWithBrowserAssistant({
+          autoFind: true,
+          windowOption: {
+            parent,
+            modal: !!parent,
+            show: true
+          }
+        })
+      } catch (error) {
+        //
+      }
+      puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+    }
+    if (!puppeteerExecutable) {
+      await dialog.showMessageBox({
+        type: `error`,
+        message: `未找到可用的浏览器`,
+        detail: `请重新运行本程序，按照提示安装、配置浏览器`
+      })
+      return
+    }
     const subProcessEnv = {
       ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
+      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
     }
     subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
       process.argv[0],

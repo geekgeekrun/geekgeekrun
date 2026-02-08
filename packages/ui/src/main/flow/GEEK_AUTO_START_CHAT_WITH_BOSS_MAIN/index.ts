@@ -6,7 +6,6 @@ import {
   getPublicDbFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 // import { pipeWriteRegardlessError } from '../utils/pipe'
-import { getAnyAvailablePuppeteerExecutable } from '../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../common/enums/auto-start-chat'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
@@ -19,6 +18,8 @@ import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to
 import { checkShouldExit } from '../../utils/worker'
 import { CookieInvalidHandlePlugin } from '../../features/cookie-invalid-handle-plugin'
 import initPublicIpc from '../../utils/initPublicIpc'
+import { getLastUsedAndAvailableBrowser } from '../DOWNLOAD_DEPENDENCIES/utils/browser-history'
+import { configWithBrowserAssistant } from '../../features/config-with-browser-assistant'
 const { default: SqlitePlugin } = SqlitePluginModule
 
 process.on('SIGTERM', () => {
@@ -48,8 +49,21 @@ const initPlugins = (hooks) => {
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 const runAutoChat = async () => {
   app.dock?.hide()
-  const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+  let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
   if (!puppeteerExecutable) {
+    try {
+      await configWithBrowserAssistant({ autoFind: true })
+    } catch (error) {
+      //
+    }
+    puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+  }
+  if (!puppeteerExecutable) {
+    await dialog.showMessageBox({
+      type: `error`,
+      message: `未找到可用的浏览器`,
+      detail: `请重新运行本程序，按照提示安装、配置浏览器`
+    })
     sendToDaemon({
       type: 'worker-to-gui-message',
       data: {

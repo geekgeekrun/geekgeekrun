@@ -34,11 +34,12 @@ import cheerio from 'cheerio'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 // import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
 import { checkShouldExit } from '../../utils/worker'
-import { getAnyAvailablePuppeteerExecutable } from '../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
 import minimist from 'minimist'
 import { checkCookieListFormat } from '../../../common/utils/cookie'
 import { loginWithCookieAssistant } from '../../features/login-with-cookie-assistant'
 import initPublicIpc from '../../utils/initPublicIpc'
+import { getLastUsedAndAvailableBrowser } from '../DOWNLOAD_DEPENDENCIES/utils/browser-history'
+import { configWithBrowserAssistant } from '../../features/config-with-browser-assistant'
 
 process.on('SIGTERM', () => {
   console.log('收到SIGTERM信号，正在退出')
@@ -615,8 +616,21 @@ export async function runEntry() {
       runRecordId
     }
   })
-  const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+  let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
   if (!puppeteerExecutable) {
+    try {
+      await configWithBrowserAssistant({ autoFind: true })
+    } catch (error) {
+      //
+    }
+    puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+  }
+  if (!puppeteerExecutable) {
+    await dialog.showMessageBox({
+      type: `error`,
+      message: `未找到可用的浏览器`,
+      detail: `请重新运行本程序，按照提示安装、配置浏览器`
+    })
     sendToDaemon({
       type: 'worker-to-gui-message',
       data: {
