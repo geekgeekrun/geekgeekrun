@@ -181,6 +181,12 @@ export default function initIpc() {
     if (hasOwn(payload, 'sageTimePauseMinute')) {
       bossConfig.sageTimePauseMinute = payload.sageTimePauseMinute
     }
+    if (hasOwn(payload, 'blockCompanyNameRegExpStr')) {
+      bossConfig.blockCompanyNameRegExpStr = payload.blockCompanyNameRegExpStr
+    }
+    if (hasOwn(payload, 'blockCompanyNameRegMatchStrategy')) {
+      bossConfig.blockCompanyNameRegMatchStrategy = payload.blockCompanyNameRegMatchStrategy
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
