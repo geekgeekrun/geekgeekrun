@@ -12,7 +12,7 @@
           >
             <template #content>
               <div w-480px>
-                <div>扩列神器！按照你所设置的求职偏好，自动开聊推荐职位列表中的匹配的Boss。</div>
+                <div>扩列神器！按照你所设置的求职偏好，自动开聊推荐职位列表中的匹配的BOSS。</div>
                 <br />
                 <div>匹配步骤</div>
                 <ol m0 pl2em>
@@ -20,10 +20,10 @@
                     按照公司名称查找职位，查找到目标职位后，自动点击这个职位，右侧将会展示职位详情
                   </li>
                   <li>
-                    检查Boss活跃度
+                    检查BOSS活跃度
                     <ul pl2em>
                       <li>
-                        如果Boss活跃度为本月活跃或更往前的时间，则会把职位标记为不合适，一段时间内你将不会在Boss上看到这个职位，且将会推荐新职位置换这个职位
+                        如果BOSS活跃度为本月活跃或更往前的时间，则会把职位标记为不合适，一段时间内你将不会在BOSS上看到这个职位，且将会推荐新职位置换这个职位
                       </li>
                     </ul>
                   </li>
@@ -32,7 +32,7 @@
                     <ul pl2em>
                       <li>如果匹配则自动点击开聊按钮</li>
                       <li>
-                        不匹配则标记这个职位为不合适，一段时间内你将不会在Boss上看到这个职位，且将会推荐新职位置换这个职位
+                        不匹配则标记这个职位为不合适，一段时间内你将不会在BOSS上看到这个职位，且将会推荐新职位置换这个职位
                       </li>
                     </ul>
                   </li>
@@ -62,16 +62,16 @@
             <template #content>
               <div w-480px>
                 <div>
-                  Boss不明原因已读不回？简历就是投不出去？<br />
-                  已读不回自动复聊，提醒一下已读不回的 Boss，助力把握每次机会
+                  BOSS不明原因已读不回？简历就是投不出去？<br />
+                  已读不回自动复聊，提醒一下已读不回的 BOSS，助力把握每次机会
                 </div>
                 <br />
                 <div>匹配逻辑</div>
-                <div>在聊天列表中查找对你消息已读不回的Boss，再发一条消息，多次复聊；同时：</div>
+                <div>在聊天列表中查找对你消息已读不回的BOSS，再发一条消息，多次复聊；同时：</div>
                 <ul m0 pl2em>
                   <li>如果设置了“跟进时限”，那么在这个时间之前活跃的聊天将不会被检查</li>
                   <li>
-                    如果设置了“跟进间隔”，且再次检查时发现Boss已读不回，且距离上次提醒时间间隔小于这个时间，那么聊天将暂时不会跟进，直到下次检查时距离上次提醒时间间隔大于这个时间
+                    如果设置了“跟进间隔”，且再次检查时发现BOSS已读不回，且距离上次提醒时间间隔小于这个时间，那么聊天将暂时不会跟进，直到下次检查时距离上次提醒时间间隔大于这个时间
                   </li>
                 </ul>
                 <br />
@@ -133,7 +133,7 @@
         <RouterLink to="./StartChatRecord">开聊记录</RouterLink>
         <RouterLink to="./MarkAsNotSuitRecord">标记不合适记录</RouterLink>
         <RouterLink to="./JobLibrary">职位库</RouterLink>
-        <RouterLink to="./BossLibrary">Boss库</RouterLink>
+        <RouterLink to="./BossLibrary">BOSS库</RouterLink>
         <RouterLink to="./CompanyLibrary">公司库</RouterLink>
       </div>
       <div class="pt-16px pb-16px flex-0 font-size-12px">
@@ -277,6 +277,7 @@ const handleClickConfigLlm = async () => {
       height: 2em;
       box-sizing: border-box;
       padding-left: 1.5em;
+      font-size: 14px;
       &.router-link-active {
         background-color: #fff;
         font-weight: 700;

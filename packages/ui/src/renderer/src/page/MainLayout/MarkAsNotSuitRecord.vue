@@ -214,7 +214,7 @@ function handleViewJobSnapshotButtonClick(record: VMarkAsNotSuitLog) {
 }
 
 const markReasonTopicMap = {
-  [MarkAsNotSuitReason.BOSS_INACTIVE]: 'Boss不活跃',
+  [MarkAsNotSuitReason.BOSS_INACTIVE]: 'BOSS不活跃',
   [MarkAsNotSuitReason.USER_MANUAL_OPERATION_WITH_UNKNOWN_REASON]: '手动标记不合适',
   [MarkAsNotSuitReason.JOB_NOT_SUIT]: '职位不合适',
   [MarkAsNotSuitReason.JOB_CITY_NOT_SUIT]: '工作地不合适',
@@ -233,8 +233,8 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
         }
       })()
       return [
-        extInfo?.bossActiveTimeDesc && `Boss活跃情况：${extInfo.bossActiveTimeDesc}`,
-        extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`
+        extInfo?.bossActiveTimeDesc && `BOSS活跃情况：${extInfo.bossActiveTimeDesc}`,
+        extInfo?.chosenReasonInUi?.text && `BOSS选项内容：${extInfo.chosenReasonInUi.text}`
       ]
         .filter(Boolean)
         .join('\n')
@@ -247,7 +247,7 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
           return null
         }
       })()
-      return [extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`]
+      return [extInfo?.chosenReasonInUi?.text && `BOSS选项内容：${extInfo.chosenReasonInUi.text}`]
         .filter(Boolean)
         .join('\n')
     }
@@ -260,7 +260,7 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
           return null
         }
       })()
-      return [extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`]
+      return [extInfo?.chosenReasonInUi?.text && `BOSS选项内容：${extInfo.chosenReasonInUi.text}`]
         .filter(Boolean)
         .join('\n')
     }
@@ -274,7 +274,7 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
       })()
       return [
         extInfo?.salaryDesc && `薪资：${extInfo.salaryDesc}`,
-        extInfo?.chosenReasonInUi?.text && `Boss选项内容：${extInfo.chosenReasonInUi.text}`
+        extInfo?.chosenReasonInUi?.text && `BOSS选项内容：${extInfo.chosenReasonInUi.text}`
       ]
         .filter(Boolean)
         .join('\n')

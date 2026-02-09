@@ -20,7 +20,7 @@
                 >
                   <template #content>
                     <div>
-                      本程序运行较长时间后，Boss直聘会对账号进行风控，导致本程序不能继续执行。<br />
+                      本程序运行较长时间后，BOSS直聘会对账号进行风控，导致本程序不能继续执行。<br />
                       为此，加入摸鱼模式。通过此配置，主动减慢本程序的运行速度，降低潜在的被风控监测到的概率。<br />
                       你可以自定义开启摸鱼模式的频率 - 默认为操作100次后，暂停运行15分钟。
                     </div>
@@ -110,7 +110,7 @@
               <div w-full>
                 <div ref="jobSourceFormItemSectionEl" font-size-16px>
                   <div>
-                    你想投递Boss直聘上哪些列表里的职位？
+                    你想投递BOSS直聘上哪些列表里的职位？
                     <el-tooltip
                       effect="light"
                       placement="bottom-start"
@@ -123,7 +123,7 @@
                       </template>
                       <el-button type="text" font-size-12px
                         ><span><QuestionFilled w-1em h-1em mr2px /></span
-                        >下方展示的各条目与Boss直聘界面对应关系是怎样的？</el-button
+                        >下方展示的各条目与BOSS直聘界面对应关系是怎样的？</el-button
                       >
                     </el-tooltip>
                   </div>
@@ -140,7 +140,7 @@
             <el-form-item prop="filter" mt18px mb0px w-full>
               <div flex-1>
                 <div font-size-16px>
-                  你希望Boss直聘为你筛选出什么样的职位？
+                  你希望BOSS直聘为你筛选出什么样的职位？
                   <el-tooltip
                     effect="light"
                     placement="bottom-start"
@@ -149,7 +149,7 @@
                     <template #content>
                       <ul m0 line-height-1.5em w-540px pl2em>
                         <li>
-                          这个配置决定了下面列表中会展示哪些职位。查找职位时，会在Boss直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
+                          这个配置决定了下面列表中会展示哪些职位。查找职位时，会在BOSS直聘页面上自动组合下方设置的筛选条件。对应UI：<br />
                           <img h-270px src="../resources/intro-of-job-filter-auto-change.png" />
                         </li>
                         <li color-orange>
@@ -886,7 +886,7 @@
                           </div>
                           <div>
                             <b>“职位类型正则”填写过程中请注意</b
-                            >，“职位类型”是由Boss直聘预定义好的一系列职位分类，因此<b>请按照这个分类来编写正则</b>。<br />
+                            >，“职位类型”是由BOSS直聘预定义好的一系列职位分类，因此<b>请按照这个分类来编写正则</b>。<br />
                             这个分类可以在此找到：<br />
                             <img w-400px src="../resources/job-type-source-entry.png" />
                           </div>
@@ -1651,7 +1651,7 @@ function handleExpectJobFilterTemplateClicked(item) {
 
 const strategyOptionWhenCurrentJobNotMatch = [
   {
-    name: '在Boss直聘上标记不合适（推荐，这确保Boss直聘推荐新职位来置换不合适职位）',
+    name: '在BOSS直聘上标记不合适（推荐，这确保BOSS直聘推荐新职位来置换不合适职位）',
     value: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
   },
   {

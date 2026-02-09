@@ -10,11 +10,11 @@
         <el-form-item>
           <div>
             <el-checkbox v-if="!expectJobTypeRegExpStr?.trim()" :model-value="false" disabled>
-              发送提醒消息前，先按照“自动开聊-职位类型正则”校验正在与Boss沟通的岗位是否满足期望，校验通过后再提醒
+              发送提醒消息前，先按照“自动开聊-职位类型正则”校验正在与BOSS沟通的岗位是否满足期望，校验通过后再提醒
             </el-checkbox>
             <template v-else>
               <el-checkbox v-model="formContent.autoReminder.onlyRemindBossWithExpectJobType">
-                发送提醒消息前，先按照“自动开聊-职位类型正则”校验正在与Boss沟通的岗位是否满足期望，校验通过后再提醒
+                发送提醒消息前，先按照“自动开聊-职位类型正则”校验正在与BOSS沟通的岗位是否满足期望，校验通过后再提醒
               </el-checkbox>
               <div ml1.5em color-gray>
                 <div>当前职位类型正则：{{ expectJobTypeRegExpStr?.trim() }}</div>
@@ -31,7 +31,7 @@
             </template>
           </div>
         </el-form-item>
-        <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：">
+        <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的BOSS时，将要向BOSS发出：">
           <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
             <div>
               <el-tooltip
@@ -142,7 +142,7 @@
             :precision="1"
             :step="0.5"
             @blur="handleThrottleIntervalMinutesBlur"
-          />&nbsp;分钟内不多次跟进同一Boss
+          />&nbsp;分钟内不多次跟进同一BOSS
         </el-form-item>
         <el-form-item label="跟进时限（天）" prop="rechatLimitDay" mb-0>
           <div>
@@ -174,7 +174,7 @@
                   请向你不想继续提醒的Boss发送任意消息，发送后立即撤回的这条消息即可。
                   <br />
                   <br />
-                  对于PC端Boss直聘，鼠标移动到要撤回的消息，点按鼠标右键调出菜单，再鼠标左键点击菜单中的“撤回”。如图所示：
+                  对于PC端BOSS直聘，鼠标移动到要撤回的消息，点按鼠标右键调出菜单，再鼠标左键点击菜单中的“撤回”。如图所示：
                   <br />
                   <img block w-full src="./resources/withdraw-message-guide.png" />
                 </li>
@@ -182,7 +182,7 @@
             </template>
             <el-button type="text" font-size-12px
               ><span><QuestionFilled w-1em h-1em mr2px /></span
-              >我不想持续提醒某个Boss了，如何处理？</el-button
+              >我不想持续提醒某个BOSS了，如何处理？</el-button
             >
           </el-tooltip>
         </el-form-item>

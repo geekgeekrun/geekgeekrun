@@ -14,7 +14,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/cookieAssistant',
     component: () => import('@renderer/page/CookieAssistant/index.vue'),
     meta: {
-      title: 'Boss 登录助手'
+      title: 'BOSS登录助手'
     }
   },
   {
@@ -110,7 +110,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'BossLibrary',
         component: () => import('@renderer/page/MainLayout/BossLibrary.vue'),
         meta: {
-          title: 'Boss库'
+          title: 'BOSS库'
         }
       },
       {

@@ -267,7 +267,7 @@ const mainLoop = async () => {
       await dialog.showMessageBox({
         type: `error`,
         message: `登录状态无效`,
-        detail: `请重新登录Boss直聘`
+        detail: `请重新登录BOSS直聘`
       })
       sendToDaemon({
         type: 'worker-to-gui-message',
@@ -319,7 +319,7 @@ const mainLoop = async () => {
       await dialog.showMessageBox({
         type: `error`,
         message: `登录状态无效`,
-        detail: `请重新登录Boss直聘`
+        detail: `请重新登录BOSS直聘`
       })
       sendToDaemon({
         type: 'worker-to-gui-message',
