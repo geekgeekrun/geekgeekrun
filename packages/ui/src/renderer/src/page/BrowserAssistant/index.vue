@@ -4,11 +4,12 @@
       <el-form ref="formRef" :model="formData" :rules="rules" flex flex-col of-hidden h-full>
         <div class="bg-#f6f6f6" flex-0>
           <el-form-item
-            class="w-80%"
+            class="w-90%"
             label="浏览器可执行文件路径"
+            label-position="top"
             prop="browserPath"
-            pt50px
-            pb50px
+            pt30px
+            pb30px
             ml-auto
             mr-auto
             mb-0
@@ -21,16 +22,18 @@
                 @click="autoDetectPuppeteerExecutable"
                 >自动检测</el-button
               >
-              <el-button :style="{ marginLeft: 0 }" @click="chooseExecutableFile">浏览</el-button>
+              <el-button :style="{ marginLeft: 0 }" @click="chooseExecutableFile"
+                >手动选择</el-button
+              >
             </div>
           </el-form-item>
         </div>
         <div flex-1 of-auto font-size-14px line-height-1.5em>
-          <div mt10px ml-auto mr-auto class="w-80%">
+          <div mt10px ml-auto mr-auto class="w-90%">
             <div>常见问题</div>
             <div class="faq-main">
               <details class="faq-item">
-                <summary>不能自动检测到浏览器？</summary>
+                <summary>“自动检测”点击后提示“未检测到可用浏览器的可执行文件”？</summary>
                 <div class="faq-answer">
                   请尝试如下方案之一来处理：
                   <ul pl1em m0>
@@ -71,7 +74,7 @@
               </details>
               <details class="faq-item">
                 <summary>
-                  如果我要自定义浏览器，那么可选择的浏览器有哪些？对于浏览器有什么要求？
+                  如果要手动选择浏览器，可选择的浏览器有哪些？对于浏览器有什么要求？
                 </summary>
                 <div class="faq-answer">
                   <div>
@@ -136,10 +139,32 @@
                       >仅支持
                       {{ EXPECT_CHROMIUM_BUILD_ID }}
                       或更高内核版本</span
-                    >，你可以打开在你想要尝试的浏览器，访问 “chrome://version” 找到 ”用户代理“ /
-                    ”User Agent“ 行来查看当前浏览器的内核版本。<br />
+                    >，你可以打开在你想要尝试的浏览器，访问 “chrome://version” 找到 “用户代理” /
+                    “User Agent” 行来查看当前浏览器的内核版本。<br />
                     目前，大部分中国大陆厂商发布的基于Chromium内核的浏览器，均由于版本过低，不被本程序支持。
                   </div>
+                </div>
+              </details>
+              <details class="faq-item">
+                <summary>如果我选择了一个不支持的浏览器，会发生什么？</summary>
+                <div class="faq-answer">
+                  <div>可能会发生的情况：</div>
+                  <ul>
+                    <li>浏览器将会启动，但会开启一个空白页面，之后浏览器不会做任何事</li>
+                    <li>浏览器启动失败，你不会看到任何界面</li>
+                    <li>浏览器会每隔一段时间打开一个新的浏览器窗口</li>
+                  </ul>
+                </div>
+              </details>
+              <details class="faq-item">
+                <summary>如果我选择了一个不是浏览器的可执行文件，会发生什么？</summary>
+                <div class="faq-answer">
+                  <div>可能会发生的情况：</div>
+                  <ul>
+                    <li>可执行文件将会启动，但会开启一个空白页面，之后可执行文件不会做任何事</li>
+                    <li>可执行文件闪退并报错，闪退后会自动重启，继续报错</li>
+                    <li>可执行文件会不断运行多个实例</li>
+                  </ul>
                 </div>
               </details>
             </div>
@@ -152,7 +177,7 @@
         :style="{
           display: 'flex',
           justifyContent: 'end',
-          width: '80%',
+          width: '90%',
           margin: '0 auto',
           paddingLeft: '',
           paddingRight: ''
