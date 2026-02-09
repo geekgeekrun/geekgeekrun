@@ -56,7 +56,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/readNoReplyReminderLlmMock',
     component: () => import('@renderer/page/ReadNoReplyReminderLlmMock/index.vue'),
     meta: {
-      title: '已读不回复聊 大语言模型测试'
+      title: '已读不回自动复聊 大语言模型测试'
     }
   },
   {
@@ -82,7 +82,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'ReadNoReplyReminder',
         component: () => import('@renderer/page/MainLayout/ReadNoReplyReminder.vue'),
         meta: {
-          title: '已读不回复聊'
+          title: '已读不回自动复聊'
         }
       },
       {
@@ -147,7 +147,7 @@ const routes: Array<RouteRecordRaw> = [
             '@renderer/page/GeekAutoStartChatWithBoss/RunningStatusForReadNoReplyReminder.vue'
           ),
         meta: {
-          title: '已读不回复聊 正在为你开聊BOSS'
+          title: '已读不回自动复聊 正在为你开聊BOSS'
         }
       }
     ]

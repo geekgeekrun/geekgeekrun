@@ -112,7 +112,7 @@
             </el-form-item>
             <el-form-item>
               <el-button size="small" type="primary" @click="handleTestEffectClicked"
-                >使用当前配置模拟已读不回复聊过程</el-button
+                >使用当前配置模拟已读不回自动复聊过程</el-button
               >
             </el-form-item>
             <el-form-item prop="recentMessageQuantityForLlm">
@@ -561,7 +561,7 @@ const rechatLlmFallbackOptions = [
     value: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
   },
   {
-    name: '退出已读不回复聊',
+    name: '退出已读不回自动复聊',
     value: RECHAT_LLM_FALLBACK.EXIT_REMINDER_PROGRAM
   }
 ]

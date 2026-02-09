@@ -45,10 +45,10 @@
 https://github.com/user-attachments/assets/672f1637-dd54-416c-922e-1ecf09b0874a
 
 
-### 已读不回复聊
+### 已读不回自动复聊
 BOSS不明原因已读不回？简历就是投不出去？
 
-已读不回复聊，有事没事提醒一下已读不回的 Ta，助力把握每次机会
+已读不回自动复聊，有事没事提醒一下已读不回的 Ta，助力沟通双向奔赴
 
 <img width="1024" alt="image" src="https://github.com/user-attachments/assets/51a43b0f-118d-4b0a-957c-40a5367e29e4" />
 
@@ -76,13 +76,13 @@ BOSS不明原因已读不回？简历就是投不出去？
 <img width="576" alt="image" src="https://github.com/user-attachments/assets/ef91642f-b0b0-438f-8c66-e650f0de139b" />
 
 
-### 已读不回复聊提示词模板编辑
+### 已读不回自动复聊提示词模板编辑
 对生成的提醒消息不够满意？您不妨可以自己进行编辑提示词，来获得您期望的结果
 
 <img width="1139" alt="image" src="https://github.com/user-attachments/assets/db956573-61c0-44d4-b588-5c04fe941f84" />
 
 
-### 已读不回复聊提醒过程模拟
+### 已读不回自动复聊提醒过程模拟
 想要测试配置的某一款模型可不可用？想测试使用当前配置生成的内容效果如何？那就来这里试试吧
 
 <img width="600" alt="image" src="https://github.com/user-attachments/assets/3b2776bd-ae5b-48d1-a01c-0819509d96a1" />
