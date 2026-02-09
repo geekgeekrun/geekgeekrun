@@ -1657,7 +1657,6 @@ const handleSubmit = async () => {
     clonedFormContent.__jobSourceList
   )
   delete clonedFormContent.__jobSourceList
-  debugger
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(clonedFormContent))
   mittBus.emit('auto-start-chat-with-boss-config-saved')
   gtagRenderer('config_saved_and_launch_auto_start_chat', {
