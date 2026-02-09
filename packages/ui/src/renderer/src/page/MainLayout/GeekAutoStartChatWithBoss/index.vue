@@ -287,6 +287,7 @@
                 :autosize="{ minRows: 4 }"
                 max-h-8lh
                 type="textarea"
+                placeholder="置空表示“不限公司，任意公司都可以投递”"
                 @blur="normalizeExpectCompanies"
               />
             </el-form-item>
@@ -1145,7 +1146,7 @@ import {
   formatStaticCombineFilters
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import defaultTargetCompanyListConf from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/target-company-list.json'
+import sampleCompanyList from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/sample-company-list.json'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
   CombineRecommendJobFilterType,
@@ -1600,12 +1601,12 @@ const normalizeExpectCompanies = () => {
 
 const expectCompanyTemplateList = [
   {
-    name: '默认值',
-    value: defaultTargetCompanyListConf.join(',')
-  },
-  {
     name: '不限公司（随便投）',
     value: ''
+  },
+  {
+    name: '示例公司',
+    value: sampleCompanyList.join(',')
   },
   {
     name: '大厂及关联企业',
