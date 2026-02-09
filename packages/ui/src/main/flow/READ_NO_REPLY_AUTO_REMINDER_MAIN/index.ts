@@ -60,7 +60,23 @@ const rechatLlmFallback =
 
 const expectJobTypeRegExpStr = readConfigFile('boss.json').expectJobTypeRegExpStr
 const onlyRemindBossWithExpectJobType =
-  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ?? !!expectJobTypeRegExpStr
+  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ??
+  !!expectJobTypeRegExpStr
+
+const blockCompanyNameRegExpStr = readConfigFile('boss.json').blockCompanyNameRegExpStr ?? ''
+const blockCompanyNameRegExp = (() => {
+  if (!blockCompanyNameRegExpStr?.trim()) {
+    return null
+  }
+  try {
+    return new RegExp(blockCompanyNameRegExpStr, 'im')
+  } catch {
+    return null
+  }
+})()
+const onlyRemindBossWithoutBlockCompanyName =
+  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithoutBlockCompanyName ??
+  !!blockCompanyNameRegExp
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
@@ -156,7 +172,8 @@ async function saveCurrentChatRecord(page) {
 
 async function checkJobIsClosed() {
   const encryptJobId = await pageMapByName.boss!.evaluate(() => {
-    return document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$.encryptJobId
+    return document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$
+      .encryptJobId
   })
   if (!encryptJobId) {
     return false
@@ -431,6 +448,9 @@ const mainLoop = async () => {
     const toCheckItemAtIndex = friendListData.findIndex((it, index) => {
       return (
         index >= cursorToContinueFind &&
+        (onlyRemindBossWithoutBlockCompanyName && blockCompanyNameRegExp
+          ? !blockCompanyNameRegExp.test(it.brandName)
+          : true) &&
         (rechatLimitDay && it.updateTime
           ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
           : true) &&
@@ -605,11 +625,14 @@ export async function runEntry() {
   })
   initPublicIpc()
   await connectToDaemon()
-  await sendToDaemon({
-    type: 'ping'
-  }, {
-    needCallback: true
-  })
+  await sendToDaemon(
+    {
+      type: 'ping'
+    },
+    {
+      needCallback: true
+    }
+  )
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
@@ -690,7 +713,11 @@ export async function runEntry() {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ACCESS_IS_DENIED)
           break
         }
-        if (err.message.includes(`PUPPETEER_IS_NOT_EXECUTABLE`) || err.message.includes(`Could not find Chrome`) || err.message.includes(`no executable was found`)) {
+        if (
+          err.message.includes(`PUPPETEER_IS_NOT_EXECUTABLE`) ||
+          err.message.includes(`Could not find Chrome`) ||
+          err.message.includes(`no executable was found`)
+        ) {
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
           break
         }
@@ -703,7 +730,7 @@ export async function runEntry() {
             buttons: ['退出']
           })
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE)
-          break;
+          break
         }
       }
     } finally {
