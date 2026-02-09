@@ -1,7 +1,7 @@
 <template>
   <div class="flex h100vh">
     <div class="flex flex-col min-w200px w200px pt30px pl30px aside-nav of-hidden">
-      <div class="nav-list flex-1 of-auto">
+      <div class="nav-list flex-1 of-auto pl20px ml--20px">
         <RouterLink v-show="false" to="./TaskManager">任务管理</RouterLink>
         <div class="group-item">
           <div class="group-title">BOSS直聘</div>
@@ -192,11 +192,13 @@
         </div>
       </div>
     </div>
-    <RouterView v-slot="{ Component }" class="flex-1 of-hidden">
-      <KeepAlive>
-        <component :is="Component" />
-      </KeepAlive>
-    </RouterView>
+    <div class="router-view-wrap">
+      <RouterView v-slot="{ Component }" class="flex-1 of-hidden">
+        <KeepAlive>
+          <component :is="Component" />
+        </KeepAlive>
+      </RouterView>
+    </div>
   </div>
 </template>
 
@@ -314,6 +316,8 @@ const handleClickConfigLlm = async () => {
             font-weight: 700;
             color: #2faa9e;
             border-radius: 9999px 0 0 9999px;
+            position: relative;
+            box-shadow: 0px 0px 10px rgba(50, 114, 108, 0.187);
           }
         }
       }
@@ -327,5 +331,11 @@ const handleClickConfigLlm = async () => {
       margin-left: 0;
     }
   }
+}
+.router-view-wrap {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  box-shadow: -4px 1px 20px rgb(50 114 108 / 29%);
 }
 </style>
