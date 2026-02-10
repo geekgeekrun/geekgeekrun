@@ -5,35 +5,50 @@
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     :show-close="false"
+    width="400px"
+    @closed="fillEmptySteps"
   >
-    <!-- v-if="stepsForRender.some(it => ['todo', 'pending', 'rejected'].includes(it.status))" -->
-    <div>
-      <ul m0 pl0>
-        <li
-          v-for="(item, index) in stepsForRender"
-          :key="index"
-          list-style-none
-          flex
-          justify-start
-          pt4px
-          pb4px
-        >
-          <div>
-            <span v-if="item.status === 'todo'">🕐</span>
-            <span v-if="item.status === 'pending'">👉</span>
-            <span v-if="item.status === 'fulfilled'">✅</span>
-            <span v-if="item.status === 'rejected'">⛔️</span>
-          </div>
-          <span ml8px>{{ item.describe }}</span>
-        </li>
-      </ul>
-    </div>
-    <div flex justify-between items-center w-full>
-      <div>
-        {{ runningStatusTextMapByCode[currentRunningStatus] }}
+    <div flex flex-col flex-items-center>
+      <div class="dialog-header" w-full>
+        <div
+          h160px
+          w-full
+          :style="{
+            backgroundImage: 'linear-gradient(#666, #666)'
+          }"
+        ></div>
       </div>
-      <div>
-        <slot name="op-buttons" :current-running-status="currentRunningStatus" />
+      <div class="dialog-main" w-full mt--20px>
+        <!-- v-if="stepsForRender.some(it => ['todo', 'pending', 'rejected'].includes(it.status))" -->
+        <div>
+          <ul m0 pl0>
+            <li
+              v-for="(item, index) in stepsForRender"
+              :key="index"
+              list-style-none
+              flex
+              justify-start
+              pt4px
+              pb4px
+            >
+              <div>
+                <span v-if="item.status === 'todo'">🕐</span>
+                <span v-if="item.status === 'pending'">👉</span>
+                <span v-if="item.status === 'fulfilled'">✅</span>
+                <span v-if="item.status === 'rejected'">⛔️</span>
+              </div>
+              <span ml8px>{{ item.describe }}</span>
+            </li>
+          </ul>
+        </div>
+        <div flex justify-between items-center w-full>
+          <div>
+            {{ runningStatusTextMapByCode[currentRunningStatus] }}
+          </div>
+          <div>
+            <slot name="op-buttons" :current-running-status="currentRunningStatus" />
+          </div>
+        </div>
       </div>
     </div>
   </el-dialog>
@@ -159,7 +174,26 @@ ipcRenderer.on('worker-exited', (ev, payload) => {
       display: none;
     }
     .el-dialog__body {
-      overflow: hidden;
+      // overflow: hidden;
+    }
+    .dialog-header {
+      display: none;
+      // display: flex;
+      // justify-content: center;
+      // border-radius: 20px 20px 0 0;
+      // overflow: hidden;
+    }
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+    .dialog-main {
+      box-sizing: border-box;
+      background: var(--el-dialog-bg-color);
+      box-shadow: var(--el-dialog-box-shadow);
+      padding: var(--el-dialog-padding-primary);
+      //border-radius: 0 0 20px 20px;
+      border-radius: 20px;
     }
   }
 }
