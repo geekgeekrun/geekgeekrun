@@ -14,7 +14,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/cookieAssistant',
     component: () => import('@renderer/page/CookieAssistant/index.vue'),
     meta: {
-      title: 'Boss 登录助手'
+      title: 'BOSS登录助手'
     }
   },
   {
@@ -56,7 +56,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/readNoReplyReminderLlmMock',
     component: () => import('@renderer/page/ReadNoReplyReminderLlmMock/index.vue'),
     meta: {
-      title: '已读不回提醒器 大语言模型测试'
+      title: '已读不回自动复聊 大语言模型测试'
     }
   },
   {
@@ -75,14 +75,14 @@ const routes: Array<RouteRecordRaw> = [
         path: 'GeekAutoStartChatWithBoss',
         component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss/index.vue'),
         meta: {
-          title: 'BOSS炸弹'
+          title: '自动开聊'
         }
       },
       {
         path: 'ReadNoReplyReminder',
         component: () => import('@renderer/page/MainLayout/ReadNoReplyReminder.vue'),
         meta: {
-          title: '已读不回提醒器'
+          title: '已读不回自动复聊'
         }
       },
       {
@@ -110,7 +110,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'BossLibrary',
         component: () => import('@renderer/page/MainLayout/BossLibrary.vue'),
         meta: {
-          title: 'Boss库'
+          title: 'BOSS库'
         }
       },
       {
@@ -130,14 +130,14 @@ const routes: Array<RouteRecordRaw> = [
         path: 'prepareRun',
         component: () => import('@renderer/page/GeekAutoStartChatWithBoss/PrepareRun.vue'),
         meta: {
-          title: 'BOSS炸弹 正在预热'
+          title: '自动开聊 正在预热'
         }
       },
       {
         path: 'runningStatus',
         component: () => import('@renderer/page/GeekAutoStartChatWithBoss/RunningStatus.vue'),
         meta: {
-          title: 'BOSS炸弹 正在为你开聊BOSS'
+          title: '自动开聊 正在为你开聊BOSS'
         }
       },
       {
@@ -147,7 +147,7 @@ const routes: Array<RouteRecordRaw> = [
             '@renderer/page/GeekAutoStartChatWithBoss/RunningStatusForReadNoReplyReminder.vue'
           ),
         meta: {
-          title: '已读不回提醒器 正在为你开聊BOSS'
+          title: '已读不回自动复聊 正在为你开聊BOSS'
         }
       }
     ]

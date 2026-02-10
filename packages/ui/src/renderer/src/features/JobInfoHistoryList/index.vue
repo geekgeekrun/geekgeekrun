@@ -5,7 +5,7 @@
         <el-col :span="6"><el-form-item label="公司">{{ jobInfo.companyName }}</el-form-item></el-col>
         <el-col :span="6"><el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item></el-col>
         <el-col :span="6"><el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="Boss及其身份">{{ jobInfo.bossName }} {{ jobInfo.bossTitle }}</el-form-item></el-col>
+        <el-col :span="6"><el-form-item label="BOSS及其身份">{{ jobInfo.bossName }} {{ jobInfo.bossTitle }}</el-form-item></el-col>
       </el-row>
     </el-form>
     <el-divider content-position="left">变更记录</el-divider>

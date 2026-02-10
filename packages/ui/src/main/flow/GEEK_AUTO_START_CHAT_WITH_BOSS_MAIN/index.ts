@@ -133,7 +133,7 @@ const runAutoChat = async () => {
           await dialog.showMessageBox({
             type: `error`,
             message: `登录状态无效`,
-            detail: `请重新登录Boss直聘`
+            detail: `请重新登录BOSS直聘`
           })
           process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
           break

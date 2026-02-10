@@ -7,27 +7,14 @@
         :model="formContent.autoReminder"
         label-position="top"
       >
-        <div flex>
-          <el-form-item label="BOSS直聘 Cookie">
-            <el-button size="small" type="primary" @click="handleClickLaunchLogin"
-              >编辑Cookie</el-button
-            >
-          </el-form-item>
-          <div w1px class="bg-#dee1e8" ml16px mr16px />
-          <el-form-item label="浏览器">
-            <el-button size="small" type="primary" @click="handleClickBrowserSetting"
-              >编辑浏览器设置</el-button
-            >
-          </el-form-item>
-        </div>
         <el-form-item>
           <div>
             <el-checkbox v-if="!expectJobTypeRegExpStr?.trim()" :model-value="false" disabled>
-              发送提醒消息前，先按照“Boss炸弹-职位类型正则”校验正在与Boss沟通的岗位是否满足期望，校验通过后再提醒
+              发送提醒消息前，先按照“自动开聊-职位类型正则”校验正在与BOSS沟通的岗位是否满足期望，校验通过后再提醒
             </el-checkbox>
             <template v-else>
               <el-checkbox v-model="formContent.autoReminder.onlyRemindBossWithExpectJobType">
-                发送提醒消息前，先按照“Boss炸弹-职位类型正则”校验正在与Boss沟通的岗位是否满足期望，校验通过后再提醒
+                发送提醒消息前，先按照“自动开聊-职位类型正则”校验正在与BOSS沟通的岗位是否满足期望，校验通过后再提醒
               </el-checkbox>
               <div ml1.5em color-gray>
                 <div>当前职位类型正则：{{ expectJobTypeRegExpStr?.trim() }}</div>
@@ -44,7 +31,7 @@
             </template>
           </div>
         </el-form-item>
-        <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的Boss时，将要向Boss发出：">
+        <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的BOSS时，将要向BOSS发出：">
           <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
             <div>
               <el-tooltip
@@ -74,32 +61,6 @@
               RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
             "
           >
-            <el-form-item class="mb4px">
-              <div>
-                <el-button size="small" type="primary" @click="handleClickConfigLlm">
-                  配置大语言模型
-                </el-button>
-                <div class="font-size-12px color-#666">
-                  支持
-                  <span
-                    class="pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
-                    style="background-color: #3c4efd"
-                    >DeepSeek-V3</span
-                  >
-                  <span
-                    class="ml4px pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
-                    style="background-color: #000000"
-                    >GPT-4o mini</span
-                  >
-                  <span
-                    class="ml4px pl6px pr6px pt4px pb2px color-white border-rd-full font-size-0.8em"
-                    style="background-color: #462ac4"
-                    >Qwen2.5</span
-                  >
-                  模型；支持多个“服务商-模型”组合按权重搭配使用
-                </div>
-              </div>
-            </el-form-item>
             <el-form-item class="mb4px">
               <div>
                 <el-button size="small" type="primary" @click="handleClickEditResume">
@@ -151,7 +112,7 @@
             </el-form-item>
             <el-form-item>
               <el-button size="small" type="primary" @click="handleTestEffectClicked"
-                >使用当前配置模拟已读不回复聊过程</el-button
+                >使用当前配置模拟已读不回自动复聊过程</el-button
               >
             </el-form-item>
             <el-form-item prop="recentMessageQuantityForLlm">
@@ -181,7 +142,7 @@
             :precision="1"
             :step="0.5"
             @blur="handleThrottleIntervalMinutesBlur"
-          />&nbsp;分钟内不多次跟进同一Boss
+          />&nbsp;分钟内不多次跟进同一BOSS
         </el-form-item>
         <el-form-item label="跟进时限（天）" prop="rechatLimitDay" mb-0>
           <div>
@@ -213,7 +174,7 @@
                   请向你不想继续提醒的Boss发送任意消息，发送后立即撤回的这条消息即可。
                   <br />
                   <br />
-                  对于PC端Boss直聘，鼠标移动到要撤回的消息，点按鼠标右键调出菜单，再鼠标左键点击菜单中的“撤回”。如图所示：
+                  对于PC端BOSS直聘，鼠标移动到要撤回的消息，点按鼠标右键调出菜单，再鼠标左键点击菜单中的“撤回”。如图所示：
                   <br />
                   <img block w-full src="./resources/withdraw-message-guide.png" />
                 </li>
@@ -221,7 +182,7 @@
             </template>
             <el-button type="text" font-size-12px
               ><span><QuestionFilled w-1em h-1em mr2px /></span
-              >我不想持续提醒某个Boss了，如何处理？</el-button
+              >我不想持续提醒某个BOSS了，如何处理？</el-button
             >
           </el-tooltip>
         </el-form-item>
@@ -562,31 +523,6 @@ const restoreDefaultTemplate = async () => {
   })
 }
 
-const handleClickLaunchLogin = async () => {
-  gtagRenderer('launch_login_clicked')
-  try {
-    await electron.ipcRenderer.invoke('login-with-cookie-assistant')
-    ElMessage({
-      type: 'success',
-      message: 'Cookie 保存成功'
-    })
-  } catch {
-    //
-  }
-}
-const handleClickBrowserSetting = async () => {
-  gtagRenderer('browser_setting_clicked')
-  try {
-    await electron.ipcRenderer.invoke('config-with-browser-assistant')
-    ElMessage({
-      type: 'success',
-      message: '浏览器设置保存成功'
-    })
-  } catch {
-    //
-  }
-}
-
 const currentStamp = ref(new Date())
 let timer = 0
 function updateCurrentStamp() {
@@ -603,15 +539,6 @@ const rechatLimitDateString = computed(() => {
     +currentStamp.value - formContent.value.autoReminder.rechatLimitDay * 24 * 60 * 60 * 1000
   ).format('YYYY-MM-DD HH:mm:ss')
 })
-
-const handleClickConfigLlm = async () => {
-  gtagRenderer('config_llm_clicked')
-  try {
-    await electron.ipcRenderer.invoke('llm-config')
-  } catch (err) {
-    console.log(err)
-  }
-}
 
 const handleClickEditResume = async () => {
   gtagRenderer('edit_resume_clicked')
@@ -634,7 +561,7 @@ const rechatLlmFallbackOptions = [
     value: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
   },
   {
-    name: '退出已读不回提醒器',
+    name: '退出已读不回自动复聊',
     value: RECHAT_LLM_FALLBACK.EXIT_REMINDER_PROGRAM
   }
 ]

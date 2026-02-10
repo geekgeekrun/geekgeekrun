@@ -3,7 +3,7 @@
     <FlyingCompanyLogoList class="flying-company-logo-list" />
     <div class="tip">
       <article>
-        <h1>👋 已读不回提醒器正在运行</h1>
+        <h1>👋 已读不回自动复聊正在运行</h1>
         <p>🍀 祝你求职顺利！</p>
       </article>
       <el-button :disabled="isStopping" @click="handleStopButtonClick">停止开聊</el-button>

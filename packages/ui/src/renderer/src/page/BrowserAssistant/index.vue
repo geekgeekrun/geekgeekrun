@@ -4,11 +4,12 @@
       <el-form ref="formRef" :model="formData" :rules="rules" flex flex-col of-hidden h-full>
         <div class="bg-#f6f6f6" flex-0>
           <el-form-item
-            class="w-80%"
+            class="w-90%"
             label="浏览器可执行文件路径"
+            label-position="top"
             prop="browserPath"
-            pt50px
-            pb50px
+            pt30px
+            pb30px
             ml-auto
             mr-auto
             mb-0
@@ -21,17 +22,19 @@
                 @click="autoDetectPuppeteerExecutable"
                 >自动检测</el-button
               >
-              <el-button :style="{ marginLeft: 0 }" @click="browserExecutableFile">浏览</el-button>
+              <el-button :style="{ marginLeft: 0 }" @click="chooseExecutableFile"
+                >手动选择</el-button
+              >
             </div>
           </el-form-item>
         </div>
         <div flex-1 of-auto font-size-14px line-height-1.5em>
-          <div mt10px ml-auto mr-auto class="w-80%">
+          <div mt10px ml-auto mr-auto class="w-90%">
             <div>常见问题</div>
-            <div>
-              <details>
-                <summary>不能自动检测到浏览器？</summary>
-                <div ml12px class="color-#666">
+            <div class="faq-main">
+              <details class="faq-item">
+                <summary>“自动检测”点击后提示“未检测到可用浏览器的可执行文件”？</summary>
+                <div class="faq-answer">
                   请尝试如下方案之一来处理：
                   <ul pl1em m0>
                     <li>
@@ -55,7 +58,8 @@
                         :loading="isAutoDetectLoading"
                         @click="autoDetectPuppeteerExecutable"
                         >自动检测</a
-                      >按钮再次尝试。目前（2026.2.7）已知 Chrome 最新版本为 144.0.7559.133
+                      >按钮再次尝试。截至本程序开发时（2026.2.7）Google Chrome 最新版本为
+                      144.0.7559.133
                       ，多数情况下本程序都可以正常工作，但由于浏览器会自动升级，版本不固定，可能存在<span
                         color-orange
                         >浏览器升级后某些功能不兼容导致本程序不能正确运行</span
@@ -65,6 +69,101 @@
                         >提交 Issue</a
                       >来反馈，同时请再尝试方案一。
                     </li>
+                  </ul>
+                </div>
+              </details>
+              <details class="faq-item">
+                <summary>
+                  如果要手动选择浏览器，可选择的浏览器有哪些？对于浏览器有什么要求？
+                </summary>
+                <div class="faq-answer">
+                  <div>
+                    截至本程序开发时（2026.2.7），已确定支持的各操作系统下的浏览器及版本包括：
+                  </div>
+                  <ul>
+                    <li>
+                      <div>macOS</div>
+                      <ul>
+                        <li>Google Chrome for Testing {{ EXPECT_CHROMIUM_BUILD_ID }}</li>
+                        <li>Google Chrome 144.0.7559.133</li>
+                        <li>Microsoft Edge 144.0.3719.115</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <div>Windows</div>
+                      <ul>
+                        <li>Google Chrome for Testing {{ EXPECT_CHROMIUM_BUILD_ID }}</li>
+                        <li>Google Chrome 144.0.7559.133</li>
+                        <li>Microsoft Edge 144.0.3719.93</li>
+                        <li>Opera 127.0.5778.14（基于 Chromium 143.0.7499.194）</li>
+                        <li>Yandex Browser 25.12.3.1126 （基于 Chromium 142.0.7444.1126）</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <div>Linux (Ubuntu)</div>
+                      <ul>
+                        <li>Google Chrome for Testing {{ EXPECT_CHROMIUM_BUILD_ID }}</li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <div>
+                    下列浏览器可以使用，但由于Chromium内核版本低于本程序设置的版本，可能存在潜在问题，不一定能完全支持所有功能，你可以尝试进行配置：
+                  </div>
+                  <ul>
+                    <li>
+                      <div>Windows</div>
+                      <ul>
+                        <li>360 安全浏览器 16.1.2552.64 （基于 Chromium 132.0.6834.83）</li>
+                        <li>360 极速浏览器X 23.1.1187.64 （基于 Chromium 132.0.6805.0）</li>
+                        <li>夸克 6.4.0.728 （基于 Chromium 130.0.6723.44）</li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <div>下列浏览器经过测试已明确不可用：</div>
+                  <ul>
+                    <li>
+                      <div>Windows</div>
+                      <ul>
+                        <li>QQ 浏览器 20.1.0 （基于 Chromium 116.0.5845.97）</li>
+                        <li>搜狗高速浏览器 13.8 （基于 Chromium 116.0.5845.97）</li>
+                        <li>猎豹浏览器（基于 Chromium 112.0.5615.138）</li>
+                        <li>Brave 1.86.148 （基于 Chromium 144.0.7559.133）</li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <div>
+                    本程序目前仅支持 Chromium 内核浏览器，因此 Safari、Firefox、Windows Internet
+                    Explorer、旧版 Microsoft Edge 等<span color-orange
+                      >非Chromium内核浏览器无法使用</span
+                    >；同时，对于 Chromium 内核浏览器，本程序<span color-orange
+                      >仅支持
+                      {{ EXPECT_CHROMIUM_BUILD_ID }}
+                      或更高内核版本</span
+                    >，你可以打开在你想要尝试的浏览器，访问 “chrome://version” 找到 “用户代理” /
+                    “User Agent” 行来查看当前浏览器的内核版本。<br />
+                    目前，大部分中国大陆厂商发布的基于Chromium内核的浏览器，均由于版本过低，不被本程序支持。
+                  </div>
+                </div>
+              </details>
+              <details class="faq-item">
+                <summary>如果我选择了一个不支持的浏览器，会发生什么？</summary>
+                <div class="faq-answer">
+                  <div>可能会发生的情况：</div>
+                  <ul>
+                    <li>浏览器将会启动，但会开启一个空白页面，之后浏览器不会做任何事</li>
+                    <li>浏览器启动失败，你不会看到任何界面</li>
+                    <li>浏览器会每隔一段时间打开一个新的浏览器窗口</li>
+                  </ul>
+                </div>
+              </details>
+              <details class="faq-item">
+                <summary>如果我选择了一个不是浏览器的可执行文件，会发生什么？</summary>
+                <div class="faq-answer">
+                  <div>可能会发生的情况：</div>
+                  <ul>
+                    <li>可执行文件将会启动，但会开启一个空白页面，之后可执行文件不会做任何事</li>
+                    <li>可执行文件闪退并报错，闪退后会自动重启，继续报错</li>
+                    <li>可执行文件会不断运行多个实例</li>
                   </ul>
                 </div>
               </details>
@@ -78,7 +177,7 @@
         :style="{
           display: 'flex',
           justifyContent: 'end',
-          width: '80%',
+          width: '90%',
           margin: '0 auto',
           paddingLeft: '',
           paddingRight: ''
@@ -100,7 +199,7 @@
 
 <script lang="ts" setup>
 import { useRouter } from 'vue-router'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import debounce from 'lodash/debounce'
 import { ElMessage } from 'element-plus'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
@@ -172,12 +271,14 @@ async function autoDetectPuppeteerExecutable() {
       type: 'success',
       grouping: true
     })
+    await nextTick()
+    await formRef.value.validateField()
   } finally {
     isAutoDetectLoading.value = false
   }
 }
 
-async function browserExecutableFile() {
+async function chooseExecutableFile() {
   const chooseResult = await ipcRenderer.invoke('choose-file', {
     fileChooserConfig: {
       properties: ['openFile', 'treatPackageAsDirectory'],
@@ -194,6 +295,8 @@ async function browserExecutableFile() {
     return
   }
   formData.value.browserPath = chooseResult.filePaths[0]
+  await nextTick()
+  await formRef.value.validateField()
 }
 
 ipcRenderer.invoke('get-last-used-and-available-browser').then((res) => {
@@ -238,5 +341,22 @@ a:visited,
 a:hover,
 a:active {
   color: #409eff;
+}
+
+.faq-main {
+  .faq-item {
+    summary {
+      padding: 4px 0;
+    }
+    .faq-answer {
+      color: #666;
+      margin-left: 12px;
+      ul {
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-left: 1em;
+      }
+    }
+  }
 }
 </style>

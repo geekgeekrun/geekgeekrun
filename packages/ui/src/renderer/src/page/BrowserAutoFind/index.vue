@@ -1,8 +1,13 @@
 <template>
   <div class="h-screen of-hidden flex flex-col flex-items-center flex-justify-center">
     <div>
-      <div>你可能是第一次安装本程序</div>
-      <div>正在查找可用浏览器，请稍等...</div>
+      <div>
+        由于您是首次使用本程序，或者您之前配置的浏览器被卸载/被删除/被移动/被更新/版本太旧，因此需要重新配置浏览器
+      </div>
+      <div>
+        首先将尝试自动配置；自动配置成功后，本对话框将自动关闭；如自动配置失败，请在下个页面中手动配置
+      </div>
+      <div>正在尝试自动配置，请稍等...</div>
     </div>
   </div>
 </template>
