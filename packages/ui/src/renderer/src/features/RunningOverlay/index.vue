@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    modal-class="runing-overlay__modal"
+    modal-class="running-overlay__modal"
     :model-value="isDialogVisible"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
@@ -56,7 +56,7 @@ const props = defineProps({
   }
 })
 // const taskManagerStore = useTaskManagerStore()
-// const runingTaskInfo = computed(() => {
+// const runningTaskInfo = computed(() => {
 //   return taskManagerStore.runningTasks?.find((it) => {
 //     return it.workerId === props.workerId
 //   })
@@ -135,7 +135,7 @@ ipcRenderer.on('worker-exited', (ev, payload) => {
 </script>
 
 <style lang="scss">
-.el-overlay.runing-overlay__modal {
+.el-overlay.running-overlay__modal {
   position: absolute;
   width: 100%;
   height: 100%;

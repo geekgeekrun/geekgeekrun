@@ -1198,12 +1198,12 @@
       </div>
     </div>
     <div
-      class="runing-overlay__wrap"
+      class="running-overlay__wrap"
       :style="{
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay
+      <RunningOverlay
         ref="runningOverlayRef"
         worker-id="geekAutoStartWithBossMain"
         :run-record-id="runRecordId"
@@ -1232,7 +1232,7 @@
             </template>
           </div>
         </template>
-      </RuningOverlay>
+      </RunningOverlay>
     </div>
   </div>
 </template>
@@ -1266,7 +1266,7 @@ import CityChooser from './components/CityChooser.vue'
 import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
 import expectJobFilterTemplateList from './expectJobFilterTemplateList'
-import RuningOverlay from '@renderer/features/RunningOverlay/index.vue'
+import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
 import { RUNNING_STATUS_ENUM } from '../../../../../common/enums/auto-start-chat'
 
 const gtagRenderer = (name, params?: object) => {
@@ -2147,7 +2147,7 @@ const handleStopButtonClick = async () => {
   }
 }
 
-.runing-overlay__wrap {
+.running-overlay__wrap {
   position: absolute;
   inset: 0;
 }

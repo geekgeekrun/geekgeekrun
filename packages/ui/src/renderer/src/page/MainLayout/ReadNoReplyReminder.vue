@@ -207,12 +207,12 @@
       </el-form>
     </div>
     <div
-      class="runing-overlay__wrap"
+      class="running-overlay__wrap"
       :style="{
         pointerEvents: 'none'
       }"
     >
-      <RuningOverlay
+      <RunningOverlay
         ref="runningOverlayRef"
         worker-id="readNoReplyAutoReminderMain"
         :run-record-id="runRecordId"
@@ -241,7 +241,7 @@
             </template>
           </div>
         </template>
-      </RuningOverlay>
+      </RunningOverlay>
     </div>
   </div>
 </template>
@@ -258,7 +258,7 @@ import {
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import mittBus from '../../utils/mitt'
 import { QuestionFilled } from '@element-plus/icons-vue'
-import RuningOverlay from '@renderer/features/RunningOverlay/index.vue'
+import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {
     scene: 'rnrr-config',
@@ -638,7 +638,7 @@ const handleStopButtonClick = async () => {
       }
     }
   }
-  .runing-overlay__wrap {
+  .running-overlay__wrap {
     position: absolute;
     inset: 0;
   }
