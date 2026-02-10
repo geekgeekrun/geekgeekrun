@@ -83,14 +83,14 @@ export const checkAndDownloadPuppeteerExecutable = async (
       })
     ).find((it) => it.buildId === EXPECT_CHROMIUM_BUILD_ID)!
   }
-  await saveLastUsedAndAvailableBrowserInfo({
-    executablePath: installedBrowser.executablePath,
-    browser:
-      installedBrowser.browser[0].toUpperCase() +
-      installedBrowser.browser.slice(1) +
-      ' ' +
-      EXPECT_CHROMIUM_BUILD_ID
-  })
+  // await saveLastUsedAndAvailableBrowserInfo({
+  //   executablePath: installedBrowser.executablePath,
+  //   browser:
+  //     installedBrowser.browser[0].toUpperCase() +
+  //     installedBrowser.browser.slice(1) +
+  //     ' ' +
+  //     EXPECT_CHROMIUM_BUILD_ID
+  // })
 
   return installedBrowser
 }
