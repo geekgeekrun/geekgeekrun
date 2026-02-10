@@ -31,6 +31,21 @@
             </template>
           </div>
         </el-form-item>
+        <el-form-item>
+          <div>
+            <el-checkbox v-if="!blockCompanyNameRegExpStr?.trim()" :model-value="false" disabled>
+              发送提醒消息前，先按照“自动开聊-不期望投递公司正则”校验正在与BOSS沟通的岗位是否归属于不期望投递的公司，如果是，则不提醒
+            </el-checkbox>
+            <template v-else>
+              <el-checkbox v-model="formContent.autoReminder.onlyRemindBossWithoutBlockCompanyName">
+                发送提醒消息前，先按照“自动开聊-不期望投递公司正则”校验正在与BOSS沟通的岗位是否归属于不期望投递的公司，如果是，则不提醒
+              </el-checkbox>
+              <div ml1.5em color-gray>
+                <div>当前不期望投递公司正则：{{ blockCompanyNameRegExpStr?.trim() }}</div>
+              </div>
+            </template>
+          </div>
+        </el-form-item>
         <el-form-item class="mb0" label="跟进话术 - 当发现已读不回的BOSS时，将要向BOSS发出：">
           <el-radio-group v-model="formContent.autoReminder.rechatContentSource">
             <div>
@@ -258,7 +273,8 @@ const formContent = ref({
     rechatContentSource: 1,
     recentMessageQuantityForLlm: 8,
     rechatLlmFallback: RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION,
-    onlyRemindBossWithExpectJobType: true
+    onlyRemindBossWithExpectJobType: true,
+    onlyRemindBossWithoutBlockCompanyName: true
   }
 })
 
@@ -296,15 +312,17 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
 })
 
 const expectJobTypeRegExpStr = ref('')
-async function fetchExpectJobTypeRegExpStr() {
+const blockCompanyNameRegExpStr = ref('')
+async function fetchAutoStartChatConfig() {
   await electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     expectJobTypeRegExpStr.value = res.config['boss.json']?.expectJobTypeRegExpStr
+    blockCompanyNameRegExpStr.value = res.config['boss.json']?.blockCompanyNameRegExpStr
   })
 }
-fetchExpectJobTypeRegExpStr()
-mittBus.on('auto-start-chat-with-boss-config-saved', fetchExpectJobTypeRegExpStr)
+fetchAutoStartChatConfig()
+mittBus.on('auto-start-chat-with-boss-config-saved', fetchAutoStartChatConfig)
 onUnmounted(() => {
-  mittBus.off('auto-start-chat-with-boss-config-saved', fetchExpectJobTypeRegExpStr)
+  mittBus.off('auto-start-chat-with-boss-config-saved', fetchAutoStartChatConfig)
 })
 
 const resumeContent = ref(null)

@@ -245,14 +245,16 @@
               <div
                 font-size-14px
                 flex
+                mb6px
                 :style="{
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  width: '100%'
+                  alignItems: 'baseline',
+                  width: '100%',
+                  lineHeight: '1.25em'
                 }"
               >
                 <div>
-                  公司白名单（以逗号分隔，不区分大小写；输入框留空表示不筛选）<el-tooltip
+                  期望投递公司&nbsp;<el-tooltip
                     effect="light"
                     placement="bottom-start"
                     @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
@@ -263,8 +265,10 @@
                     <el-button type="text" font-size-12px
                       ><span><QuestionFilled w-1em h-1em mr2px /></span
                       >公司信息UI位置图示</el-button
-                    >
-                  </el-tooltip>
+                    ></el-tooltip
+                  ><br /><span font-size-12px
+                    ><b color-orange>逗号分隔</b>，不区分大小写；输入框留空表示不筛选</span
+                  >
                 </div>
                 <el-dropdown @command="handleExpectCompanyTemplateClicked">
                   <el-button size="small"
@@ -291,6 +295,107 @@
                 @blur="normalizeExpectCompanies"
               />
             </el-form-item>
+            <div class="h-1px bg-#f0f0f0" mt16px mb8px />
+            <div
+              ref="blockCompanyNameRegExpSectionEl"
+              font-size-14px
+              flex
+              :style="{
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                width: '100%',
+                lineHeight: '1.25em'
+              }"
+            >
+              <div mb6px>
+                不期望投递公司<b color-orange>正则</b>&nbsp;<el-tooltip
+                  effect="light"
+                  placement="bottom-start"
+                  @show="gtagRenderer('tooltip_show_about_expect_company_figure')"
+                >
+                  <template #content>
+                    <img block h-270px src="../resources/intro-of-job-entry.png" />
+                  </template>
+                  <el-button type="text" font-size-12px
+                    ><span><QuestionFilled w-1em h-1em mr2px /></span>公司信息UI位置图示</el-button
+                  ></el-tooltip
+                ><br /><span font-size-12px
+                  ><b color-orange>正则表达式</b>，不区分大小写；输入框留空表示不筛选；<span
+                    color-orange
+                    >优先级高于上方“期望投递公司”</span
+                  ></span
+                >
+              </div>
+              <!-- <el-dropdown @command="handleExpectCompanyTemplateClicked">
+                <el-button size="small"
+                  >公司列表模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
+                ></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="item in expectCompanyTemplateList"
+                      :key="item.name"
+                      :command="item"
+                      >{{ item.name }}</el-dropdown-item
+                    >
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown> -->
+            </div>
+            <div
+              class="block-company-filter-wrap"
+              :style="{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '10px'
+              }"
+            >
+              <el-form-item prop="blockCompanyNameRegExpStr" mb0 w-full>
+                <el-input
+                  v-model="formContent.blockCompanyNameRegExpStr"
+                  :autosize="{ minRows: 4 }"
+                  max-h-8lh
+                  type="textarea"
+                  placeholder="置空表示“不限公司，任意公司都不会被标记为不合适”"
+                  @blur="
+                    formContent.blockCompanyNameRegExpStr =
+                      formContent.blockCompanyNameRegExpStr?.trim() ?? ''
+                  "
+                />
+              </el-form-item>
+              <div
+                v-if="formContent.expectCityList?.length"
+                :style="{
+                  width: '400px',
+                  borderLeft: '1px solid #f0f0f0',
+                  paddingLeft: '10px',
+                  flex: `0 0 auto`
+                }"
+              >
+                <el-form-item
+                  mb10px
+                  :style="{
+                    width: '100%'
+                  }"
+                >
+                  <div font-size-12px>当前职位对应公司名称与不期望投递公司正则匹配时：</div>
+                  <el-select
+                    v-model="formContent.blockCompanyNameRegMatchStrategy"
+                    @change="
+                      (value) => gtagRenderer('block_company_match_strategy_changed', { value })
+                    "
+                  >
+                    <el-option
+                      v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                      :key="op.value"
+                      :label="op.name"
+                      :value="op.value"
+                      >{{ op.name }}</el-option
+                    >
+                  </el-select>
+                </el-form-item>
+              </div>
+            </div>
             <div class="h-1px bg-#f0f0f0" mt16px mb16px />
             <div mt16px>
               <div font-size-14px mb8px>工作地</div>
@@ -1213,7 +1318,9 @@ const formContent = ref({
   ]),
   isSageTimeEnabled: true,
   sageTimeOpTimes: 100,
-  sageTimePauseMinute: 15
+  sageTimePauseMinute: 15,
+  blockCompanyNameRegExpStr: '',
+  blockCompanyNameRegMatchStrategy: MarkAsNotSuitOp.NO_OP
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -1371,10 +1478,15 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     parseFloat(res.config['boss.json'].sageTimePauseMinute) < 0
       ? 15
       : parseFloat(res.config['boss.json'].sageTimePauseMinute)
+  formContent.value.blockCompanyNameRegExpStr =
+    res.config['boss.json'].blockCompanyNameRegExpStr?.trim() ?? ''
+  formContent.value.blockCompanyNameRegMatchStrategy =
+    res.config['boss.json'].blockCompanyNameRegMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 })
 
 const jobSourceFormItemSectionEl = ref()
 const jobDetailRegExpSectionEl = ref()
+const blockCompanyNameRegExpSectionEl = ref()
 const formRules = {
   expectJobNameRegExpStr: {
     trigger: 'blur',
@@ -1488,6 +1600,25 @@ const formRules = {
         return
       }
       cb()
+    }
+  },
+  blockCompanyNameRegExpStr: {
+    trigger: 'blur',
+    validator(_, value, cb) {
+      if (!value) {
+        cb()
+        gtagRenderer('empty_reg_exp_for_bcn')
+        return
+      }
+      try {
+        new RegExp(value, 'ig')
+        gtagRenderer('valid_reg_exp_for_bcn', { v: value })
+        cb()
+      } catch (err) {
+        cb(new Error(`正则无效：${err?.message}`))
+        blockCompanyNameRegExpSectionEl.value?.scrollIntoViewIfNeeded()
+        gtagRenderer('invalid_reg_exp_for_bcn', { v: value })
+      }
     }
   }
 }
@@ -1671,7 +1802,7 @@ const strategyScopeOptionWhenMarkJobNotMatch = [
     value: StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
   },
   {
-    name: '仅和“公司白名单”匹配的职位',
+    name: '仅和“期望投递公司”匹配的职位',
     value: StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
   }
 ]
@@ -1989,7 +2120,8 @@ const handleStopButtonClick = async () => {
     font-size: 12px;
     line-height: 1.2em;
   }
-  .job-detail-filter-wrap .el-form-item__error {
+  .job-detail-filter-wrap .el-form-item__error,
+  .block-company-filter-wrap .el-form-item__error {
     position: static;
     word-break: break-word;
   }
