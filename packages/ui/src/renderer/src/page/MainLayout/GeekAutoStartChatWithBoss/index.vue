@@ -364,12 +364,18 @@
                 />
               </el-form-item>
               <div
-                v-if="formContent.expectCityList?.length"
                 :style="{
                   width: '400px',
-                  borderLeft: '1px solid #f0f0f0',
                   paddingLeft: '10px',
-                  flex: `0 0 auto`
+                  flex: `0 0 auto`,
+                  ...(formContent.blockCompanyNameRegExpStr?.length
+                    ? {
+                        borderLeft: '1px solid #f0f0f0'
+                      }
+                    : {
+                        borderLeft: '1px solid transparent',
+                        visibility: 'hidden'
+                      })
                 }"
               >
                 <el-form-item
