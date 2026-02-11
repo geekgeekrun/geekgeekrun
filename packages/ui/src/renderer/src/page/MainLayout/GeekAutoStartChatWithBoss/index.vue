@@ -323,7 +323,8 @@
                   ><b color-orange>正则表达式</b>，不区分大小写；输入框留空表示不筛选；<span
                     color-orange
                     >优先级高于上方“期望投递公司”</span
-                  ></span
+                  ><br />请<b color-red>小心验证</b
+                  >你编写的正则，填写太过于宽泛的正则（例如`.*`）将导致任何职位都不会开聊</span
                 >
               </div>
               <el-dropdown @command="handleBlockCompanyNameRegExpTemplateClicked">
