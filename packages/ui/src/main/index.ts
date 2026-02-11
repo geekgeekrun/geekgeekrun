@@ -9,6 +9,7 @@ const enableLogToFile = process.env.GEEKGEEKRUN_ENABLE_LOG_TO_FILE === String(1)
 if (isUiDev || enableLogToFile) {
   overrideConsole()
 }
+console.log('NODE_ENV:', process.env.NODE_ENV)
 
 // 捕获未处理的 EPIPE 错误
 process.on('uncaughtException', (err) => {
@@ -18,9 +19,9 @@ process.on('uncaughtException', (err) => {
   throw err
 })
 
-console.log(process.argv)
+console.log('argv:', process.argv)
 const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
-console.log(commandlineArgs)
+console.log('parsed commandline args:', commandlineArgs)
 
 const runMode = commandlineArgs['mode']
 
