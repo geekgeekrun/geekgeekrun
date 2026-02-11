@@ -47,7 +47,13 @@ export async function ensureEditThisCookie () {
   if (geekgeekrunEditVersion < APP_GEEKGEEKRUN_EDIT_VERSION) {
     isNeedExtractEditThisCookie = true
   }
-
+  const isExtractDoneFlagFilePath = path.join(editThisCookieExtensionPath, 'EXTRACT_DONE')
+  if (
+    !isNeedExtractEditThisCookie && 
+    !fs.existsSync(isExtractDoneFlagFilePath)
+  ) {
+    isNeedExtractEditThisCookie = true
+  }
   if (isNeedExtractEditThisCookie) {
     if (
       fs.existsSync(
@@ -67,6 +73,10 @@ export async function ensureEditThisCookie () {
       {
         dir: extensionDir
       }
+    )
+    await fs.promises.writeFile(
+      isExtractDoneFlagFilePath,
+      ''
     )
   }
 }
