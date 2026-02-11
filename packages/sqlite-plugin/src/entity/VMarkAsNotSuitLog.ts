@@ -1,7 +1,7 @@
-import { requireTypeorm } from "../utils/module-loader";
+import * as typeorm from 'typeorm';
 import { ChatStartupFrom } from "./ChatStartupLog";
 import { MarkAsNotSuitReason } from "../enums";
-const { ViewEntity, ViewColumn } = requireTypeorm();
+const { ViewEntity, ViewColumn } = typeorm;
 @ViewEntity({
   expression: `SELECT
     job_info.*,

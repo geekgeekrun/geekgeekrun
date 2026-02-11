@@ -8,7 +8,7 @@ export interface BrowserInfo {
   executablePath: string
 }
 
-const CONFIG_VSERION = 2
+const CONFIG_VERSION = 2
 
 const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
 export const lastUsedBrowserRecordFilePath = path.join(
@@ -35,18 +35,11 @@ export const getLastUsedAndAvailableBrowser = async (): Promise<BrowserInfo | nu
       !path ||
       !fs.existsSync(path) ||
       !Number(configVersion) ||
-      Number(configVersion) < CONFIG_VSERION
+      Number(configVersion) < CONFIG_VERSION
     ) {
       await removeLastUsedAndAvailableBrowserPath()
       return null
     }
-
-    // blacklist browser
-    if (path.includes(`Microsoft\\Edge\\Application\\msedge.exe`)) {
-      await removeLastUsedAndAvailableBrowserPath()
-      return null
-    }
-
     return {
       executablePath: path,
       browser
@@ -64,7 +57,7 @@ export const saveLastUsedAndAvailableBrowserInfo = async (browserInfo: BrowserIn
     }
     await fsPromise.writeFile(
       lastUsedBrowserRecordFilePath,
-      [browserInfo.executablePath, browserInfo.browser, CONFIG_VSERION].join('\n')
+      [browserInfo.executablePath, browserInfo.browser, CONFIG_VERSION].join('\n')
     )
   } catch {
     console.warn('lastUsedBrowserRecordFile write error')

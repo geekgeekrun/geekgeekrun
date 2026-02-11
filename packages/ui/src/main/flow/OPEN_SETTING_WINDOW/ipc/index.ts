@@ -1,22 +1,18 @@
-import { ipcMain, shell, app } from 'electron'
+import { ipcMain, shell, app, dialog, BrowserWindow } from 'electron'
 import path from 'path'
 import * as childProcess from 'node:child_process'
 import {
   ensureConfigFileExist,
-  ensureStorageFileExist,
   configFileNameList,
   readConfigFile,
   writeConfigFile,
   readStorageFile,
-  writeStorageFile,
   storageFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { ChildProcess } from 'child_process'
 import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
-import { getAnyAvailablePuppeteerExecutable } from '../../../flow/CHECK_AND_DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
-import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../../../common/enums/auto-start-chat'
+import { getAnyAvailablePuppeteerExecutable } from '../../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { mainWindow } from '../../../window/mainWindow'
 import {
   getAutoStartChatRecord,
@@ -36,11 +32,11 @@ import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/re
 import {
   getValidTemplate,
   requestNewMessageContent
-} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+} from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
   autoReminderPromptTemplateFileName,
   writeDefaultAutoRemindPrompt
-} from '../../READ_NO_REPLY_AUTO_REMINDER/boss-operation'
+} from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
   checkIsResumeContentValid,
   resumeContentEnoughDetect
@@ -52,6 +48,16 @@ import {
 import { RequestSceneEnum } from '../../../features/llm-request-log'
 import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
+import { daemonEE, sendToDaemon } from '../connect-to-daemon'
+import { runCommon } from '../../../features/run-common'
+import { loginWithCookieAssistant } from '../../../features/login-with-cookie-assistant'
+import { configWithBrowserAssistant } from '../../../features/config-with-browser-assistant'
+import {
+  createFirstLaunchNoticeApproveFlag,
+  isFirstLaunchNoticeApproveFlagExist,
+  waitForUserApproveAgreement
+} from '../../../features/first-launch-notice-window'
+import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -175,6 +181,12 @@ export default function initIpc() {
     if (hasOwn(payload, 'sageTimePauseMinute')) {
       bossConfig.sageTimePauseMinute = payload.sageTimePauseMinute
     }
+    if (hasOwn(payload, 'blockCompanyNameRegExpStr')) {
+      bossConfig.blockCompanyNameRegExpStr = payload.blockCompanyNameRegExpStr
+    }
+    if (hasOwn(payload, 'blockCompanyNameRegMatchStrategy')) {
+      bossConfig.blockCompanyNameRegMatchStrategy = payload.blockCompanyNameRegMatchStrategy
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 
@@ -187,262 +199,111 @@ export default function initIpc() {
     return await Promise.all(promiseArr)
   })
 
-  ipcMain.handle('read-storage-file', async (ev, payload) => {
-    ensureStorageFileExist()
-    return await readStorageFile(payload.fileName)
-  })
-
-  ipcMain.handle('write-storage-file', async (ev, payload) => {
-    ensureStorageFileExist()
-
-    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
-  })
-
-  // const currentExecutablePath = app.getPath('exe')
-  // console.log(currentExecutablePath)
-  ipcMain.handle('prepare-run-geek-auto-start-chat-with-boss', async () => {
-    mainWindow?.webContents.send('locating-puppeteer-executable')
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    if (!puppeteerExecutable) {
-      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    }
-    mainWindow?.webContents.send('puppeteer-executable-is-located')
-  })
-
-  let subProcessOfPuppeteer: ChildProcess | null = null
-  ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
-    if (subProcessOfPuppeteer) {
-      return
-    }
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    if (!puppeteerExecutable) {
-      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    }
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
-    }
-    subProcessOfPuppeteer = childProcess.spawn(
-      process.argv[0],
-      [
-        process.argv[1],
-        `--mode=geekAutoStartWithBossDaemon`,
-        `--mode-to-daemon=geekAutoStartWithBossMain`
-      ],
-      {
-        env: subProcessEnv,
-        stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+  ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
+    const mode = 'geekAutoStartWithBossMain'
+    const { runRecordId } = await runCommon({ mode })
+    daemonEE.on('message', function handler(message) {
+      if (message.workerId !== mode) {
+        return
       }
-    )
-    // console.log(subProcessOfPuppeteer)
-    return new Promise((resolve, reject) => {
-      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
-        const data = raw
-        switch (data.type) {
-          case 'GEEK_AUTO_START_CHAT_WITH_BOSS_STARTED': {
-            resolve(data)
-            break
-          }
-          case 'LOGIN_STATUS_INVALID': {
-            await sleep(500)
-            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-            return
-          }
-          default: {
-            return
-          }
-        }
-      })
-
-      subProcessOfPuppeteer!.once('exit', (exitCode) => {
-        subProcessOfPuppeteer = null
-        if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
-          // means cannot find downloaded puppeteer
-          reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-        } else {
-          mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
-        }
-      })
+      if (message.type === 'worker-exited') {
+        mainWindow?.webContents.send('worker-exited', message)
+      }
     })
-    // TODO:
+    return { runRecordId }
   })
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
-    if (subProcessOfPuppeteer) {
-      return
-    }
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
-    if (!puppeteerExecutable) {
-      return Promise.reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-    }
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
-    }
-    subProcessOfPuppeteer = childProcess.spawn(
-      process.argv[0],
-      [process.argv[1], `--mode=readNoReplyAutoReminder`],
-      {
-        env: subProcessEnv,
-        stdio: ['inherit', 'inherit', 'inherit', 'pipe', 'ipc']
+    const mode = 'readNoReplyAutoReminderMain'
+    const { runRecordId } = await runCommon({ mode })
+    daemonEE.on('message', function handler(message) {
+      if (message.workerId !== mode) {
+        return
       }
-    )
-    // console.log(subProcessOfPuppeteer)
-    return new Promise((resolve, reject) => {
-      subProcessOfPuppeteer!.stdio[3]!.pipe(JSONStream.parse()).on('data', async (raw) => {
-        const data = raw
-        switch (data.type) {
-          case 'LOGIN_STATUS_INVALID': {
-            await sleep(500)
-            mainWindow?.webContents.send('check-boss-zhipin-cookie-file')
-            return
-          }
-          case 'ERR_INTERNET_DISCONNECTED': {
-            mainWindow?.webContents.send('toast-message', {
-              type: 'error',
-              message: '联网失败，请检查网络连接'
-            })
-            return
-          }
-          default: {
-            return
-          }
-        }
-      })
-
-      subProcessOfPuppeteer!.once('exit', (exitCode) => {
-        subProcessOfPuppeteer = null
-        if (exitCode === AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE) {
-          // means cannot find downloaded puppeteer
-          reject('NEED_TO_CHECK_RUNTIME_DEPENDENCIES')
-        } else {
-          mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
-        }
-      })
-
-      resolve(true)
-    })
-    // TODO:
-  })
-
-  ipcMain.handle('check-dependencies', async () => {
-    const [anyAvailablePuppeteerExecutable] = await Promise.all([
-      getAnyAvailablePuppeteerExecutable()
-    ])
-    return {
-      puppeteerExecutableAvailable: !!anyAvailablePuppeteerExecutable
-    }
-  })
-
-  let subProcessOfCheckAndDownloadDependencies: ChildProcess | null = null
-  ipcMain.handle('setup-dependencies', async () => {
-    if (subProcessOfCheckAndDownloadDependencies) {
-      return
-    }
-    subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
-      process.argv[0],
-      [process.argv[1], `--mode=checkAndDownloadDependenciesForInit`],
-      {
-        stdio: [null, null, null, 'pipe', 'ipc']
+      if (message.type === 'worker-exited') {
+        mainWindow?.webContents.send('worker-exited', message)
       }
-    )
-    return new Promise((resolve, reject) => {
-      subProcessOfCheckAndDownloadDependencies!.stdio[3]!.pipe(JSONStream.parse()).on(
-        'data',
-        (raw) => {
-          const data = raw
-          switch (data.type) {
-            case 'NEED_RESETUP_DEPENDENCIES':
-            case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-              mainWindow?.webContents.send(data.type, data)
-              break
-            }
-            case 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR': {
-              console.error(data)
-              break
-            }
-            default: {
-              return
-            }
-          }
-        }
-      )
-      subProcessOfCheckAndDownloadDependencies!.once('exit', (exitCode) => {
-        switch (exitCode) {
-          case 0: {
-            resolve(exitCode)
-            break
-          }
-          default: {
-            reject('PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR')
-            break
-          }
-        }
-        subProcessOfCheckAndDownloadDependencies = null
-      })
     })
+    return { runRecordId }
   })
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
     mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
-    subProcessOfPuppeteer?.kill()
-    setTimeout(() => {
-      try {
-        subProcessOfPuppeteer?.kill('SIGKILL')
-      } catch {
-        //
-      }
-    }, 1000)
-  })
-
-  let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
-  ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', async () => {
-    try {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
-    } catch {
-      //
-    }
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: (await getAnyAvailablePuppeteerExecutable())!.executablePath
-    }
-    subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
-      process.argv[0],
-      [process.argv[1], `--mode=launchBossZhipinLoginPageWithPreloadExtension`],
-      {
-        env: subProcessEnv,
-        stdio: [null, null, null, 'pipe', 'ipc']
-      }
-    )
-    subProcessOfBossZhipinLoginPageWithPreloadExtension!.stdio[3]!.pipe(JSONStream.parse()).on(
-      'data',
-      (raw) => {
-        const data = raw
-        switch (data.type) {
-          case 'BOSS_ZHIPIN_COOKIE_COLLECTED': {
-            mainWindow?.webContents.send(data.type, data)
-            break
-          }
-          default: {
-            return
-          }
+    const p = new Promise((resolve) => {
+      daemonEE.on('message', function handler(message) {
+        if (message.workerId !== 'geekAutoStartWithBossMain') {
+          return
         }
+        if (message.type === 'worker-exited') {
+          daemonEE.off('message', handler)
+          resolve(undefined)
+        }
+      })
+    })
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId: 'geekAutoStartWithBossMain'
+      },
+      {
+        needCallback: true
       }
     )
 
-    subProcessOfBossZhipinLoginPageWithPreloadExtension!.once('exit', () => {
-      mainWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
-      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
-    })
+    await p
+    mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
   })
-  ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', async () => {
-    try {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
-    } catch {
-      //
-    } finally {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
-    }
+
+  ipcMain.handle('stop-read-no-reply-auto-reminder', async () => {
+    mainWindow?.webContents.send('read-no-reply-auto-reminder-stopping')
+    const p = new Promise((resolve) => {
+      daemonEE.on('message', function handler(message) {
+        if (message.workerId !== 'readNoReplyAutoReminderMain') {
+          return
+        }
+        if (message.type === 'worker-exited') {
+          daemonEE.off('message', handler)
+          resolve(undefined)
+        }
+      })
+    })
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId: 'readNoReplyAutoReminderMain'
+      },
+      {
+        needCallback: true
+      }
+    )
+
+    await p
+    mainWindow?.webContents.send('read-no-reply-auto-reminder-stopped')
+  })
+
+  ipcMain.handle('get-task-manager-list', async () => {
+    const result = await sendToDaemon(
+      {
+        type: 'get-status'
+      },
+      {
+        needCallback: true
+      }
+    )
+    return result
+  })
+
+  // IPC处理：停止工具进程
+  ipcMain.handle('stop-task', async (_, workerId) => {
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId
+      },
+      {
+        needCallback: true
+      }
+    )
   })
 
   ipcMain.handle('check-boss-zhipin-cookie-file', () => {
@@ -473,7 +334,7 @@ export default function initIpc() {
 
   let subProcessOfOpenBossSiteDefer: null | PromiseWithResolvers<ChildProcess> = null
   let subProcessOfOpenBossSite: null | ChildProcess = null
-  ipcMain.handle('open-site-with-boss-cookie', async (_, data) => {
+  ipcMain.handle('open-site-with-boss-cookie', async (ev, data) => {
     const url = data.url
     if (
       !subProcessOfOpenBossSiteDefer ||
@@ -481,7 +342,31 @@ export default function initIpc() {
       subProcessOfOpenBossSite.killed
     ) {
       subProcessOfOpenBossSiteDefer = Promise.withResolvers()
-      const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+      let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+      if (!puppeteerExecutable) {
+        try {
+          const parent = BrowserWindow.fromWebContents(ev.sender) || undefined
+          await configWithBrowserAssistant({
+            autoFind: true,
+            windowOption: {
+              parent,
+              modal: !!parent,
+              show: true
+            }
+          })
+          puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+        } catch (error) {
+          //
+        }
+      }
+      if (!puppeteerExecutable) {
+        await dialog.showMessageBox({
+          type: `error`,
+          message: `未找到可用的浏览器`,
+          detail: `请重新运行本程序，按照提示安装、配置浏览器`
+        })
+        return
+      }
       const subProcessEnv = {
         ...process.env,
         PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath
@@ -665,6 +550,60 @@ export default function initIpc() {
   ipcMain.handle('check-update', async () => {
     const newRelease = await checkUpdateForUi()
     return newRelease
+  })
+  ipcMain.handle('login-with-cookie-assistant', async () => {
+    return await loginWithCookieAssistant({
+      windowOption: {
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      }
+    })
+  })
+  ipcMain.handle('config-with-browser-assistant', async () => {
+    return await configWithBrowserAssistant({
+      windowOption: {
+        parent: mainWindow!,
+        modal: true,
+        show: true
+      }
+    })
+  })
+
+  ipcMain.handle('pre-enter-setting-ui', async () => {
+    if (!isFirstLaunchNoticeApproveFlagExist()) {
+      try {
+        await waitForUserApproveAgreement({
+          windowOption: {
+            parent: mainWindow!,
+            modal: true,
+            show: true
+          }
+        })
+        createFirstLaunchNoticeApproveFlag()
+      } catch {
+        app.exit(0)
+        return
+      }
+    }
+    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    if (!puppeteerExecutable) {
+      const lastBrowser = await getLastUsedAndAvailableBrowser()
+      if (!lastBrowser) {
+        try {
+          await configWithBrowserAssistant({
+            windowOption: {
+              parent: mainWindow!,
+              modal: true,
+              show: true
+            },
+            autoFind: true
+          })
+        } catch (err) {
+          void err
+        }
+      }
+    }
   })
 
   ipcMain.handle('exit-app-immediately', () => {

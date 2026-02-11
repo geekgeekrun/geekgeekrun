@@ -1,16 +1,11 @@
 <template>
   <div class="cookie-assistant-page">
-    <div ml1em mt1em mb1em font-size-16px>Boss 登录助手</div>
-    <el-alert
-      v-if="cookieInvalid"
-      type="warning"
-      :closable="false"
-      title="需要获取您的Boss直聘Cookie才能继续"
-    >
-      由于您是首次使用本程序，或者您之前使用的Boss直聘账号登录状态失效，因此您需要重新获取登录凭证。
+    <div ml1em mt1em mb1em font-size-16px>BOSS登录助手</div>
+    <el-alert v-if="cookieInvalid" type="warning" :closable="false">
+      由于您是首次使用本程序，或者您之前使用的BOSS直聘账号登录状态失效，因此您需要重新获取登录凭证
     </el-alert>
     <div ml1em mt1em line-height-normal>
-      如果您了解如何获取Cookie、了解有效的Cookie格式，可以直接在下方输入框中进行编辑。由于手动编辑较为麻烦，建议您打开已登录过Boss直聘的浏览器，使用<a
+      如果您了解如何获取Cookie、了解有效的Cookie格式，可以直接在下方输入框中进行编辑。由于手动编辑较为麻烦，建议您打开已登录过BOSS直聘的浏览器，使用<a
         class="color-blue! decoration-none"
         href="javascript:void(0)"
         @click.prevent="handleEditThisCookieExtensionStoreLinkClick"
@@ -29,14 +24,14 @@
         >
         启动浏览器
       </li>
-      <li>按照正常流程，通过 <b>短信验证码/二维码/微信小程序</b> 登录您的Boss直聘账号</li>
+      <li>按照正常流程，通过 <b>短信验证码/二维码/微信小程序</b> 登录您的BOSS直聘账号</li>
       <li>接下来将自动进行一些页面跳转，最终将会停留在首页</li>
       <li>
         登录后预计5-10秒内（具体取决于您的网速），您的Cookie将被自动填入下方输入框。
         <details>
           <summary color-orange cursor-pointer>我已完成登录，但Cookie一直没出现？</summary>
           <div ml-2em max-h-200px of-auto>
-            如果您确实已经在打开浏览器中看到您已登录了Boss直聘，请尝试按照如图所示方式复制Cookie：
+            如果您确实已经在打开浏览器中看到您已登录了BOSS直聘，请尝试按照如图所示方式复制Cookie：
             <figure>
               <figcaption>依次点击浏览器右上角“扩展程序”图标、“EditThisCookie”图标</figcaption>
               <img block max-w-full src="./resources/copy-cookie-step-1.png" />
@@ -98,7 +93,7 @@
       </el-form-item>
     </el-form>
     <footer flex mt20px pb20px flex-justify-end>
-      <el-button v-if="!cookieInvalid" @click="handleCancel">取消</el-button>
+      <el-button @click="handleCancel">取消</el-button>
       <el-button type="primary" @click="handleSubmit">确定</el-button>
     </footer>
   </div>
@@ -201,7 +196,7 @@ const handleEditThisCookieExtensionStoreLinkClick = () => {
 
 const handleCancel = () => {
   gtagRenderer('cancel_clicked')
-  router.replace('/main-layout')
+  window.close()
 }
 const handleSubmit = async () => {
   gtagRenderer('save_clicked')
@@ -210,9 +205,10 @@ const handleSubmit = async () => {
     fileName: 'boss-cookies.json',
     data: formContent.value.collectedCookies
   })
-  ElMessage.success('Boss直聘 Cookie 保存成功')
+  ElMessage.success('BOSS直聘 Cookie 保存成功')
   gtagRenderer('save_cookie_done')
-  router.replace('/main-layout')
+
+  window.electron.ipcRenderer.send('cookie-saved')
 }
 
 const handleBossZhipinLoginPageClosed = () => {

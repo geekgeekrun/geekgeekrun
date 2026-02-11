@@ -9,7 +9,7 @@ export enum DOWNLOAD_ERROR_EXIT_CODE {
   DOWNLOAD_ERROR = 80
 }
 
-export const checkAndDownloadDependenciesForInit = async () => {
+export const downloadDependenciesForInit = async () => {
   process.on('disconnect', () => app.exit())
   process.on('uncaughtException', () => app.exit(DOWNLOAD_ERROR_EXIT_CODE.DOWNLOAD_ERROR))
   app.dock?.hide()
@@ -50,7 +50,7 @@ export const checkAndDownloadDependenciesForInit = async () => {
           timeoutTimer = setTimeout(() => {
             // will encounter this when network disconnected when downloading
             promiseWithResolver.reject(new Error('PROGRESS_NOT_CHANGED_TOO_LONG'))
-          }, 5 * 1000)
+          }, 10 * 1000)
         } else {
           clearTimeout(throttleProgressTimer)
           throttleProgressTimer = null
@@ -73,7 +73,7 @@ export const checkAndDownloadDependenciesForInit = async () => {
           )
           throttleProgressTimer = setTimeout(() => {
             throttleProgressTimer = null
-          }, 2500)
+          }, 500)
         }
       }
     })
@@ -94,11 +94,13 @@ export const checkAndDownloadDependenciesForInit = async () => {
       pipe,
       JSON.stringify({
         type: 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR',
-        ...err instanceof Error ? {
-          name: err.name,
-          message: err.message,
-          stack: err.stack
-        } : null
+        ...(err instanceof Error
+          ? {
+              name: err.name,
+              message: err.message,
+              stack: err.stack
+            }
+          : null)
       }) + '\r\n'
     )
     await sleep(1000)

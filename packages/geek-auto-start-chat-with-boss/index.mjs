@@ -86,30 +86,31 @@ export const autoStartChatEventBus = new EventEmitter()
 let puppeteer
 let StealthPlugin
 let LaodengPlugin
+let AnonymizeUaPlugin
 export async function initPuppeteer () {
   // production
   const importResult = await Promise.all(
     [
       import('puppeteer-extra'),
       import('puppeteer-extra-plugin-stealth'),
-      import('@geekgeekrun/puppeteer-extra-plugin-laodeng')
+      import('@geekgeekrun/puppeteer-extra-plugin-laodeng'),
+      import('puppeteer-extra-plugin-anonymize-ua')
     ]
   )
   puppeteer = importResult[0].default
   StealthPlugin = importResult[1].default
   LaodengPlugin = importResult[2].default
+  AnonymizeUaPlugin = importResult[3].default
   puppeteer.use(StealthPlugin())
   puppeteer.use(LaodengPlugin())
-
+  puppeteer.use(AnonymizeUaPlugin({ makeWindows: false }))
   return {
     puppeteer,
     StealthPlugin,
-    LaodengPlugin
+    LaodengPlugin,
+    AnonymizeUaPlugin
   }
 }
-
-const bossCookies = readStorageFile('boss-cookies.json')
-const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
 const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
 const combineRecommendJobFilterType = readConfigFile('boss.json').combineRecommendJobFilterType ?? CombineRecommendJobFilterType.ANY_COMBINE
@@ -246,6 +247,19 @@ const recommendJobPageUrl = `https://www.zhipin.com/web/geek/jobs`
 
 const expectCompanySet = new Set(targetCompanyList)
 const enableCompanyAllowList = Boolean(expectCompanySet.size)
+const blockCompanyNameRegExpStr = readConfigFile('boss.json').blockCompanyNameRegExpStr ?? ''
+const blockCompanyNameRegExp = (() => {
+  if (!blockCompanyNameRegExpStr?.trim()) {
+    return null
+  }
+  try {
+    return new RegExp(blockCompanyNameRegExpStr, 'im')
+  }
+  catch {
+    return null
+  }
+})()
+const blockCompanyNameRegMatchStrategy = readConfigFile('boss.json').blockCompanyNameRegMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 
 /**
  * @type { import('puppeteer').Browser }
@@ -297,6 +311,18 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
     let isOptionChosen = false
     if (chooseReasonDialogProxy) {
       switch (reasonCode) {
+        case MarkAsNotSuitReason.COMPANY_NAME_NOT_SUIT: {
+          const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="薪资"]`))
+          if (opProxy) {
+            await opProxy.click()
+            isOptionChosen = true
+          }
+          break
+        }
         case MarkAsNotSuitReason.BOSS_INACTIVE: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title="BOSS活跃度低"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="职位停招/招满"]`))
@@ -311,7 +337,7 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         case MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT:
         case MarkAsNotSuitReason.JOB_CITY_NOT_SUIT: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
@@ -324,7 +350,7 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
         case MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT: {
           const opProxy = (await chooseReasonDialogProxy.$(`.zp-type-item[title*="薪资"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title$="城市"]`))
-            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离远"]`))
+            ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="距离"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title*="公司"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="面试过/入职过"]`))
             ?? (await chooseReasonDialogProxy.$(`.zp-type-item[title="重复推荐"]`))
@@ -983,6 +1009,14 @@ async function toRecommendPage (hooks) {
                           ].includes(expectSalaryNotMatchStrategy) &&
                           strategyScopeOptionWhenMarkSalaryNotMatch === StrategyScopeOptionWhenMarkJobNotMatch.ALL_JOB
                         ) ? !checkIfSalarySuit(it.salaryDesc) : false
+                      ) || (
+                        // enter job detail to mark as not suit for company name filter
+                        !!blockCompanyNameRegExp &&
+                        blockCompanyNameRegExp.test(it.brandName?.toLowerCase?.() ?? '') &&
+                          [
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                            MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+                          ].includes(blockCompanyNameRegMatchStrategy)
                       )
                     )
                 })
@@ -1076,6 +1110,47 @@ async function toRecommendPage (hooks) {
                   //#region collect not suit reasons
                   const notSuitReasonIdToStrategyMap = {}
                   const notSuitConditionHandleMap = {
+                    async companyName() {
+                      blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                      if (blockCompanyNameRegMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL && !await page.$('.job-detail-box .job-detail-operate .not-suitable')) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.COMPANY_NAME_NOT_SUIT,
+                              extInfo: null,
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (blockCompanyNameRegMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.COMPANY_NAME_NOT_SUIT)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.COMPANY_NAME_NOT_SUIT,
+                              extInfo: {
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
+                            }
+                          )
+                        } catch(err) {
+                          console.log(`mark boss inactive failed`, err)
+                        }
+                      }
+                    },
                     async active() {
                       blockBossNotActive.add(targetJobData.jobInfo.encryptUserId)
                       if (jobNotActiveStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL || !await page.$('.job-detail-box .job-detail-operate .not-suitable')) {
@@ -1288,6 +1363,11 @@ async function toRecommendPage (hooks) {
                     }
                   }
 
+                  if (
+                    !!blockCompanyNameRegExp && blockCompanyNameRegExp.test(selectedJobData.brandName ?? '')
+                  ) {
+                    notSuitReasonIdToStrategyMap.companyName = blockCompanyNameRegMatchStrategy
+                  }
                   //#region
                   // null
                   // 刚刚活跃 // 今日活跃 // 昨日活跃 // 3日内活跃 // 本周活跃 // 2周内活跃
@@ -1544,10 +1624,13 @@ export async function mainLoop (hooks) {
         height: 900 - 140,
       }
     })
-    hooks.puppeteerLaunched?.call()
+    hooks.puppeteerLaunched?.call(browser)
     page = (await browser.pages())[0]
+    hooks.pageGotten?.call(page)
     //set cookies
-    hooks.cookieWillSet?.call(bossCookies)
+    const bossCookies = readStorageFile('boss-cookies.json')
+    const bossLocalStorage = readStorageFile('boss-local-storage.json')
+    await hooks.cookieWillSet?.promise(bossCookies)
     for(let i = 0; i < bossCookies.length; i++){
       await page.setCookie(bossCookies[i]);
     }
@@ -1576,7 +1659,10 @@ export async function closeBrowserWindow () {
   browser?.close()
   const browserProcess = browser?.process()
   if (browserProcess) {
-    process.kill(browserProcess.pid)
+    try {
+      process.kill(browserProcess.pid)
+    }
+    catch {}
   }
   browser = null
   page = null

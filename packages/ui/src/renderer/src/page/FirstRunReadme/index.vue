@@ -22,8 +22,8 @@
                   gtagRenderer('view_boss_agreement_clicked')
                 }
               "
-              >《Boss直聘用户协议》</el-link
-            >（2023年3月版）相关条款相违背，您在注册Boss直聘时已签署过这一条款；根据该条款
+              >《BOSS直聘用户协议》</el-link
+            >（2023年3月版）相关条款相违背，您在注册BOSS直聘时已签署过这一条款；根据该条款
             <i>七、用户的平台使用义务</i>、<i>八、违约责任</i>
             章节，如果一些非正常用户行为被风控监测到，您需要承受包括不仅限于<b class="color-red"
               >账号被强制退出登录、账号被限制使用、账号被封禁</b
@@ -31,10 +31,10 @@
             >，且如果相关风险发生，<b class="color-red">您需要自行承担相关后果，本程序不负责</b>。
           </ElCheckbox>
           <ElCheckbox :label="1" :class="[unreadItemsAfterClickSubmit[1] ? 'unread' : '']">
-            本程序需要存储您的登录凭据，即Cookie，来模拟您在Boss直聘上开聊Boss的行为；本程序仅会把您的Cookie存储在本地，并在您访问Boss直聘时将其传输到Boss直聘，<b
+            本程序需要存储您的登录凭据，即Cookie，来模拟您在BOSS直聘上开聊BOSS的行为；本程序仅会把您的Cookie存储在本地，并在您访问BOSS直聘时将其传输到BOSS直聘，<b
               class="color-red"
               >不会泄露给第三方</b
-            >，也不会进行除自动开聊Boss以外的行为；<b class="color-red">请勿向他人泄漏您的Cookie</b
+            >，也不会进行除自动开聊BOSS以外的行为；<b class="color-red">请勿向他人泄漏您的Cookie</b
             >。
           </ElCheckbox>
           <ElCheckbox :label="2" :class="[unreadItemsAfterClickSubmit[2] ? 'unread' : '']">
@@ -42,11 +42,11 @@
               class="color-red"
               >注意节制</b
             >，建议当天开聊次数用尽后，隔几天再使用。建议您<b class="color-red"
-              >注册一个本程序专用的新的Boss直聘账号</b
+              >注册一个本程序专用的新的BOSS直聘账号</b
             >进行求职。
           </ElCheckbox>
           <ElCheckbox :label="3" :class="[unreadItemsAfterClickSubmit[3] ? 'unread' : '']">
-            本程序原理是模拟用户在Boss直聘网页上，寻找关键元素并进行点击操作；Boss直聘网站经常<b>发生改版</b>，且有可能<b>包含A/B实验</b>，这将导致本程序相关脚本失效（典型表现为本程序运行到某一步骤后，<b
+            本程序原理是模拟用户在BOSS直聘网页上，寻找关键元素并进行点击操作；BOSS直聘网站经常<b>发生改版</b>，且有可能<b>包含A/B实验</b>，这将导致本程序相关脚本失效（典型表现为本程序运行到某一步骤后，<b
               class="color-red"
               >浏览器重复“闪退、重新启动”</b
             >）。如果您在使用过程中遇上程序未按照预期执行的情况，请点击程序左下角进行反馈。
@@ -81,16 +81,16 @@
           </ElCheckbox>
           <ElCheckbox :label="7" :class="[unreadItemsAfterClickSubmit[7] ? 'unread' : '']">
             本程序<b class="color-red">不对您的求职过程与结果负责</b
-            >，为您开聊的职位均在Boss直聘上发布，职位信息真实性由Boss直聘负责；请<b
+            >，为您开聊的职位均在BOSS直聘上发布，职位信息真实性由BOSS直聘负责；请<b
               class="color-red"
               >自行甄别为您开聊的公司、认真决定是否参加面试、慎重选择Offer</b
             >。
           </ElCheckbox>
           <ElCheckbox :label="8" :class="[unreadItemsAfterClickSubmit[8] ? 'unread' : '']">
-            请在Boss直聘上自行<b class="color-red">屏蔽您不期望投递的公司</b
-            >；如果您不希望您当前公司其它具有招聘账号的员工看到您在Boss直聘上活跃，请<b
+            请在BOSS直聘上自行<b class="color-red">屏蔽您不期望投递的公司</b
+            >；如果您不希望您当前公司其它具有招聘账号的员工看到您在BOSS直聘上活跃，请<b
               class="color-red"
-              >在Boss直聘上屏蔽当前公司及与之关联的公司</b
+              >在BOSS直聘上屏蔽当前公司及与之关联的公司</b
             >。
           </ElCheckbox>
           <ElCheckbox :label="9" :class="[unreadItemsAfterClickSubmit[9] ? 'unread' : '']">
@@ -129,7 +129,7 @@ const readmeItemCheckStatusList = ref<number[]>([])
 const handleCancel = async () => {
   gtagRenderer('cancel_clicked')
   await sleep(500)
-  electron.ipcRenderer.invoke('exit-app-immediately')
+  window.close()
 }
 
 const unreadItemsAfterClickSubmit = ref<Record<number, true>>({})
@@ -150,7 +150,7 @@ const handleSubmit = () => {
     }
     return
   }
-  electron.ipcRenderer.invoke('first-launch-notice-approve')
+  electron.ipcRenderer.send('first-launch-notice-approve')
   gtagRenderer('submit_done')
 }
 const handleReadmeItemCheckStatusListChange = (value: number[]) => {

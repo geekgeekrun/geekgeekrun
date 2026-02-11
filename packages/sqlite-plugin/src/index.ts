@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import { type DataSource } from "typeorm";
-import { requireTypeorm } from "./utils/module-loader";
 
 import { BossInfo } from "./entity/BossInfo";
 import { BossInfoChangeLog } from "./entity/BossInfoChangeLog";
@@ -22,7 +21,6 @@ import { ChatMessageRecord } from './entity/ChatMessageRecord'
 import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
 import { JobHireStatusRecord } from './entity/JobHireStatusRecord'
 
-import sqlite3 from 'sqlite3';
 import {
   saveChatStartupRecord,
   saveJobInfoFromRecommendPage,
@@ -40,17 +38,17 @@ import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/17460923
 import { Init1000000000000 } from "./migrations/1000000000000-Init";
 import { AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526 } from "./migrations/1752380078526-AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog";
 import { AddJobHireStatusTable1766466476822 } from "./migrations/1766466476822-AddJobHireStatusTable";
-const lodashImportPromise = import('lodash-es')
+import chunk from 'lodash/chunk'
+import * as typeorm from 'typeorm'
 
 export function initDb(dbFilePath) {
-  const { DataSource } = requireTypeorm()
+  const { DataSource } = typeorm
   const appDataSource = new DataSource({
-    type: "sqlite",
+    type: "better-sqlite3",
     synchronize: false,
     logging: true,
     logger: "simple-console",
     database: dbFilePath,
-    driver: sqlite3, // The important line
     entities: [
       ChatStartupLog,
       BossInfo,
@@ -97,6 +95,25 @@ export default class SqlitePlugin {
   userInfo = null
 
   apply(hooks) {
+    hooks.pageGotten.tap(
+      'SqlitePlugin',
+      (page) => {
+        page.on('response', async (response) => {
+          const ds = await this.initPromise;
+          if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
+            const data = await response.json()
+            if (data.code === 0) {
+              await saveJobInfoFromRecommendPage(await ds, data.zpData)
+              await saveJobHireStatusRecord(await ds, {
+                encryptJobId: data.zpData.jobInfo.encryptId,
+                hireStatus: JobHireStatus.HIRING,
+                lastSeenDate: new Date()
+              })
+            }
+          }
+        })
+      }
+    )
     hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
       async (userInfoResponse) => {
@@ -183,7 +200,6 @@ export default class SqlitePlugin {
           if (chattedJobIds.length === 0) {
             return
           }
-          const { chunk } = await lodashImportPromise
           const chattedJobIdChunks = chunk(chattedJobIds, 200)
           const chattedBossIds = [];
           for (const chattedJobIdChunk of chattedJobIdChunks) {

@@ -11,6 +11,7 @@ import { VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/dist/entity/VMarkA
 import { measureExecutionTime } from '../../../../../../common/utils/performance'
 import { PageReq, PagedRes } from '../../../../../../common/types/pagination'
 import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/dist/entity/JobInfoChangeLog'
+import { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/AutoStartChatRunRecord'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 let dataSource: DataSource | null = null
@@ -161,6 +162,13 @@ const payloadHandler = {
       })
     )
     return data
+  },
+  async saveAndGetCurrentRunRecord() {
+    const autoStartChatRunRecord = new AutoStartChatRunRecord()
+    autoStartChatRunRecord.date = new Date()
+    const autoStartChatRunRecordRepository = dataSource!.getRepository(AutoStartChatRunRecord)
+    const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
+    return result
   }
 }
 

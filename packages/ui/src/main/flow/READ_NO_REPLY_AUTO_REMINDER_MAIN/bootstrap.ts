@@ -7,8 +7,6 @@ import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storag
 
 const localStoragePageUrl = `https://www.zhipin.com/desktop/`
 const bossChatUiUrl = `https://www.zhipin.com/web/geek/chat`
-const bossCookies = readStorageFile('boss-cookies.json')
-const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
 export async function bootstrap() {
   const { puppeteer } = await initPuppeteer()
@@ -28,6 +26,8 @@ export async function bootstrap() {
 
 export async function launchBoss(browser: Browser) {
   const page = (await browser.pages())[0]
+  const bossCookies = readStorageFile('boss-cookies.json')
+  const bossLocalStorage = readStorageFile('boss-local-storage.json')
   //set cookies
   for (let i = 0; i < bossCookies.length; i++) {
     await page.setCookie(bossCookies[i])

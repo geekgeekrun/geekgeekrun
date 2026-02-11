@@ -4,7 +4,6 @@ import { Browser, Page } from 'puppeteer'
 import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait.mjs'
-import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
 import { app, dialog } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import {
@@ -17,16 +16,35 @@ import {
   getJobHireStatusRecord,
   saveJobHireStatusRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
-import { writeStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import * as fs from 'fs'
-import { pipeWriteRegardlessError } from '../utils/pipe'
+import {
+  writeStorageFile,
+  readStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
-import { RECHAT_CONTENT_SOURCE, RECHAT_LLM_FALLBACK } from '../../../common/enums/auto-start-chat'
+import {
+  AUTO_CHAT_ERROR_EXIT_CODE,
+  RECHAT_CONTENT_SOURCE,
+  RECHAT_LLM_FALLBACK
+} from '../../../common/enums/auto-start-chat'
 import gtag from '../../utils/gtag'
 import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums'
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
+import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
+// import { pushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS } from '../../utils/screenshot'
+import { checkShouldExit } from '../../utils/worker'
+import minimist from 'minimist'
+import { checkCookieListFormat } from '../../../common/utils/cookie'
+import { loginWithCookieAssistant } from '../../features/login-with-cookie-assistant'
+import initPublicIpc from '../../utils/initPublicIpc'
+import { getLastUsedAndAvailableBrowser } from '../DOWNLOAD_DEPENDENCIES/utils/browser-history'
+import { configWithBrowserAssistant } from '../../features/config-with-browser-assistant'
+
+process.on('SIGTERM', () => {
+  console.log('收到SIGTERM信号，正在退出')
+  process.exit(0)
+})
 
 const throttleIntervalMinutes =
   readConfigFile('boss.json').autoReminder?.throttleIntervalMinutes ?? 10
@@ -42,13 +60,53 @@ const rechatLlmFallback =
 
 const expectJobTypeRegExpStr = readConfigFile('boss.json').expectJobTypeRegExpStr
 const onlyRemindBossWithExpectJobType =
-  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ?? !!expectJobTypeRegExpStr
+  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ??
+  !!expectJobTypeRegExpStr
+
+const blockCompanyNameRegExpStr = readConfigFile('boss.json').blockCompanyNameRegExpStr ?? ''
+const blockCompanyNameRegExp = (() => {
+  if (!blockCompanyNameRegExpStr?.trim()) {
+    return null
+  }
+  try {
+    return new RegExp(blockCompanyNameRegExpStr, 'im')
+  } catch {
+    return null
+  }
+})()
+const onlyRemindBossWithoutBlockCompanyName =
+  readConfigFile('boss.json').autoReminder?.onlyRemindBossWithoutBlockCompanyName ??
+  !!blockCompanyNameRegExp
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
 export const pageMapByName: {
   boss?: Page | null
 } = {}
+
+// async function periodPushCurrentPageScreenshot () {
+//   try {
+//     if (pageMapByName.boss?.isClosed()) {
+//       return
+//     }
+//     const shouldExit = await checkShouldExit()
+//     if (shouldExit) {
+//       return
+//     }
+//     try {
+//       await pushCurrentPageScreenshot(pageMapByName.boss)
+//     }
+//     catch (err) {
+//       if (err?.message?.includes(`PAGE_CLOSED`)) {
+//         return
+//       }
+//     }
+//     setTimeout(periodPushCurrentPageScreenshot, SCREENSHOT_INTERVAL_MS)
+//   }
+//   catch {}
+// }
+
+// periodPushCurrentPageScreenshot()
 
 async function saveCurrentChatRecord(page) {
   const userInfo = await page.evaluate(
@@ -114,7 +172,8 @@ async function saveCurrentChatRecord(page) {
 
 async function checkJobIsClosed() {
   const encryptJobId = await pageMapByName.boss!.evaluate(() => {
-    return document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$.encryptJobId
+    return document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$
+      .encryptJobId
   })
   if (!encryptJobId) {
     return false
@@ -214,6 +273,44 @@ const mainLoop = async () => {
       browser = null
     }
   }
+  let bossCookies = readStorageFile('boss-cookies.json')
+  let cookieCheckResult = checkCookieListFormat(bossCookies)
+  while (!cookieCheckResult) {
+    try {
+      await loginWithCookieAssistant()
+      bossCookies = readStorageFile('boss-cookies.json')
+      cookieCheckResult = checkCookieListFormat(bossCookies)
+    } catch (err) {
+      await dialog.showMessageBox({
+        type: `error`,
+        message: `登录状态无效`,
+        detail: `请重新登录BOSS直聘`
+      })
+      sendToDaemon({
+        type: 'worker-to-gui-message',
+        data: {
+          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          step: {
+            id: 'basic-cookie-check',
+            status: 'rejected'
+          },
+          runRecordId
+        }
+      })
+      throw new Error('LOGIN_STATUS_INVALID')
+    }
+  }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'basic-cookie-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
   const canNotConfirmIfHasReadMsgTemplateList = [
     'Boss还没查看你的消息',
     '你与该职位竞争者PK情况',
@@ -232,12 +329,45 @@ const mainLoop = async () => {
   // #region
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
     writeStorageFile('boss-cookies.json', [])
-    throw new Error('LOGIN_STATUS_INVALID')
+    try {
+      // popup login dialog, then update login status
+      await loginWithCookieAssistant()
+    } catch (err) {
+      await dialog.showMessageBox({
+        type: `error`,
+        message: `登录状态无效`,
+        detail: `请重新登录BOSS直聘`
+      })
+      sendToDaemon({
+        type: 'worker-to-gui-message',
+        data: {
+          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          step: {
+            id: 'login-status-check',
+            status: 'rejected'
+          },
+          runRecordId
+        }
+      })
+      throw new Error('LOGIN_STATUS_INVALID')
+    }
+    throw new Error('THROW_FOR_RETRY')
   }
   if (
     currentPageUrl.startsWith('https://www.zhipin.com/web/common/403.html') ||
     currentPageUrl.startsWith('https://www.zhipin.com/web/common/error.html')
   ) {
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      data: {
+        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        step: {
+          id: 'login-status-check',
+          status: 'rejected'
+        },
+        runRecordId
+      }
+    })
     throw new Error('ACCESS_IS_DENIED')
   }
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/safe/verify-slider')) {
@@ -260,9 +390,31 @@ const mainLoop = async () => {
       })
     if (validateRes.code === 0) {
       await storeStorage(pageMapByName.boss)
+      sendToDaemon({
+        type: 'worker-to-gui-message',
+        data: {
+          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          step: {
+            id: 'login-status-check',
+            status: 'rejected'
+          },
+          runRecordId
+        }
+      })
       throw new Error('CAPTCHA_PASSED_AND_NEED_RESTART')
     }
   }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'login-status-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
   // #endregion
   // check set security question tip modal
   let setSecurityQuestionTipModelProxy = await pageMapByName.boss!.$(
@@ -296,6 +448,9 @@ const mainLoop = async () => {
     const toCheckItemAtIndex = friendListData.findIndex((it, index) => {
       return (
         index >= cursorToContinueFind &&
+        (onlyRemindBossWithoutBlockCompanyName && blockCompanyNameRegExp
+          ? !blockCompanyNameRegExp.test(it.brandName)
+          : true) &&
         (rechatLimitDay && it.updateTime
           ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
           : true) &&
@@ -452,10 +607,6 @@ const mainLoop = async () => {
   }
 }
 
-let isParentProcessDisconnect = false
-process.once('disconnect', () => {
-  isParentProcessDisconnect = true
-})
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
@@ -465,19 +616,75 @@ const rerunInterval = (() => {
   return v
 })()
 
-let pipe
-try {
-  pipe = fs.createWriteStream(null, { fd: 3 })
-} catch {
-  console.warn('pipe is not available')
-}
+const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export async function runEntry() {
-  process.on('disconnect', () => {
-    app.exit()
-  })
   app.dock?.hide()
-
-  while (!isParentProcessDisconnect) {
+  await app.whenReady()
+  app.on('window-all-closed', (e) => {
+    e.preventDefault()
+  })
+  initPublicIpc()
+  await connectToDaemon()
+  await sendToDaemon(
+    {
+      type: 'ping'
+    },
+    {
+      needCallback: true
+    }
+  )
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'worker-launch',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
+  let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+  if (!puppeteerExecutable) {
+    try {
+      await configWithBrowserAssistant({ autoFind: true })
+    } catch (error) {
+      //
+    }
+    puppeteerExecutable = await getLastUsedAndAvailableBrowser()
+  }
+  if (!puppeteerExecutable) {
+    await dialog.showMessageBox({
+      type: `error`,
+      message: `未找到可用的浏览器`,
+      detail: `请重新运行本程序，按照提示安装、配置浏览器`
+    })
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      data: {
+        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        step: {
+          id: 'puppeteer-executable-check',
+          status: 'rejected'
+        },
+        runRecordId
+      }
+    })
+    throw new Error(`PUPPETEER_IS_NOT_EXECUTABLE`)
+  }
+  sendToDaemon({
+    type: 'worker-to-gui-message',
+    data: {
+      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      step: {
+        id: 'puppeteer-executable-check',
+        status: 'fulfilled'
+      },
+      runRecordId
+    }
+  })
+  process.env.PUPPETEER_EXECUTABLE_PATH = puppeteerExecutable.executablePath
+  while (true) {
     try {
       await mainLoop()
     } catch (err) {
@@ -487,31 +694,44 @@ export async function runEntry() {
       } catch {
         //
       }
-      // handle error
-      if (
-        err instanceof Error &&
-        ['LOGIN_STATUS_INVALID', 'ACCESS_IS_DENIED', 'ERR_INTERNET_DISCONNECTED'].includes(
-          err.message
-        )
-      ) {
-        pipeWriteRegardlessError(
-          pipe,
-          JSON.stringify({
-            type: err.message
-          }) + '\r\n'
-        )
-        process.exit(1)
+      const shouldExit = await checkShouldExit()
+      if (shouldExit) {
+        app.exit()
+        return
       }
-      if (err instanceof Error && err.message === 'CANNOT_FIND_A_USABLE_MODEL') {
-        gtag('cannot_find_a_usable_model')
-        await dialog.showMessageBox({
-          type: 'error',
-          message:
-            '未找到可以使用的模型，请确定您所配置的模型均可使用。重启本程序或许可以解决这个问题',
-          buttons: ['退出']
-        })
-        process.exit(0)
-        break;
+      // handle error
+      if (err instanceof Error) {
+        if (err.message.includes('LOGIN_STATUS_INVALID')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LOGIN_STATUS_INVALID)
+          break
+        }
+        if (err.message.includes('ERR_INTERNET_DISCONNECTED')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ERR_INTERNET_DISCONNECTED)
+          break
+        }
+        if (err.message.includes('ACCESS_IS_DENIED')) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.ACCESS_IS_DENIED)
+          break
+        }
+        if (
+          err.message.includes(`PUPPETEER_IS_NOT_EXECUTABLE`) ||
+          err.message.includes(`Could not find Chrome`) ||
+          err.message.includes(`no executable was found`)
+        ) {
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.PUPPETEER_IS_NOT_EXECUTABLE)
+          break
+        }
+        if (err.message === 'CANNOT_FIND_A_USABLE_MODEL') {
+          gtag('cannot_find_a_usable_model')
+          await dialog.showMessageBox({
+            type: 'error',
+            message:
+              '未找到可以使用的模型，请确定您所配置的模型均可使用。重启本程序或许可以解决这个问题',
+            buttons: ['退出']
+          })
+          process.exit(AUTO_CHAT_ERROR_EXIT_CODE.LLM_UNAVAILABLE)
+          break
+        }
       }
     } finally {
       pageMapByName['boss'] = null
@@ -522,8 +742,6 @@ export async function runEntry() {
   process.exit(0)
 }
 
-attachListenerForKillSelfOnParentExited()
-
 process.once('uncaughtException', (error) => {
   console.error('uncaughtException', error)
   process.exit(1)
@@ -531,6 +749,10 @@ process.once('uncaughtException', (error) => {
 process.once('unhandledRejection', (error) => {
   console.log('unhandledRejection', error)
   process.exit(1)
+})
+
+process.once('disconnect', () => {
+  process.exit(0)
 })
 
 async function storeStorage(page) {

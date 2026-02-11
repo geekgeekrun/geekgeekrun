@@ -20,7 +20,7 @@ export const initDbWorker = () => {
           // attach more event
           worker?.off('message', handler)
         } else if (data.type === 'DB_INIT_FAIL') {
-          reject(undefined)
+          reject(data.error)
           worker?.terminate()
           worker?.off('message', handler)
           worker = null
@@ -99,6 +99,13 @@ export const getJobHistoryByEncryptId = async (encryptJobId) => {
   const res = await createWorkerPromise({
     type: 'getJobHistoryByEncryptId',
     encryptJobId
+  })
+  return res
+}
+
+export const saveAndGetCurrentRunRecord = async () => {
+  const res = await createWorkerPromise({
+    type: 'saveAndGetCurrentRunRecord'
   })
   return res
 }

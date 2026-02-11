@@ -18,6 +18,7 @@
     "minimist": "^1.2.8",
     "puppeteer": "24.19.0",
     "puppeteer-extra": "3.3.6",
+    "puppeteer-extra-plugin-anonymize-ua": "2.4.6",
     "puppeteer-extra-plugin-stealth": "2.11.2",
     "rimraf": "^3.0.2",
     "tapable": "^2.2.1"
@@ -29,11 +30,12 @@
     "node": "20.16.0"
   },
   "engines": {
-    "pnpm": "=8.15.9"
+    "pnpm": ">=8.15.9 <9.0.0"
   },
   "pnpm": {
     "patchedDependencies": {
-      "find-chrome-bin@2.0.4": "patches/find-chrome-bin@2.0.4.patch"
+      "find-chrome-bin@2.0.4": "patches/find-chrome-bin@2.0.4.patch",
+      "puppeteer-extra-plugin-anonymize-ua@2.4.6": "patches/puppeteer-extra-plugin-anonymize-ua@2.4.6.patch"
     }
   }
 }
