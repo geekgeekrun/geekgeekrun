@@ -5,6 +5,8 @@ import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
+import { sendToDaemon, closeDaemonClient } from './connect-to-daemon'
+
 export function openSettingWindow() {
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
   if (!app.requestSingleInstanceLock()) {
@@ -65,4 +67,25 @@ export function openSettingWindow() {
       globalShortcut.unregister('Command+Option+Shift+/')
     })
   })
+
+  whenReadyPromise.then(async () => {
+    await sendToDaemon(
+      {
+        type: 'ping'
+      },
+      {
+        needCallback: true
+      }
+    )
+    await sendToDaemon(
+      {
+        type: 'user-process-register'
+      },
+      {
+        needCallback: true
+      }
+    )
+  })
+  app.on('window-all-closed', closeDaemonClient)
+  app.on('before-quit', closeDaemonClient)
 }

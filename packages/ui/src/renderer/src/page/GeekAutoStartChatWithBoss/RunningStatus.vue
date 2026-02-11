@@ -3,7 +3,7 @@
     <FlyingCompanyLogoList class="flying-company-logo-list" />
     <div class="tip">
       <article>
-        <h1>👋 BOSS炸弹正在运行</h1>
+        <h1>👋 自动开聊正在运行</h1>
         <p>💬 正在为你开聊BOSS，请静候佳音</p>
         <p>📱 你可以在<b>手机</b> / <b>平板电脑</b>上，使用BOSS直聘App与为你开聊的BOSS聊天</p>
         <p>🍀 祝你求职顺利！</p>

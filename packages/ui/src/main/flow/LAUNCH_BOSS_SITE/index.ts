@@ -49,64 +49,62 @@ const attachRequestsListener = async (target: Target) => {
     return
   }
 
-  function handleJobDetailPage({ encryptJobId } = { encryptJobId: null }) {
-    Promise.resolve()
-      .then(async () => {
-        if (!encryptJobId) {
-          return
-        }
-        try {
-          await page.waitForFunction(
-            ({ encryptJobId }) => {
-              return (
-                location.href.startsWith(`https://www.zhipin.com/job_detail/${encryptJobId}`) &&
-                document.readyState === 'complete'
-              )
-            },
-            undefined,
-            { encryptJobId }
+  // FIXME: might not work
+  async function handleJobDetailPage({ encryptJobId } = { encryptJobId: null }) {
+    if (!encryptJobId) {
+      return
+    }
+    try {
+      await page.waitForFunction(
+        ({ encryptJobId }) => {
+          return (
+            location.href.startsWith(`https://www.zhipin.com/job_detail/${encryptJobId}`) &&
+            (!!document.querySelector('#main .job-banner') ||
+              !!document.documentElement.innerText?.includes(`您访问的页面不存在`))
           )
-          const htmlContent = await page.content()
-          if (htmlContent) {
-            const $ = cheerio.load(htmlContent)
-            const [jobBannerEl] = $('#main .job-banner') ?? []
-            if (!jobBannerEl) {
-              console.log(`access might be blocked`)
-              if (
-                htmlContent.includes(`您访问的页面不存在`) ||
-                location.href === `https://www.zhipin.com/`
-              ) {
-                await saveJobHireStatusRecord(await dbInitPromise, {
-                  encryptJobId,
-                  hireStatus: JobHireStatus.DELETED,
-                  lastSeenDate: new Date()
-                })
-              }
+        },
+        undefined,
+        { encryptJobId }
+      )
+      const htmlContent = await page.content()
+      if (htmlContent) {
+        const $ = cheerio.load(htmlContent)
+        const [jobBannerEl] = $('#main .job-banner') ?? []
+        if (!jobBannerEl) {
+          console.log(`access might be blocked`)
+          if (
+            htmlContent.includes(`您访问的页面不存在`) ||
+            location.href === `https://www.zhipin.com/`
+          ) {
+            await saveJobHireStatusRecord(await dbInitPromise, {
+              encryptJobId,
+              hireStatus: JobHireStatus.DELETED,
+              lastSeenDate: new Date()
+            })
+          }
+        } else {
+          const [jobStatusTextEl] = $('#main .job-banner .job-status') ?? []
+          if (jobStatusTextEl) {
+            const jobStatusText = $(jobStatusTextEl).text()?.trim() ?? ''
+            if ([`职位已关闭`].includes(jobStatusText)) {
+              await saveJobHireStatusRecord(await dbInitPromise, {
+                encryptJobId,
+                hireStatus: JobHireStatus.CLOSED,
+                lastSeenDate: new Date()
+              })
             } else {
-              const [jobStatusTextEl] = $('#main .job-banner .job-status') ?? []
-              if (jobStatusTextEl) {
-                const jobStatusText = $(jobStatusTextEl).text()?.trim() ?? ''
-                if ([`职位已关闭`].includes(jobStatusText)) {
-                  await saveJobHireStatusRecord(await dbInitPromise, {
-                    encryptJobId,
-                    hireStatus: JobHireStatus.CLOSED,
-                    lastSeenDate: new Date()
-                  })
-                } else {
-                  await saveJobHireStatusRecord(await dbInitPromise, {
-                    encryptJobId,
-                    hireStatus: JobHireStatus.HIRING,
-                    lastSeenDate: new Date()
-                  })
-                }
-              }
+              await saveJobHireStatusRecord(await dbInitPromise, {
+                encryptJobId,
+                hireStatus: JobHireStatus.HIRING,
+                lastSeenDate: new Date()
+              })
             }
           }
-        } catch {
-          //
         }
-      })
-      .catch(() => void 0)
+      }
+    } catch {
+      //
+    }
   }
 
   if (page.url().match(/^https:\/\/www.zhipin.com\/job_detail\/(.+)\.html/)) {
@@ -200,7 +198,7 @@ const attachRequestsListener = async (target: Target) => {
       )
       const requestBody = new URLSearchParams(response.request().postData())
 
-      const securityIdInRequest = requestBody.get("securityId")
+      const securityIdInRequest = requestBody.get('securityId')
       const currentJobSecurityId = currentJobData?.securityId
 
       if (securityIdInRequest !== currentJobSecurityId) {

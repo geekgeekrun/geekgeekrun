@@ -1,7 +1,7 @@
 import { JobSource, MarkAsNotSuitOp, MarkAsNotSuitReason } from "../enums";
-import { requireTypeorm } from "../utils/module-loader";
+import * as typeorm from 'typeorm';
 import { ChatStartupFrom } from "./ChatStartupLog";
-const { Entity, Column, PrimaryGeneratedColumn } = requireTypeorm()
+const { Entity, Column, PrimaryGeneratedColumn } = typeorm
 
 @Entity()
 export class MarkAsNotSuitLog {

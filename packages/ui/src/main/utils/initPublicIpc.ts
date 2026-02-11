@@ -1,7 +1,13 @@
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import gtag from './gtag'
 import buildInfo from '../../common/build-info.json'
 import os from 'node:os'
+import fs from 'node:fs'
+import {
+  ensureStorageFileExist,
+  readStorageFile,
+  writeStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 export default function initPublicIpc() {
   ipcMain.on(
@@ -55,5 +61,53 @@ export default function initPublicIpc() {
         activate: true
       }
     )
+  })
+
+  ipcMain.handle('read-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+    return await readStorageFile(payload.fileName)
+  })
+
+  ipcMain.handle('write-storage-file', async (ev, payload) => {
+    ensureStorageFileExist()
+    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
+  })
+  ipcMain.handle('get-os-platform', () => {
+    return os.platform()
+  })
+  ipcMain.handle('choose-file', (ev, { fileChooserConfig }) => {
+    if (!fileChooserConfig) {
+      fileChooserConfig = {}
+    }
+    const win = BrowserWindow.fromWebContents(ev.sender)
+    if (!win) {
+      return dialog.showOpenDialog(fileChooserConfig)
+    } else {
+      return dialog.showOpenDialog(win, fileChooserConfig)
+    }
+  })
+  ipcMain.handle('check-executable-file', (ev, filePath: string) => {
+    if (!filePath?.trim()) {
+      return {
+        message: '文件名无效'
+      }
+    }
+    if (!fs.existsSync(filePath)) {
+      return {
+        message: '文件不存在'
+      }
+    }
+    if (!fs.statSync(filePath).isFile()) {
+      const messageSeg = ['文件不是可执行文件']
+      if (os.platform() === 'darwin') {
+        messageSeg.push(
+          'macOS 平台，可执行文件位于“App包.app/Contents/MacOS/ 文件夹下”，而不是“App包.app”文件夹整体'
+        )
+      }
+      return {
+        message: messageSeg.join('；')
+      }
+    }
+    return null
   })
 }

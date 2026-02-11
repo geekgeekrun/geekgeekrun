@@ -35,5 +35,6 @@
   ],
   "isSageTimeEnabled": true,
   "sageTimeOpTimes": 100,
-  "sageTimePauseMinute": 15
+  "sageTimePauseMinute": 15,
+  "blockCompanyNameRegExpStr": ""
 }

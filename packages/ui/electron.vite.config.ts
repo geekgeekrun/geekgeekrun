@@ -18,8 +18,6 @@ export default defineConfig({
     plugins: [
       externalizeDepsPlugin({
         exclude: [
-          '@geekgeekrun/geek-auto-start-chat-with-boss',
-          '@geekgeekrun/dingtalk-plugin',
           '@geekgeekrun/utils',
           'find-chrome-bin',
           '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension'

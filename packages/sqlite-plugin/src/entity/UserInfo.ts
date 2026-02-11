@@ -1,5 +1,5 @@
-import { requireTypeorm } from "../utils/module-loader";
-const { Entity, Column, PrimaryColumn } = requireTypeorm()
+import * as typeorm from 'typeorm';
+const { Entity, Column, PrimaryColumn } = typeorm
 
 @Entity()
 export class UserInfo {
