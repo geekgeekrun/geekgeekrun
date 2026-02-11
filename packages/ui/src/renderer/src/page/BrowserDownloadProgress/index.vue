@@ -18,10 +18,17 @@
 <script lang="ts" setup>
 import { ref, onUnmounted, h } from 'vue'
 import { ElMessageBox } from 'element-plus'
-import { gtagRenderer } from '@renderer/utils/gtag'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import FailMessage from './FailMessage.vue'
 import { EXPECT_CHROMIUM_BUILD_ID } from '../../../../common/constant'
+
+const gtagRenderer = (name, params?: object) => {
+  return baseGtagRenderer(name, {
+    scene: 'browser-download-progress',
+    ...params
+  })
+}
 
 const browserDownloadPercentage = ref(0)
 const handleBrowserDownloadProgress = (ev, { downloadedBytes, totalBytes }) => {
@@ -62,6 +69,7 @@ const processTasks = async () => {
   try {
     await processDownloadBrowser()
     electron.ipcRenderer.send('browser-download-done', executablePath)
+    gtagRenderer('download_deps_done')
   } catch (err) {
     gtagRenderer('encounter_error_when_download_deps')
     await ElMessageBox.confirm(h(FailMessage), {

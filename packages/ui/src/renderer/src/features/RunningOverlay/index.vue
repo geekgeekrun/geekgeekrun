@@ -62,6 +62,7 @@ import {
   AUTO_CHAT_ERROR_EXIT_CODE,
   RUNNING_STATUS_ENUM
 } from '../../../../common/enums/auto-start-chat'
+import { gtagRenderer } from '@renderer/utils/gtag'
 const props = defineProps({
   workerId: {
     type: String
@@ -103,6 +104,20 @@ function fillEmptySteps() {
 watch(() => props.runRecordId, fillEmptySteps, {
   immediate: true
 })
+watch(
+  () => stepsForRender.value,
+  (v) => {
+    const rejectedItems = v?.filter((it) => it.status === 'rejected')
+    if (!rejectedItems.length) {
+      return
+    }
+    gtagRenderer('running_overlay_rejected', {
+      stepId: rejectedItems.map((it) => it.id).join(','),
+      workerId: props.workerId
+    })
+  },
+  { deep: true }
+)
 
 const { ipcRenderer } = electron
 function messageHandler(ev, { data }) {
@@ -129,6 +144,16 @@ const show = () => {
 const hide = () => {
   isDialogVisible.value = false
 }
+watch(
+  () => isDialogVisible.value,
+  (newVal) => {
+    if (!newVal) {
+      gtagRenderer('running_overlay_shown')
+    } else {
+      gtagRenderer('running_overlay_hidden')
+    }
+  }
+)
 defineExpose({
   show,
   hide
@@ -143,8 +168,16 @@ ipcRenderer.on('worker-exited', (ev, payload) => {
   }
   if (code !== AUTO_CHAT_ERROR_EXIT_CODE.NORMAL) {
     currentRunningStatus.value = RUNNING_STATUS_ENUM.ERROR_EXITED
+    gtagRenderer('running_overlay_error_exited', {
+      exitCode: code,
+      workerId: props.workerId
+    })
   } else {
     currentRunningStatus.value = RUNNING_STATUS_ENUM.NORMAL_EXITED
+    gtagRenderer('running_overlay_normal_exited', {
+      exitCode: code,
+      workerId: props.workerId
+    })
   }
 })
 </script>
