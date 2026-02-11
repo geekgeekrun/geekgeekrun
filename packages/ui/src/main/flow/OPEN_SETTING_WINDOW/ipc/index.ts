@@ -373,7 +373,9 @@ export default function initIpc() {
       }
       subProcessOfOpenBossSite = childProcess.spawn(
         process.argv[0],
-        [process.argv[1], `--mode=launchBossSite`],
+        process.env.NODE_ENV === 'development'
+          ? [process.argv[1], `--mode=launchBossSite`]
+          : [`--mode=launchBossSite`],
         {
           env: subProcessEnv,
           stdio: ['inherit', 'inherit', 'inherit', 'pipe']

@@ -7,6 +7,56 @@ import transformerDirective from '@unocss/transformer-directives'
 import Replace from 'unplugin-replace/vite'
 
 process.env = { ...process.env, ...loadEnv(process.env.NODE_ENV!, process.cwd()) }
+const mainPlugins = [
+  externalizeDepsPlugin({
+    exclude: [
+      '@geekgeekrun/utils',
+      'find-chrome-bin',
+      '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension'
+    ]
+  }),
+  Replace({
+    delimiters: ['', ''],
+    sourcemap: true,
+    include: ['**/src/main/utils/gtag/Analytics.ts'],
+    values: [
+      {
+        find: /<measurement_id>/g,
+        replacement: process.env.VITE_APP_GTAG_MEASUREMENT_ID as string
+      },
+      {
+        find: /<api_secret>/g,
+        replacement: process.env.VITE_APP_GTAG_API_SECRET as string
+      }
+    ]
+  })
+]
+const preloadPlugins = [externalizeDepsPlugin()]
+const rendererPlugins = [
+  vue(),
+  UnoCSS({
+    presets: [presetUno(), presetAttributify(), presetIcons()],
+    transformers: [transformerDirective()]
+  })
+]
+if (process.env.NODE_ENV) {
+  ;[mainPlugins, preloadPlugins, rendererPlugins].forEach((pluginList) => {
+    pluginList.push(
+      Replace({
+        delimiters: ['', ''],
+        sourcemap: true,
+        include: ['**'],
+        values: [
+          {
+            find: /process.env.NODE_ENV/g,
+            replacement: `'${process.env.NODE_ENV}'` as string
+          }
+        ]
+      })
+    )
+  })
+}
+
 export default defineConfig({
   main: {
     build: {
@@ -15,33 +65,10 @@ export default defineConfig({
       },
       minify: process.env.NODE_ENV === 'development' ? undefined : 'terser'
     },
-    plugins: [
-      externalizeDepsPlugin({
-        exclude: [
-          '@geekgeekrun/utils',
-          'find-chrome-bin',
-          '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension'
-        ]
-      }),
-      Replace({
-        delimiters: ['', ''],
-        sourcemap: true,
-        include: ['**/src/main/utils/gtag/Analytics.ts'],
-        values: [
-          {
-            find: /<measurement_id>/g,
-            replacement: process.env.VITE_APP_GTAG_MEASUREMENT_ID as string
-          },
-          {
-            find: /<api_secret>/g,
-            replacement: process.env.VITE_APP_GTAG_API_SECRET as string
-          }
-        ]
-      })
-    ]
+    plugins: mainPlugins
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: preloadPlugins,
     build: {
       minify: process.env.NODE_ENV === 'development' ? undefined : 'terser'
     }
@@ -52,13 +79,7 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [
-      vue(),
-      UnoCSS({
-        presets: [presetUno(), presetAttributify(), presetIcons()],
-        transformers: [transformerDirective()]
-      })
-    ],
+    plugins: rendererPlugins,
     build: {
       minify: process.env.NODE_ENV === 'development' ? undefined : 'terser'
     }

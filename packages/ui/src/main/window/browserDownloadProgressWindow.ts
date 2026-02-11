@@ -62,7 +62,9 @@ export function createBrowserDownloadProgressWindow(
     }
     subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
       process.argv[0],
-      [process.argv[1], `--mode=downloadDependenciesForInit`],
+      process.env.NODE_ENV === 'development'
+        ? [process.argv[1], `--mode=downloadDependenciesForInit`]
+        : [`--mode=downloadDependenciesForInit`],
       {
         stdio: [null, null, null, 'pipe', 'ipc']
       }

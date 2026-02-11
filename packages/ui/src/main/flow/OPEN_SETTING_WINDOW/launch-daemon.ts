@@ -7,7 +7,6 @@ import {
 import { randomUUID } from 'node:crypto'
 import { connectToDaemon } from './connect-to-daemon'
 
-const isUiDev = process.env.NODE_ENV === 'development'
 export async function ensureIpcPipeName({ isReset } = {}) {
   if (isReset) {
     await writeStorageFile('ipc-pipe-name', '', { isJson: false })
@@ -29,7 +28,9 @@ export async function launchDaemon() {
     // 添加参数使守护进程在后台运行，不显示 UI
     daemonProcess = spawn(
       process.argv[0],
-      isUiDev ? [process.argv[1], `--mode=launchDaemon`] : [`--mode=launchDaemon`],
+      process.env.NODE_ENV === 'development'
+        ? [process.argv[1], `--mode=launchDaemon`]
+        : [`--mode=launchDaemon`],
       {
         stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
         detached: true,
