@@ -27,16 +27,49 @@ export default function overrideConsole() {
   console.log = (...args: any[]) => {
     const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [log][PID=${process.pid}]`
     originConsoleLog(lineHead, ...args)
-    logFileStream.write([lineHead, args.map((arg) => JSON.stringify(arg))].join(' ') + '\n')
+    logFileStream.write(
+      [
+        lineHead,
+        args.map((arg) => {
+          try {
+            return JSON.stringify(arg)
+          } catch (err) {
+            return `[[${JSON.stringify(err?.toString())}]]`
+          }
+        })
+      ].join(' ') + '\n'
+    )
   }
   console.warn = (...args: any[]) => {
     const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [warn][PID=${process.pid}]`
     originConsoleWarn(lineHead, ...args)
-    warnFileStream.write([lineHead, args.map((arg) => JSON.stringify(arg))].join(' ') + '\n')
+    warnFileStream.write(
+      [
+        lineHead,
+        args.map((arg) => {
+          try {
+            return JSON.stringify(arg)
+          } catch (err) {
+            return `[[${JSON.stringify(err?.toString())}]]`
+          }
+        })
+      ].join(' ') + '\n'
+    )
   }
   console.error = (...args: any[]) => {
     const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [warn][PID=${process.pid}]`
     originConsoleError(lineHead, ...args)
-    errorFileStream.write([lineHead, args.map((arg) => JSON.stringify(arg))].join(' ') + '\n')
+    errorFileStream.write(
+      [
+        lineHead,
+        args.map((arg) => {
+          try {
+            return JSON.stringify(arg)
+          } catch (err) {
+            return `[[${JSON.stringify(err?.toString())}]]`
+          }
+        })
+      ].join(' ') + '\n'
+    )
   }
 }
