@@ -1,7 +1,14 @@
+import overrideConsole from './utils/overrideConsole'
 import minimist from 'minimist'
 import { runCommon } from './features/run-common'
 import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon'
 import { app } from 'electron'
+
+const isUiDev = process.env.NODE_ENV === 'development'
+const enableLogToFile = process.env.GEEKGEEKRUN_ENABLE_LOG_TO_FILE === String(1)
+if (isUiDev || enableLogToFile) {
+  overrideConsole()
+}
 
 // 捕获未处理的 EPIPE 错误
 process.on('uncaughtException', (err) => {
@@ -11,7 +18,7 @@ process.on('uncaughtException', (err) => {
   throw err
 })
 
-const isUiDev = process.env.NODE_ENV === 'development'
+console.log(process.argv)
 const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
 console.log(commandlineArgs)
 
