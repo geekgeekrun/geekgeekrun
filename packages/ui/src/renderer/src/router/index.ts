@@ -156,7 +156,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/',
     component: BootstrapSplash,
     meta: {
-      title: '薪想事成'
+      title: '你的职场大机密'
     }
   }
 ]
