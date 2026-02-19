@@ -2,6 +2,9 @@
   <div class="group-item">
     <div class="group-title">全局设置</div>
     <div flex flex-col class="link-list">
+      <a href="javascript:void(0)" @click="handleClickConfigCommonJobCondition">
+        公共职位筛选条件
+      </a>
       <a href="javascript:void(0)" @click="handleClickBrowserSetting">
         编辑浏览器偏好<TopRight w-1em h-1em mr10px />
       </a>
@@ -65,6 +68,15 @@ const handleClickConfigLlm = async () => {
   gtagRenderer('config_llm_clicked')
   try {
     await electron.ipcRenderer.invoke('llm-config')
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+const handleClickConfigCommonJobCondition = async () => {
+  gtagRenderer('config_cjc_clicked')
+  try {
+    await electron.ipcRenderer.invoke('common-job-condition-config')
   } catch (err) {
     console.log(err)
   }

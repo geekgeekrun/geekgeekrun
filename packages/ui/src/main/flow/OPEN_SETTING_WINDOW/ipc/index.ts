@@ -58,6 +58,7 @@ import {
   waitForUserApproveAgreement
 } from '../../../features/first-launch-notice-window'
 import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
+import { createCommonJobConditionConfigWindow } from '../../../window/commonJobConditionConfigWindow'
 
 export default function initIpc() {
   ipcMain.handle('fetch-config-file-content', async () => {
@@ -606,6 +607,13 @@ export default function initIpc() {
         }
       }
     }
+  })
+  ipcMain.handle('common-job-condition-config', async () => {
+    createCommonJobConditionConfigWindow({
+      parent: mainWindow!,
+      modal: true,
+      show: true
+    })
   })
 
   ipcMain.handle('exit-app-immediately', () => {
