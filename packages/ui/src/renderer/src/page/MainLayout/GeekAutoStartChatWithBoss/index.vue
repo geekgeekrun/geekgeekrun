@@ -410,13 +410,17 @@
                   width: '400px',
                   paddingLeft: '10px',
                   flex: `0 0 auto`,
-                  ...(formContent.blockCompanyNameRegExpStr?.length
+                  ...((!formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr
+                    ? formContent
+                    : commonJobConditionConfig
+                  ).blockCompanyNameRegExpStr?.length
                     ? {
                         borderLeft: '1px solid #f0f0f0'
                       }
                     : {
                         borderLeft: '1px solid transparent',
-                        visibility: 'hidden'
+                        visibility: 'hidden',
+                        opacity: 0
                       })
                 }"
               >
@@ -535,7 +539,12 @@
                   </div>
                 </el-form-item>
                 <div
-                  v-if="formContent.expectCityList?.length"
+                  v-if="
+                    (!formContent.fieldsForUseCommonConfig.city
+                      ? formContent
+                      : commonJobConditionConfig
+                    ).expectCityList?.length
+                  "
                   :style="{
                     width: '400px',
                     borderLeft: '1px solid #f0f0f0',
@@ -1444,7 +1453,13 @@
                   </div>
                 </div>
                 <div
-                  v-if="!isJobDetailRegExpEmpty({ formContent })"
+                  v-if="
+                    !isJobDetailRegExpEmpty({
+                      formContent: !formContent.fieldsForUseCommonConfig.jobDetail
+                        ? formContent
+                        : commonJobConditionConfig
+                    })
+                  "
                   :style="{
                     width: '400px',
                     borderLeft: '1px solid #f0f0f0',
@@ -2086,12 +2101,15 @@ const salaryMarkAsNotSuitLabelText = computed(() => {
 })
 
 const isShowSalaryMarkAsNotSuitStrategy = computed(() => {
-  let flag = formContent.value.expectSalaryHigh || formContent.value.expectSalaryLow
+  const formContentToUse = !formContent.value.fieldsForUseCommonConfig.salary
+    ? formContent.value
+    : commonJobConditionConfig.value
+  let flag = formContentToUse.expectSalaryHigh || formContentToUse.expectSalaryLow
 
   if (
-    formContent.value.expectSalaryHigh &&
-    formContent.value.expectSalaryLow &&
-    formContent.value.expectSalaryHigh < formContent.value.expectSalaryLow
+    formContentToUse.expectSalaryHigh &&
+    formContentToUse.expectSalaryLow &&
+    formContentToUse.expectSalaryHigh < formContentToUse.expectSalaryLow
   ) {
     flag = false
   }
