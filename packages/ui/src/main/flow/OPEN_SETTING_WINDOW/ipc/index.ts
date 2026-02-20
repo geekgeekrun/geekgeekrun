@@ -188,6 +188,9 @@ export default function initIpc() {
     if (hasOwn(payload, 'blockCompanyNameRegMatchStrategy')) {
       bossConfig.blockCompanyNameRegMatchStrategy = payload.blockCompanyNameRegMatchStrategy
     }
+    if (hasOwn(payload, 'fieldsForUseCommonConfig')) {
+      bossConfig.fieldsForUseCommonConfig = payload.fieldsForUseCommonConfig
+    }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))
 

@@ -286,18 +286,36 @@
                   </template>
                 </el-dropdown>
               </div>
-              <el-input
-                v-model="formContent.expectCompanies"
-                :autosize="{ minRows: 4 }"
-                max-h-8lh
-                type="textarea"
-                placeholder="置空表示“不限公司，任意公司都可以投递”"
-                @blur="
-                  formContent.expectCompanies = normalizeCommaSplittedStr(
-                    formContent.expectCompanies
-                  )
-                "
-              />
+              <div w-full>
+                <div>
+                  <el-checkbox v-model="formContent.fieldsForUseCommonConfig.expectCompanies"
+                    >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                  >
+                </div>
+                <el-input
+                  v-if="!formContent.fieldsForUseCommonConfig.expectCompanies"
+                  v-model="formContent.expectCompanies"
+                  :autosize="{ minRows: 4 }"
+                  max-h-8lh
+                  type="textarea"
+                  placeholder="置空表示“不限公司，任意公司都可以投递”"
+                  @blur="
+                    formContent.expectCompanies = normalizeCommaSplittedStr(
+                      formContent.expectCompanies
+                    )
+                  "
+                />
+                <el-input
+                  v-else
+                  disabled
+                  inert
+                  :model-value="commonJobConditionConfig.expectCompanies ?? ''"
+                  :autosize="{ minRows: 4 }"
+                  max-h-8lh
+                  type="textarea"
+                  placeholder="置空表示“不限公司，任意公司都可以投递”"
+                />
+              </div>
             </el-form-item>
             <div class="h-1px bg-#f0f0f0" mt16px mb8px />
             <div
@@ -355,19 +373,38 @@
                 gap: '10px'
               }"
             >
-              <el-form-item prop="blockCompanyNameRegExpStr" mb0 w-full>
-                <el-input
-                  v-model="formContent.blockCompanyNameRegExpStr"
-                  :autosize="{ minRows: 4 }"
-                  max-h-8lh
-                  type="textarea"
-                  placeholder="置空表示“不限公司，任意公司都不会被标记为不合适”"
-                  @blur="
-                    formContent.blockCompanyNameRegExpStr =
-                      formContent.blockCompanyNameRegExpStr?.trim() ?? ''
-                  "
-                />
-              </el-form-item>
+              <div w-full>
+                <div>
+                  <el-checkbox
+                    v-model="formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
+                    >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                  >
+                </div>
+                <el-form-item prop="blockCompanyNameRegExpStr" mb0 w-full>
+                  <el-input
+                    v-if="!formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
+                    v-model="formContent.blockCompanyNameRegExpStr"
+                    :autosize="{ minRows: 4 }"
+                    max-h-8lh
+                    type="textarea"
+                    placeholder="置空表示“不限公司，任意公司都不会被标记为不合适”"
+                    @blur="
+                      formContent.blockCompanyNameRegExpStr =
+                        formContent.blockCompanyNameRegExpStr?.trim() ?? ''
+                    "
+                  />
+                  <el-input
+                    v-else
+                    inert
+                    disabled
+                    :model-value="commonJobConditionConfig.blockCompanyNameRegExpStr"
+                    :autosize="{ minRows: 4 }"
+                    max-h-8lh
+                    type="textarea"
+                    placeholder="置空表示“不限公司，任意公司都不会被标记为不合适”"
+                  />
+                </el-form-item>
+              </div>
               <div
                 :style="{
                   width: '400px',
@@ -426,7 +463,15 @@
                       width: '100%'
                     }"
                   >
-                    <city-chooser v-model="formContent.expectCityList">
+                    <div>
+                      <el-checkbox v-model="formContent.fieldsForUseCommonConfig.city"
+                        >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                      >
+                    </div>
+                    <city-chooser
+                      v-if="!formContent.fieldsForUseCommonConfig.city"
+                      v-model="formContent.expectCityList"
+                    >
                       <template #default="{ modelValue, showDialog, clearValue }">
                         <div v-if="modelValue?.length">
                           <div>当前已选择城市：</div>
@@ -464,6 +509,26 @@
                             @click="clearValue"
                             >清空已选择的所有城市</el-button
                           >
+                        </div>
+                      </template>
+                    </city-chooser>
+                    <city-chooser
+                      v-else
+                      :model-value="commonJobConditionConfig.expectCityList || []"
+                      inert
+                      opacity-60
+                    >
+                      <template #default="{ modelValue }">
+                        <div v-if="modelValue?.length">
+                          <div>当前已选择城市：</div>
+                          <div flex flex-wrap gap-10px>
+                            <el-tag v-for="it in modelValue" :key="it">
+                              {{ it }}
+                            </el-tag>
+                          </div>
+                        </div>
+                        <div v-else>
+                          <div>当前未选择任何期望城市，将不会按照城市进行筛选</div>
                         </div>
                       </template>
                     </city-chooser>
@@ -544,166 +609,337 @@
                 }"
               >
                 <div>
-                  <el-form-item prop="expectSalaryLow" mb10px>
-                    <div w-full>
-                      <div font-size-12px>薪资筛选方式</div>
-                      <el-select
-                        v-model="formContent.expectSalaryCalculateWay"
-                        @change="handleExpectSalaryCalculateWayChanged"
-                      >
-                        <el-option
-                          v-for="op in expectSalaryCalculateWayOption"
-                          :key="op.value"
-                          :label="op.name"
-                          :value="op.value"
-                          >{{ op.name }}</el-option
+                  <div>
+                    <el-checkbox v-model="formContent.fieldsForUseCommonConfig.salary"
+                      >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                    >
+                  </div>
+                  <template v-if="!formContent.fieldsForUseCommonConfig.salary">
+                    <el-form-item prop="expectSalaryLow" mb10px>
+                      <div w-full>
+                        <div font-size-12px>薪资筛选方式</div>
+                        <el-select
+                          v-model="formContent.expectSalaryCalculateWay"
+                          @change="handleExpectSalaryCalculateWayChanged"
                         >
-                      </el-select>
-                    </div>
-                  </el-form-item>
-                  <el-form-item prop="expectSalaryLow" mb10px>
-                    <div>
-                      <div font-size-12px>期望薪资范围</div>
-                      <div>
-                        <el-input-number
-                          v-model="formContent.expectSalaryLow"
-                          controls-position="right"
-                          :min="0"
-                          :step="0.25"
-                          placeholder="不设置"
-                          @change="
-                            () => {
-                              gtagRenderer('expect_salary_low_changed')
-                              ensureSalaryRangeCorrect({ formContent })
-                            }
-                          "
-                        >
-                          <template #prefix>下限</template>
-                          <template #suffix>
-                            <template v-if="formContent.expectSalaryLow">
-                              <template
-                                v-if="
-                                  formContent.expectSalaryCalculateWay ===
-                                  SalaryCalculateWay.MONTH_SALARY
-                                "
-                                >k</template
-                              >
-                              <template
-                                v-if="
-                                  formContent.expectSalaryCalculateWay ===
-                                  SalaryCalculateWay.ANNUAL_PACKAGE
-                                "
-                                >W</template
-                              >
-                            </template>
-                          </template>
-                        </el-input-number>
-                        -
-                        <el-input-number
-                          v-model="formContent.expectSalaryHigh"
-                          controls-position="right"
-                          :min="0"
-                          :step="0.25"
-                          placeholder="不设置"
-                          @change="
-                            () => {
-                              gtagRenderer('expect_salary_high_changed')
-                              ensureSalaryRangeCorrect({ formContent })
-                            }
-                          "
-                        >
-                          <template #prefix>上限</template>
-                          <template #suffix>
-                            <template v-if="formContent.expectSalaryHigh">
-                              <template
-                                v-if="
-                                  formContent.expectSalaryCalculateWay ===
-                                  SalaryCalculateWay.MONTH_SALARY
-                                "
-                                >k</template
-                              >
-                              <template
-                                v-if="
-                                  formContent.expectSalaryCalculateWay ===
-                                  SalaryCalculateWay.ANNUAL_PACKAGE
-                                "
-                                >W</template
-                              >
-                            </template>
-                          </template>
-                        </el-input-number>
-                      </div>
-                    </div>
-                  </el-form-item>
-                  <el-form-item
-                    v-if="
-                      formContent.expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE &&
-                      (formContent.expectSalaryLow || formContent.expectSalaryHigh)
-                    "
-                    mb10px
-                  >
-                    <div>
-                      <div font-size-12px>薪资范围满足以下条件的职位将会被匹配</div>
-                      <div>
-                        <div flex flex-nowrap flex-items-start>
-                          <template
-                            v-for="(mGroup, index) in [
-                              [12, 13, 14, 15, 16, 17, 18],
-                              [19, 20, 21, 22, 23, 24]
-                            ]"
-                            :key="index"
+                          <el-option
+                            v-for="op in expectSalaryCalculateWayOption"
+                            :key="op.value"
+                            :label="op.name"
+                            :value="op.value"
+                            >{{ op.name }}</el-option
                           >
-                            <table
-                              :style="{
-                                lineHeight: '1.25em'
-                              }"
-                            >
-                              <tr>
-                                <th
-                                  v-for="(text, i) in ['月薪下限', '月薪上限', '']"
-                                  :key="i"
-                                  :style="{
-                                    borderBottom: '2px solid #f0f0f0'
-                                  }"
+                        </el-select>
+                      </div>
+                    </el-form-item>
+                    <el-form-item prop="expectSalaryLow" mb10px>
+                      <div>
+                        <div font-size-12px>期望薪资范围</div>
+                        <div>
+                          <el-input-number
+                            v-model="formContent.expectSalaryLow"
+                            controls-position="right"
+                            :min="0"
+                            :step="0.25"
+                            placeholder="不设置"
+                            @change="
+                              () => {
+                                gtagRenderer('expect_salary_low_changed')
+                                ensureSalaryRangeCorrect({ formContent })
+                              }
+                            "
+                          >
+                            <template #prefix>下限</template>
+                            <template #suffix>
+                              <template v-if="formContent.expectSalaryLow">
+                                <template
+                                  v-if="
+                                    formContent.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.MONTH_SALARY
+                                  "
+                                  >k</template
                                 >
-                                  {{ text }}
-                                </th>
-                              </tr>
-                              <tr v-for="m in mGroup" :key="m">
-                                <td>
-                                  {{
-                                    formContent.expectSalaryLow
-                                      ? ((formContent.expectSalaryLow / m) * 10).toFixed(2)
-                                      : '无下限'
-                                  }}<small
-                                    v-if="formContent.expectSalaryLow"
-                                    class="color-#999 ml-2px"
-                                    >k</small
-                                  >
-                                </td>
-                                <td>
-                                  {{
-                                    formContent.expectSalaryHigh
-                                      ? ((formContent.expectSalaryHigh / m) * 10).toFixed(2)
-                                      : '无上限'
-                                  }}<small
-                                    v-if="formContent.expectSalaryHigh"
-                                    class="color-#999 ml-2px"
-                                    >k</small
-                                  >
-                                </td>
-                                <td>{{ m }}薪</td>
-                              </tr>
-                            </table>
-                            <div
-                              v-if="index !== 1"
-                              class="bg-#f0f0f0 w-2px flex-self-stretch"
-                            ></div>
-                          </template>
+                                <template
+                                  v-if="
+                                    formContent.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.ANNUAL_PACKAGE
+                                  "
+                                  >W</template
+                                >
+                              </template>
+                            </template>
+                          </el-input-number>
+                          -
+                          <el-input-number
+                            v-model="formContent.expectSalaryHigh"
+                            controls-position="right"
+                            :min="0"
+                            :step="0.25"
+                            placeholder="不设置"
+                            @change="
+                              () => {
+                                gtagRenderer('expect_salary_high_changed')
+                                ensureSalaryRangeCorrect({ formContent })
+                              }
+                            "
+                          >
+                            <template #prefix>上限</template>
+                            <template #suffix>
+                              <template v-if="formContent.expectSalaryHigh">
+                                <template
+                                  v-if="
+                                    formContent.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.MONTH_SALARY
+                                  "
+                                  >k</template
+                                >
+                                <template
+                                  v-if="
+                                    formContent.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.ANNUAL_PACKAGE
+                                  "
+                                  >W</template
+                                >
+                              </template>
+                            </template>
+                          </el-input-number>
                         </div>
                       </div>
-                    </div>
-                  </el-form-item>
+                    </el-form-item>
+                    <el-form-item
+                      v-if="
+                        formContent.expectSalaryCalculateWay ===
+                          SalaryCalculateWay.ANNUAL_PACKAGE &&
+                        (formContent.expectSalaryLow || formContent.expectSalaryHigh)
+                      "
+                      mb10px
+                    >
+                      <div>
+                        <div font-size-12px>薪资范围满足以下条件的职位将会被匹配</div>
+                        <div>
+                          <div flex flex-nowrap flex-items-start>
+                            <template
+                              v-for="(mGroup, index) in [
+                                [12, 13, 14, 15, 16, 17, 18],
+                                [19, 20, 21, 22, 23, 24]
+                              ]"
+                              :key="index"
+                            >
+                              <table
+                                :style="{
+                                  lineHeight: '1.25em'
+                                }"
+                              >
+                                <tr>
+                                  <th
+                                    v-for="(text, i) in ['月薪下限', '月薪上限', '']"
+                                    :key="i"
+                                    :style="{
+                                      borderBottom: '2px solid #f0f0f0'
+                                    }"
+                                  >
+                                    {{ text }}
+                                  </th>
+                                </tr>
+                                <tr v-for="m in mGroup" :key="m">
+                                  <td>
+                                    {{
+                                      formContent.expectSalaryLow
+                                        ? ((formContent.expectSalaryLow / m) * 10).toFixed(2)
+                                        : '无下限'
+                                    }}<small
+                                      v-if="formContent.expectSalaryLow"
+                                      class="color-#999 ml-2px"
+                                      >k</small
+                                    >
+                                  </td>
+                                  <td>
+                                    {{
+                                      formContent.expectSalaryHigh
+                                        ? ((formContent.expectSalaryHigh / m) * 10).toFixed(2)
+                                        : '无上限'
+                                    }}<small
+                                      v-if="formContent.expectSalaryHigh"
+                                      class="color-#999 ml-2px"
+                                      >k</small
+                                    >
+                                  </td>
+                                  <td>{{ m }}薪</td>
+                                </tr>
+                              </table>
+                              <div
+                                v-if="index !== 1"
+                                class="bg-#f0f0f0 w-2px flex-self-stretch"
+                              ></div>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                    </el-form-item>
+                  </template>
+                  <template v-else>
+                    <el-form-item prop="expectSalaryLow" mb10px>
+                      <div w-full>
+                        <div font-size-12px>薪资筛选方式</div>
+                        <el-select
+                          :model-value="commonJobConditionConfig.expectSalaryCalculateWay"
+                          disabled
+                          inert
+                        >
+                          <el-option
+                            v-for="op in expectSalaryCalculateWayOption"
+                            :key="op.value"
+                            :label="op.name"
+                            :value="op.value"
+                            >{{ op.name }}</el-option
+                          >
+                        </el-select>
+                      </div>
+                    </el-form-item>
+                    <el-form-item prop="expectSalaryLow" mb10px>
+                      <div>
+                        <div font-size-12px>期望薪资范围</div>
+                        <div>
+                          <el-input-number
+                            :model-value="commonJobConditionConfig.expectSalaryLow"
+                            disabled
+                            inert
+                            controls-position="right"
+                            :min="0"
+                            :step="0.25"
+                            placeholder="不设置"
+                          >
+                            <template #prefix>下限</template>
+                            <template #suffix>
+                              <template v-if="commonJobConditionConfig.expectSalaryLow">
+                                <template
+                                  v-if="
+                                    commonJobConditionConfig.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.MONTH_SALARY
+                                  "
+                                  >k</template
+                                >
+                                <template
+                                  v-if="
+                                    commonJobConditionConfig.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.ANNUAL_PACKAGE
+                                  "
+                                  >W</template
+                                >
+                              </template>
+                            </template>
+                          </el-input-number>
+                          -
+                          <el-input-number
+                            :model-value="commonJobConditionConfig.expectSalaryHigh"
+                            disabled
+                            inert
+                            controls-position="right"
+                            :min="0"
+                            :step="0.25"
+                            placeholder="不设置"
+                          >
+                            <template #prefix>上限</template>
+                            <template #suffix>
+                              <template v-if="commonJobConditionConfig.expectSalaryHigh">
+                                <template
+                                  v-if="
+                                    commonJobConditionConfig.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.MONTH_SALARY
+                                  "
+                                  >k</template
+                                >
+                                <template
+                                  v-if="
+                                    commonJobConditionConfig.expectSalaryCalculateWay ===
+                                    SalaryCalculateWay.ANNUAL_PACKAGE
+                                  "
+                                  >W</template
+                                >
+                              </template>
+                            </template>
+                          </el-input-number>
+                        </div>
+                      </div>
+                    </el-form-item>
+                    <el-form-item
+                      v-if="
+                        commonJobConditionConfig.expectSalaryCalculateWay ===
+                          SalaryCalculateWay.ANNUAL_PACKAGE &&
+                        (commonJobConditionConfig.expectSalaryLow ||
+                          commonJobConditionConfig.expectSalaryHigh)
+                      "
+                      mb10px
+                    >
+                      <div>
+                        <div font-size-12px>薪资范围满足以下条件的职位将会被匹配</div>
+                        <div>
+                          <div flex flex-nowrap flex-items-start>
+                            <template
+                              v-for="(mGroup, index) in [
+                                [12, 13, 14, 15, 16, 17, 18],
+                                [19, 20, 21, 22, 23, 24]
+                              ]"
+                              :key="index"
+                            >
+                              <table
+                                :style="{
+                                  lineHeight: '1.25em'
+                                }"
+                              >
+                                <tr>
+                                  <th
+                                    v-for="(text, i) in ['月薪下限', '月薪上限', '']"
+                                    :key="i"
+                                    :style="{
+                                      borderBottom: '2px solid #f0f0f0'
+                                    }"
+                                  >
+                                    {{ text }}
+                                  </th>
+                                </tr>
+                                <tr v-for="m in mGroup" :key="m">
+                                  <td>
+                                    {{
+                                      commonJobConditionConfig.expectSalaryLow
+                                        ? (
+                                            (commonJobConditionConfig.expectSalaryLow / m) *
+                                            10
+                                          ).toFixed(2)
+                                        : '无下限'
+                                    }}<small
+                                      v-if="commonJobConditionConfig.expectSalaryLow"
+                                      class="color-#999 ml-2px"
+                                      >k</small
+                                    >
+                                  </td>
+                                  <td>
+                                    {{
+                                      commonJobConditionConfig.expectSalaryHigh
+                                        ? (
+                                            (commonJobConditionConfig.expectSalaryHigh / m) *
+                                            10
+                                          ).toFixed(2)
+                                        : '无上限'
+                                    }}<small
+                                      v-if="commonJobConditionConfig.expectSalaryHigh"
+                                      class="color-#999 ml-2px"
+                                      >k</small
+                                    >
+                                  </td>
+                                  <td>{{ m }}薪</td>
+                                </tr>
+                              </table>
+                              <div
+                                v-if="index !== 1"
+                                class="bg-#f0f0f0 w-2px flex-self-stretch"
+                              ></div>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                    </el-form-item>
+                  </template>
                 </div>
                 <div
                   v-if="isShowSalaryMarkAsNotSuitStrategy"
@@ -928,11 +1164,36 @@
                 }"
               >
                 <div flex-1>
-                  <el-form-item mb0 prop="expectJobNameRegExpStr">
+                  <div>
+                    <el-checkbox v-model="formContent.fieldsForUseCommonConfig.jobDetail"
+                      >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                    >
+                  </div>
+                  <el-form-item
+                    v-if="!formContent.fieldsForUseCommonConfig.jobDetail"
+                    mb0
+                    prop="expectJobNameRegExpStr"
+                  >
                     <div font-size-12px>职位名称/类型/描述 正则匹配筛选逻辑</div>
                     <el-select
                       v-model="formContent.jobDetailRegExpMatchLogic"
                       @change="(value) => gtagRenderer('job_detail_re_ml_change', { value })"
+                    >
+                      <el-option
+                        v-for="op in jobDetailRegExpMatchLogicOptions"
+                        :key="op.value"
+                        :label="op.name"
+                        :value="op.value"
+                        >{{ op.name }}</el-option
+                      >
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item v-else mb0>
+                    <div font-size-12px>职位名称/类型/描述 正则匹配筛选逻辑</div>
+                    <el-select
+                      :model-value="commonJobConditionConfig.jobDetailRegExpMatchLogic"
+                      disabled
+                      inert
                     >
                       <el-option
                         v-for="op in jobDetailRegExpMatchLogicOptions"
@@ -1032,7 +1293,11 @@
                       >
                     </el-tooltip>
                     <div></div>
-                    <el-form-item mb0 prop="expectJobNameRegExpStr">
+                    <el-form-item
+                      v-if="!formContent.fieldsForUseCommonConfig.jobDetail"
+                      mb0
+                      prop="expectJobNameRegExpStr"
+                    >
                       <div font-size-12px>职位名称正则（不区分大小写）</div>
                       <el-input
                         v-model="formContent.expectJobNameRegExpStr"
@@ -1048,6 +1313,22 @@
                         "
                       />
                     </el-form-item>
+                    <el-form-item v-else mb0>
+                      <div font-size-12px>职位名称正则（不区分大小写）</div>
+                      <el-input
+                        :model-value="commonJobConditionConfig.expectJobNameRegExpStr"
+                        disabled
+                        inert
+                        type="textarea"
+                        :placeholder="
+                          getJobDetailRegExpMatchLogicConfig({
+                            formContent: commonJobConditionConfig
+                          }).inputPlaceholderText
+                        "
+                        :autosize="{ minRows: 2 }"
+                        max-h-6lh
+                      />
+                    </el-form-item>
                     <div
                       mb0px
                       font-size-12px
@@ -1058,9 +1339,19 @@
                       position-relative
                       style="top: 42px"
                     >
-                      {{ getJobDetailRegExpMatchLogicConfig({ formContent }).logicText }}
+                      {{
+                        getJobDetailRegExpMatchLogicConfig({
+                          formContent: !formContent.fieldsForUseCommonConfig.jobDetail
+                            ? formContent
+                            : commonJobConditionConfig
+                        }).logicText
+                      }}
                     </div>
-                    <el-form-item mb0 prop="expectJobTypeRegExpStr">
+                    <el-form-item
+                      v-if="!formContent.fieldsForUseCommonConfig.jobDetail"
+                      mb0
+                      prop="expectJobTypeRegExpStr"
+                    >
                       <div ref="jobDetailRegExpSectionEl" font-size-12px>
                         职位类型正则（推荐填写，不区分大小写）
                       </div>
@@ -1078,6 +1369,24 @@
                         "
                       />
                     </el-form-item>
+                    <el-form-item v-else mb0>
+                      <div ref="jobDetailRegExpSectionEl" font-size-12px>
+                        职位类型正则（推荐填写，不区分大小写）
+                      </div>
+                      <el-input
+                        v-model="commonJobConditionConfig.expectJobTypeRegExpStr"
+                        disabled
+                        inert
+                        type="textarea"
+                        :placeholder="
+                          getJobDetailRegExpMatchLogicConfig({
+                            formContent: commonJobConditionConfig
+                          }).inputPlaceholderText
+                        "
+                        :autosize="{ minRows: 2 }"
+                        max-h-6lh
+                      />
+                    </el-form-item>
                     <div
                       mb0px
                       font-size-12px
@@ -1088,9 +1397,19 @@
                       position-relative
                       style="top: 42px"
                     >
-                      {{ getJobDetailRegExpMatchLogicConfig({ formContent }).logicText }}
+                      {{
+                        getJobDetailRegExpMatchLogicConfig({
+                          formContent: !formContent.fieldsForUseCommonConfig.jobDetail
+                            ? formContent
+                            : commonJobConditionConfig
+                        }).logicText
+                      }}
                     </div>
-                    <el-form-item mb0 prop="expectJobDescRegExpStr">
+                    <el-form-item
+                      v-if="!formContent.fieldsForUseCommonConfig.jobDetail"
+                      mb0
+                      prop="expectJobDescRegExpStr"
+                    >
                       <div font-size-12px>职位描述正则（不区分大小写）</div>
                       <el-input
                         v-model="formContent.expectJobDescRegExpStr"
@@ -1104,6 +1423,22 @@
                           formContent.expectJobDescRegExpStr =
                             formContent.expectJobDescRegExpStr?.trim() ?? ''
                         "
+                      />
+                    </el-form-item>
+                    <el-form-item v-else mb0>
+                      <div font-size-12px>职位描述正则（不区分大小写）</div>
+                      <el-input
+                        :model-value="commonJobConditionConfig.expectJobDescRegExpStr"
+                        disabled
+                        inert
+                        type="textarea"
+                        :placeholder="
+                          getJobDetailRegExpMatchLogicConfig({
+                            formContent: commonJobConditionConfig
+                          }).inputPlaceholderText
+                        "
+                        :autosize="{ minRows: 2 }"
+                        max-h-6lh
                       />
                     </el-form-item>
                   </div>
@@ -1301,7 +1636,7 @@ import {
   getHandlerForExpectSalaryCalculateWayChanged,
   normalizeCommaSplittedStr
 } from './common'
-
+const { ipcRenderer } = window.electron
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {
     scene: 'gascwb-config',
@@ -1353,7 +1688,8 @@ const formContent = ref({
   sageTimeOpTimes: 100,
   sageTimePauseMinute: 15,
   blockCompanyNameRegExpStr: '',
-  blockCompanyNameRegMatchStrategy: MarkAsNotSuitOp.NO_OP
+  blockCompanyNameRegMatchStrategy: MarkAsNotSuitOp.NO_OP,
+  fieldsForUseCommonConfig: {}
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -1515,6 +1851,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     res.config['boss.json'].blockCompanyNameRegExpStr?.trim() ?? ''
   formContent.value.blockCompanyNameRegMatchStrategy =
     res.config['boss.json'].blockCompanyNameRegMatchStrategy ?? MarkAsNotSuitOp.NO_OP
+  formContent.value.fieldsForUseCommonConfig =
+    res.config['boss.json']?.fieldsForUseCommonConfig ?? {}
 })
 
 const jobSourceFormItemSectionEl = ref()
@@ -1877,6 +2215,17 @@ const handleBlockCompanyNameRegExpTemplateClicked =
     gtagRenderer,
     formContent
   })
+
+const commonJobConditionConfig = ref({})
+const unListenCommonJobConditionConfig = ipcRenderer.on(
+  'common-job-condition-config-changed',
+  (_, config) => {
+    commonJobConditionConfig.value = config
+  }
+)
+onUnmounted(() => {
+  unListenCommonJobConditionConfig()
+})
 </script>
 
 <style scoped lang="scss">
