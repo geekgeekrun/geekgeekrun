@@ -74,7 +74,7 @@ const handleClickConfigLlm = async () => {
 }
 
 const handleClickConfigCommonJobCondition = async () => {
-  gtagRenderer('config_cjc_clicked')
+  gtagRenderer('config_cjc_clicked', { entry: 'left-nav' })
   try {
     await electron.ipcRenderer.invoke('common-job-condition-config')
   } catch (err) {

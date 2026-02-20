@@ -287,9 +287,16 @@
                 </el-dropdown>
               </div>
               <div w-full>
-                <div>
+                <div flex flex-items-center>
                   <el-checkbox v-model="formContent.fieldsForUseCommonConfig.expectCompanies"
                     >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                  >
+                  <el-button
+                    v-if="formContent.fieldsForUseCommonConfig.expectCompanies"
+                    size="small"
+                    ml-10px
+                    @click="handleClickConfigCommonJobCondition({ entry: 'expect-company-field' })"
+                    >编辑公共职位筛选条件</el-button
                   >
                 </div>
                 <el-input
@@ -374,10 +381,21 @@
               }"
             >
               <div w-full>
-                <div>
+                <div flex flex-items-center>
                   <el-checkbox
                     v-model="formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
                     >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                  >
+                  <el-button
+                    v-if="formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
+                    size="small"
+                    ml-10px
+                    @click="
+                      handleClickConfigCommonJobCondition({
+                        entry: 'block-company-name-reg-exp-field'
+                      })
+                    "
+                    >编辑公共职位筛选条件</el-button
                   >
                 </div>
                 <el-form-item prop="blockCompanyNameRegExpStr" mb0 w-full>
@@ -467,9 +485,20 @@
                       width: '100%'
                     }"
                   >
-                    <div>
+                    <div flex flex-items-center>
                       <el-checkbox v-model="formContent.fieldsForUseCommonConfig.city"
                         >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                      >
+                      <el-button
+                        v-if="formContent.fieldsForUseCommonConfig.city"
+                        size="small"
+                        ml-10px
+                        @click="
+                          handleClickConfigCommonJobCondition({
+                            entry: 'city-field'
+                          })
+                        "
+                        >编辑公共职位筛选条件</el-button
                       >
                     </div>
                     <city-chooser
@@ -618,9 +647,20 @@
                 }"
               >
                 <div>
-                  <div>
+                  <div flex flex-items-center>
                     <el-checkbox v-model="formContent.fieldsForUseCommonConfig.salary"
                       >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                    >
+                    <el-button
+                      v-if="formContent.fieldsForUseCommonConfig.salary"
+                      size="small"
+                      ml-10px
+                      @click="
+                        handleClickConfigCommonJobCondition({
+                          entry: 'salary-field'
+                        })
+                      "
+                      >编辑公共职位筛选条件</el-button
                     >
                   </div>
                   <template v-if="!formContent.fieldsForUseCommonConfig.salary">
@@ -1173,9 +1213,20 @@
                 }"
               >
                 <div flex-1>
-                  <div>
+                  <div flex flex-items-center>
                     <el-checkbox v-model="formContent.fieldsForUseCommonConfig.jobDetail"
                       >使用在“公共职位筛选条件”中设置的值</el-checkbox
+                    >
+                    <el-button
+                      v-if="formContent.fieldsForUseCommonConfig.jobDetail"
+                      size="small"
+                      ml-10px
+                      @click="
+                        handleClickConfigCommonJobCondition({
+                          entry: 'job-detail-field'
+                        })
+                      "
+                      >编辑公共职位筛选条件</el-button
                     >
                   </div>
                   <el-form-item
@@ -2244,6 +2295,15 @@ const unListenCommonJobConditionConfig = ipcRenderer.on(
 onUnmounted(() => {
   unListenCommonJobConditionConfig()
 })
+
+const handleClickConfigCommonJobCondition = async ({ entry }) => {
+  gtagRenderer('config_cjc_clicked', { entry })
+  try {
+    await electron.ipcRenderer.invoke('common-job-condition-config')
+  } catch (err) {
+    console.log(err)
+  }
+}
 </script>
 
 <style scoped lang="scss">
