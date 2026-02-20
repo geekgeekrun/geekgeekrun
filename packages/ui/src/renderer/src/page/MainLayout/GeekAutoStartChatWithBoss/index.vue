@@ -270,7 +270,10 @@
                     ><b color-orange>逗号分隔</b>，不区分大小写；输入框留空表示不筛选</span
                   >
                 </div>
-                <el-dropdown @command="handleExpectCompanyTemplateClicked">
+                <el-dropdown
+                  v-if="!formContent.fieldsForUseCommonConfig.expectCompanies"
+                  @command="handleExpectCompanyTemplateClicked"
+                >
                   <el-button size="small"
                     >公司列表模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
                   ></el-button>
@@ -356,7 +359,10 @@
                   >你编写的正则，填写太过于宽泛的正则（例如`.*`）将导致任何职位都不会开聊</span
                 >
               </div>
-              <el-dropdown @command="handleBlockCompanyNameRegExpTemplateClicked">
+              <el-dropdown
+                v-if="!formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
+                @command="handleBlockCompanyNameRegExpTemplateClicked"
+              >
                 <el-button size="small"
                   >公司列表模板 <el-icon class="el-icon--right"><arrow-down /></el-icon
                 ></el-button>
@@ -1182,7 +1188,11 @@
                   </el-tooltip>
                 </div>
                 <div>
-                  <el-dropdown ml20px @command="handleExpectJobFilterTemplateClicked">
+                  <el-dropdown
+                    v-if="!formContent.fieldsForUseCommonConfig.jobDetail"
+                    ml20px
+                    @command="handleExpectJobFilterTemplateClicked"
+                  >
                     <el-button size="small"
                       >职位详情筛选模板（按职类区分）
                       <el-icon class="el-icon--right"><arrow-down /></el-icon
