@@ -11,16 +11,100 @@ import defaultLlmConf from './default-config-file/llm.json' assert { type: 'json
 import defaultBossCookieStorage from './default-storage-file/boss-cookies.json' assert { type: 'json' }
 import defaultBossLocalStorageStorage from './default-storage-file/boss-local-storage.json' assert { type: 'json' }
 import defaultJobNotSuitReasonCodeToTextCacheStorage from './default-storage-file/job-not-suit-reason-code-to-text-cache.json' assert { type: 'json' }
-export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json', 'llm.json']
+import defaultCommonJobConditionConfig from './default-config-file/common-job-condition-config.json' assert { type: 'json' }
+export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json', 'llm.json', 'common-job-condition-config.json']
 
 const defaultConfigFileContentMap = {
   'boss.json': JSON.stringify(defaultBossConf),
   'dingtalk.json': JSON.stringify(defaultDingtalkConf),
   'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf),
-  'llm.json': JSON.stringify(defaultLlmConf)
+  'llm.json': JSON.stringify(defaultLlmConf),
+  'common-job-condition-config.json': JSON.stringify(defaultCommonJobConditionConfig)
+}
+const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
+export const configFolderPath = path.join(
+  runtimeFolderPath,
+  'config'
+)
+export const writeConfigFile = async (fileName, content, { isSync } = {}) => {
+  const filePath = path.join(configFolderPath, fileName)
+  const fileContent = JSON.stringify(content)
+  if (isSync) {
+    fs.writeFileSync(
+      filePath,
+      fileContent
+    )
+  }
+  else {
+    return fsPromise.writeFile(
+      filePath,
+      fileContent
+    )
+  }
+}
+if (
+  !fs.existsSync(
+    path.join(configFolderPath, 'common-job-condition-config.json')
+  )
+) {
+  let bossConfig = null
+  if (
+    fs.existsSync(
+      path.join(configFolderPath, 'boss.json')
+    )
+  ) {
+    fs.existsSync(
+      path.join(configFolderPath, 'boss.json')
+    )
+    try {
+      bossConfig = JSON.parse(
+        fs.readFileSync(
+          path.join(configFolderPath, 'boss.json')
+        )
+      )
+    }
+    catch {}
+  }
+  if (bossConfig) {
+    Object.keys(defaultCommonJobConditionConfig).forEach(
+      key => {
+        if (Object.hasOwn(bossConfig, key)) {
+          defaultCommonJobConditionConfig[key] = bossConfig[key]
+        }
+      }
+    )
+  }
+  let targetCompanyList = null
+  if (
+    fs.existsSync(
+      path.join(configFolderPath, 'target-company-list.json')
+    )
+  ) {
+    targetCompanyList = JSON.parse(
+      fs.readFileSync(
+        path.join(configFolderPath, 'target-company-list.json')
+      )
+    )
+  }
+  if (targetCompanyList) {
+    defaultCommonJobConditionConfig.expectCompanies = targetCompanyList ?? []
+  }
+  writeConfigFile('common-job-condition-config.json', defaultCommonJobConditionConfig, { isSync: true })
+  if (bossConfig) {
+    if (!bossConfig.fieldsForUseCommonConfig) {
+      bossConfig.fieldsForUseCommonConfig = {}
+    }
+    Object.assign(bossConfig.fieldsForUseCommonConfig, {
+      city: true,
+      salary: true,
+      jobDetail: true,
+      blockCompanyNameRegExpStr: true,
+      expectCompanies: true
+    })
+    writeConfigFile('boss.json', bossConfig, { isSync: true })
+  }
 }
 
-const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
 const ensureRuntimeFolderPathExist = () => {
   if (!fs.existsSync(runtimeFolderPath)) {
     fs.mkdirSync(runtimeFolderPath)
@@ -35,11 +119,6 @@ const ensureRuntimeFolderPathExist = () => {
     }
   })
 }
-
-export const configFolderPath = path.join(
-  runtimeFolderPath,
-  'config'
-)
 export const ensureConfigFileExist = () => {
   ensureRuntimeFolderPathExist()
   ;configFileNameList.forEach(
@@ -80,15 +159,6 @@ export const readConfigFile = (fileName) => {
   }
 
   return o
-}
-
-export const writeConfigFile = async (fileName, content) => {
-  const filePath = path.join(configFolderPath, fileName)
-  const fileContent = JSON.stringify(content)
-  return fsPromise.writeFile(
-    filePath,
-    fileContent
-  )
 }
 
 export const storageFilePath = path.join(

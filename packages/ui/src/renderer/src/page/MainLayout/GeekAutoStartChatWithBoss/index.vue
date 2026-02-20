@@ -1929,6 +1929,28 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     res.config['boss.json'].blockCompanyNameRegMatchStrategy ?? MarkAsNotSuitOp.NO_OP
   formContent.value.fieldsForUseCommonConfig =
     res.config['boss.json']?.fieldsForUseCommonConfig ?? {}
+
+  commonJobConditionConfig.value = {
+    expectJobNameRegExpStr:
+      res.config['common-job-condition-config.json']?.expectJobNameRegExpStr ?? '',
+    expectJobTypeRegExpStr:
+      res.config['common-job-condition-config.json']?.expectJobTypeRegExpStr ?? '',
+    expectJobDescRegExpStr:
+      res.config['common-job-condition-config.json']?.expectJobDescRegExpStr ?? '',
+    jobDetailRegExpMatchLogic:
+      res.config['common-job-condition-config.json']?.jobDetailRegExpMatchLogic ??
+      JobDetailRegExpMatchLogic.EVERY,
+    expectCompanies: (res.config['common-job-condition-config.json']?.expectCompanies ?? []).join(
+      ','
+    ),
+    blockCompanyNameRegExpStr:
+      res.config['common-job-condition-config.json']?.blockCompanyNameRegExpStr ?? '',
+    expectSalaryCalculateWay:
+      res.config['common-job-condition-config.json']?.expectSalaryCalculateWay ??
+      SalaryCalculateWay.MONTH_SALARY,
+    expectSalaryLow: res.config['common-job-condition-config.json']?.expectSalaryLow ?? null,
+    expectSalaryHigh: res.config['common-job-condition-config.json']?.expectSalaryHigh ?? null
+  }
 })
 
 const jobSourceFormItemSectionEl = ref()
