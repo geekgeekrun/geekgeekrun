@@ -241,7 +241,15 @@
             <el-form-item mb0>
               <div font-size-16px>职位列表筛选条件</div>
             </el-form-item>
-            <el-form-item prop="expectCompanies" mb0>
+            <el-form-item
+              :key="!formContent.fieldsForUseCommonConfig.expectCompanies"
+              :prop="
+                !formContent.fieldsForUseCommonConfig.expectCompanies
+                  ? 'expectCompanies'
+                  : undefined
+              "
+              mb0
+            >
               <div
                 font-size-14px
                 flex
@@ -404,7 +412,16 @@
                     >编辑公共职位筛选条件</el-button
                   >
                 </div>
-                <el-form-item prop="blockCompanyNameRegExpStr" mb0 w-full>
+                <el-form-item
+                  :key="!formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
+                  :prop="
+                    !formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr
+                      ? 'blockCompanyNameRegExpStr'
+                      : undefined
+                  "
+                  mb0
+                  w-full
+                >
                   <el-input
                     v-if="!formContent.fieldsForUseCommonConfig.blockCompanyNameRegExpStr"
                     v-model="formContent.blockCompanyNameRegExpStr"
@@ -482,7 +499,11 @@
                   gap: '10px'
                 }"
               >
-                <el-form-item prop="expectCityList" mb0>
+                <el-form-item
+                  :key="!formContent.fieldsForUseCommonConfig.city"
+                  :prop="!formContent.fieldsForUseCommonConfig.city ? 'expectCityList' : undefined"
+                  mb0
+                >
                   <div
                     font-size-12px
                     :style="{
@@ -833,7 +854,7 @@
                     </el-form-item>
                   </template>
                   <template v-else>
-                    <el-form-item prop="expectSalaryLow" mb10px>
+                    <el-form-item mb10px>
                       <div w-full>
                         <div font-size-12px>薪资筛选方式</div>
                         <el-select
@@ -851,7 +872,7 @@
                         </el-select>
                       </div>
                     </el-form-item>
-                    <el-form-item prop="expectSalaryLow" mb10px>
+                    <el-form-item mb10px>
                       <div>
                         <div font-size-12px>期望薪资范围</div>
                         <div>
