@@ -597,6 +597,9 @@ export default function initIpc() {
   })
   ipcMain.handle('common-job-condition-config', async () => {
     await waitForCommonJobConditionDone()
+    mainWindow?.webContents.send('common-job-condition-config-updated', {
+      config: await readConfigFile('common-job-condition-config.json')
+    })
   })
 
   ipcMain.handle('exit-app-immediately', () => {
