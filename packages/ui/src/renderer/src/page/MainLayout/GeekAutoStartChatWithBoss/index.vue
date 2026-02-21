@@ -1970,7 +1970,8 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
       res.config['common-job-condition-config.json']?.expectSalaryCalculateWay ??
       SalaryCalculateWay.MONTH_SALARY,
     expectSalaryLow: res.config['common-job-condition-config.json']?.expectSalaryLow ?? null,
-    expectSalaryHigh: res.config['common-job-condition-config.json']?.expectSalaryHigh ?? null
+    expectSalaryHigh: res.config['common-job-condition-config.json']?.expectSalaryHigh ?? null,
+    expectCityList: res.config['common-job-condition-config.json']?.expectCityList ?? []
   }
 })
 
