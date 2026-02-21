@@ -73,6 +73,27 @@ if (
         }
       }
     )
+    let {
+      expectJobRegExpStr,
+      expectJobNameRegExpStr,
+      expectJobTypeRegExpStr,
+      expectJobDescRegExpStr,
+    } = bossConfig
+    if (
+      expectJobRegExpStr &&
+      !expectJobNameRegExpStr &&
+      !expectJobTypeRegExpStr &&
+      !expectJobDescRegExpStr
+    ) {
+      expectJobNameRegExpStr = expectJobRegExpStr
+      expectJobTypeRegExpStr = expectJobRegExpStr
+      expectJobDescRegExpStr = expectJobRegExpStr
+    }
+    Object.assign(defaultCommonJobConditionConfig, {
+      expectJobNameRegExpStr,
+      expectJobTypeRegExpStr,
+      expectJobDescRegExpStr
+    })
   }
   let targetCompanyList = null
   if (
