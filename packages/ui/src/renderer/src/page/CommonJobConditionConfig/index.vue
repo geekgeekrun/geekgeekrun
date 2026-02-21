@@ -596,7 +596,7 @@
 
 <script setup lang="tsx">
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import { SalaryCalculateWay } from '@geekgeekrun/sqlite-plugin/src/enums'
+import { JobDetailRegExpMatchLogic, SalaryCalculateWay } from '@geekgeekrun/sqlite-plugin/src/enums'
 import CityChooser from '../MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'
 import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
 
@@ -618,18 +618,19 @@ import {
   normalizeCommaSplittedStr
 } from '../MainLayout/GeekAutoStartChatWithBoss/common'
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import expectJobFilterTemplateList from '../MainLayout/GeekAutoStartChatWithBoss/expectJobFilterTemplateList'
-
+const { ipcRenderer } = window.electron
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {
     scene: 'cjc_config',
     ...params
   })
 }
-const router = useRouter()
 
 const formContent = ref({
+  expectCompanies: '',
+  expectCityList: [],
+  jobDetailRegExpMatchLogic: JobDetailRegExpMatchLogic.EVERY,
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
   expectJobDescRegExpStr: '',
@@ -697,8 +698,32 @@ function handleCancel() {
 const formRef = ref()
 async function handleSave() {
   await formRef.value?.validate()
-  //
+  await ipcRenderer.invoke(
+    'save-common-job-condition-config',
+    JSON.parse(
+      JSON.stringify({
+        ...formContent.value,
+        expectCompanies: formContent.value.expectCompanies
+          ? formContent.value.expectCompanies.split(',').map((s) => s.trim())
+          : []
+      })
+    )
+  )
+  ipcRenderer.send('common-job-condition-config-done')
 }
+
+ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+  const commonJobConditionConfig = res.config?.['common-job-condition-config.json'] ?? {}
+  Object.keys(formContent.value).forEach((key) => {
+    if (key in commonJobConditionConfig) {
+      if (key === 'expectCompanies') {
+        formContent.value[key] = (commonJobConditionConfig[key] ?? []).join(',')
+      } else {
+        formContent.value[key] = commonJobConditionConfig[key]
+      }
+    }
+  })
+})
 </script>
 
 <style lang="scss">

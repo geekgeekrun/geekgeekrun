@@ -2,8 +2,6 @@ import { ipcMain, shell, app, dialog, BrowserWindow } from 'electron'
 import path from 'path'
 import * as childProcess from 'node:child_process'
 import {
-  ensureConfigFileExist,
-  configFileNameList,
   readConfigFile,
   writeConfigFile,
   readStorageFile,
@@ -58,24 +56,10 @@ import {
   waitForUserApproveAgreement
 } from '../../../features/first-launch-notice-window'
 import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
-import { createCommonJobConditionConfigWindow } from '../../../window/commonJobConditionConfigWindow'
+import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
+import { ensureConfigFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 export default function initIpc() {
-  ipcMain.handle('fetch-config-file-content', async () => {
-    const configFileContentList = configFileNameList.map((fileName) => {
-      return readConfigFile(fileName)
-    })
-    const result = {
-      config: {}
-    }
-
-    configFileNameList.forEach((fileName, index) => {
-      result.config[fileName] = configFileContentList[index]
-    })
-
-    return result
-  })
-
   ipcMain.handle('save-config-file-from-ui', async (ev, payload) => {
     payload = JSON.parse(payload)
     ensureConfigFileExist()
@@ -612,11 +596,7 @@ export default function initIpc() {
     }
   })
   ipcMain.handle('common-job-condition-config', async () => {
-    createCommonJobConditionConfigWindow({
-      parent: mainWindow!,
-      modal: true,
-      show: true
-    })
+    await waitForCommonJobConditionDone()
   })
 
   ipcMain.handle('exit-app-immediately', () => {

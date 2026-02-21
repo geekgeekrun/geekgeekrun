@@ -2340,9 +2340,12 @@ const handleBlockCompanyNameRegExpTemplateClicked =
 
 const commonJobConditionConfig = ref({})
 const unListenCommonJobConditionConfig = ipcRenderer.on(
-  'common-job-condition-config-changed',
-  (_, config) => {
-    commonJobConditionConfig.value = config
+  'common-job-condition-config-updated',
+  (_, { config }) => {
+    commonJobConditionConfig.value = {
+      ...config,
+      expectCompanies: config?.expectCompanies?.map((it) => it.trim())?.join(',') ?? ''
+    }
   }
 )
 onUnmounted(() => {

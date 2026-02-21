@@ -1,5 +1,6 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
+import { writeConfigFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 export let commonJobConditionConfigWindow: BrowserWindow | null = null
 export function createCommonJobConditionConfigWindow(
@@ -40,6 +41,14 @@ export function createCommonJobConditionConfigWindow(
 
   commonJobConditionConfigWindow!.once('closed', () => {
     commonJobConditionConfigWindow = null
+  })
+
+  ipcMain.handle('save-common-job-condition-config', async (_ev, payload) => {
+    await writeConfigFile('common-job-condition-config.json', payload)
+    commonJobConditionConfigWindow!.close()
+  })
+  commonJobConditionConfigWindow!.once('closed', () => {
+    ipcMain.removeHandler('save-common-job-condition-config')
   })
 
   return commonJobConditionConfigWindow!
