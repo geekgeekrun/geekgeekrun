@@ -115,13 +115,6 @@ if (
     if (!bossConfig.fieldsForUseCommonConfig) {
       bossConfig.fieldsForUseCommonConfig = {}
     }
-    Object.assign(bossConfig.fieldsForUseCommonConfig, {
-      city: true,
-      salary: true,
-      jobDetail: true,
-      blockCompanyNameRegExpStr: true,
-      expectCompanies: true
-    })
     writeConfigFile('boss.json', bossConfig, { isSync: true })
   }
 }

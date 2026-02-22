@@ -40,11 +40,5 @@
   "sageTimeOpTimes": 100,
   "sageTimePauseMinute": 15,
   "blockCompanyNameRegExpStr": "",
-  "fieldsForUseCommonConfig": {
-    "city": true,
-    "salary": true,
-    "jobDetail": true,
-    "blockCompanyNameRegExpStr": true,
-    "expectCompanies": true
-  }
+  "fieldsForUseCommonConfig": {}
 }
