@@ -60,6 +60,13 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/commonJobConditionConfig',
+    component: () => import('@renderer/page/CommonJobConditionConfig/index.vue'),
+    meta: {
+      title: '公共职位筛选条件'
+    }
+  },
+  {
     path: '/main-layout',
     component: () => import('@renderer/page/MainLayout/index.vue'),
     redirect: '/main-layout/GeekAutoStartChatWithBoss',

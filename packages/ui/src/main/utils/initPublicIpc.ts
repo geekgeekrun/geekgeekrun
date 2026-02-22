@@ -5,8 +5,10 @@ import os from 'node:os'
 import fs from 'node:fs'
 import {
   ensureStorageFileExist,
-  readStorageFile,
-  writeStorageFile
+  writeStorageFile,
+  configFileNameList,
+  readConfigFile,
+  readStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 export default function initPublicIpc() {
@@ -109,5 +111,20 @@ export default function initPublicIpc() {
       }
     }
     return null
+  })
+
+  ipcMain.handle('fetch-config-file-content', async () => {
+    const configFileContentList = configFileNameList.map((fileName) => {
+      return readConfigFile(fileName)
+    })
+    const result = {
+      config: {}
+    }
+
+    configFileNameList.forEach((fileName, index) => {
+      result.config[fileName] = configFileContentList[index]
+    })
+
+    return result
   })
 }

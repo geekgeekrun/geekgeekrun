@@ -39,6 +39,7 @@ import {
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
 import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
+import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
 const flattedCityList = []
 ;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
   const firstChar = it.firstChar
@@ -112,7 +113,15 @@ export async function initPuppeteer () {
   }
 }
 
-const targetCompanyList = readConfigFile('target-company-list.json').filter(it => !!it.trim());
+const commonJobConditionConfig = readConfigFile('common-job-condition-config.json')
+const fieldsForUseCommonConfig = readConfigFile('boss.json').fieldsForUseCommonConfig ?? {}
+
+const targetCompanyList = (
+  !fieldsForUseCommonConfig.expectCompanies ?
+    readConfigFile('target-company-list.json')
+    :
+    commonJobConditionConfig.expectCompanies
+).filter(it => !!it.trim());
 const combineRecommendJobFilterType = readConfigFile('boss.json').combineRecommendJobFilterType ?? CombineRecommendJobFilterType.ANY_COMBINE
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
@@ -125,14 +134,34 @@ const expectJobRegExpStr = readConfigFile('boss.json').expectJobRegExpStr
 const jobNotMatchStrategy = readConfigFile('boss.json').jobNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS
 
 const expectCityNotMatchStrategy = readConfigFile('boss.json').expectCityNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
-const expectCityList = readConfigFile('boss.json').expectCityList ?? []
+const expectCityList = (
+  !fieldsForUseCommonConfig.city ?
+    readConfigFile('boss.json').expectCityList
+    :
+    commonJobConditionConfig.expectCityList
+) ?? []
 
 const strategyScopeOptionWhenMarkJobCityNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobCityNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
 // salary
-const expectSalaryLow = parseFloat(readConfigFile('boss.json').expectSalaryLow) || null
-const expectSalaryHigh = parseFloat(readConfigFile('boss.json').expectSalaryHigh) || null
-const expectSalaryCalculateWay = readConfigFile('boss.json').expectSalaryCalculateWay ?? SalaryCalculateWay.MONTH_SALARY
+const expectSalaryLow = parseFloat(
+  !fieldsForUseCommonConfig.salary ? 
+    readConfigFile('boss.json').expectSalaryLow
+    :
+    commonJobConditionConfig.expectSalaryLow
+) || null
+const expectSalaryHigh = parseFloat(
+  !fieldsForUseCommonConfig.salary ? 
+    readConfigFile('boss.json').expectSalaryHigh
+    :
+    commonJobConditionConfig.expectSalaryHigh
+) || null
+const expectSalaryCalculateWay = (
+  !fieldsForUseCommonConfig.salary ?
+    readConfigFile('boss.json').expectSalaryCalculateWay
+    :
+    commonJobConditionConfig.expectSalaryCalculateWay
+) ?? SalaryCalculateWay.MONTH_SALARY
 const expectSalaryNotMatchStrategy = readConfigFile('boss.json').expectSalaryNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const isSalaryFilterEnabled = expectSalaryLow || expectSalaryHigh
 const strategyScopeOptionWhenMarkSalaryNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkSalaryNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
@@ -153,7 +182,12 @@ expectWorkExpList = Array.from(expectWorkExpListSet)
 const expectWorkExpNotMatchStrategy = readConfigFile('boss.json').expectWorkExpNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
 const strategyScopeOptionWhenMarkJobWorkExpNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkJobWorkExpNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
-let jobDetailRegExpMatchLogic = readConfigFile('boss.json').jobDetailRegExpMatchLogic ?? JobDetailRegExpMatchLogic.EVERY
+let jobDetailRegExpMatchLogic = (
+  !fieldsForUseCommonConfig.jobDetail ?
+    readConfigFile('boss.json').jobDetailRegExpMatchLogic
+    :
+    commonJobConditionConfig.jobDetailRegExpMatchLogic
+) ?? JobDetailRegExpMatchLogic.EVERY
 
 const markAsNotActiveSelectedTimeRange = (() => {
   let n = readConfigFile('boss.json').markAsNotActiveSelectedTimeRange
@@ -176,8 +210,9 @@ let {
   expectJobNameRegExpStr,
   expectJobTypeRegExpStr,
   expectJobDescRegExpStr,
-} = readConfigFile('boss.json')
+} = !fieldsForUseCommonConfig.jobDetail ? readConfigFile('boss.json') : commonJobConditionConfig
 if (
+  !fieldsForUseCommonConfig.jobDetail &&
   expectJobRegExpStr &&
   !expectJobNameRegExpStr &&
   !expectJobTypeRegExpStr &&
@@ -247,7 +282,12 @@ const recommendJobPageUrl = `https://www.zhipin.com/web/geek/jobs`
 
 const expectCompanySet = new Set(targetCompanyList)
 const enableCompanyAllowList = Boolean(expectCompanySet.size)
-const blockCompanyNameRegExpStr = readConfigFile('boss.json').blockCompanyNameRegExpStr ?? ''
+const blockCompanyNameRegExpStr = (
+  !fieldsForUseCommonConfig.blockCompanyNameRegExpStr ?
+    readConfigFile('boss.json').blockCompanyNameRegExpStr
+    :
+    commonJobConditionConfig.blockCompanyNameRegExpStr
+) ?? ''
 const blockCompanyNameRegExp = (() => {
   if (!blockCompanyNameRegExpStr?.trim()) {
     return null
@@ -947,20 +987,24 @@ async function toRecommendPage (hooks) {
               function checkIfSalarySuit(salaryDesc) {
                 const salaryData = parseSalary(salaryDesc)
                 if (expectSalaryCalculateWay === SalaryCalculateWay.MONTH_SALARY) {
-                  if (expectSalaryHigh && salaryData.high > expectSalaryHigh) {
-                    return false
+                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
                   }
-                  if (expectSalaryLow && salaryData.high < expectSalaryLow) {
-                    return false
-                  }
-                } else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
+                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null]
+                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
+                }
+                else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
                   const salaryDataMonth = salaryData.month || 12
-                  if (expectSalaryHigh && (salaryData.high * salaryDataMonth) / 10 > expectSalaryHigh) {
-                    return false
+                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
                   }
-                  if (expectSalaryLow && (salaryData.high * salaryDataMonth) / 10 < expectSalaryLow) {
-                    return false
-                  }
+                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null].map(
+                    it =>
+                      it === null ? null : (it * salaryDataMonth / 10)
+                  )
+                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
                 }
                 return true
               }

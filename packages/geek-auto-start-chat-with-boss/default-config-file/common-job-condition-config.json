@@ -1,0 +1,12 @@
+{
+  "expectCityList": [],
+  "expectJobNameRegExpStr": "",
+  "expectJobTypeRegExpStr": "",
+  "expectJobDescRegExpStr": "",
+  "expectCompanies": [],
+  "blockCompanyNameRegExpStr": "",
+  "jobDetailRegExpMatchLogic": 1,
+  "expectSalaryCalculateWay": 1,
+  "expectSalaryLow": null,
+  "expectSalaryHigh": null
+}
