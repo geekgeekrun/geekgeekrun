@@ -42,7 +42,7 @@ export const expectSalaryCalculateWayOption = [
     value: SalaryCalculateWay.MONTH_SALARY
   },
   {
-    name: '“年包”（单位为 万元 - 即“W”）',
+    name: '总包（单位为 万元 - 即“W”）',
     value: SalaryCalculateWay.ANNUAL_PACKAGE
   }
 ]

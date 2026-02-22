@@ -39,6 +39,7 @@ import {
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
 import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
+import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
 const flattedCityList = []
 ;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
   const firstChar = it.firstChar
@@ -986,20 +987,24 @@ async function toRecommendPage (hooks) {
               function checkIfSalarySuit(salaryDesc) {
                 const salaryData = parseSalary(salaryDesc)
                 if (expectSalaryCalculateWay === SalaryCalculateWay.MONTH_SALARY) {
-                  if (expectSalaryHigh && salaryData.high > expectSalaryHigh) {
-                    return false
+                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
                   }
-                  if (expectSalaryLow && salaryData.high < expectSalaryLow) {
-                    return false
-                  }
-                } else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
+                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null]
+                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
+                }
+                else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
                   const salaryDataMonth = salaryData.month || 12
-                  if (expectSalaryHigh && (salaryData.high * salaryDataMonth) / 10 > expectSalaryHigh) {
-                    return false
+                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
                   }
-                  if (expectSalaryLow && (salaryData.high * salaryDataMonth) / 10 < expectSalaryLow) {
-                    return false
-                  }
+                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null].map(
+                    it =>
+                      it === null ? null : (it * salaryDataMonth / 10)
+                  )
+                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
                 }
                 return true
               }
