@@ -2196,10 +2196,13 @@ const handleExpectSalaryCalculateWayChanged = getHandlerForExpectSalaryCalculate
 
 const salaryMarkAsNotSuitLabelText = computed(() => {
   const textSeg = []
-  if (formContent.value.expectSalaryLow) {
+  const formContentToUse = !formContent.value.fieldsForUseCommonConfig.salary
+    ? formContent.value
+    : commonJobConditionConfig.value
+  if (formContentToUse.expectSalaryLow) {
     textSeg.push('低于期望薪资下限')
   }
-  if (formContent.value.expectSalaryHigh) {
+  if (formContentToUse.expectSalaryHigh) {
     textSeg.push('高于期望薪资上限')
   }
   return textSeg.join(' / ')
