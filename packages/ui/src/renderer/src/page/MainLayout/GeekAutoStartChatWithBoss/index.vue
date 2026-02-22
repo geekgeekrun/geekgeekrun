@@ -309,6 +309,13 @@
                     @click="handleClickConfigCommonJobCondition({ entry: 'expect-company-field' })"
                     >编辑公共职位筛选条件</el-button
                   >
+                  <el-button
+                    v-else
+                    size="small"
+                    ml-10px
+                    @click="fillCommonConfigField('expectCompanies')"
+                    >填入公共职位筛选条件的值</el-button
+                  >
                 </div>
                 <el-input
                   v-if="!formContent.fieldsForUseCommonConfig.expectCompanies"
@@ -410,6 +417,13 @@
                       })
                     "
                     >编辑公共职位筛选条件</el-button
+                  >
+                  <el-button
+                    v-else
+                    size="small"
+                    ml-10px
+                    @click="fillCommonConfigField('blockCompanyNameRegExpStr')"
+                    >填入公共职位筛选条件的值</el-button
                   >
                 </div>
                 <el-form-item
@@ -526,6 +540,9 @@
                           })
                         "
                         >编辑公共职位筛选条件</el-button
+                      >
+                      <el-button v-else size="small" ml-10px @click="fillCommonConfigField('city')"
+                        >填入公共职位筛选条件的值</el-button
                       >
                     </div>
                     <city-chooser
@@ -688,6 +705,9 @@
                         })
                       "
                       >编辑公共职位筛选条件</el-button
+                    >
+                    <el-button v-else size="small" ml-10px @click="fillCommonConfigField('salary')"
+                      >填入公共职位筛选条件的值</el-button
                     >
                   </div>
                   <template v-if="!formContent.fieldsForUseCommonConfig.salary">
@@ -1258,6 +1278,13 @@
                         })
                       "
                       >编辑公共职位筛选条件</el-button
+                    >
+                    <el-button
+                      v-else
+                      size="small"
+                      ml-10px
+                      @click="fillCommonConfigField('jobDetail')"
+                      >填入公共职位筛选条件的值</el-button
                     >
                   </div>
                   <el-form-item
@@ -2362,6 +2389,49 @@ const handleClickConfigCommonJobCondition = async ({ entry }) => {
     await electron.ipcRenderer.invoke('common-job-condition-config')
   } catch (err) {
     console.log(err)
+  }
+}
+
+const fillCommonConfigField = (field) => {
+  debugger
+  gtagRenderer('fill_common_config_field_clicked', { field })
+  let fieldsToReplace = []
+  switch (field) {
+    case 'salary': {
+      fieldsToReplace = ['expectSalaryCalculateWay', 'expectSalaryLow', 'expectSalaryHigh']
+      break
+    }
+    case 'city': {
+      fieldsToReplace = ['expectCityList']
+      break
+    }
+    case 'jobDetail': {
+      fieldsToReplace = [
+        'jobDetailRegExpMatchLogic',
+        'expectJobNameRegExpStr',
+        'expectJobTypeRegExpStr',
+        'expectJobDescRegExpStr'
+      ]
+      break
+    }
+    case 'expectCompanies': {
+      fieldsToReplace = ['expectCompanies']
+      break
+    }
+    case 'blockCompanyNameRegExpStr': {
+      fieldsToReplace = ['blockCompanyNameRegExpStr']
+      break
+    }
+  }
+  for (const field of fieldsToReplace) {
+    let sourceValue = commonJobConditionConfig.value[field]
+    if (
+      commonJobConditionConfig.value[field] &&
+      typeof commonJobConditionConfig.value[field] === 'object'
+    ) {
+      sourceValue = JSON.parse(JSON.stringify(commonJobConditionConfig.value[field]))
+    }
+    formContent.value[field] = sourceValue
   }
 }
 </script>
