@@ -2393,7 +2393,6 @@ const handleClickConfigCommonJobCondition = async ({ entry }) => {
 }
 
 const fillCommonConfigField = (field) => {
-  debugger
   gtagRenderer('fill_common_config_field_clicked', { field })
   let fieldsToReplace = []
   switch (field) {
