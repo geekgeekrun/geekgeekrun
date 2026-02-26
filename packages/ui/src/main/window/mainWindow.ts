@@ -12,6 +12,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 1280,
     show: false,
     autoHideMenuBar: true,
+    frame: true,
     ...(process.platform === 'linux'
       ? {
           /* icon */

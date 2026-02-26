@@ -20,6 +20,7 @@ export function createCookieAssistantWindow(
     resizable: true,
     show: false,
     autoHideMenuBar: true,
+    frame: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false
