@@ -1,7 +1,7 @@
 import { bootstrap, launchBoss } from './bootstrap'
 import { MsgStatus, type ChatListItem } from './types'
 import { Browser, Page } from 'puppeteer'
-import { sendGptContent, sendLookForwardReplyEmotion } from './boss-operation'
+import { getGptContent, sendLookForwardReplyEmotion, sendMessage } from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait.mjs'
 import { app, dialog } from 'electron'
@@ -24,6 +24,7 @@ import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import {
   AUTO_CHAT_ERROR_EXIT_CODE,
+  OPEN_CONTENT_SOURCE,
   RECHAT_CONTENT_SOURCE,
   RECHAT_LLM_FALLBACK
 } from '../../../common/enums/auto-start-chat'
@@ -40,6 +41,7 @@ import { loginWithCookieAssistant } from '../../features/login-with-cookie-assis
 import initPublicIpc from '../../utils/initPublicIpc'
 import { getLastUsedAndAvailableBrowser } from '../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { configWithBrowserAssistant } from '../../features/config-with-browser-assistant'
+import { DEFAULT_CONSTANT_OPEN_CONTENT_SEGS } from '../../../common/constant'
 
 process.on('SIGTERM', () => {
   console.log('收到SIGTERM信号，正在退出')
@@ -86,6 +88,21 @@ const blockCompanyNameRegExp = (() => {
 const onlyRemindBossWithoutBlockCompanyName =
   readConfigFile('boss.json').autoReminder?.onlyRemindBossWithoutBlockCompanyName ??
   !!blockCompanyNameRegExp
+
+const openContentSource = readConfigFile('boss.json').autoReminder?.openContentSource ?? OPEN_CONTENT_SOURCE.CONSTANT_CONTENT
+const constantOpenContent = (() => {
+  let constantOpenContent = readConfigFile('boss.json').autoReminder?.constantOpenContent ?? ''
+  if (constantOpenContent?.trim?.()) {
+    return constantOpenContent
+  } else {
+    if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
+      constantOpenContent = DEFAULT_CONSTANT_OPEN_CONTENT_SEGS.join(`；`)
+    } else {
+      constantOpenContent = DEFAULT_CONSTANT_OPEN_CONTENT_SEGS[0]
+    }
+  }
+  return constantOpenContent
+})()
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 
@@ -582,30 +599,50 @@ const mainLoop = async () => {
         (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
     ) {
       await sleepWithRandomDelay(3250)
-      if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
-        try {
-          const messageListForGpt = historyMessageList
-            .filter((it) => it.bizType !== 101 && it.isSelf)
-            .slice(-recentMessageQuantityForLlm)
-          await sendGptContent(pageMapByName.boss!, messageListForGpt)
+      const messageList = historyMessageList
+        .filter((it) => it.bizType !== 101 && it.isSelf)
+        .slice(-recentMessageQuantityForLlm)
+      if (!messageList?.length) {
+        if (openContentSource === OPEN_CONTENT_SOURCE.CONSTANT_CONTENT) {
+          await sendMessage(pageMapByName.boss!, constantOpenContent)
           gtag('rnrr_llm_content_sent')
-        } catch (err) {
-          console.log(err)
-          if (rechatLlmFallback === RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION) {
-            await sendLookForwardReplyEmotion(pageMapByName.boss!)
+        } else {
+          try {
+            const textToSend = await getGptContent(messageList)
+            await sendMessage(pageMapByName.boss!, textToSend)
+            gtag('rnrr_llm_content_sent')
+          } catch (err) {
+            console.log(err)
+            await sendMessage(pageMapByName.boss!, constantOpenContent)
             gtag('rnrr_look_forward_reply_emotion_sent', {
               fallback: true
             })
-          } else {
-            gtag('rnrr_encounter_error', {
-              error: err
-            })
-            throw err
           }
         }
       } else {
-        await sendLookForwardReplyEmotion(pageMapByName.boss!)
-        gtag('rnrr_look_forward_reply_emotion_sent')
+        if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
+          try {
+            const textToSend = await getGptContent(messageList)
+            await sendMessage(pageMapByName.boss!, textToSend)
+            gtag('rnrr_llm_content_sent')
+          } catch (err) {
+            console.log(err)
+            if (rechatLlmFallback === RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION) {
+              await sendLookForwardReplyEmotion(pageMapByName.boss!)
+              gtag('rnrr_look_forward_reply_emotion_sent', {
+                fallback: true
+              })
+            } else {
+              gtag('rnrr_encounter_error', {
+                error: err
+              })
+              throw err
+            }
+          }
+        } else {
+          await sendLookForwardReplyEmotion(pageMapByName.boss!)
+          gtag('rnrr_look_forward_reply_emotion_sent')
+        }
       }
     } else {
       cursorToContinueFind += 1
