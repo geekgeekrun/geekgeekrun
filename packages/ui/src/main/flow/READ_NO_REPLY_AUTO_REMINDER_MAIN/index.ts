@@ -58,12 +58,21 @@ const rechatLlmFallback =
   readConfigFile('boss.json').autoReminder?.rechatLlmFallback ??
   RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
 
-const expectJobTypeRegExpStr = readConfigFile('boss.json').expectJobTypeRegExpStr
+const fieldsForUseCommonConfig = readConfigFile('boss.json').fieldsForUseCommonConfig ?? {}
+const commonJobConditionConfig = readConfigFile('common-job-condition-config.json') ?? {}
+const expectJobTypeRegExpStr =
+  (!fieldsForUseCommonConfig.jobDetail ? readConfigFile('boss.json') : commonJobConditionConfig)
+    ?.expectJobTypeRegExpStr ?? ''
 const onlyRemindBossWithExpectJobType =
   readConfigFile('boss.json').autoReminder?.onlyRemindBossWithExpectJobType ??
   !!expectJobTypeRegExpStr
 
-const blockCompanyNameRegExpStr = readConfigFile('boss.json').blockCompanyNameRegExpStr ?? ''
+const blockCompanyNameRegExpStr =
+  (!fieldsForUseCommonConfig.blockCompanyNameRegExpStr
+    ? readConfigFile('boss.json')
+    : commonJobConditionConfig
+  )?.blockCompanyNameRegExpStr ?? ''
+
 const blockCompanyNameRegExp = (() => {
   if (!blockCompanyNameRegExpStr?.trim()) {
     return null
