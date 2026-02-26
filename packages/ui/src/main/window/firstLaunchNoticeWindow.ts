@@ -8,11 +8,12 @@ export function createFirstLaunchNoticeWindow(
   // Create the browser window.
   firstLaunchNoticeWindow = new BrowserWindow({
     width: 960,
-    height: 640,
-    resizable: false,
+    maxWidth: 960,
+    minHeight: 320,
+    resizable: true,
     show: false,
     autoHideMenuBar: true,
-    frame: false,
+    frame: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false

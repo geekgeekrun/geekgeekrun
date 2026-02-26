@@ -32,7 +32,7 @@ import {
   requestNewMessageContent
 } from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
-  autoReminderPromptTemplateFileName,
+  defaultPromptMap,
   writeDefaultAutoRemindPrompt
 } from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
@@ -466,17 +466,19 @@ export default function initIpc() {
     const res = (await readConfigFile('resumes.json'))?.[0]
     return res?.content ?? null
   })
-  ipcMain.on('no-reply-reminder-prompt-edit', async () => {
-    const template = await readStorageFile(autoReminderPromptTemplateFileName, { isJson: false })
+  ipcMain.on('no-reply-reminder-prompt-edit', async (_, { type }) => {
+    const template = await readStorageFile(defaultPromptMap[type].fileName, {
+      isJson: false
+    })
     if (!template) {
-      await writeDefaultAutoRemindPrompt()
+      await writeDefaultAutoRemindPrompt({ type })
     }
-    const filePath = path.join(storageFilePath, autoReminderPromptTemplateFileName)
+    const filePath = path.join(storageFilePath, defaultPromptMap[type].fileName)
     shell.openPath(filePath)
   })
   ipcMain.on('close-resume-editor', () => resumeEditorWindow?.close())
-  ipcMain.handle('check-if-auto-remind-prompt-valid', async () => {
-    await getValidTemplate()
+  ipcMain.handle('check-if-auto-remind-prompt-valid', async (_, { type }) => {
+    await getValidTemplate({ type })
   })
   ipcMain.handle('check-is-resume-content-valid', async () => {
     const res = (await readConfigFile('resumes.json'))?.[0]
@@ -486,8 +488,8 @@ export default function initIpc() {
     const res = (await readConfigFile('resumes.json'))?.[0]
     return resumeContentEnoughDetect(res)
   })
-  ipcMain.handle('overwrite-auto-remind-prompt-with-default', async () => {
-    await writeDefaultAutoRemindPrompt()
+  ipcMain.handle('overwrite-auto-remind-prompt-with-default', async (_, { type }) => {
+    await writeDefaultAutoRemindPrompt({ type })
   })
   ipcMain.handle('check-if-llm-config-list-valid', async () => {
     const llmConfigList = await readConfigFile('llm.json')

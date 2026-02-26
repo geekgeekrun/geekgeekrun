@@ -31,6 +31,7 @@ export function createBrowserAssistantWindow(
     minWidth: 800,
     height: 400,
     resizable: true,
+    frame: true,
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
