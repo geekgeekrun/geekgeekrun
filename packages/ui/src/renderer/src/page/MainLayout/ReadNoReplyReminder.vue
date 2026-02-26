@@ -612,7 +612,14 @@ const handleSubmit = async () => {
     throttle_interval_minutes: formContent.value.autoReminder.throttleIntervalMinutes,
     rechat_limit_day: formContent.value.autoReminder.rechatLimitDay,
     rechat_content_source: formContent.value.autoReminder.rechatContentSource,
-    recent_message_quantity_for_llm: formContent.value.autoReminder.recentMessageQuantityForLlm
+    recent_message_quantity_for_llm: formContent.value.autoReminder.recentMessageQuantityForLlm,
+    only_remind_boss_with_expect_job_type:
+      formContent.value.autoReminder.onlyRemindBossWithExpectJobType,
+    only_remind_boss_without_block_company_name:
+      formContent.value.autoReminder.onlyRemindBossWithoutBlockCompanyName,
+    rechat_llm_fallback: formContent.value.autoReminder.rechatLlmFallback,
+    open_content_source: formContent.value.autoReminder.openContentSource,
+    constant_open_content_text_length: formContent.value.autoReminder.constantOpenContent.length ?? 0
   })
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
