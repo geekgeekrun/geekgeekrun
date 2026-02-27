@@ -172,7 +172,7 @@ const componentRootEl = ref<HTMLElement>()
 <style lang="scss" scoped>
 .first-run-readme {
   box-sizing: border-box;
-  width: 960px;
+  width: 100vw;
   height: 100vh;
   overflow: auto;
   user-select: none;
