@@ -1,4 +1,26 @@
-node_modules
-database.sqlite
-.env.local
+**/node_modules/
 
+# build outputs
+dist/
+out/
+packages/**/dist/
+packages/**/out/
+packages/**/.vite/
+packages/**/.turbo/
+packages/**/.cache/
+
+# OS / logs
+.DS_Store
+*.log
+*.log.*
+
+# local examples (often large/volatile)
+examples/
+
+# runtime data / secrets
+database.sqlite
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+.env.local

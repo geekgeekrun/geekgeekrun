@@ -1,0 +1,24 @@
+{
+  "name": "@geekgeekrun/boss-auto-browse-and-chat",
+  "private": true,
+  "version": "1.0.0",
+  "description": "boss-auto-browse-and-chat",
+  "module": "./index.mjs",
+  "type": "module",
+  "scripts": {
+  },
+  "author": "geekgeekrun",
+  "license": "ISC",
+  "dependencies": {
+    "@geekgeekrun/utils": "workspace:*",
+    "@geekgeekrun/sqlite-plugin": "workspace:*",
+    "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",
+    "json5": "^2.2.3",
+    "puppeteer": "24.19.0",
+    "puppeteer-extra": "3.3.6",
+    "puppeteer-extra-plugin-anonymize-ua": "2.4.6",
+    "puppeteer-extra-plugin-stealth": "2.11.2",
+    "tapable": "^2.2.1",
+    "ghost-cursor": "^1.3.1"
+  }
+}

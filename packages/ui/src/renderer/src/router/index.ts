@@ -69,7 +69,10 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/main-layout',
     component: () => import('@renderer/page/MainLayout/index.vue'),
-    redirect: '/main-layout/GeekAutoStartChatWithBoss',
+    redirect: () => {
+      const lastPath = localStorage.getItem('geekgeekrun_last_main_layout_path')
+      return lastPath || '/main-layout/GeekAutoStartChatWithBoss'
+    },
     children: [
       {
         path: 'taskManager',
@@ -125,6 +128,62 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@renderer/page/MainLayout/CompanyLibrary.vue'),
         meta: {
           title: '公司库'
+        }
+      },
+      {
+        name: 'BossJobConfig',
+        path: 'BossJobConfig',
+        component: () => import('@renderer/page/MainLayout/BossJobConfig/index.vue'),
+        meta: {
+          title: '职位配置'
+        }
+      },
+      {
+        name: 'BossAutoBrowseAndChat',
+        path: 'BossAutoBrowseAndChat',
+        component: () => import('@renderer/page/MainLayout/BossAutoBrowseAndChat/index.vue'),
+        meta: {
+          title: '推荐牛人 - 自动开聊'
+        }
+      },
+      {
+        name: 'BossChatPage',
+        path: 'BossChatPage',
+        component: () => import('@renderer/page/MainLayout/BossChatPage/index.vue'),
+        meta: {
+          title: '沟通'
+        }
+      },
+      {
+        name: 'BossAutoSequence',
+        path: 'BossAutoSequence',
+        component: () => import('@renderer/page/MainLayout/BossAutoSequence/index.vue'),
+        meta: {
+          title: '自动顺序执行'
+        }
+      },
+      {
+        name: 'WebhookIntegration',
+        path: 'WebhookIntegration',
+        component: () => import('@renderer/page/MainLayout/WebhookIntegration/index.vue'),
+        meta: {
+          title: 'Webhook / 外部集成'
+        }
+      },
+      {
+        name: 'BossDebugTool',
+        path: 'BossDebugTool',
+        component: () => import('@renderer/page/MainLayout/BossDebugTool/index.vue'),
+        meta: {
+          title: '招聘端调试工具'
+        }
+      },
+      {
+        name: 'BossLlmConfig',
+        path: 'BossLlmConfig',
+        component: () => import('@renderer/page/MainLayout/BossLlmConfig/index.vue'),
+        meta: {
+          title: '招聘端大语言模型配置'
         }
       }
     ]

@@ -41,6 +41,18 @@
             </li>
           </ul>
         </div>
+        <div
+          v-if="props.workerId === 'bossAutoBrowseAndChatMain' && (bossProgress.recommend.max > 0 || bossProgress.chatPage.max > 0)"
+          class="progress-block"
+          mb8px
+        >
+          <div v-if="bossProgress.recommend.max > 0" class="progress-line">
+            推荐页：已开聊 {{ bossProgress.recommend.current }} / {{ bossProgress.recommend.max }}
+          </div>
+          <div v-if="bossProgress.chatPage.max > 0" class="progress-line">
+            沟通页：已处理 {{ bossProgress.chatPage.current }} / {{ bossProgress.chatPage.max }}
+          </div>
+        </div>
         <div flex justify-between items-center w-full>
           <div>
             {{ runningStatusTextMapByCode[currentRunningStatus] }}
@@ -48,6 +60,17 @@
           <div>
             <slot name="op-buttons" :current-running-status="currentRunningStatus" />
           </div>
+        </div>
+        <div
+          v-if="workerLogs.length"
+          mt8px
+          style="max-height: 120px; overflow-y: auto; background: #f5f5f5; border-radius: 6px; padding: 6px 8px"
+        >
+          <div
+            v-for="(line, i) in workerLogs"
+            :key="i"
+            style="font-size: 11px; color: #666; line-height: 1.5; word-break: break-all; font-family: monospace"
+          >{{ line }}</div>
         </div>
       </div>
     </div>
@@ -69,6 +92,10 @@ const props = defineProps({
   },
   runRecordId: {
     type: Number
+  },
+  getSteps: {
+    type: Function,
+    default: getAutoStartChatSteps
   }
 })
 // const taskManagerStore = useTaskManagerStore()
@@ -78,6 +105,14 @@ const props = defineProps({
 //   })
 // })
 const steps = ref([])
+const workerLogs = ref<string[]>([])
+const bossProgress = ref<{
+  recommend: { current: number; max: number }
+  chatPage: { current: number; max: number }
+}>({
+  recommend: { current: 0, max: 0 },
+  chatPage: { current: 0, max: 0 }
+})
 const stepsForRender = computed(() => {
   const clonedSteps = JSON.parse(JSON.stringify(steps.value))
   if (clonedSteps.some((it) => it.status === 'rejected')) {
@@ -96,10 +131,12 @@ const runningStatusTextMapByCode = {
 }
 const currentRunningStatus = ref(RUNNING_STATUS_ENUM.RUNNING)
 function fillEmptySteps() {
-  const arr = getAutoStartChatSteps()
+  const arr = props.getSteps()
   arr.forEach((it) => (it.status = 'todo'))
   steps.value = arr
   currentRunningStatus.value = RUNNING_STATUS_ENUM.RUNNING
+  workerLogs.value = []
+  bossProgress.value = { recommend: { current: 0, max: 0 }, chatPage: { current: 0, max: 0 } }
 }
 watch(() => props.runRecordId, fillEmptySteps, {
   immediate: true
@@ -121,6 +158,22 @@ watch(
 
 const { ipcRenderer } = electron
 function messageHandler(ev, { data }) {
+  if (data.type === 'worker-log' && data.workerId === props.workerId) {
+    workerLogs.value.push(data.message)
+    return
+  }
+  if (
+    data.type === 'boss-auto-browse-progress' &&
+    data.workerId === props.workerId &&
+    (data.runRecordId == null || data.runRecordId === props.runRecordId)
+  ) {
+    if (data.phase === 'recommend') {
+      bossProgress.value.recommend = { current: data.current ?? 0, max: data.max ?? 0 }
+    } else if (data.phase === 'chatPage') {
+      bossProgress.value.chatPage = { current: data.current ?? 0, max: data.max ?? 0 }
+    }
+    return
+  }
   if (
     data.type !== 'prerequisite-step-by-step-checkstep-by-step-check' ||
     data.runRecordId !== props.runRecordId
@@ -227,6 +280,13 @@ ipcRenderer.on('worker-exited', (ev, payload) => {
       padding: var(--el-dialog-padding-primary);
       //border-radius: 0 0 20px 20px;
       border-radius: 20px;
+      .progress-block {
+        font-size: 13px;
+        color: #333;
+        .progress-line {
+          line-height: 1.6;
+        }
+      }
     }
   }
 }

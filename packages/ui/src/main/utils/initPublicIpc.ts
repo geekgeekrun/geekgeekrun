@@ -113,6 +113,16 @@ export default function initPublicIpc() {
     return null
   })
 
+  ipcMain.on('toggle-devtools', (ev) => {
+    const win = BrowserWindow.fromWebContents(ev.sender)
+    if (!win) return
+    if (win.webContents.isDevToolsOpened()) {
+      win.webContents.closeDevTools()
+    } else {
+      win.webContents.openDevTools()
+    }
+  })
+
   ipcMain.handle('fetch-config-file-content', async () => {
     const configFileContentList = configFileNameList.map((fileName) => {
       return readConfigFile(fileName)

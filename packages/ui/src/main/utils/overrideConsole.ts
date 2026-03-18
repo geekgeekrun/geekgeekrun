@@ -1,9 +1,19 @@
 import path from 'node:path'
 import os from 'node:os'
 import fs from 'node:fs'
+import { execSync } from 'node:child_process'
 import dayjs from 'dayjs'
 
 export default function overrideConsole() {
+  // 在 Windows 下将控制台代码页设为 UTF-8，避免中文在终端中显示为乱码
+  if (os.platform() === 'win32') {
+    try {
+      execSync('cmd /c "chcp 65001 >nul"', { stdio: 'ignore', windowsHide: true })
+    } catch {
+      // 忽略 chcp 失败（如无控制台时）
+    }
+  }
+
   const originConsoleLog = console.log.bind(console)
   const originConsoleWarn = console.warn.bind(console)
   const originConsoleError = console.error.bind(console)
@@ -15,13 +25,16 @@ export default function overrideConsole() {
   }
 
   const logFileStream = fs.createWriteStream(path.join(logDirPath, `log.log`), {
-    flags: 'a' // 追加模式
+    flags: 'a', // 追加模式
+    encoding: 'utf8'
   })
   const warnFileStream = fs.createWriteStream(path.join(logDirPath, `warn.log`), {
-    flags: 'a' // 追加模式
+    flags: 'a',
+    encoding: 'utf8'
   })
   const errorFileStream = fs.createWriteStream(path.join(logDirPath, `error.log`), {
-    flags: 'a' // 追加模式
+    flags: 'a',
+    encoding: 'utf8'
   })
 
   console.log = (...args: any[]) => {

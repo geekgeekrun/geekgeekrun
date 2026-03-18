@@ -1,0 +1,34 @@
+{
+  "logLevel": "info",
+  "targetJobId": "",
+  "recommendPage": {
+    "clickNotInterestedForFiltered": true,
+    "skipViewedCandidates": false,
+    "runOnceAfterComplete": false,
+    "rerunIntervalMs": 3000,
+    "delayBetweenNotInterestedMs": [800, 2500],
+    "keepBrowserOpenAfterRun": false
+  },
+  "autoChat": {
+    "enabled": true,
+    "greetingMessage": "您好，您的简历与我们的岗位非常匹配，方便了解一下吗？",
+    "maxChatPerRun": 50,
+    "delayBetweenChats": [3000, 8000]
+  },
+  "scoring": {
+    "enabled": false,
+    "minScoreToChat": 0
+  },
+  "chatPage": {
+    "enabled": true,
+    "maxProcessPerRun": 20,
+    "filter": {
+      "mode": "keywords",
+      "keywordList": [],
+      "llmRule": ""
+    },
+    "attachmentResume": {
+      "skipDownload": false
+    }
+  }
+}
