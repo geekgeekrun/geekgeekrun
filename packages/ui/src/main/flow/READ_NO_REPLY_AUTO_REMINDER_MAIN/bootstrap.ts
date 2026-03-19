@@ -30,6 +30,9 @@ export async function launchBoss(browser: Browser) {
   const bossLocalStorage = readStorageFile('boss-local-storage.json')
   //set cookies
   for (let i = 0; i < bossCookies.length; i++) {
+    if (Object.hasOwn(bossCookies[i], 'sameSite')) {
+      bossCookies[i].sameSite = 'unspecified'
+    }
     await page.setCookie(bossCookies[i])
   }
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage)

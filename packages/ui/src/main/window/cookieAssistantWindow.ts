@@ -27,7 +27,9 @@ export function createCookieAssistantWindow(
     },
     ...opt
   })
-
+  cookieAssistantWindow!.setAlwaysOnTop(true, 'normal')
+  cookieAssistantWindow!.focus()
+  cookieAssistantWindow!.setAlwaysOnTop(false)
   cookieAssistantWindow.on('ready-to-show', () => {
     cookieAssistantWindow!.show()
   })
