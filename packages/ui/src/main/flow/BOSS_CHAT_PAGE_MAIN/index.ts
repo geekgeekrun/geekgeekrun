@@ -39,6 +39,64 @@ const log = (msg: string) => {
   console.log(`[boss-chat-page-worker] ${msg}`)
 }
 
+/**
+ * 检测当前页面是否为 BOSS 安全验证页（URL 特征 + 页面文字 + 常见验证组件选择器）。
+ * 没有具体截图样本，使用多重信号：命中任意一条即判定为验证页。
+ */
+const checkForBossVerification = async (page: any): Promise<boolean> => {
+  try {
+    const url: string = page.url()
+    if (/verify|captcha|security.?check|safe\b|\/safe\/|安全验证/.test(url)) return true
+    return await page.evaluate(() => {
+      const text = (document.body?.innerText || '').toLowerCase()
+      const hasVerifyText = /请完成.{0,10}验证|安全验证|滑动.{0,6}滑块|人机验证|完成验证后继续|异常.{0,6}操作|验证码/.test(
+        document.body?.innerText || ''
+      )
+      const hasVerifyEl = !!(
+        document.querySelector('#nc_mask') ||
+        document.querySelector('.verify-container') ||
+        document.querySelector('.captcha-wrap') ||
+        document.querySelector('.nc-container') ||
+        document.querySelector('[class*="verify"][class*="wrap"]') ||
+        document.querySelector('[class*="captcha"]')
+      )
+      return hasVerifyText || hasVerifyEl
+    })
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 等待用户完成验证（最长 5 分钟）。
+ * 期间每 2s 轮询页面状态；完成后返回 true，超时返回 false。
+ */
+const waitForBossVerificationCompletion = async (page: any, expectedUrlPrefix: string, logFn: (msg: string) => void): Promise<boolean> => {
+  logFn('⚠️  检测到 BOSS 安全验证，请在浏览器窗口中手动完成验证，完成后将自动继续...')
+  try {
+    const { Notification } = await import('electron')
+    new Notification({
+      title: 'GeekGeekRun - 需要人工验证',
+      body: '检测到 BOSS 直聘安全验证，请在打开的浏览器窗口中完成验证，完成后程序将自动继续。'
+    }).show()
+  } catch { /* Notification 不可用时静默忽略 */ }
+
+  const deadline = Date.now() + 5 * 60 * 1000
+  while (Date.now() < deadline) {
+    await sleep(2000)
+    try {
+      const url: string = page.url()
+      const isStillVerify = await checkForBossVerification(page)
+      if (url.startsWith(expectedUrlPrefix) && !isStillVerify) {
+        logFn('✅ 安全验证已完成，继续处理...')
+        return true
+      }
+    } catch { /* 页面可能正在跳转，继续等待 */ }
+  }
+  logFn('验证等待超时（5 分钟），将重启浏览器重试')
+  return false
+}
+
 const runChatPage = async () => {
   app.dock?.hide()
   log('runChatPage 开始')
@@ -81,7 +139,12 @@ const runChatPage = async () => {
 
   log('正在动态 import boss package...')
   type BossAutoBrowseModule = {
-    startBossChatPageProcess: (hooks: any, options?: { browser?: any; page?: any; getCapturedText?: any; clearCapturedText?: any }) => Promise<void>
+    startBossChatPageProcess: (hooks: any, options?: {
+      browser?: any; page?: any; getCapturedText?: any; clearCapturedText?: any;
+      jobId?: string | null;
+      retryCandidate?: { encryptGeekId: string; geekName: string; jobTitle: string } | null;
+      processContext?: { currentCandidate: any } | null;
+    }) => Promise<void>
     initPuppeteer: () => Promise<{ puppeteer: any }>
   }
   const {
@@ -137,8 +200,15 @@ const runChatPage = async () => {
   const { setDomainLocalStorage } = await import('@geekgeekrun/utils/puppeteer/local-storage.mjs') as any
   const localStoragePageUrl = 'https://www.zhipin.com/desktop/'
 
+  // browser/page/canvas hooks 提升到循环外，验证完成后可复用
+  let browser: any = null
+  let page: any = null
+  let getCapturedText: any = null
+  let clearCapturedText: any = null
+  // processContext 提升到循环外，catch 块中可读取被中断的候选人
+  const processContext: { currentCandidate: any } = { currentCandidate: null }
+
   while (true) {
-    let browser: any = null
     try {
       const { readConfigFile: readCfg } = await import(
         '@geekgeekrun/boss-auto-browse-and-chat/runtime-file-utils.mjs'
@@ -153,43 +223,77 @@ const runChatPage = async () => {
       const runOnceAfterComplete = cfg?.chatPage?.runOnceAfterComplete === true
       const keepBrowserOpenAfterRun = cfg?.chatPage?.keepBrowserOpenAfterRun === true
 
-      log('启动浏览器...')
-      await hooks.beforeBrowserLaunch?.promise?.()
+      // 仅在没有复用浏览器时才重新启动
+      if (!browser) {
+        log('启动浏览器...')
+        await hooks.beforeBrowserLaunch?.promise?.()
 
-      const headless = process.env.HEADLESS === '1'
-      browser = await puppeteer.launch({
-        headless,
-        ignoreHTTPSErrors: true,
-        protocolTimeout: 120000,
-        defaultViewport: { width: 1440, height: 900 - 140 }
-      })
+        const headless = process.env.HEADLESS === '1'
+        browser = await puppeteer.launch({
+          headless,
+          ignoreHTTPSErrors: true,
+          protocolTimeout: 120000,
+          defaultViewport: { width: 1440, height: 900 - 140 }
+        })
 
-      await hooks.afterBrowserLaunch?.promise?.()
+        await hooks.afterBrowserLaunch?.promise?.()
 
-      const bossCookies = readStorageFile('boss-cookies.json')
-      const bossLocalStorage = readStorageFile('boss-local-storage.json')
+        const bossCookies = readStorageFile('boss-cookies.json')
+        const bossLocalStorage = readStorageFile('boss-local-storage.json')
 
-      const page = (await browser.pages())[0]
-      // 注入 Canvas fillText hook，必须在页面导航前注入（evaluateOnNewDocument）
-      const { getCapturedText, clearCapturedText } = await setupCanvasTextHook(page)
-      if (Array.isArray(bossCookies) && bossCookies.length > 0) {
-        await page.setCookie(...bossCookies)
-      }
-      await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
-      await page.goto(BOSS_CHAT_PAGE_URL, { timeout: 60 * 1000 })
-      await page.waitForFunction(() => document.readyState === 'complete', { timeout: 120 * 1000 })
-
-      sendToDaemon({
-        type: 'worker-to-gui-message',
-        data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
-          step: { id: 'login-status-check', status: 'fulfilled' },
-          runRecordId
+        page = (await browser.pages())[0]
+        // 注入 Canvas fillText hook，必须在页面导航前注入（evaluateOnNewDocument）
+        const canvasHooks = await setupCanvasTextHook(page)
+        getCapturedText = canvasHooks.getCapturedText
+        clearCapturedText = canvasHooks.clearCapturedText
+        if (Array.isArray(bossCookies) && bossCookies.length > 0) {
+          await page.setCookie(...bossCookies)
         }
-      })
+        await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
+        await page.goto(BOSS_CHAT_PAGE_URL, { timeout: 60 * 1000 })
+        await page.waitForFunction(() => document.readyState === 'complete', { timeout: 120 * 1000 })
 
-      log('开始执行 startBossChatPageProcess（沟通页）...')
-      await startBossChatPageProcess(hooks, { browser, page, getCapturedText, clearCapturedText })
+        sendToDaemon({
+          type: 'worker-to-gui-message',
+          data: {
+            type: 'prerequisite-step-by-step-checkstep-by-step-check',
+            step: { id: 'login-status-check', status: 'fulfilled' },
+            runRecordId
+          }
+        })
+      } else {
+        log('复用已有浏览器实例，直接开始处理...')
+      }
+
+      log('读取职位队列配置...')
+      const { readBossJobsConfig } = await import(
+        '@geekgeekrun/boss-auto-browse-and-chat/runtime-file-utils.mjs'
+      ) as any
+      const jobsConfig = readBossJobsConfig()
+      const allJobs = jobsConfig?.jobs || []
+
+      if (allJobs.length > 0) {
+        const chatJobs = allJobs.filter(
+          (j: any) => j.sequence?.enabled === true && j.sequence?.runChat !== false
+        )
+        if (chatJobs.length > 0) {
+          log(`检测到 ${chatJobs.length} 个职位纳入沟通处理，依次执行...`)
+          for (const job of chatJobs) {
+            const jid = job.jobId ?? job.id
+            const jname = job.jobName ?? job.name
+            log(`开始处理职位 ${jid}（${jname}）的沟通页...`)
+            processContext.currentCandidate = null
+            await startBossChatPageProcess(hooks, { browser, page, getCapturedText, clearCapturedText, jobId: jid, processContext })
+            log(`职位 ${jid} 沟通页处理完成`)
+          }
+        } else {
+          log('当前没有勾选"纳入处理"的职位，跳过本轮沟通页扫描')
+        }
+      } else {
+        log('未配置职位队列，开始执行 startBossChatPageProcess（处理所有未读）...')
+        processContext.currentCandidate = null
+        await startBossChatPageProcess(hooks, { browser, page, getCapturedText, clearCapturedText, processContext })
+      }
       log('startBossChatPageProcess 完成')
 
       if (runOnceAfterComplete) {
@@ -207,13 +311,60 @@ const runChatPage = async () => {
 
       try { await browser.close() } catch (e) { void e }
       browser = null
+      page = null
+      getCapturedText = null
+      clearCapturedText = null
       const rerunMs = cfg?.chatPage?.rerunIntervalMs ?? rerunInterval
       log(`下次运行将在 ${rerunMs}ms 后开始`)
       await sleep(rerunMs)
     } catch (err) {
+      // ── 优先检测安全验证，命中则等待完成后复用浏览器继续，而非重启 ──
+      if (page) {
+        try {
+          const isVerify = await checkForBossVerification(page)
+          if (isVerify) {
+            // 保存被中断的候选人，验证完成后通过 retryCandidate 重试
+            const interruptedCandidate = processContext.currentCandidate ?? null
+            if (interruptedCandidate) {
+              log(`⚠️  验证中断时正在处理候选人：${interruptedCandidate.geekName}（${interruptedCandidate.encryptGeekId}），验证后将优先重试`)
+            }
+
+            const completed = await waitForBossVerificationCompletion(page, BOSS_CHAT_PAGE_URL, log)
+            if (completed) {
+              // 验证完成：导航回沟通页
+              try {
+                await page.goto(BOSS_CHAT_PAGE_URL, { timeout: 60 * 1000 })
+                await page.waitForFunction(() => document.readyState === 'complete', { timeout: 60 * 1000 })
+              } catch { /* 导航失败则让下一轮处理 */ }
+
+              // 若有被中断的候选人，立即单独重试（不依赖 jobId，在「全部」tab 中找回）
+              if (interruptedCandidate) {
+                log(`🔄 正在重试被验证中断的候选人：${interruptedCandidate.geekName}...`)
+                try {
+                  await startBossChatPageProcess(hooks, {
+                    browser, page, getCapturedText, clearCapturedText,
+                    retryCandidate: interruptedCandidate,
+                    processContext: { currentCandidate: null }
+                  })
+                  log(`重试候选人 ${interruptedCandidate.geekName} 完成`)
+                } catch (retryErr) {
+                  log(`重试候选人时发生错误：${retryErr instanceof Error ? retryErr.message : String(retryErr)}`)
+                }
+              }
+
+              continue // 重新进入循环，进行正常扫描
+            }
+          }
+        } catch { /* 检测本身出错，走正常错误处理 */ }
+      }
+
+      // ── 正常错误处理：关闭浏览器、识别错误类型 ──
       if (browser) {
         try { await browser.close() } catch (e) { void e }
         browser = null
+        page = null
+        getCapturedText = null
+        clearCapturedText = null
       }
       if (err instanceof Error) {
         if (err.message.includes('LOGIN_STATUS_INVALID')) {

@@ -7,7 +7,7 @@
         </template>
         <template v-if="jobsList.length === 0">
           <el-alert
-            title="请先在「推荐牛人-自动开聊」页面同步职位列表"
+            title="请先在「职位配置」页面同步职位列表"
             type="info"
             :closable="false"
             show-icon
@@ -95,7 +95,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onActivated } from 'vue'
 import { ElMessage } from 'element-plus'
 import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
 import { RUNNING_STATUS_ENUM } from '../../../../../common/enums/auto-start-chat'
@@ -120,14 +120,17 @@ interface JobSequenceItem {
 const jobsList = ref<JobSequenceItem[]>([])
 const isSavingQueue = ref(false)
 
-onMounted(async () => {
+const loadJobsList = async () => {
   try {
     const result = await ipcRenderer.invoke('fetch-boss-jobs-config')
     jobsList.value = result?.jobs ?? []
   } catch (err) {
     console.error(err)
   }
-})
+}
+
+onMounted(loadJobsList)
+onActivated(loadJobsList)
 
 const handleSaveQueue = async () => {
   isSavingQueue.value = true

@@ -55,15 +55,11 @@ export async function openOnlineResume (page, options = {}) {
   const closeBtn = await page.$(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR)
   if (closeBtn) {
     console.log('[openOnlineResume] 检测到旧简历弹窗，点击关闭按钮...')
-    try {
-      // 直接用 page.click，比坐标点击更可靠（不受 ghost-cursor 偏移影响）
-      await page.click(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR)
-    } catch (e) {
-      // 备用：坐标点击
-      const closeBox = await closeBtn.boundingBox().catch(() => null)
-      if (closeBox) {
-        await cursor.click({ x: closeBox.x + closeBox.width / 2, y: closeBox.y + closeBox.height / 2 })
-      }
+    const closeBox = await closeBtn.boundingBox().catch(() => null)
+    if (closeBox) {
+      await cursor.click({ x: closeBox.x + closeBox.width / 2, y: closeBox.y + closeBox.height / 2 })
+    } else {
+      await closeBtn.click().catch(() => {})
     }
     // 等关闭按钮从 DOM 消失（即弹窗完全关闭），比等 iframe 消失更可靠
     try {
@@ -331,7 +327,7 @@ export async function openPreviewAndDownloadPdf (page, messageElement, options =
   // 预览按钮在消息少时会紧贴 tab 栏，拟人轨迹从别处移过来会经过「已交换微信」等 tab，一点就切到空白。
   // 此处直接用 Puppeteer 的 element.click()：无移动轨迹，先 scrollIntoView 再点，避免误触 tab。
   await previewBtn.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }))
-  await sleepWithRandomDelay(150, 300)
+  await sleepWithRandomDelay(300, 600)
   console.log('[openPreviewAndDownloadPdf] 点击「点击预览附件简历」按钮（原生 click，避免轨迹误触 tab）')
   await previewBtn.click()
 

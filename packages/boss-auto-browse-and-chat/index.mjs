@@ -141,22 +141,45 @@ async function storeStorage (page) {
  */
 async function switchRecommendJobId (page, jobId) {
   try {
-    await page.click(RECOMMEND_JOB_DROPDOWN_LABEL_SELECTOR)
+    const { createHumanCursor } = await import('./humanMouse.mjs')
+    const cursor = await createHumanCursor(page)
+    // 用拟人轨迹点击下拉触发按钮
+    const dropdownBtn = await page.$(RECOMMEND_JOB_DROPDOWN_LABEL_SELECTOR)
+    if (dropdownBtn) {
+      const box = await dropdownBtn.boundingBox().catch(() => null)
+      if (box) {
+        await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
+      } else {
+        await dropdownBtn.click()
+      }
+    } else {
+      await page.click(RECOMMEND_JOB_DROPDOWN_LABEL_SELECTOR)
+    }
     await page.waitForSelector(RECOMMEND_JOB_ITEM_SELECTOR, { timeout: 5000 })
-    const found = await page.evaluate((jid) => {
-      const item = document.querySelector(`#headerWrap ul.job-list li.job-item[value="${jid}"]`)
-      if (!item) return false
-      item.click()
-      return true
-    }, jobId)
+    await sleepWithRandomDelay(150, 300)
+    // 用拟人轨迹点击目标职位项
+    const items = await page.$$(RECOMMEND_JOB_ITEM_SELECTOR)
+    let found = false
+    for (const item of items) {
+      const val = await item.evaluate(el => el.getAttribute('value')).catch(() => null)
+      if (val === jobId) {
+        const itemBox = await item.boundingBox().catch(() => null)
+        if (itemBox) {
+          await cursor.click({ x: itemBox.x + itemBox.width / 2, y: itemBox.y + itemBox.height / 2 })
+        } else {
+          await item.click()
+        }
+        found = true
+        break
+      }
+    }
     if (!found) {
       logWarn(`[boss-auto-browse] 职位 ${jobId} 未在下拉列表中找到，将使用默认职位继续`)
-      // 关闭下拉
       await page.keyboard.press('Escape')
       return
     }
     // 等候选人列表重新加载
-    await new Promise(r => setTimeout(r, 500))
+    await sleepWithRandomDelay(400, 800)
     logInfo(`[boss-auto-browse] 已切换到职位 ${jobId}`)
   } catch (e) {
     logWarn(`[boss-auto-browse] 切换推荐页职位失败（${e.message}），将使用默认职位继续`)

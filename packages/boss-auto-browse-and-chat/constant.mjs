@@ -119,6 +119,9 @@ export const CHAT_PAGE_JOB_ITEM_SELECTOR = '.chat-top-job .ui-dropmenu-list li'
 // - CHAT_PAGE_PREVIEW_RESUME_BTN_SELECTOR：消息里"点击预览附件简历"（对方同意并发来 PDF 后，新消息里会出现）
 // - CHAT_PAGE_DOWNLOAD_PDF_BTN_SELECTOR：简历预览弹窗里的"下载 PDF"按钮
 
+/** 沟通页：顶部"全部"筛选 tab（span:nth-child(1) 在 .chat-message-filter-left 内） */
+export const CHAT_PAGE_ALL_FILTER_SELECTOR = '.chat-message-filter-left span:nth-child(1)'
+
 /** 沟通页：顶部"未读"筛选 tab（span:nth-child(2) 在 .chat-message-filter-left 内，active 时有 class="active"） */
 export const CHAT_PAGE_UNREAD_FILTER_SELECTOR = '.chat-message-filter-left span:nth-child(2)'
 

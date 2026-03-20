@@ -25,6 +25,7 @@ import {
   CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR,
   CHAT_PAGE_ITEM_SELECTOR,
   CHAT_PAGE_ITEM_UNREAD_SELECTOR,
+  CHAT_PAGE_ALL_FILTER_SELECTOR,
   CHAT_PAGE_UNREAD_FILTER_SELECTOR,
   CHAT_PAGE_NAME_SELECTOR,
   CHAT_PAGE_JOB_SELECTOR,
@@ -41,21 +42,44 @@ const LOG = '[chat-page-processor]'
  */
 async function switchChatPageJobId (page, jobId) {
   try {
-    await page.click('.ui-dropmenu.chat-top-job .ui-dropmenu-label')
+    const cursor = await createHumanCursor(page)
+    // 用拟人轨迹点击下拉触发按钮
+    const dropdownBtn = await page.$('.ui-dropmenu.chat-top-job .ui-dropmenu-label')
+    if (dropdownBtn) {
+      const box = await dropdownBtn.boundingBox().catch(() => null)
+      if (box) {
+        await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
+      } else {
+        await dropdownBtn.click()
+      }
+    } else {
+      await page.click('.ui-dropmenu.chat-top-job .ui-dropmenu-label')
+    }
     await page.waitForSelector('.ui-dropmenu.chat-top-job .ui-dropmenu-list', { timeout: 5000 })
-    const found = await page.evaluate((jid) => {
-      const item = document.querySelector(`.ui-dropmenu.chat-top-job .ui-dropmenu-list li[value="${jid}"]`)
-      if (!item) return false
-      item.click()
-      return true
-    }, jobId)
+    await sleepWithRandomDelay(150, 300)
+    // 用拟人轨迹点击目标职位项
+    const items = await page.$$('.ui-dropmenu.chat-top-job .ui-dropmenu-list li')
+    let found = false
+    for (const item of items) {
+      const val = await item.evaluate(el => el.getAttribute('value')).catch(() => null)
+      if (val === jobId) {
+        const itemBox = await item.boundingBox().catch(() => null)
+        if (itemBox) {
+          await cursor.click({ x: itemBox.x + itemBox.width / 2, y: itemBox.y + itemBox.height / 2 })
+        } else {
+          await item.click()
+        }
+        found = true
+        break
+      }
+    }
     if (!found) {
       logWarn(`${LOG} 职位 ${jobId} 未在沟通页下拉列表中找到，将使用默认职位继续`)
       await page.keyboard.press('Escape')
       return
     }
     // 等待左侧会话列表刷新
-    await new Promise(r => setTimeout(r, 500))
+    await sleepWithRandomDelay(400, 700)
     logInfo(`${LOG} 已切换到职位 ${jobId}`)
   } catch (e) {
     logWarn(`${LOG} 切换沟通页职位失败（${e.message}），将使用默认职位继续`)
@@ -277,11 +301,29 @@ async function waitForGeekInfo (peekFn, opts = {}) {
 /**
  * 沟通页自动化主入口。
  * @param {object} hooksFromCaller - 与 startBossAutoBrowse 相同的 hooks（onError, insertCandidateContactLog, createOrUpdateCandidateInfo, queryCandidateByEncryptId 等）
- * @param {{ browser?: import('puppeteer').Browser, page?: import('puppeteer').Page }} [options] - 若传入则复用已有 browser/page，否则内部不启动浏览器（调用方需先导航到沟通页或由推荐页流程传入）
+ * @param {{
+ *   browser?: import('puppeteer').Browser,
+ *   page?: import('puppeteer').Page,
+ *   getCapturedText?: Function,
+ *   clearCapturedText?: Function,
+ *   jobId?: string | null,
+ *   retryCandidate?: { encryptGeekId: string, geekName: string, jobTitle: string } | null,
+ *   processContext?: { currentCandidate: object | null } | null
+ * }} [options]
+ * - retryCandidate: 验证中断后需优先重试的候选人（此前已被点击成"已读"，需在「全部」tab 找回）
+ * - processContext: 调用方传入的可变对象，本函数在处理每条会话前将 currentCandidate 写入，
+ *   供调用方在捕获错误时读取"是哪位候选人被中断"
  */
 export default async function startBossChatPageProcess (hooksFromCaller, options = {}) {
   const hooks = hooksFromCaller || {}
-  const { page: existingPage, getCapturedText, clearCapturedText, jobId = null } = options
+  const {
+    page: existingPage,
+    getCapturedText,
+    clearCapturedText,
+    jobId = null,
+    retryCandidate = null,
+    processContext = null
+  } = options
 
   /** @type {import('puppeteer').Page} */
   let page = existingPage
@@ -344,60 +386,54 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
       await switchChatPageJobId(page, jobId)
     }
 
-    // 切换到"未读"tab，确保虚拟滚动列表只包含未读会话（避免全部模式下未读项在视口外未渲染）
     const cursor = await createHumanCursor(page)
-    const unreadTabActive = await page.evaluate((sel) => {
-      const el = document.querySelector(sel)
-      return el ? el.classList.contains('active') : false
-    }, CHAT_PAGE_UNREAD_FILTER_SELECTOR)
-    if (!unreadTabActive) {
-      logInfo(`${LOG} 切换到「未读」tab...`)
-      const tabEl = await page.$(CHAT_PAGE_UNREAD_FILTER_SELECTOR)
-      if (tabEl) {
-        const box = await tabEl.boundingBox()
-        if (box) {
-          await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
-          await sleepWithRandomDelay(400, 600)
-          // 等列表刷新
-          try {
-            await page.waitForSelector(CHAT_PAGE_ITEM_SELECTOR, { timeout: 5000 })
-            logDebug(`${LOG} 「未读」tab 切换后列表已刷新`)
-          } catch {
-            logDebug(`${LOG} 「未读」tab 切换后列表为空（无未读会话）`)
-          }
-        }
-      } else {
-        logWarn(`${LOG} 未找到「未读」tab 元素（selector: ${CHAT_PAGE_UNREAD_FILTER_SELECTOR}）`)
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // 内部辅助：切换到指定 tab（封闭 page、cursor）
+    // ────────────────────────────────────────────────────────────────────────────
+    const switchToTab = async (selector, tabName) => {
+      const isActive = await page.evaluate(
+        (sel) => document.querySelector(sel)?.classList.contains('active') ?? false,
+        selector
+      )
+      if (isActive) {
+        logDebug(`${LOG} 已在「${tabName}」tab`)
+        return
       }
-    } else {
-      logDebug(`${LOG} 已在「未读」tab`)
+      logInfo(`${LOG} 切换到「${tabName}」tab...`)
+      const tabEl = await page.$(selector)
+      if (!tabEl) {
+        logWarn(`${LOG} 未找到「${tabName}」tab 元素（selector: ${selector}）`)
+        return
+      }
+      const box = await tabEl.boundingBox().catch(() => null)
+      if (box) {
+        await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
+        await sleepWithRandomDelay(400, 600)
+        try {
+          await page.waitForSelector(CHAT_PAGE_ITEM_SELECTOR, { timeout: 5000 })
+          logDebug(`${LOG} 「${tabName}」tab 切换后列表已刷新`)
+        } catch {
+          logDebug(`${LOG} 「${tabName}」tab 切换后列表为空（无会话）`)
+        }
+      }
     }
-    await sleepWithRandomDelay(300)
 
-    const conversations = await parseConversationList(page)
-    logDebug(`${LOG} DOM 解析到 ${conversations.length} 条会话`)
-
-    // 已切到"未读"tab，列表中所有 item 均为未读会话，无需再用 badge-count 二次过滤
-    const unreadItems = conversations.filter((c) => c.encryptGeekId)
-    const toProcess = unreadItems.slice(0, maxProcessPerRun)
-    logInfo(`${LOG} 未读会话 ${unreadItems.length} 条，本次最多处理 ${toProcess.length} 条`)
-    if (toProcess.length > 0) {
-      logDebug(`${LOG} 候选人列表：${toProcess.map((c, i) => `[${i}] ${c.geekName}(${c.encryptGeekId})`).join(', ')}`)
-    }
-
-    await hooks.onProgress?.promise?.({ phase: 'chatPage', current: 0, max: toProcess.length }).catch(() => {})
-
-    let processed = 0
-
-    for (let i = 0; i < toProcess.length; i++) {
-      const item = toProcess[i]
+    // ────────────────────────────────────────────────────────────────────────────
+    // 内部核心：处理单条会话的完整逻辑（闭包，封闭所有外层状态变量）
+    // 返回 { processed: boolean, skipped: boolean }
+    // ────────────────────────────────────────────────────────────────────────────
+    const processOneCandidateConversation = async (item) => {
       const { encryptGeekId, geekName, jobTitle } = item
-      logInfo(`${LOG} ── [${i + 1}/${toProcess.length}] 开始处理 ${geekName}（${encryptGeekId}）──`)
+
+      // 向调用方暴露当前正在处理的候选人（发生错误时可读取）
+      if (processContext) processContext.currentCandidate = item
 
       const { contacted } = await checkIfAlreadyContacted(encryptGeekId, hooks)
       if (contacted) {
         logInfo(`${LOG}   → 已在数据库中联系过，跳过`)
-        continue
+        if (processContext) processContext.currentCandidate = null
+        return { processed: false, skipped: true }
       }
       logDebug(`${LOG}   → 数据库未记录，继续处理`)
 
@@ -408,12 +444,16 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         const resumeCloseBtn = await page.$(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR).catch(() => null)
         if (resumeCloseBtn) {
           logDebug(`${LOG}   → 检测到在线简历弹窗未关闭，点击关闭...`)
-          await page.click(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR).catch(() => {})
+          const closeBox = await resumeCloseBtn.boundingBox().catch(() => null)
+          if (closeBox) {
+            await cursor.click({ x: closeBox.x + closeBox.width / 2, y: closeBox.y + closeBox.height / 2 })
+          } else {
+            await resumeCloseBtn.click().catch(() => {})
+          }
           try {
             await page.waitForSelector(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR, { hidden: true, timeout: 4000 })
             logDebug(`${LOG}   → 在线简历弹窗已关闭`)
           } catch {
-            // 仍未消失则强制刷新检查
             const stillOpen = await page.$(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR).catch(() => null)
             if (stillOpen) {
               logWarn(`${LOG}   → 在线简历弹窗关闭失败（4s 超时），继续尝试切换会话，但可能影响会话切换成功率`)
@@ -428,7 +468,8 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
       const selected = await selectConversationById(page, encryptGeekId, { cursor })
       if (!selected) {
         logWarn(`${LOG}   → 无法在 DOM 中找到该会话（可能已被标为已读或滚出虚拟滚动视口），跳过`)
-        continue
+        if (processContext) processContext.currentCandidate = null
+        return { processed: false, skipped: true }
       }
       logInfo(`${LOG}   → 会话已选中，等待页面加载...`)
       await sleepWithRandomDelay(600, 1200)
@@ -439,7 +480,8 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         if (panelName && !geekName.includes(panelName) && !panelName.includes(geekName)) {
           logWarn(`${LOG}   → 右侧面板姓名「${panelName}」与期望「${geekName}」不符，会话切换未生效，跳过`)
           await sleepWithRandomDelay(300, 600)
-          continue
+          if (processContext) processContext.currentCandidate = null
+          return { processed: false, skipped: true }
         }
         if (panelName) {
           logDebug(`${LOG}   → 右侧面板验证：「${panelName}」✓`)
@@ -452,12 +494,23 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         if (intentKnowBtn) {
           logInfo(`${LOG}   → 检测到「意向沟通」提示弹窗，点击「我知道了」关闭...`)
           try {
-            await page.click(CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR)
+            const knowBox = await intentKnowBtn.boundingBox().catch(() => null)
+            if (knowBox) {
+              await cursor.click({ x: knowBox.x + knowBox.width / 2, y: knowBox.y + knowBox.height / 2 })
+            } else {
+              await intentKnowBtn.click().catch(() => {})
+            }
           } catch {
-            // 备用：点关闭图标
-            await page.click(CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR).catch(() => {})
+            const closeIconEl = await page.$(CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR).catch(() => null)
+            if (closeIconEl) {
+              const closeIconBox = await closeIconEl.boundingBox().catch(() => null)
+              if (closeIconBox) {
+                await cursor.click({ x: closeIconBox.x + closeIconBox.width / 2, y: closeIconBox.y + closeIconBox.height / 2 })
+              } else {
+                await closeIconEl.click().catch(() => {})
+              }
+            }
           }
-          // 等弹窗消失（点击后 Vue 会移除 DOM）
           try {
             await page.waitForSelector(CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR, { hidden: true, timeout: 3000 })
             logDebug(`${LOG}   → 「意向沟通」弹窗已关闭`)
@@ -474,7 +527,6 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         logDebug(`${LOG}   → 等待 geek/info 数据（初步筛选，最长 5s）...`)
         let geekInfoSnap = await waitForGeekInfo(peekInterceptedData, { timeoutMs: 5000 })
         if (!geekInfoSnap) {
-          // geek/info 未到达，可能是 BOSS 缓存导致未重新请求；重新点击一次会话触发请求
           logWarn(`${LOG}   → geek/info 未到达，重试点击会话...`)
           getInterceptedData()
           const retrySelected = await selectConversationById(page, encryptGeekId, { cursor })
@@ -502,10 +554,10 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
               logInfo(`${LOG}   → 初步信息筛选不通过：${reason}，跳过`)
               await logContact(encryptGeekId, 'resume_screened_out', null, `preFilter:${reason}`, hooks)
               await saveCandidateInfo({ encryptGeekId, geekName, jobTitle, status: 'screened_out' }, hooks)
-              // 消费并清空拦截数据，准备下一个候选人
               getInterceptedData()
               await sleepWithRandomDelay(300, 600)
-              continue
+              if (processContext) processContext.currentCandidate = null
+              return { processed: false, skipped: true }
             }
             logInfo(`${LOG}   → 初步信息筛选通过`)
           } else {
@@ -547,36 +599,31 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
           }
         }
         await saveCandidateInfo({ encryptGeekId, geekName, jobTitle, status: 'contacted' }, hooks)
-        processed++
-        await hooks.onProgress?.promise?.({ phase: 'chatPage', current: processed, max: toProcess.length }).catch(() => {})
         getInterceptedData()
-        await sleepWithRandomDelay(1000, 2500)
-        continue
+        await sleepWithRandomDelay(2000, 4000)
+        if (processContext) processContext.currentCandidate = null
+        return { processed: true, skipped: false }
       }
 
       // 无附件简历 → 说明对方只是打招呼，需要我方先筛选再决定是否索取
-      // 点击「查看在线简历」（等 iframe 出现即视为打开成功，geek/info 数据点击会话时已触发，复用之）
       logInfo(`${LOG}   → 对方打招呼，点击查看在线简历...`)
-      // 打开新简历前清空残留数据（主要清除 geek/info 等待阶段积累的旧 iframe postMessage）
       if (typeof clearCapturedText === 'function') {
         await clearCapturedText(page)
       }
-      // 传入 clearCapturedText，在旧弹窗关闭后、新简历点击前再清一次（关闭过程中可能有新一批旧数据到达）
       const openedResume = await openOnlineResume(page, { cursor, clearCapturedText: clearCapturedText || undefined })
       if (!openedResume) {
         logWarn(`${LOG}   → 未找到「查看在线简历」按钮或 iframe 未出现，跳过`)
         await saveCandidateInfo({ encryptGeekId, geekName, jobTitle, status: 'viewed' }, hooks)
         getInterceptedData()
         await sleepWithRandomDelay(500, 1000)
-        continue
+        if (processContext) processContext.currentCandidate = null
+        return { processed: false, skipped: true }
       }
       logInfo(`${LOG}   → 在线简历 iframe 已出现，等待 Canvas 渲染完成...`)
       let resumeText = ''
       if (typeof getCapturedText === 'function') {
         const { extractResumeText } = await import('./resume-extractor.mjs')
 
-        // 稳定轮询：连续两次 peek 到相同数量（且 > 0）视为渲染完成
-        // WASM 通常在 iframe 出现后 1~2s 内完成全部渲染
         const POLL_INTERVAL_MS = 400
         const STABLE_POLLS_NEEDED = 2
         const CANVAS_POLL_TIMEOUT = 8000
@@ -595,10 +642,8 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
           lastCount = currentCount
         }
 
-        // 最终读取并清空（getCapturedText 内部再等 150ms 确保最后一批 postMessage 已到）
         const captured = await getCapturedText(page)
         const rawLines = extractResumeText(captured)
-        // 去除 BOSS 字体预热数据（首次 iframe 加载时 "bzl|abcdef..." 类的 ASCII 行）
         const lines = filterFontTestLines(rawLines)
         resumeText = lines.join('\n')
         logInfo(`${LOG}   → Canvas 抓取完成，共 ${captured.length} 次 fillText 调用，文本 ${resumeText.length} 字（原始行 ${rawLines.length}，过滤后 ${lines.length}）`)
@@ -609,8 +654,6 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
           resumeText = out.text
           logInfo(`${LOG}   → geek/info 摘要文本 ${resumeText.length} 字`)
         } else {
-          // 验证简历内容是否属于当前候选人。
-          // geekName 已知，直接用 includes 最可靠；extractNameFromResumeText 仅用于 warn 消息。
           const detectedName = extractNameFromResumeText(resumeText)
           logDebug(`${LOG}   → 简历姓名识别：${detectedName || '（未识别）'}（期望：${geekName}）`)
           if (!resumeText.includes(geekName)) {
@@ -618,7 +661,8 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
             logWarn(`${LOG}   → 右侧面板未切换到本会话（geek/info 超时或被安全验证打断），跳过，下次运行时重试`)
             getInterceptedData()
             await sleepWithRandomDelay(300, 600)
-            continue
+            if (processContext) processContext.currentCandidate = null
+            return { processed: false, skipped: true }
           }
         }
       } else {
@@ -634,6 +678,8 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         logDebug(`${LOG}   → 简历文本（前200字）：${resumeText.slice(0, 200).replace(/\n/g, ' ')}`)
         logInfo(`${LOG}   → 简历文本获取成功（共 ${resumeText.length} 字）`)
       }
+
+      await sleepWithRandomDelay(2000, 4500)
 
       let pass = true
       let filterReason = ''
@@ -669,19 +715,22 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
 
       if (pass) {
         logInfo(`${LOG}   → 筛选通过，发送索取附件简历请求...`)
-        // 在线简历弹窗若仍开着，会遮挡附件简历按钮导致点击失效，必须先完全关闭（含动画）
         const openResumeCloseBtn = await page.$(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR).catch(() => null)
         if (openResumeCloseBtn) {
           logDebug(`${LOG}   → 先关闭在线简历弹窗，避免遮挡附件简历按钮...`)
-          await page.click(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR).catch(() => {})
+          const closeBox2 = await openResumeCloseBtn.boundingBox().catch(() => null)
+          if (closeBox2) {
+            await cursor.click({ x: closeBox2.x + closeBox2.width / 2, y: closeBox2.y + closeBox2.height / 2 })
+          } else {
+            await openResumeCloseBtn.click().catch(() => {})
+          }
           try {
             await page.waitForSelector(CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR, { hidden: true, timeout: 3000 })
             logDebug(`${LOG}   → 在线简历弹窗已关闭`)
           } catch {
             logWarn(`${LOG}   → 在线简历弹窗关闭超时，继续尝试（可能影响附件简历按钮点击）`)
           }
-          // 等待弹窗 CSS 动画完全结束，确保不再遮挡下方按钮
-          await new Promise(r => setTimeout(r, 400))
+          await sleepWithRandomDelay(500, 1000)
         }
         const { requested, error } = await requestAttachmentResume(page, { cursor })
         if (requested) {
@@ -706,10 +755,58 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         },
         hooks
       )
-      processed++
-      await hooks.onProgress?.promise?.({ phase: 'chatPage', current: processed, max: toProcess.length }).catch(() => {})
       getInterceptedData()
-      await sleepWithRandomDelay(1000, 2500)
+      await sleepWithRandomDelay(2000, 4500)
+      if (processContext) processContext.currentCandidate = null
+      return { processed: true, skipped: false }
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
+    // ── 验证恢复：若上次被验证中断，优先重试被中断的候选人 ────────────────────────
+    if (retryCandidate) {
+      logInfo(`${LOG} ── 验证恢复：重试被中断候选人 ${retryCandidate.geekName}（${retryCandidate.encryptGeekId}）──`)
+      // 候选人此前已被点击，状态变为"已读"，需切换到「全部」tab 才能找到
+      await switchToTab(CHAT_PAGE_ALL_FILTER_SELECTOR, '全部')
+      await sleepWithRandomDelay(300)
+      const retrySel = await selectConversationById(page, retryCandidate.encryptGeekId, { cursor })
+      if (retrySel) {
+        logInfo(`${LOG} 重试候选人会话已找到，开始处理...`)
+        await sleepWithRandomDelay(600, 1200)
+        await processOneCandidateConversation(retryCandidate)
+      } else {
+        logWarn(`${LOG} 未在「全部」会话中找到重试候选人 ${retryCandidate.geekName}（可能已被处理或不可见），跳过`)
+      }
+      // 切回「未读」tab 进行正常扫描
+      await switchToTab(CHAT_PAGE_UNREAD_FILTER_SELECTOR, '未读')
+      await sleepWithRandomDelay(300)
+    }
+
+    // ── 正常扫描：切换到「未读」tab，处理未读会话 ───────────────────────────────
+    await switchToTab(CHAT_PAGE_UNREAD_FILTER_SELECTOR, '未读')
+    await sleepWithRandomDelay(300)
+
+    const conversations = await parseConversationList(page)
+    logDebug(`${LOG} DOM 解析到 ${conversations.length} 条会话`)
+
+    const unreadItems = conversations.filter((c) => c.encryptGeekId)
+    const toProcess = unreadItems.slice(0, maxProcessPerRun)
+    logInfo(`${LOG} 未读会话 ${unreadItems.length} 条，本次最多处理 ${toProcess.length} 条`)
+    if (toProcess.length > 0) {
+      logDebug(`${LOG} 候选人列表：${toProcess.map((c, i) => `[${i}] ${c.geekName}(${c.encryptGeekId})`).join(', ')}`)
+    }
+
+    await hooks.onProgress?.promise?.({ phase: 'chatPage', current: 0, max: toProcess.length }).catch(() => {})
+
+    let processed = 0
+
+    for (let i = 0; i < toProcess.length; i++) {
+      const item = toProcess[i]
+      logInfo(`${LOG} ── [${i + 1}/${toProcess.length}] 开始处理 ${item.geekName}（${item.encryptGeekId}）──`)
+      const result = await processOneCandidateConversation(item)
+      if (result.processed) {
+        processed++
+        await hooks.onProgress?.promise?.({ phase: 'chatPage', current: processed, max: toProcess.length }).catch(() => {})
+      }
     }
 
     logInfo(`${LOG} 本次共处理 ${processed} 条未读会话`)
