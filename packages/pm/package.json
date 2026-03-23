@@ -2,12 +2,13 @@
   "name": "@geekgeekrun/pm",
   "version": "0.0.1",
   "description": "Electron多进程架构",
-  "main": "main.js",
+  "main": "dist/daemon.js",
   "scripts": {
-    "start:daemon": "electron ./daemon",
-    "dev:daemon": "electron ./daemon --dev",
-    "start:worker": "electron ./worker",
-    "dev:worker": "electron ./worker --dev"
+    "build": "tsc",
+    "start:daemon": "electron ./dist/daemon",
+    "dev:daemon": "electron ./dist/daemon --dev",
+    "start:worker": "electron ./dist/worker",
+    "dev:worker": "electron ./dist/worker --dev"
   },
   "keywords": [
     "electron",
@@ -16,7 +17,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "28.2.0"
+    "electron": "28.2.0",
+    "typescript": "^5.6.2",
+    "@types/node": "^20.16.10"
   },
   "dependencies": {
     "JSONStream": "^1.3.5",

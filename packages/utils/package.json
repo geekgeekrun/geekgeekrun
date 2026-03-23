@@ -3,10 +3,18 @@
   "private": true,
   "version": "1.0.0",
   "description": "utils",
-  "scripts": {},
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
   "author": "geekgeekrun",
   "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "@types/node": "^20.16.10"
+  },
   "dependencies": {
-    "openai": "^4.91.1"
+    "openai": "^4.91.1",
+    "dayjs": "^1.11.10"
   }
 }

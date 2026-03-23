@@ -2,14 +2,20 @@
   "name": "@geekgeekrun/puppeteer-extra-plugin-laodeng",
   "version": "0.0.1",
   "description": "laodeng",
-  "main": "./index.js",
+  "main": "dist/index.js",
   "author": "geekgeekrun",
   "productName": "GeekGeekRun",
   "homepage": "https://github.com/geekgeekrun",
-  "scripts": {},
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin": "^3.2.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "@types/node": "^20.16.10"
   },
   "peerDependencies": {
     "playwright-extra": "*",

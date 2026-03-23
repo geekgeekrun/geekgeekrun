@@ -3,12 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "description": "geek-auto-start-chat-with-boss",
-  "module": "./index.mjs",
-  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
+    "build": "tsc"
   },
   "author": "geekgeekrun",
   "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "@types/node": "^20.16.10"
+  },
   "dependencies": {
     "@geekgeekrun/utils": "workspace:*"
   }
