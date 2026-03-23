@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { checkAndDownloadPuppeteerExecutable } from './utils/puppeteer-executable/index'
 import * as fs from 'fs'
 import { pipeWriteRegardlessError } from '../utils/pipe'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils'
 import gtag from '../../utils/gtag'
 
 export enum DOWNLOAD_ERROR_EXIT_CODE {

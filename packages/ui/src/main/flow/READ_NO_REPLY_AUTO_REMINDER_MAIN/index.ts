@@ -2,14 +2,14 @@ import { bootstrap, launchBoss } from './bootstrap'
 import { MsgStatus, type ChatListItem } from './types'
 import { Browser, Page } from 'puppeteer'
 import { getGptContent, sendLookForwardReplyEmotion, sendMessage } from './boss-operation'
-import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
-import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait.mjs'
+import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils'
+import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait'
 import { app, dialog } from 'electron'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import {
   getPublicDbFilePath,
   readConfigFile
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord'
 import {
   saveChatMessageRecord,
@@ -19,7 +19,7 @@ import {
 import {
   writeStorageFile,
   readStorageFile
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import {

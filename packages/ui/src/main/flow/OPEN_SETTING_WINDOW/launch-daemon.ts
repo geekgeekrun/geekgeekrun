@@ -3,7 +3,7 @@ import {
   ensureStorageFileExist,
   writeStorageFile,
   readStorageFile
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import { randomUUID } from 'node:crypto'
 import { connectToDaemon } from './connect-to-daemon'
 

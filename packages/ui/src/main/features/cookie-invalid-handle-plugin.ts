@@ -2,8 +2,8 @@ import { sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
 import minimist from 'minimist'
 import { loginWithCookieAssistant } from './login-with-cookie-assistant'
 import { checkCookieListFormat } from '../../common/utils/cookie'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
-import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { sleep } from '@geekgeekrun/utils'
+import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export class CookieInvalidHandlePlugin {

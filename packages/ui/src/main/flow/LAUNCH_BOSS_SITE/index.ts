@@ -1,14 +1,14 @@
 import { app } from 'electron'
-import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
+import { initPuppeteer } from '@geekgeekrun/geek-auto-start-chat-with-boss'
 import {
   readStorageFile,
   writeStorageFile
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import {
   RECOMMEND_JOB_ENTRY_SELECTOR,
   USER_SET_EXPECT_JOB_ENTRIES_SELECTOR
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
-import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/constant'
+import { setDomainLocalStorage } from '@geekgeekrun/utils/puppeteer/local-storage'
 import {
   saveJobInfoFromRecommendPage,
   saveChatStartupRecord,
@@ -17,7 +17,7 @@ import {
   saveJobHireStatusRecord
 } from '@geekgeekrun/sqlite-plugin/dist/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
-import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import {
   MarkAsNotSuitReason,
   JobSource,
@@ -39,7 +39,7 @@ import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import {
   ensureEditThisCookie,
   editThisCookieExtensionPath
-} from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/utils.mjs'
+} from '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/utils'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 

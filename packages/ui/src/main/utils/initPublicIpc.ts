@@ -9,7 +9,7 @@ import {
   configFileNameList,
   readConfigFile,
   readStorageFile
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 
 export default function initPublicIpc() {
   ipcMain.on(

@@ -40,7 +40,7 @@ export const launchBossZhipinLoginPageWithPreloadExtension = async () => {
     })
     app.exit(1)
   }
-  const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
+  const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss')
   try {
     await initPuppeteer()
   } catch (err) {
