@@ -5,7 +5,8 @@
   "description": "launch-bosszhipin-login-page-with-preload-extension",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "author": "geekgeekrun",
   "license": "ISC",

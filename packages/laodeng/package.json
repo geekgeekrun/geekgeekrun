@@ -7,7 +7,8 @@
   "productName": "GeekGeekRun",
   "homepage": "https://github.com/geekgeekrun",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "puppeteer-extra": "^3.3.6",

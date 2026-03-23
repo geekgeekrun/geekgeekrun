@@ -5,7 +5,8 @@
   "description": "geek-auto-start-chat-with-boss",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "author": "geekgeekrun",
   "license": "ISC",

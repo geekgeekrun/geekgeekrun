@@ -5,6 +5,7 @@
   "main": "dist/daemon.js",
   "scripts": {
     "build": "tsc",
+    "dev": "tsc --watch",
     "start:daemon": "electron ./dist/daemon",
     "dev:daemon": "electron ./dist/daemon --dev",
     "start:worker": "electron ./dist/worker",

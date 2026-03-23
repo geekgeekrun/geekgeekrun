@@ -6,6 +6,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
+    "dev": "tsc --watch",
     "start": "node ./dist/daemon-main.js",
     "start:bare": "node ./dist/main.js"
   },

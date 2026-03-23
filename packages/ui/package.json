@@ -8,7 +8,8 @@
   "homepage": "https://github.com/geekgeekrun",
   "scripts": {
     "start": "node scripts/run-build-sqlite-plugin.mjs && electron-vite preview",
-    "dev": "node scripts/run-build-sqlite-plugin.mjs && electron-vite dev",
+    "dev": "node scripts/run-build-sqlite-plugin.mjs && node scripts/watch-dependencies.mjs & electron-vite dev",
+    "dev:ui-only": "node scripts/run-build-sqlite-plugin.mjs && electron-vite dev",
     "build": "node scripts/run-build-sqlite-plugin.mjs && electron-vite build",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
