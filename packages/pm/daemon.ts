@@ -31,15 +31,8 @@ import * as fs from 'fs';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 
-declare module 'split2' {
-  import { Transform } from 'stream';
-  
-  function split2(separator?: string | RegExp, options?: any): Transform;
-  
-  export = split2;
-}
-
-const split2 = require('split2');
+// @ts-ignore
+const split2: any = require('split2');
 
 const ipcWritePipe = fs.createWriteStream(null, { fd: 3 });
 let ipcSocketName = process.env.GEEKGEEKRUND_PIPE_NAME;

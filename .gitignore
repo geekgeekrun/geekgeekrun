@@ -1,4 +1,4 @@
 node_modules
 database.sqlite
 .env.local
-
+dist

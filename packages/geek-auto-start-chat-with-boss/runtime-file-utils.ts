@@ -3,26 +3,9 @@ import fsPromise from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 
-import defaultDingtalkConf from './default-config-file/dingtalk.json'
-import defaultBossConf from './default-config-file/boss.json'
-import defaultTargetCompanyListConf from './default-config-file/target-company-list.json'
-import defaultLlmConf from './default-config-file/llm.json'
-
-import defaultBossCookieStorage from './default-storage-file/boss-cookies.json'
-import defaultBossLocalStorageStorage from './default-storage-file/boss-local-storage.json'
-import defaultJobNotSuitReasonCodeToTextCacheStorage from './default-storage-file/job-not-suit-reason-code-to-text-cache.json'
-import defaultCommonJobConditionConfig from './default-config-file/common-job-condition-config.json'
-
 export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json', 'llm.json', 'common-job-condition-config.json']
 
-const defaultConfigFileContentMap: Record<string, string> = {
-  'boss.json': JSON.stringify(defaultBossConf),
-  'dingtalk.json': JSON.stringify(defaultDingtalkConf),
-  'target-company-list.json': JSON.stringify(defaultTargetCompanyListConf),
-  'llm.json': JSON.stringify(defaultLlmConf),
-  'common-job-condition-config.json': JSON.stringify(defaultCommonJobConditionConfig)
-}
-const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
+export const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
 export const configFolderPath = path.join(
   runtimeFolderPath,
   'config'
@@ -42,85 +25,6 @@ export const writeConfigFile = async (fileName: string, content: any, { isSync }
       filePath,
       fileContent
     ) as unknown as Promise<void>
-  }
-}
-
-if (
-  !fs.existsSync(
-    path.join(configFolderPath, 'common-job-condition-config.json')
-  )
-) {
-  let bossConfig: any = null
-  if (
-    fs.existsSync(
-      path.join(configFolderPath, 'boss.json')
-    )
-  ) {
-    fs.existsSync(
-      path.join(configFolderPath, 'boss.json')
-    )
-    try {
-      bossConfig = JSON.parse(
-        fs.readFileSync(
-          path.join(configFolderPath, 'boss.json'),
-          'utf-8'
-        )
-      )
-    }
-    catch {}
-  }
-  if (bossConfig) {
-    Object.keys(defaultCommonJobConditionConfig).forEach(
-      key => {
-        if (Object.hasOwn(bossConfig, key)) {
-          (defaultCommonJobConditionConfig as any)[key] = bossConfig[key]
-        }
-      }
-    )
-    let {
-      expectJobRegExpStr,
-      expectJobNameRegExpStr,
-      expectJobTypeRegExpStr,
-      expectJobDescRegExpStr,
-    } = bossConfig
-    if (
-      expectJobRegExpStr &&
-      !expectJobNameRegExpStr &&
-      !expectJobTypeRegExpStr &&
-      !expectJobDescRegExpStr
-    ) {
-      expectJobNameRegExpStr = expectJobRegExpStr
-      expectJobTypeRegExpStr = expectJobRegExpStr
-      expectJobDescRegExpStr = expectJobRegExpStr
-    }
-    Object.assign(defaultCommonJobConditionConfig, {
-      expectJobNameRegExpStr,
-      expectJobTypeRegExpStr,
-      expectJobDescRegExpStr
-    })
-  }
-  let targetCompanyList: any = null
-  if (
-    fs.existsSync(
-      path.join(configFolderPath, 'target-company-list.json')
-    )
-  ) {
-    targetCompanyList = JSON.parse(
-      fs.readFileSync(
-        path.join(configFolderPath, 'target-company-list.json'),
-        'utf-8'
-      )
-    )
-  }
-  if (targetCompanyList) {
-    (defaultCommonJobConditionConfig as any).expectCompanies = targetCompanyList ?? []
-  }
-  writeConfigFile('common-job-condition-config.json', defaultCommonJobConditionConfig, { isSync: true })
-  if (bossConfig) {
-    if (!bossConfig.fieldsForUseCommonConfig) {
-      bossConfig.fieldsForUseCommonConfig = {}
-    }
-    writeConfigFile('boss.json', bossConfig, { isSync: true })
   }
 }
 
@@ -148,7 +52,7 @@ export const ensureConfigFileExist = () => {
       )) {
         fs.writeFileSync(
           path.join(configFolderPath, fileName),
-          defaultConfigFileContentMap[fileName]
+          '{}'
         )
       }
     }
@@ -170,12 +74,8 @@ export const readConfigFile = (fileName: string): any => {
     )
   } catch {
     fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
-    if (defaultConfigFileContentMap[fileName]) {
-      ensureConfigFileExist()
-      o = JSON.parse(defaultConfigFileContentMap[fileName])
-    } else {
-      o = null
-    }
+    ensureConfigFileExist()
+    o = {}
   }
 
   return o
@@ -187,12 +87,6 @@ export const storageFilePath = path.join(
 )
 export const storageFileNameList = ['boss-cookies.json', 'boss-local-storage.json', 'job-not-suit-reason-code-to-text-cache.json']
 
-const defaultStorageFileContentMap: Record<string, string> = {
-  'boss-cookies.json': JSON.stringify(defaultBossCookieStorage),
-  'boss-local-storage.json': JSON.stringify(defaultBossLocalStorageStorage),
-  'job-not-suit-reason-code-to-text-cache.json': JSON.stringify(defaultJobNotSuitReasonCodeToTextCacheStorage)
-}
-
 export const ensureStorageFileExist = () => {
   ensureRuntimeFolderPathExist()
   ;storageFileNameList.forEach(
@@ -202,7 +96,7 @@ export const ensureStorageFileExist = () => {
       )) {
         fs.writeFileSync(
           path.join(storageFilePath, fileName),
-          defaultStorageFileContentMap[fileName]
+          '[]'
         )
       }
     }
@@ -231,12 +125,7 @@ export const readStorageFile = (fileName: string, { isJson }: { isJson?: boolean
   } catch {
     fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
     ensureStorageFileExist()
-    if (isJson) {
-      o = JSON.parse(defaultStorageFileContentMap[fileName] ?? 'null')
-    }
-    else {
-      o = defaultStorageFileContentMap[fileName] ?? null
-    }
+    o = isJson ? [] : ''
   }
 
   return o

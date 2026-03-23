@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import extractZip from 'extract-zip'
 
-import packageJson from './package.json' assert { type: 'json' }
+import packageJson from './package.json'
 
 const isUiDev = process.env.NODE_ENV === 'development'
 
