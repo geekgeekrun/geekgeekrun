@@ -43,11 +43,11 @@
 
 <script setup lang="ts">
 import { PropType, computed, ref, watch } from 'vue'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
+import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
+import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/entity/JobInfoChangeLog'
 import { ElTable, ElTableColumn, ElForm, ElFormItem, ElRow, ElCol, ElDivider } from 'element-plus'
 import TextDiff from '../../components/TextDiff.vue'
-import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
 const props = defineProps({

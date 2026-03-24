@@ -121,8 +121,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer, ElMessage } from 'element-plus'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { type JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
+import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
+import { type JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/entity/JobInfoChangeLog'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import JobInfoHistoryList from '../../features/JobInfoHistoryList/index.vue'

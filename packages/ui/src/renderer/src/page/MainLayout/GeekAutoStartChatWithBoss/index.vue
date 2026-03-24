@@ -1720,12 +1720,12 @@ import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBossRecommendFilter/index.vue'
-import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
+import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant'
 import {
   calculateTotalCombinations,
   checkAnyCombineBossRecommendFilterHasCondition,
   formatStaticCombineFilters
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import {
   CombineRecommendJobFilterType,
@@ -1733,7 +1733,7 @@ import {
   StrategyScopeOptionWhenMarkJobNotMatch,
   SalaryCalculateWay,
   JobDetailRegExpMatchLogic
-} from '@geekgeekrun/sqlite-plugin/src/enums'
+} from '@geekgeekrun/sqlite-plugin/enums'
 import { debounce } from 'lodash'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'

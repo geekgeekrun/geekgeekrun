@@ -207,7 +207,7 @@ import debounce from 'lodash/debounce'
 import { ElMessage } from 'element-plus'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { EXPECT_CHROMIUM_BUILD_ID } from '../../../../common/constant'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep'
 const { ipcRenderer } = electron
 useRouter()
 // const checkDependenciesResult = ref({})

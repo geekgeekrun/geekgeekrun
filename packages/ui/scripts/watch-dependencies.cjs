@@ -1,5 +1,5 @@
-import { spawn } from 'child_process'
-import { platform } from 'os'
+const { spawn } = require('child_process')
+const { platform } = require('os')
 
 const isWindows = platform() === 'win32'
 const packages = [
@@ -12,9 +12,9 @@ const packages = [
   'run-core-of-geek-auto-start-chat-with-boss'
 ]
 
-const watchProcesses: any[] = []
+const watchProcesses = []
 
-function startWatch(packageName: string) {
+function startWatch(packageName) {
   const child = spawn(
     isWindows ? 'pnpm.cmd' : 'pnpm',
     ['--filter', `@geekgeekrun/${packageName === 'laodeng' ? 'puppeteer-extra-plugin-laodeng' : packageName}`, 'dev'],
@@ -23,18 +23,18 @@ function startWatch(packageName: string) {
       shell: isWindows
     }
   )
-  
-  child.on('error', (err) => {
-    console.error(`Failed to start watch for ${packageName}:`, err)
+
+  child.on('error', function(err) {
+    console.error('Failed to start watch for ' + packageName + ':', err)
   })
-  
+
   watchProcesses.push(child)
-  console.log(`Started watch for ${packageName}`)
+  console.log('Started watch for ' + packageName)
 }
 
 function cleanup() {
   console.log('\nStopping all watch processes...')
-  watchProcesses.forEach((child) => {
+  watchProcesses.forEach(function(child) {
     child.kill('SIGTERM')
   })
   process.exit(0)

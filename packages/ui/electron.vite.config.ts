@@ -9,10 +9,16 @@ import Replace from 'unplugin-replace/vite'
 process.env = { ...process.env, ...loadEnv(process.env.NODE_ENV!, process.cwd()) }
 const mainPlugins = [
   externalizeDepsPlugin({
+    // 显式排除所有 workspace 包，让 Vite 正确处理它们的导出
     exclude: [
+      '@geekgeekrun/dingtalk-plugin',
+      '@geekgeekrun/sqlite-plugin',
+      '@geekgeekrun/geek-auto-start-chat-with-boss',
       '@geekgeekrun/utils',
-      'find-chrome-bin',
-      '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension'
+      '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension',
+      '@geekgeekrun/puppeteer-extra-plugin-laodeng',
+      '@geekgeekrun/pm',
+      '@geekgeekrun/run-core-of-geek-auto-start-chat-with-boss'
     ]
   }),
   Replace({
@@ -61,7 +67,12 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: []
+        external: [
+          /^@geekgeekrun\//,
+          'find-chrome-bin',
+          'better-sqlite3',
+          'typeorm'
+        ]
       },
       minify: process.env.NODE_ENV === 'development' ? undefined : 'terser',
       watch: process.env.NODE_ENV === 'development' ? {} : undefined
@@ -78,8 +89,29 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        'diff': 'diff'
       }
+    },
+    optimizeDeps: {
+      include: [
+        'diff',
+        '@geekgeekrun/utils',
+        '@geekgeekrun/utils/sleep',
+        '@geekgeekrun/utils/date',
+        '@geekgeekrun/utils/number',
+        '@geekgeekrun/utils/gpt-request',
+        '@geekgeekrun/utils/legacy-path',
+        '@geekgeekrun/geek-auto-start-chat-with-boss',
+        '@geekgeekrun/geek-auto-start-chat-with-boss/cityGroup',
+        '@geekgeekrun/geek-auto-start-chat-with-boss/constant',
+        '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator',
+        '@geekgeekrun/geek-auto-start-chat-with-boss/sage-time',
+        '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils',
+        '@geekgeekrun/sqlite-plugin',
+        '@geekgeekrun/sqlite-plugin/enums',
+        '@geekgeekrun/sqlite-plugin/handlers'
+      ]
     },
     plugins: rendererPlugins,
     build: {

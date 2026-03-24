@@ -9,7 +9,7 @@ import {
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import { formatResumeJsonToMarkdown } from '../../../common/utils/resume'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../common/constant'
-import { LlmModelUsageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/LlmModelUsageRecord'
+import { LlmModelUsageRecord } from '@geekgeekrun/sqlite-plugin/entity/LlmModelUsageRecord'
 import gtag from '../../utils/gtag'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {

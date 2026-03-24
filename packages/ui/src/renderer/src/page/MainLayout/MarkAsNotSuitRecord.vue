@@ -132,11 +132,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, h } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
-import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/src/entity/VMarkAsNotSuitLog'
+import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/entity/VMarkAsNotSuitLog'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
-import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/src/enums'
-import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
+import { MarkAsNotSuitReason } from '@geekgeekrun/sqlite-plugin/enums'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
 const tableData = ref<VMarkAsNotSuitLog[]>([])

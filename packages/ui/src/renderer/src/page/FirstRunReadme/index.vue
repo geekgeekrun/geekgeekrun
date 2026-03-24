@@ -120,7 +120,7 @@
 import { ElCheckbox, ElCheckboxGroup, ElMessage } from 'element-plus'
 import { ref, onMounted, onBeforeMount } from 'vue'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep'
 
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {

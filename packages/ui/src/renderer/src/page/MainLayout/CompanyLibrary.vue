@@ -54,9 +54,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination } from 'element-plus'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
+import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
-import { formatCompanyScale } from '@geekgeekrun/sqlite-plugin/src/utils/parser'
+import { formatCompanyScale } from '@geekgeekrun/sqlite-plugin/utils/parser'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
 const tableData = ref<VChatStartupLog[]>([])

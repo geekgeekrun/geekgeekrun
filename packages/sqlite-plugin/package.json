@@ -3,6 +3,48 @@
   "version": "0.0.2",
   "description": "",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./handlers": {
+      "require": "./dist/handlers.js",
+      "import": "./dist/handlers.js",
+      "types": "./dist/handlers.d.ts"
+    },
+    "./enums": {
+      "require": "./dist/enums.js",
+      "import": "./dist/enums.js",
+      "types": "./dist/enums.d.ts"
+    },
+    "./entity/*": {
+      "require": "./dist/entity/*.js",
+      "import": "./dist/entity/*.js",
+      "types": "./dist/entity/*.d.ts"
+    },
+    "./utils/*": {
+      "require": "./dist/utils/*.js",
+      "import": "./dist/utils/*.js",
+      "types": "./dist/utils/*.d.ts"
+    },
+    "./src/entity/*": {
+      "require": "./dist/entity/*.js",
+      "import": "./dist/entity/*.js",
+      "types": "./dist/entity/*.d.ts"
+    },
+    "./src/utils/*": {
+      "require": "./dist/utils/*.js",
+      "import": "./dist/utils/*.js",
+      "types": "./dist/utils/*.d.ts"
+    },
+    "./src/enums": {
+      "require": "./dist/enums.js",
+      "import": "./dist/enums.js",
+      "types": "./dist/enums.d.ts"
+    }
+  },
   "dependencies": {
     "better-sqlite3": "12.6.2",
     "cli-highlight": "^2.1.11",

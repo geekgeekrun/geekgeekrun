@@ -4,6 +4,18 @@
   "version": "1.0.0",
   "description": "launch-bosszhipin-login-page-with-preload-extension",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./utils": {
+      "require": "./dist/utils.js",
+      "import": "./dist/utils.js",
+      "types": "./dist/utils.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"

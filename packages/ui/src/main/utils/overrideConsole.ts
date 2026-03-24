@@ -10,66 +10,96 @@ export default function overrideConsole() {
 
   const runtimeFolderPath = path.join(os.homedir(), '.geekgeekrun')
   const logDirPath = path.join(runtimeFolderPath, 'log')
-  if (!fs.existsSync(logDirPath)) {
-    fs.mkdirSync(logDirPath, { recursive: true })
-  }
 
-  const logFileStream = fs.createWriteStream(path.join(logDirPath, `log.log`), {
-    flags: 'a' // 追加模式
-  })
-  const warnFileStream = fs.createWriteStream(path.join(logDirPath, `warn.log`), {
-    flags: 'a' // 追加模式
-  })
-  const errorFileStream = fs.createWriteStream(path.join(logDirPath, `error.log`), {
-    flags: 'a' // 追加模式
-  })
+  let logFileStream: fs.WriteStream | null = null
+  let warnFileStream: fs.WriteStream | null = null
+  let errorFileStream: fs.WriteStream | null = null
+
+  try {
+    if (!fs.existsSync(logDirPath)) {
+      fs.mkdirSync(logDirPath, { recursive: true })
+    }
+
+    logFileStream = fs.createWriteStream(path.join(logDirPath, `log.log`), {
+      flags: 'a'
+    })
+    warnFileStream = fs.createWriteStream(path.join(logDirPath, `warn.log`), {
+      flags: 'a'
+    })
+    errorFileStream = fs.createWriteStream(path.join(logDirPath, `error.log`), {
+      flags: 'a'
+    })
+
+    // 监听错误事件，防止未捕获的错误导致应用崩溃
+    logFileStream.on('error', () => {})
+    warnFileStream.on('error', () => {})
+    errorFileStream.on('error', () => {})
+  } catch (err) {
+    originConsoleError(
+      `[Override console] Failed to initialize log files, logging to console only: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
 
   console.log = (...args: any[]) => {
     const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [log][PID=${process.pid}]`
     originConsoleLog(lineHead, ...args)
-    logFileStream.write(
-      [
-        lineHead,
-        args.map((arg) => {
-          try {
-            return JSON.stringify(arg)
-          } catch (err) {
-            return `[[${JSON.stringify(err?.toString())}]]`
-          }
-        })
-      ].join(' ') + '\n'
-    )
+    try {
+      logFileStream?.write(
+        [
+          lineHead,
+          args.map((arg) => {
+            try {
+              return JSON.stringify(arg)
+            } catch (err) {
+              return `[[${JSON.stringify(err instanceof Error ? err.message : String(err))}]]`
+            }
+          })
+        ].join(' ') + '\n'
+      )
+    } catch (err) {
+      // Silently fail - already logged to console
+    }
   }
+
   console.warn = (...args: any[]) => {
     const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [warn][PID=${process.pid}]`
     originConsoleWarn(lineHead, ...args)
-    warnFileStream.write(
-      [
-        lineHead,
-        args.map((arg) => {
-          try {
-            return JSON.stringify(arg)
-          } catch (err) {
-            return `[[${JSON.stringify(err?.toString())}]]`
-          }
-        })
-      ].join(' ') + '\n'
-    )
+    try {
+      warnFileStream?.write(
+        [
+          lineHead,
+          args.map((arg) => {
+            try {
+              return JSON.stringify(arg)
+            } catch (err) {
+              return `[[${JSON.stringify(err instanceof Error ? err.message : String(err))}]]`
+            }
+          })
+        ].join(' ') + '\n'
+      )
+    } catch (err) {
+      // Silently fail - already logged to console
+    }
   }
+
   console.error = (...args: any[]) => {
-    const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [warn][PID=${process.pid}]`
+    const lineHead = `${dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')} [error][PID=${process.pid}]`
     originConsoleError(lineHead, ...args)
-    errorFileStream.write(
-      [
-        lineHead,
-        args.map((arg) => {
-          try {
-            return JSON.stringify(arg)
-          } catch (err) {
-            return `[[${JSON.stringify(err?.toString())}]]`
-          }
-        })
-      ].join(' ') + '\n'
-    )
+    try {
+      errorFileStream?.write(
+        [
+          lineHead,
+          args.map((arg) => {
+            try {
+              return JSON.stringify(arg)
+            } catch (err) {
+              return `[[${JSON.stringify(err instanceof Error ? err.message : String(err))}]]`
+            }
+          })
+        ].join(' ') + '\n'
+      )
+    } catch (err) {
+      // Silently fail - already logged to console
+    }
   }
 }

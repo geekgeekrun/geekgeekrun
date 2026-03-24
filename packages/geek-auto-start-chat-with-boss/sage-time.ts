@@ -1,5 +1,5 @@
 import { readConfigFile } from './runtime-file-utils'
-import { sleep } from "@geekgeekrun/utils/dist/sleep"
+import { sleep } from "@geekgeekrun/utils"
 
 let {
   isSageTimeEnabled,

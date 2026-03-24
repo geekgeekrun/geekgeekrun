@@ -15,25 +15,25 @@ import {
   saveMarkAsNotSuitRecord,
   saveChatMessageRecord,
   saveJobHireStatusRecord
-} from '@geekgeekrun/sqlite-plugin/dist/handlers'
+} from '@geekgeekrun/sqlite-plugin/handlers'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
 import {
   MarkAsNotSuitReason,
   JobSource,
   JobHireStatus
-} from '@geekgeekrun/sqlite-plugin/dist/enums'
+} from '@geekgeekrun/sqlite-plugin/enums'
 import cheerio from 'cheerio'
 
 import fs from 'node:fs'
 import { Target } from 'puppeteer'
 import { pipeWriteRegardlessError } from '../utils/pipe'
 import * as JSONStream from 'JSONStream'
-import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
+import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/entity/ChatStartupLog'
 import gtag from '../../utils/gtag'
 import attachListenerForKillSelfOnParentExited from '../../utils/attachListenerForKillSelfOnParentExited'
-import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/src/entity/ChatMessageRecord'
-import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
+import { type ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/entity/ChatMessageRecord'
+import { BossInfo } from '@geekgeekrun/sqlite-plugin/entity/BossInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 
 import {

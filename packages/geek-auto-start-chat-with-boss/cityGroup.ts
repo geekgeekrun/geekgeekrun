@@ -1,4 +1,4 @@
-export default {
+export const cityGroupData = {
   "code": 0,
   "message": "Success",
   "zpData": {
@@ -30,3 +30,5 @@ export default {
     ]
   }
 }
+
+export default cityGroupData

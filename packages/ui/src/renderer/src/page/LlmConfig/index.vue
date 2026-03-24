@@ -257,7 +257,7 @@ import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../../common/constant'
 import { v4 as uuid } from 'uuid'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep'
 interface LlmConfigItem {
   id: string
   providerCompleteApiUrl: string

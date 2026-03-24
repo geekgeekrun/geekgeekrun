@@ -4,6 +4,58 @@
   "version": "1.0.0",
   "description": "utils",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./sleep": {
+      "require": "./dist/sleep.js",
+      "import": "./dist/sleep.js",
+      "types": "./dist/sleep.d.ts"
+    },
+    "./date": {
+      "require": "./dist/date.js",
+      "import": "./dist/date.js",
+      "types": "./dist/date.d.ts"
+    },
+    "./number": {
+      "require": "./dist/number.js",
+      "import": "./dist/number.js",
+      "types": "./dist/number.d.ts"
+    },
+    "./gpt-request": {
+      "require": "./dist/gpt-request.js",
+      "import": "./dist/gpt-request.js",
+      "types": "./dist/gpt-request.d.ts"
+    },
+    "./legacy-path": {
+      "require": "./dist/legacy-path.js",
+      "import": "./dist/legacy-path.js",
+      "types": "./dist/legacy-path.d.ts"
+    },
+    "./puppeteer/wait": {
+      "require": "./dist/puppeteer/wait.js",
+      "import": "./dist/puppeteer/wait.js",
+      "types": "./dist/puppeteer/wait.d.ts"
+    },
+    "./puppeteer/local-storage": {
+      "require": "./dist/puppeteer/local-storage.js",
+      "import": "./dist/puppeteer/local-storage.js",
+      "types": "./dist/puppeteer/local-storage.d.ts"
+    },
+    "./puppeteer/block-navigation": {
+      "require": "./dist/puppeteer/block-navigation.js",
+      "import": "./dist/puppeteer/block-navigation.js",
+      "types": "./dist/puppeteer/block-navigation.d.ts"
+    },
+    "./windows-only/file": {
+      "require": "./dist/windows-only/file.js",
+      "import": "./dist/windows-only/file.js",
+      "types": "./dist/windows-only/file.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"

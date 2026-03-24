@@ -1,16 +1,16 @@
-import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/dist/index'
-import { mainLoop, closeBrowserWindow } from '@geekgeekrun/geek-auto-start-chat-with-boss/dist/index'
+import { DingtalkPlugin } from '@geekgeekrun/dingtalk-plugin'
+import { mainLoop, closeBrowserWindow } from '@geekgeekrun/geek-auto-start-chat-with-boss'
 import {
   SyncHook,
   AsyncSeriesHook
 } from 'tapable'
-import { readConfigFile, readStorageFile, getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/dist/runtime-file-utils'
-import { sleep } from '@geekgeekrun/utils/dist/sleep'
+import { readConfigFile, readStorageFile, getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
+import { sleep } from '@geekgeekrun/utils'
 import {
   AUTO_CHAT_ERROR_EXIT_CODE
 } from './enums'
 
-import SqlitePlugin from '@geekgeekrun/sqlite-plugin/dist/index'
+import SqlitePlugin from '@geekgeekrun/sqlite-plugin'
 
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
@@ -39,7 +39,7 @@ const main = async (): Promise<void> => {
     process.exit(AUTO_CHAT_ERROR_EXIT_CODE.COOKIE_INVALID)
   }
   const hooks = {
-    daemonInitialized: new AsyncSeriesHook(),
+    daemonInitialized: new AsyncSeriesHook<[]>() as any,
     puppeteerLaunched: new SyncHook(['browser']),
     pageGotten: new SyncHook(['page']),
     pageLoaded: new SyncHook(),
@@ -47,7 +47,7 @@ const main = async (): Promise<void> => {
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
     mainFlowWillLaunch: new AsyncSeriesHook(['args']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
-    newChatStartup: new AsyncSeriesHook(['positionInfoDetail', 'chatRunningContext']),
+    newChatStartup: new AsyncSeriesHook<string, string>() as any,
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo']),
@@ -56,7 +56,7 @@ const main = async (): Promise<void> => {
     sageTimeExit: new AsyncSeriesHook(['args'])
   }
   initPlugins(hooks)
-  await hooks.daemonInitialized.callAsync()
+  await hooks.daemonInitialized.callAsync(() => {})
   while (true) {
     try {
       await mainLoop(hooks)

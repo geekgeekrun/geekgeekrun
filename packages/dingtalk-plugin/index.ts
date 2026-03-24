@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 let sendQueueTimer: NodeJS.Timeout = 0 as unknown as NodeJS.Timeout
 let collectedMessageList: any[] = []
 
-export default class DingtalkPlugin {
+class DingtalkPlugin {
   private dingtalkAccessToken: string
 
   constructor(dingtalkAccessToken: string) {
@@ -75,3 +75,6 @@ Chat has startup!`
     )
   }
 }
+
+export { DingtalkPlugin }
+export default DingtalkPlugin

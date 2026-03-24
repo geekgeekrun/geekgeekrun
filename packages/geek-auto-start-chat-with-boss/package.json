@@ -4,6 +4,40 @@
   "version": "1.0.0",
   "description": "geek-auto-start-chat-with-boss",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./runtime-file-utils": {
+      "require": "./dist/runtime-file-utils.js",
+      "import": "./dist/runtime-file-utils.js",
+      "types": "./dist/runtime-file-utils.d.ts"
+    },
+    "./constant": {
+      "require": "./dist/constant.js",
+      "import": "./dist/constant.js",
+      "types": "./dist/constant.d.ts"
+    },
+    "./combineCalculator": {
+      "require": "./dist/combineCalculator.js",
+      "import": "./dist/combineCalculator.js",
+      "types": "./dist/combineCalculator.d.ts"
+    },
+    "./sage-time": {
+      "require": "./dist/sage-time.js",
+      "import": "./dist/sage-time.js",
+      "types": "./dist/sage-time.d.ts"
+    },
+    "./cityGroup": {
+      "require": "./dist/cityGroup.js",
+      "import": "./dist/cityGroup.js",
+      "types": "./dist/cityGroup.d.ts"
+    },
+    "./internal-config/*": "./internal-config/*",
+    "./default-config-file/*": "./default-config-file/*"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
@@ -15,6 +49,7 @@
     "@types/node": "^20.16.10"
   },
   "dependencies": {
-    "@geekgeekrun/utils": "workspace:*"
+    "@geekgeekrun/utils": "workspace:*",
+    "@geekgeekrun/sqlite-plugin": "workspace:*"
   }
 }

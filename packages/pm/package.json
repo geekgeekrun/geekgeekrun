@@ -3,6 +3,23 @@
   "version": "0.0.1",
   "description": "Electron多进程架构",
   "main": "dist/daemon.js",
+  "exports": {
+    ".": {
+      "require": "./dist/daemon.js",
+      "import": "./dist/daemon.js",
+      "types": "./dist/daemon.d.ts"
+    },
+    "./daemon": {
+      "require": "./dist/daemon.js",
+      "import": "./dist/daemon.js",
+      "types": "./dist/daemon.d.ts"
+    },
+    "./daemon.js": {
+      "require": "./dist/daemon.js",
+      "import": "./dist/daemon.js",
+      "types": "./dist/daemon.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

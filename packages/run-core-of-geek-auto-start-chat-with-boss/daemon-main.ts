@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { sleep } from '@geekgeekrun/utils/dist/sleep'
+import { sleep } from '@geekgeekrun/utils'
 import childProcess from 'node:child_process'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from './enums'
 
@@ -32,11 +32,10 @@ function runWithDaemon(): void {
     'exit',
     async (exitCode: number | null) => {
       const validExitCode = exitCode ?? 0
-      const exitCodes = Object.values(AUTO_CHAT_ERROR_EXIT_CODE)
-        .filter((it): it is number => typeof it === 'number')
+      const exitCodeName = (AUTO_CHAT_ERROR_EXIT_CODE as Record<number, string>)[validExitCode]
 
-      if (exitCodes.includes(validExitCode)) {
-        console.log(`[Run core daemon] Child process exit with reason ${(AUTO_CHAT_ERROR_EXIT_CODE as Record<number, string>)[validExitCode]}.`)
+      if (exitCodeName) {
+        console.log(`[Run core daemon] Child process exit with reason ${exitCodeName}.`)
         process.exit(validExitCode)
         return
       }

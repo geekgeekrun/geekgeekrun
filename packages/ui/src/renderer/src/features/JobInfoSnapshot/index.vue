@@ -34,9 +34,9 @@
 
 <script setup lang="ts">
 import { PropType } from 'vue'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/src/entity/VMarkAsNotSuitLog'
-import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
+import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
+import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/entity/VMarkAsNotSuitLog'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date'
 
 defineProps({
   jobInfo: {

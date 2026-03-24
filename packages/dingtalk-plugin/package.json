@@ -4,6 +4,13 @@
   "version": "1.0.0",
   "description": "@geekgeekrun/dingtalk-plugin",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"

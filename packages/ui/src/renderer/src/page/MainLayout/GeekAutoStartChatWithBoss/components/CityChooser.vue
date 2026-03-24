@@ -166,7 +166,7 @@
 
 <script lang="ts" setup>
 import { PropType, ref } from 'vue'
-import cityGroupData from '@geekgeekrun/geek-auto-start-chat-with-boss/cityGroup.mjs'
+import cityGroupData from '@geekgeekrun/geek-auto-start-chat-with-boss/cityGroup'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { ElRadioGroup } from 'element-plus'
 

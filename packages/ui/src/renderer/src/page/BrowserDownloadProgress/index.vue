@@ -19,7 +19,7 @@
 import { ref, onUnmounted, h } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import { sleep } from '@geekgeekrun/utils/sleep.mjs'
+import { sleep } from '@geekgeekrun/utils/sleep'
 import FailMessage from './FailMessage.vue'
 import { EXPECT_CHROMIUM_BUILD_ID } from '../../../../common/constant'
 

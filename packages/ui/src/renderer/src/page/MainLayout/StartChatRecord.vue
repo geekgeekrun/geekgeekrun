@@ -99,8 +99,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
+import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
+import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date'
 import { PageReq, PagedRes } from '../../../../common/types/pagination'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import { gtagRenderer } from '@renderer/utils/gtag'

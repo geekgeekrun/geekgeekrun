@@ -204,7 +204,7 @@ import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, PropType } from 'vue'
 import CityChooser from '@renderer/page/MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'
 
-import { getStaticCombineFilterKey } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
+import { getStaticCombineFilterKey } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator'
 
 const props = defineProps({
   modelValue: {

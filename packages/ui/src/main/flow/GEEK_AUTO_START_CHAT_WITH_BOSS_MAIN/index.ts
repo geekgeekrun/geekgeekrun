@@ -1,4 +1,4 @@
-import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin'
+import { DingtalkPlugin } from '@geekgeekrun/dingtalk-plugin'
 import { app, dialog } from 'electron'
 import { SyncHook, AsyncSeriesHook } from 'tapable'
 import {
@@ -22,6 +22,7 @@ import { getLastUsedAndAvailableBrowser } from '../DOWNLOAD_DEPENDENCIES/utils/b
 import { configWithBrowserAssistant } from '../../features/config-with-browser-assistant'
 const { default: SqlitePlugin } = SqlitePluginModule
 
+debugger
 process.on('SIGTERM', () => {
   console.log('收到SIGTERM信号，正在退出')
   process.exit(0)
