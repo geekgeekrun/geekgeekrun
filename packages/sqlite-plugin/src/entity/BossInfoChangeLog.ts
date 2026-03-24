@@ -6,12 +6,12 @@ export class BossInfoChangeLog {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptBossId: string;
 
-  @Column()
+  @Column({ type: "datetime" })
   updateTime: Date;
 
-  @Column()
+  @Column({ type: "varchar" })
   dataAsJson: string;
 }

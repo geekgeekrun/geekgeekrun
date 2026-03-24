@@ -3,15 +3,15 @@ import { parentPort } from 'node:worker_threads'
 import { initDb } from '@geekgeekrun/sqlite-plugin'
 import { type DataSource } from 'typeorm'
 import { getPublicDbFilePath } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils'
-import { VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
-import { VJobLibrary } from '@geekgeekrun/sqlite-plugin/entity/VJobLibrary'
-import { VCompanyLibrary } from '@geekgeekrun/sqlite-plugin/entity/VCompanyLibrary'
-import { VBossLibrary } from '@geekgeekrun/sqlite-plugin/entity/VBossLibrary'
-import { VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/entity/VMarkAsNotSuitLog'
+import type { VChatStartupLog } from '@geekgeekrun/sqlite-plugin/entity/VChatStartupLog'
+import type { VJobLibrary } from '@geekgeekrun/sqlite-plugin/entity/VJobLibrary'
+import type { VCompanyLibrary } from '@geekgeekrun/sqlite-plugin/entity/VCompanyLibrary'
+import type { VBossLibrary } from '@geekgeekrun/sqlite-plugin/entity/VBossLibrary'
+import type { VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/entity/VMarkAsNotSuitLog'
 import { measureExecutionTime } from '../../../../../../common/utils/performance'
 import { PageReq, PagedRes } from '../../../../../../common/types/pagination'
-import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/entity/JobInfoChangeLog'
-import { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/entity/AutoStartChatRunRecord'
+import type { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/entity/JobInfoChangeLog'
+import type { AutoStartChatRunRecord } from '@geekgeekrun/sqlite-plugin/entity/AutoStartChatRunRecord'
 
 const dbInitPromise = initDb(getPublicDbFilePath())
 let dataSource: DataSource | null = null
@@ -44,7 +44,7 @@ const payloadHandler = {
       pageSize = 10
     }
 
-    const userRepository = dataSource!.getRepository(VChatStartupLog)!
+    const userRepository = dataSource!.getRepository<VChatStartupLog>('VChatStartupLog')!
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
@@ -69,7 +69,7 @@ const payloadHandler = {
     if (!pageSize) {
       pageSize = 10
     }
-    const recordRepository = dataSource!.getRepository(VMarkAsNotSuitLog)!
+    const recordRepository = dataSource!.getRepository<VMarkAsNotSuitLog>('VMarkAsNotSuitLog')!
     const [data, totalItemCount] = await measureExecutionTime(
       recordRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
@@ -93,7 +93,7 @@ const payloadHandler = {
       pageSize = 10
     }
 
-    const userRepository = dataSource!.getRepository(VJobLibrary)!
+    const userRepository = dataSource!.getRepository<VJobLibrary>('VJobLibrary')!
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
@@ -116,7 +116,7 @@ const payloadHandler = {
       pageSize = 10
     }
 
-    const userRepository = dataSource!.getRepository(VCompanyLibrary)!
+    const userRepository = dataSource!.getRepository<VCompanyLibrary>('VCompanyLibrary')!
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
@@ -139,7 +139,7 @@ const payloadHandler = {
       pageSize = 10
     }
 
-    const userRepository = dataSource!.getRepository(VBossLibrary)!
+    const userRepository = dataSource!.getRepository<VBossLibrary>('VBossLibrary')!
     const [data, totalItemCount] = await measureExecutionTime(
       userRepository.findAndCount({
         skip: (pageNo - 1) * pageSize,
@@ -153,7 +153,7 @@ const payloadHandler = {
     }
   },
   async getJobHistoryByEncryptId({ encryptJobId }): Promise<JobInfoChangeLog[]> {
-    const jobInfoChangeLogRepository = dataSource!.getRepository(JobInfoChangeLog)!
+    const jobInfoChangeLogRepository = dataSource!.getRepository<JobInfoChangeLog>('JobInfoChangeLog')!
     const data = await measureExecutionTime(
       jobInfoChangeLogRepository.find({
         where: {
@@ -164,9 +164,11 @@ const payloadHandler = {
     return data
   },
   async saveAndGetCurrentRunRecord() {
-    const autoStartChatRunRecord = new AutoStartChatRunRecord()
-    autoStartChatRunRecord.date = new Date()
-    const autoStartChatRunRecordRepository = dataSource!.getRepository(AutoStartChatRunRecord)
+    const autoStartChatRunRecordRepository =
+      dataSource!.getRepository<AutoStartChatRunRecord>('AutoStartChatRunRecord')
+    const autoStartChatRunRecord = autoStartChatRunRecordRepository.create({
+      date: new Date()
+    })
     const result = await autoStartChatRunRecordRepository.save(autoStartChatRunRecord)
     return result
   }

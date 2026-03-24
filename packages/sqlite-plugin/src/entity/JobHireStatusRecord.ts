@@ -4,12 +4,12 @@ const { Entity, Column, PrimaryColumn } = typeorm;
 
 @Entity()
 export class JobHireStatusRecord {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: "varchar" })
   encryptJobId: string;
 
-  @Column()
+  @Column({ type: "integer" })
   hireStatus: JobHireStatus;
 
-  @Column()
+  @Column({ type: "datetime" })
   lastSeenDate: Date;
 }

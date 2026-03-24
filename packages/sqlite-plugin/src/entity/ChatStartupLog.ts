@@ -12,26 +12,29 @@ export class ChatStartupLog {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptJobId: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptCurrentUserId: string;
 
-  @Column()
+  @Column({ type: "datetime" })
   date: Date;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   chatStartupFrom?: ChatStartupFrom;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   autoStartupChatRecordId?: number;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   jobSource?: JobSource;

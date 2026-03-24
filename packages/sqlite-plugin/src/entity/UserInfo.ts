@@ -3,9 +3,9 @@ const { Entity, Column, PrimaryColumn } = typeorm
 
 @Entity()
 export class UserInfo {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: "varchar" })
   encryptUserId: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   name: string;
 }

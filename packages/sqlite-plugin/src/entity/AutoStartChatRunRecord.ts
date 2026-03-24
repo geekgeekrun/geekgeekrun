@@ -6,6 +6,6 @@ export class AutoStartChatRunRecord {
   @PrimaryGeneratedColumn()
   id: number;
   
-  @Column()
+  @Column({ type: "datetime" })
   date: Date;
 }

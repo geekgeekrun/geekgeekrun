@@ -3,20 +3,21 @@ const { Entity, Column, PrimaryColumn } = typeorm;
 
 @Entity()
 export class BossInfo {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: "varchar" })
   encryptBossId: string;
 
   @Column({
+    type: "varchar",
     nullable: true
   })
   encryptCompanyId: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   name: string;
 
-  @Column()
+  @Column({ type: "datetime" })
   date: Date;
 
-  @Column()
+  @Column({ type: "varchar" })
   title: string;
 }

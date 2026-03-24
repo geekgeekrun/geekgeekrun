@@ -6,12 +6,12 @@ export class CompanyInfoChangeLog {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptCompanyId: string;
 
-  @Column()
+  @Column({ type: "datetime" })
   updateTime: Date;
 
-  @Column()
+  @Column({ type: "varchar" })
   dataAsJson: string;
 }

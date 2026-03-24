@@ -1,4 +1,4 @@
-export const parseCompanyScale = (str: string): [number| null, number | null] => {
+const parseCompanyScale = (str: string): [number| null, number | null] => {
   if (!str) {
     return [null, null]
   }
@@ -24,7 +24,7 @@ export const parseCompanyScale = (str: string): [number| null, number | null] =>
   return [null, null]
 }
 
-export function formatCompanyScale(low, high) {
+function formatCompanyScale(low: number | null, high: number | null): string {
   if (low === null && high === null) {
     return ''
   }
@@ -37,7 +37,10 @@ export function formatCompanyScale(low, high) {
   return `${low}-${high}人`
 }
 
-export const parseSalary = (str: string): { low: null | number, high: null | number, month: null | number } => {
+// 为了解决导出问题，添加一个别名
+const formatCompanyScaleHelper = formatCompanyScale
+
+const parseSalary = (str: string): { low: null | number, high: null | number, month: null | number } => {
   const result = {
     high: null,
     low: null,
@@ -78,3 +81,5 @@ export const parseSalary = (str: string): { low: null | number, high: null | num
 
   return result
 }
+
+export { parseCompanyScale, formatCompanyScale, formatCompanyScaleHelper, parseSalary }

@@ -8,41 +8,47 @@ export class MarkAsNotSuitLog {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptJobId: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptCurrentUserId: string;
 
-  @Column()
+  @Column({ type: "datetime" })
   date: Date;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   markFrom?: ChatStartupFrom;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   markReason?: MarkAsNotSuitReason
 
   @Column({
+    type: "integer",
     nullable: true
   })
   markOp?: MarkAsNotSuitOp
 
   @Column({
+    type: "varchar",
     nullable: true
   })
   extInfo?: string
 
   @Column({
+    type: "integer",
     nullable: true
   })
   autoStartupChatRecordId?: number;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   jobSource?: JobSource;

@@ -3,54 +3,60 @@ const { Entity, Column, PrimaryColumn } = typeorm
 
 @Entity()
 export class JobInfo {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: "varchar" })
   encryptJobId: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   jobName: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   positionName: string;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   salaryLow?: number;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   salaryHigh?: number;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   salaryMonth?: number;
 
-  @Column()
+  @Column({ type: "varchar" })
   experienceName: string;
 
   @Column({
+    type: "datetime",
     nullable: true
   })
   publishDate?: Date;
 
   @Column({
+    type: "varchar",
     nullable: true
   })
   degreeName?: string;
 
   @Column({
+    type: "varchar",
     nullable: true
   })
   address?: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   description: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptBossId: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptCompanyId: string;
 }

@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { DataSource, Raw } from "typeorm";
 import { BossActiveStatusRecord } from "./entity/BossActiveStatusRecord";
 import { BossInfo } from "./entity/BossInfo";

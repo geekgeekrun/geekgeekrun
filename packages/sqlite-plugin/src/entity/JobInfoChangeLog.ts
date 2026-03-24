@@ -6,12 +6,12 @@ export class JobInfoChangeLog {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "varchar" })
   encryptJobId: string;
 
-  @Column()
+  @Column({ type: "datetime" })
   updateTime: Date;
 
-  @Column()
+  @Column({ type: "varchar" })
   dataAsJson: string;
 }

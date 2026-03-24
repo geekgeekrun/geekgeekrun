@@ -2,45 +2,47 @@
   "name": "@geekgeekrun/sqlite-plugin",
   "version": "0.0.2",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./handlers": {
-      "require": "./dist/handlers.js",
+      "require": "./dist/handlers.cjs",
       "import": "./dist/handlers.js",
       "types": "./dist/handlers.d.ts"
     },
     "./enums": {
-      "require": "./dist/enums.js",
+      "require": "./dist/enums.cjs",
       "import": "./dist/enums.js",
       "types": "./dist/enums.d.ts"
     },
     "./entity/*": {
-      "require": "./dist/entity/*.js",
+      "require": "./dist/entity/*.cjs",
       "import": "./dist/entity/*.js",
       "types": "./dist/entity/*.d.ts"
     },
     "./utils/*": {
-      "require": "./dist/utils/*.js",
+      "require": "./dist/utils/*.cjs",
       "import": "./dist/utils/*.js",
       "types": "./dist/utils/*.d.ts"
     },
     "./src/entity/*": {
-      "require": "./dist/entity/*.js",
+      "require": "./dist/entity/*.cjs",
       "import": "./dist/entity/*.js",
       "types": "./dist/entity/*.d.ts"
     },
     "./src/utils/*": {
-      "require": "./dist/utils/*.js",
+      "require": "./dist/utils/*.cjs",
       "import": "./dist/utils/*.js",
       "types": "./dist/utils/*.d.ts"
     },
     "./src/enums": {
-      "require": "./dist/enums.js",
+      "require": "./dist/enums.cjs",
       "import": "./dist/enums.js",
       "types": "./dist/enums.d.ts"
     }
@@ -55,12 +57,13 @@
   "devDependencies": {
     "@types/lodash": "^4.17.23",
     "node-gyp": "^12.2.0",
+    "tsup": "^8.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "dev": "rimraf dist && tsc --outDir dist --watch true",
-    "build": "rimraf dist && tsc --outDir dist",
+    "dev": "tsup --watch",
+    "build": "tsup",
     "postinstall": "npm run build || exit 0;"
   }
 }

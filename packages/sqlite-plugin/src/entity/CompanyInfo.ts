@@ -3,31 +3,35 @@ const { Entity, Column, PrimaryColumn } = typeorm
 
 @Entity()
 export class CompanyInfo {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: "varchar" })
   encryptCompanyId: string;
   
-  @Column()
+  @Column({ type: "varchar" })
   name: string;
   
-  @Column()
+  @Column({ type: "varchar" })
   brandName: string;
 
   @Column({
+    type: "integer",
     nullable: true
   })
   scaleLow?: number;
   
   @Column({
+    type: "integer",
     nullable: true
   })
   scaleHigh?: number;
 
   @Column({
+    type: "varchar",
     nullable: true
   })
   stageName?: string;
   
   @Column({
+    type: "varchar",
     nullable: true
   })
   industryName?: string;
