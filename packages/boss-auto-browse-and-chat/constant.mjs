@@ -217,3 +217,26 @@ export const CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR = '.op-btn.rightbar-item div
  * HTML: div.chat-label-item[title="全部"]，选中态有 class selected。
  */
 export const CHAT_PAGE_TAB_ALL_SELECTOR = '.chat-label-item[title="全部"]'
+
+// =============================================================================
+// 三、治理公告弹窗（登录后出现，须点击「我已知晓」才能继续操作）
+// =============================================================================
+/**
+ * 治理公告弹窗（dialog-uninstall-extension）容器选择器。
+ * BOSS 每次登录后会弹出此公告，告知平台禁止使用第三方自动化工具。
+ * HTML: div.boss-popup__wrapper.boss-dialog.boss-dialog__wrapper.dialog-uninstall-extension
+ */
+export const GOVERNANCE_NOTICE_DIALOG_SELECTOR = '.dialog-uninstall-extension'
+
+/**
+ * 治理公告弹窗内的「我已知晓」确认按钮（div.confirm-btn，背景图模拟按钮样式）。
+ * HTML: div.dialog-uninstall-extension div.uninstall-extension div.content div.confirm-btn
+ */
+export const GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR = '.dialog-uninstall-extension .confirm-btn'
+
+/**
+ * 沟通页：左侧会话列表分类 tab——「新招呼」（候选人主动发来招呼的会话）。
+ * 每次开始处理前须先点击此 tab，确保只扫描新招呼消息，避免遍历其他类型会话。
+ * HTML: div.chat-label-item[title="新招呼"]，选中态有 class selected。
+ */
+export const CHAT_PAGE_TAB_NEW_GREET_SELECTOR = '.chat-label-item[title="新招呼"]'

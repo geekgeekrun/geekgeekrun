@@ -27,6 +27,7 @@ import {
   CHAT_PAGE_ITEM_UNREAD_SELECTOR,
   CHAT_PAGE_ALL_FILTER_SELECTOR,
   CHAT_PAGE_UNREAD_FILTER_SELECTOR,
+  CHAT_PAGE_TAB_NEW_GREET_SELECTOR,
   CHAT_PAGE_NAME_SELECTOR,
   CHAT_PAGE_JOB_SELECTOR,
   CHAT_PAGE_PREVIEW_RESUME_BTN_SELECTOR,
@@ -391,14 +392,16 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
     // ────────────────────────────────────────────────────────────────────────────
     // 内部辅助：切换到指定 tab（封闭 page、cursor）
     // ────────────────────────────────────────────────────────────────────────────
-    const switchToTab = async (selector, tabName) => {
-      const isActive = await page.evaluate(
-        (sel) => document.querySelector(sel)?.classList.contains('active') ?? false,
-        selector
-      )
-      if (isActive) {
-        logDebug(`${LOG} 已在「${tabName}」tab`)
-        return
+    const switchToTab = async (selector, tabName, opts = {}) => {
+      if (!opts.force) {
+        const isActive = await page.evaluate(
+          (sel) => document.querySelector(sel)?.classList.contains('active') ?? false,
+          selector
+        )
+        if (isActive) {
+          logDebug(`${LOG} 已在「${tabName}」tab`)
+          return
+        }
       }
       logInfo(`${LOG} 切换到「${tabName}」tab...`)
       const tabEl = await page.$(selector)
@@ -762,6 +765,16 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
     }
     // ────────────────────────────────────────────────────────────────────────────
 
+    // ── 职位 tab 初始化：切换到「新招呼」分类，再强制点击「未读」触发列表刷新 ────────
+    // 必须先进入「新招呼」分类，才能只扫描当前职位下候选人主动发来的招呼，避免遍历其他类型会话。
+    // 「未读」tab 只有被实际点击时 BOSS 才会刷新列表；若上次运行后页面已停在「未读」tab，
+    // 不点击则不会刷新，已处理过的会话仍会出现，导致重复操作。因此此处强制点击（force: true）。
+    await switchToTab(CHAT_PAGE_TAB_NEW_GREET_SELECTOR, '新招呼', { force: true })
+    await sleepWithRandomDelay(300, 500)
+    await switchToTab(CHAT_PAGE_UNREAD_FILTER_SELECTOR, '未读', { force: true })
+    await sleepWithRandomDelay(400, 600)
+    // ────────────────────────────────────────────────────────────────────────────
+
     // ── 验证恢复：若上次被验证中断，优先重试被中断的候选人 ────────────────────────
     if (retryCandidate) {
       logInfo(`${LOG} ── 验证恢复：重试被中断候选人 ${retryCandidate.geekName}（${retryCandidate.encryptGeekId}）──`)
@@ -781,9 +794,9 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
       await sleepWithRandomDelay(300)
     }
 
-    // ── 正常扫描：切换到「未读」tab，处理未读会话 ───────────────────────────────
-    await switchToTab(CHAT_PAGE_UNREAD_FILTER_SELECTOR, '未读')
-    await sleepWithRandomDelay(300)
+    // ── 正常扫描：处理「新招呼」分类下的未读会话 ─────────────────────────────────
+    // 「新招呼」分类与「未读」tab 已在上方初始化阶段完成切换（force: true），此处直接解析列表。
+    // 若经过 retryCandidate 流程，retry 结束时已切回「未读」tab，状态同样正确。
 
     const conversations = await parseConversationList(page)
     logDebug(`${LOG} DOM 解析到 ${conversations.length} 条会话`)

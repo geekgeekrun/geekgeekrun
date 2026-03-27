@@ -1,7 +1,7 @@
 # 招聘端（Recruiter/BOSS）架构总览
 
 > **定位**：供 AI Agent 快速理解招聘端全貌，用于协作开发时减少 token 消耗。
-> 最后更新：2026-03-16
+> 最后更新：2026-03-26
 
 ---
 
@@ -205,6 +205,8 @@ startBossChatPageProcess(hooks, { browser?, page? })
 
 ## 6. 关键常量（constant.mjs）
 
+> 以下为主要常量摘录，完整列表以源文件为准。BOSS 站点改版时常量可能失效，参见 §14.5 排查流程。
+
 ```js
 // URL
 BOSS_RECOMMEND_PAGE_URL = 'https://www.zhipin.com/web/chat/recommend'
@@ -212,24 +214,29 @@ BOSS_CHAT_INDEX_URL     = 'https://www.zhipin.com/web/chat/index'
 BOSS_CHAT_PAGE_URL      = 'https://www.zhipin.com/web/chat/index'
 
 // 推荐牛人页选择器
-CANDIDATE_LIST_SELECTOR      = '#recommend-list'
-CANDIDATE_ITEM_SELECTOR      = '#recommend-list ul.card-list > li.card-item'
-CANDIDATE_NAME_SELECTOR      = 'span.name'
-CHAT_START_BUTTON_SELECTOR   = 'div.operate-side button.btn-greet'
+CANDIDATE_LIST_SELECTOR         = 'ul.card-list'
+CANDIDATE_ITEM_SELECTOR         = 'ul.card-list > li.card-item'
+CANDIDATE_NAME_SELECTOR         = 'span.name'
+CHAT_START_BUTTON_SELECTOR      = 'button.btn-greet'
 GREETING_SENT_KNOW_BTN_SELECTOR = 'div.dialog-wrap button.btn-sure-v2'
-CONTINUE_CHAT_BUTTON_SELECTOR   = 'div.operate-side > div > span > div > div'
-CHAT_INPUT_SELECTOR          = '#boss-chat-global-input'
+CONTINUE_CHAT_BUTTON_SELECTOR   = 'div.operate-side div.button-chat'
+CHAT_INPUT_SELECTOR             = '#boss-chat-global-input'
 
 // 沟通页选择器（CHAT_PAGE_* 前缀）
-CHAT_PAGE_ITEM_SELECTOR      = 'div.user-container > div > div:nth-child(2) > div:nth-child(1) > div'
-CHAT_PAGE_NAME_SELECTOR      = 'span.geek-name'
-CHAT_PAGE_JOB_SELECTOR       = 'span.source-job'
-CHAT_PAGE_ONLINE_RESUME_SELECTOR       = 'div.resume-btn-content > a > svg'
-CHAT_PAGE_ATTACH_RESUME_BTN_SELECTOR   = 'div.resume-btn-content > div > div.btn.resume-btn-file'
-CHAT_PAGE_ASK_RESUME_CONFIRM_BTN_SELECTOR = 'div.ask-for-resume-confirm .content button.boss-btn-primary'
-CHAT_PAGE_MESSAGE_ITEM_SELECTOR        = 'div.chat-message-list.is-to-top > div > div:nth-child(2) > div'
-CHAT_PAGE_PREVIEW_RESUME_BTN_SELECTOR  = 'div.message-card-buttons > span'
-CHAT_PAGE_DOWNLOAD_PDF_BTN_SELECTOR    = 'div.resume-common-dialog div.resume-footer-wrap > div > div > div:nth-child(3)'
+CHAT_PAGE_ITEM_SELECTOR                   = '.user-container .geek-item'
+CHAT_PAGE_NAME_SELECTOR                   = 'span.geek-name'
+CHAT_PAGE_JOB_SELECTOR                    = 'span.source-job'
+CHAT_PAGE_ONLINE_RESUME_SELECTOR          = 'a.resume-btn-online'
+CHAT_PAGE_ATTACH_RESUME_BTN_SELECTOR      = 'div.resume-btn-content .resume-btn-file'
+CHAT_PAGE_ASK_RESUME_CONFIRM_BTN_SELECTOR = 'div.ask-for-resume-confirm > div.content > button.boss-btn-primary'
+CHAT_PAGE_MESSAGE_ITEM_SELECTOR           = '.chat-message-list .message-item'
+CHAT_PAGE_PREVIEW_RESUME_BTN_SELECTOR     = 'div.message-card-buttons > span.card-btn:only-child'
+CHAT_PAGE_DOWNLOAD_PDF_BTN_SELECTOR       = '.resume-common-dialog .attachment-resume-btns > .popover:nth-child(3)'
+CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR = '.op-btn.rightbar-item div.dialog-container div.button span'
+
+// 治理公告弹窗（登录后必现，§14.1 详述）
+GOVERNANCE_NOTICE_DIALOG_SELECTOR             = '.dialog-uninstall-extension'
+GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR = '.dialog-uninstall-extension .confirm-btn'
 ```
 
 ---
@@ -414,7 +421,112 @@ const hooks = {
 
 ---
 
-## 14. 相关文档
+## 14. 已知弹窗及自动处理清单
+
+BOSS直聘在各页面会弹出各类提示/公告弹窗，均需自动点击关闭，否则会遮挡操作区域或导致自动化卡死。以下列出所有已纳入代码处理的弹窗。
+
+---
+
+### 14.1 治理公告弹窗（dialog-uninstall-extension）
+
+**何时出现：** 每次登录后（包含首次加载、cookie 失效重新登录），浏览器导航到 BOSS 站点后必现。BOSS 借此告知平台禁止使用第三方自动化工具。
+
+**外观：** 全屏遮罩，正中宽 580px 卡片，含平台公告文字；底部有一枚背景图模拟的「我已知晓」按钮（`div.confirm-btn`，非 `<button>`，以图片代替文字）。
+
+**HTML 骨架（来自 `examples/BOSS直聘-治理公告 (2026_3_26 15：41：51).html`）：**
+```html
+<!-- 挂载在 #boss-dynamic-dialog-<id>，id 随机 -->
+<div class="boss-popup__wrapper boss-dialog boss-dialog__wrapper dialog-uninstall-extension"
+     style="animation-duration:0s; width:580px; z-index:2002">
+  <div class="boss-popup__content">
+    <div class="boss-dialog__body">
+      <div data-v-4a24c2ed class="uninstall-extension">
+        <div data-v-4a24c2ed class="top"></div>        <!-- 顶部装饰图 -->
+        <div data-v-4a24c2ed class="content">
+          <div data-v-4a24c2ed class="notice">...公告标题...</div>
+          <div data-v-4a24c2ed class="tips mb-24">...禁止使用第三方工具说明...</div>
+          <div data-v-4a24c2ed class="confirm-btn"></div>  <!-- 「我已知晓」按钮（背景图） -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <div ka class="boss-popup__close"><i class="icon-close"></i></div>
+</div>
+```
+
+**关键选择器（在 `constant.mjs` 中定义）：**
+
+| 常量 | 选择器 | 用途 |
+|------|--------|------|
+| `GOVERNANCE_NOTICE_DIALOG_SELECTOR` | `.dialog-uninstall-extension` | 检测弹窗是否存在 |
+| `GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR` | `.dialog-uninstall-extension .confirm-btn` | 点击「我已知晓」 |
+
+> **注意：** `confirm-btn` 是 `<div>` 而非 `<button>`，文字由背景图渲染，`page.$eval(selector, el => el.textContent)` 返回空字符串。
+
+**处理函数：** `dismissGovernanceNoticeDialog(page)` — 在 `boss-auto-browse-and-chat/index.mjs` 中定义。
+
+**调用位置：**
+- `launchBrowserAndNavigateToChat()` — 导航到沟通页并等待 `readyState=complete` 之后
+- `startBossAutoBrowse()` — 登录检查/等待登录块结束之后、切换职位之前
+
+**Debug 提示：**
+- 若弹窗出现但 `confirm-btn` 不可点击（`boundingBox()` 返回 null），说明容器被 `overflow:hidden` 裁剪或弹窗尚未完成动画，应先等待 500ms 再重试。
+- 弹窗 `z-index:2002`，会遮挡推荐牛人 iframe；若候选人列表未能渲染，优先排查此弹窗是否已关闭。
+- 若选择器失效（BOSS 改了 class），打开 `examples/` 文件夹中最新保存的治理公告 HTML 快照，搜索 `confirm-btn` 或 `dialog-uninstall-extension` 重新确认。
+
+---
+
+### 14.2 意向沟通提示弹窗（dialog-container）
+
+**何时出现：** 沟通页，每次新浏览器会话切到某个会话时，BOSS 视为新用户会弹出此提示（遮挡右侧附件简历等操作按钮）。
+
+**关键选择器：**
+
+| 常量 | 选择器 |
+|------|--------|
+| `CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR` | `.op-btn.rightbar-item div.dialog-container div.button span` |
+| `CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR` | `.op-btn.rightbar-item div.dialog-container div.iboss-close.close` |
+
+**处理位置：** `chat-page-processor.mjs`，每次切换会话后（点击左侧会话项、等待右侧面板更新之后）立即检测并关闭。
+
+---
+
+### 14.3 已向牛人发送招呼弹窗
+
+**何时出现：** 推荐牛人页，点击「打招呼」后弹出确认。
+
+**关键选择器：** `GREETING_SENT_KNOW_BTN_SELECTOR = 'div.dialog-wrap button.btn-sure-v2'`
+
+**处理位置：** `chat-handler.mjs` — `processCandidate()` 内打招呼流程。
+
+---
+
+### 14.4 「不感兴趣」原因弹窗
+
+**何时出现：** 推荐牛人页 iframe 内，点击「不感兴趣」后弹出原因选择框。
+
+**关键选择器：**
+
+| 常量 | 选择器 |
+|------|--------|
+| `NOT_INTERESTED_REASON_POPUP_SELECTOR` | `div.card-reason-f1.show` |
+| `NOT_INTERESTED_REASON_POPUP_CLOSE_SELECTOR` | `div.card-reason-f1.show div.close-icon` |
+
+**处理位置：** `chat-handler.mjs` — `clickNotInterested()` 内。
+
+---
+
+### 14.5 维护历史 & 选择器失效排查流程
+
+1. 在 Chrome DevTools 中打开对应 BOSS 页面，手动触发弹窗。
+2. 右键元素 → Copy → Copy selector，与 `constant.mjs` 中对应常量对比。
+3. 更新 `constant.mjs` 中的常量值。
+4. 在 `examples/` 目录下保存最新 HTML 快照（文件名含日期），以备后续对比。
+5. 若弹窗结构变化较大，同步更新本文档对应小节的「HTML 骨架」。
+
+---
+
+## 15. 相关文档
 
 - [boss_auto_browse_tabs.md](boss_auto_browse_tabs.md) — 双 Tab 设计（沟通 vs 推荐牛人）
 - [chat_page_resume_flow.md](chat_page_resume_flow.md) — 沟通页简历流程详述

@@ -9,7 +9,9 @@ import {
   BOSS_RECOMMEND_PAGE_URL,
   BOSS_CHAT_PAGE_URL,
   RECOMMEND_JOB_DROPDOWN_LABEL_SELECTOR,
-  RECOMMEND_JOB_ITEM_SELECTOR
+  RECOMMEND_JOB_ITEM_SELECTOR,
+  GOVERNANCE_NOTICE_DIALOG_SELECTOR,
+  GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR
 } from './constant.mjs'
 import { setupNetworkInterceptor, setupCanvasTextHook } from './resume-extractor.mjs'
 import { parseCandidateList, filterCandidates, scrollAndLoadMore } from './candidate-processor.mjs'
@@ -60,6 +62,34 @@ export async function initPuppeteer () {
   }
 }
 
+/**
+ * 关闭登录后弹出的「治理公告」弹窗（点击「我已知晓」确认按钮）。
+ * 该弹窗在每次登录后必现，不处理会导致后续自动化操作卡死超时。
+ * @param {import('puppeteer').Page} page
+ */
+async function dismissGovernanceNoticeDialog (page) {
+  try {
+    const confirmBtn = await page.$(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR)
+    if (!confirmBtn) return
+    logInfo('[boss-auto-browse] 检测到「治理公告」弹窗，点击「我已知晓」关闭...')
+    try {
+      const box = await confirmBtn.boundingBox().catch(() => null)
+      if (box) {
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+      } else {
+        await confirmBtn.click()
+      }
+    } catch {
+      await confirmBtn.click().catch(() => {})
+    }
+    await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { hidden: true, timeout: 5000 }).catch(() => {})
+    logInfo('[boss-auto-browse] 「治理公告」弹窗已关闭')
+    await sleep(300)
+  } catch {
+    // 弹窗不存在或关闭失败时静默继续
+  }
+}
+
 /** 招聘端 localStorage 生效的页面 URL（与 geek 端一致使用 desktop） */
 const localStoragePageUrl = 'https://www.zhipin.com/desktop/'
 
@@ -86,6 +116,7 @@ export async function launchBrowserAndNavigateToChat () {
   await page.goto(BOSS_CHAT_PAGE_URL, { timeout: 60 * 1000 })
   await page.waitForFunction(() => document.readyState === 'complete', { timeout: 120 * 1000 })
   await new Promise(r => setTimeout(r, 1500))
+  await dismissGovernanceNoticeDialog(page)
   return { browser, page }
 }
 
@@ -303,6 +334,9 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
     } else {
       await storeStorage(page).catch(() => {})
     }
+
+    // 关闭登录后弹出的「治理公告」弹窗（每次登录必现，不处理会阻塞后续操作）
+    await dismissGovernanceNoticeDialog(page)
 
     // 切换职位（若指定了 jobId 且非全部职位标志）
     if (jobId && jobId !== '-1' && jobId !== '0') {

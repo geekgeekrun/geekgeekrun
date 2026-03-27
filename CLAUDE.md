@@ -101,6 +101,11 @@ Key files and their roles:
 
 Anti-detection: stealth + laodeng + anonymize-ua plugins; all clicks via `ghost-cursor` (`createHumanCursor`); random delays via `sleepWithRandomDelay`.
 
+**Known post-login popups** — all must be auto-dismissed or automation will hang:
+- **Governance notice** (`dialog-uninstall-extension`) — appears every login; handled by `dismissGovernanceNoticeDialog(page)` in `index.mjs`, called after login in both `launchBrowserAndNavigateToChat` and `startBossAutoBrowse`. Confirm button is `div.confirm-btn` (a `<div>` styled with a background image, not a `<button>`). See `plan/recruiter_architecture.md §14.1` and `examples/BOSS直聘-治理公告*.html`.
+- **Intent dialog** (`.op-btn.rightbar-item div.dialog-container`) — per-session, per-conversation; handled in `chat-page-processor.mjs`.
+- When selectors break, update `constant.mjs` first, then follow the checklist in `plan/recruiter_architecture.md §14.5`.
+
 ## Code Style
 
 Enforced by eslint + prettier in `packages/ui`:
