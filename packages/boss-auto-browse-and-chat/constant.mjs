@@ -98,7 +98,7 @@ export const RECOMMEND_JOB_LIST_SELECTOR = '#headerWrap ul.job-list'
 export const RECOMMEND_JOB_ITEM_SELECTOR = '#headerWrap ul.job-list li.job-item'
 
 /** 沟通页：顶部职位筛选下拉触发按钮（点击展开职位列表） */
-export const CHAT_PAGE_JOB_DROPDOWN_SELECTOR = '.chat-top-job .ui-dropmenu-label'
+export const CHAT_PAGE_JOB_DROPDOWN_SELECTOR = '.dropmenu-label.chat-select-job'
 /** 沟通页：职位下拉展开后的列表项（过滤 value="-1" 的"全部职位"） */
 export const CHAT_PAGE_JOB_ITEM_SELECTOR = '.chat-top-job .ui-dropmenu-list li'
 
