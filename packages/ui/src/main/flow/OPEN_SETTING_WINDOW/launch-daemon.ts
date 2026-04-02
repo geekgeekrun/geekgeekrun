@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import { resolve } from 'path'
 import {
   ensureStorageFileExist,
   writeStorageFile,
@@ -29,7 +30,7 @@ export async function launchDaemon() {
     daemonProcess = spawn(
       process.argv[0],
       process.env.NODE_ENV === 'development'
-        ? [process.argv[1], `--mode=launchDaemon`]
+        ? [resolve(process.argv[1]), `--mode=launchDaemon`]
         : [`--mode=launchDaemon`],
       {
         stdio: ['ignore', 'pipe', 'pipe', 'pipe'],

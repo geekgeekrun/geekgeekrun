@@ -98,7 +98,7 @@ export const RECOMMEND_JOB_LIST_SELECTOR = '#headerWrap ul.job-list'
 export const RECOMMEND_JOB_ITEM_SELECTOR = '#headerWrap ul.job-list li.job-item'
 
 /** 沟通页：顶部职位筛选下拉触发按钮（点击展开职位列表） */
-export const CHAT_PAGE_JOB_DROPDOWN_SELECTOR = '.chat-top-job .ui-dropmenu-label'
+export const CHAT_PAGE_JOB_DROPDOWN_SELECTOR = '.dropmenu-label.chat-select-job'
 /** 沟通页：职位下拉展开后的列表项（过滤 value="-1" 的"全部职位"） */
 export const CHAT_PAGE_JOB_ITEM_SELECTOR = '.chat-top-job .ui-dropmenu-list li'
 
@@ -239,4 +239,4 @@ export const GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR = '.dialog-uninstall-
  * 每次开始处理前须先点击此 tab，确保只扫描新招呼消息，避免遍历其他类型会话。
  * HTML: div.chat-label-item[title="新招呼"]，选中态有 class selected。
  */
-export const CHAT_PAGE_TAB_NEW_GREET_SELECTOR = '.chat-label-item[title="新招呼"]'
+export const CHAT_PAGE_TAB_NEW_GREET_SELECTOR = '.chat-label-item[title^="新招呼"]'

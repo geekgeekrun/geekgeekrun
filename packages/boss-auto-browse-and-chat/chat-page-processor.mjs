@@ -31,7 +31,9 @@ import {
   CHAT_PAGE_NAME_SELECTOR,
   CHAT_PAGE_JOB_SELECTOR,
   CHAT_PAGE_PREVIEW_RESUME_BTN_SELECTOR,
-  CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR
+  CHAT_PAGE_ONLINE_RESUME_CLOSE_SELECTOR,
+  CHAT_PAGE_JOB_DROPDOWN_SELECTOR,
+  CHAT_PAGE_JOB_ITEM_SELECTOR
 } from './constant.mjs'
 
 const LOG = '[chat-page-processor]'
@@ -45,7 +47,7 @@ async function switchChatPageJobId (page, jobId) {
   try {
     const cursor = await createHumanCursor(page)
     // 用拟人轨迹点击下拉触发按钮
-    const dropdownBtn = await page.$('.ui-dropmenu.chat-top-job .ui-dropmenu-label')
+    const dropdownBtn = await page.$(CHAT_PAGE_JOB_DROPDOWN_SELECTOR)
     if (dropdownBtn) {
       const box = await dropdownBtn.boundingBox().catch(() => null)
       if (box) {
@@ -54,12 +56,12 @@ async function switchChatPageJobId (page, jobId) {
         await dropdownBtn.click()
       }
     } else {
-      await page.click('.ui-dropmenu.chat-top-job .ui-dropmenu-label')
+      await page.click(CHAT_PAGE_JOB_DROPDOWN_SELECTOR)
     }
-    await page.waitForSelector('.ui-dropmenu.chat-top-job .ui-dropmenu-list', { timeout: 5000 })
+    await page.waitForSelector(CHAT_PAGE_JOB_ITEM_SELECTOR, { timeout: 5000 })
     await sleepWithRandomDelay(150, 300)
     // 用拟人轨迹点击目标职位项
-    const items = await page.$$('.ui-dropmenu.chat-top-job .ui-dropmenu-list li')
+    const items = await page.$$(CHAT_PAGE_JOB_ITEM_SELECTOR)
     let found = false
     for (const item of items) {
       const val = await item.evaluate(el => el.getAttribute('value')).catch(() => null)
@@ -798,31 +800,52 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
     // 「新招呼」分类与「未读」tab 已在上方初始化阶段完成切换（force: true），此处直接解析列表。
     // 若经过 retryCandidate 流程，retry 结束时已切回「未读」tab，状态同样正确。
 
-    const conversations = await parseConversationList(page)
-    logDebug(`${LOG} DOM 解析到 ${conversations.length} 条会话`)
+    // ── 批次循环：每处理 BATCH_REFRESH_SIZE 条后重新点击「未读」刷新列表（步骤4-5）────
+    const BATCH_REFRESH_SIZE = 10
+    let totalAttempted = 0
+    let totalProcessed = 0
+    const seenIds = new Set()
 
-    const unreadItems = conversations.filter((c) => c.encryptGeekId)
-    const toProcess = unreadItems.slice(0, maxProcessPerRun)
-    logInfo(`${LOG} 未读会话 ${unreadItems.length} 条，本次最多处理 ${toProcess.length} 条`)
-    if (toProcess.length > 0) {
-      logDebug(`${LOG} 候选人列表：${toProcess.map((c, i) => `[${i}] ${c.geekName}(${c.encryptGeekId})`).join(', ')}`)
-    }
+    while (totalAttempted < maxProcessPerRun) {
+      const conversations = await parseConversationList(page)
+      logDebug(`${LOG} DOM 解析到 ${conversations.length} 条会话`)
 
-    await hooks.onProgress?.promise?.({ phase: 'chatPage', current: 0, max: toProcess.length }).catch(() => {})
-
-    let processed = 0
-
-    for (let i = 0; i < toProcess.length; i++) {
-      const item = toProcess[i]
-      logInfo(`${LOG} ── [${i + 1}/${toProcess.length}] 开始处理 ${item.geekName}（${item.encryptGeekId}）──`)
-      const result = await processOneCandidateConversation(item)
-      if (result.processed) {
-        processed++
-        await hooks.onProgress?.promise?.({ phase: 'chatPage', current: processed, max: toProcess.length }).catch(() => {})
+      const unreadItems = conversations.filter((c) => c.encryptGeekId && !seenIds.has(c.encryptGeekId))
+      if (unreadItems.length === 0) {
+        logInfo(`${LOG} 「未读」列表为空，全部处理完毕`)
+        break
       }
+
+      const batchSize = Math.min(BATCH_REFRESH_SIZE, maxProcessPerRun - totalAttempted)
+      const batch = unreadItems.slice(0, batchSize)
+      logInfo(`${LOG} 当前未读 ${unreadItems.length} 条，本批次处理 ${batch.length} 条（已尝试 ${totalAttempted}/${maxProcessPerRun}）`)
+
+      await hooks.onProgress?.promise?.({ phase: 'chatPage', current: totalProcessed, max: maxProcessPerRun }).catch(() => {})
+
+      for (const item of batch) {
+        seenIds.add(item.encryptGeekId)
+        logInfo(`${LOG} ── [${totalAttempted + 1}/${maxProcessPerRun}] 开始处理 ${item.geekName}（${item.encryptGeekId}）──`)
+        const result = await processOneCandidateConversation(item)
+        totalAttempted++
+        if (result.processed) {
+          totalProcessed++
+          await hooks.onProgress?.promise?.({ phase: 'chatPage', current: totalProcessed, max: maxProcessPerRun }).catch(() => {})
+        }
+        if (totalAttempted >= maxProcessPerRun) break
+      }
+
+      if (totalAttempted >= maxProcessPerRun) {
+        logInfo(`${LOG} 已达本次最大处理数 ${maxProcessPerRun}，停止`)
+        break
+      }
+
+      // 步骤4：每批次结束后重新点击「未读」标签，刷新列表
+      logInfo(`${LOG} 本批次结束，重新点击「未读」标签刷新列表...`)
+      await switchToTab(CHAT_PAGE_UNREAD_FILTER_SELECTOR, '未读', { force: true })
+      await sleepWithRandomDelay(400, 600)
     }
 
-    logInfo(`${LOG} 本次共处理 ${processed} 条未读会话`)
+    logInfo(`${LOG} 本次共处理 ${totalProcessed} 条未读会话（尝试 ${totalAttempted} 条）`)
   } catch (err) {
     await hooks.onError?.promise?.(err)
     throw err
