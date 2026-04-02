@@ -69,7 +69,9 @@ export async function initPuppeteer () {
  */
 async function dismissGovernanceNoticeDialog (page) {
   try {
-    const confirmBtn = await page.$(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR)
+    const confirmBtn = await page
+      .waitForSelector(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR, { timeout: 10000 })
+      .catch(() => null)
     if (!confirmBtn) return
     logInfo('[boss-auto-browse] 检测到「治理公告」弹窗，点击「我已知晓」关闭...')
     try {
