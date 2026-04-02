@@ -239,4 +239,4 @@ export const GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR = '.dialog-uninstall-
  * 每次开始处理前须先点击此 tab，确保只扫描新招呼消息，避免遍历其他类型会话。
  * HTML: div.chat-label-item[title="新招呼"]，选中态有 class selected。
  */
-export const CHAT_PAGE_TAB_NEW_GREET_SELECTOR = '.chat-label-item[title="新招呼"]'
+export const CHAT_PAGE_TAB_NEW_GREET_SELECTOR = '.chat-label-item[title^="新招呼"]'

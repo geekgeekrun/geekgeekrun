@@ -146,10 +146,12 @@ const runChatPage = async () => {
       processContext?: { currentCandidate: any } | null;
     }) => Promise<void>
     initPuppeteer: () => Promise<{ puppeteer: any }>
+    dismissGovernanceNoticeDialog: (page: any) => Promise<void>
   }
   const {
     startBossChatPageProcess,
-    initPuppeteer
+    initPuppeteer,
+    dismissGovernanceNoticeDialog
   } = (await import('@geekgeekrun/boss-auto-browse-and-chat/index.mjs')) as unknown as BossAutoBrowseModule
   const { setupCanvasTextHook } = (await import('@geekgeekrun/boss-auto-browse-and-chat/resume-extractor.mjs')) as any
   log('boss package import 完成，初始化 puppeteer...')
@@ -252,6 +254,8 @@ const runChatPage = async () => {
         await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
         await page.goto(BOSS_CHAT_PAGE_URL, { timeout: 60 * 1000 })
         await page.waitForFunction(() => document.readyState === 'complete', { timeout: 120 * 1000 })
+        await new Promise(r => setTimeout(r, 1500))
+        await dismissGovernanceNoticeDialog(page)
 
         sendToDaemon({
           type: 'worker-to-gui-message',
