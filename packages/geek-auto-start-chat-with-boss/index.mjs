@@ -1417,7 +1417,12 @@ async function toRecommendPage (hooks) {
                   // 刚刚活跃 // 今日活跃 // 昨日活跃 // 3日内活跃 // 本周活跃 // 2周内活跃
                   // 本月活跃 // 2月内活跃 // 3月内活跃 // 4月内活跃 // 5月内活跃 // 近半年活跃 // 半年前活跃
                   //#endregion
-                  const indexOfActiveText = activeDescList.indexOf(targetJobData.bossInfo.activeTimeDesc)
+                  let activeTimeDescForCompare = targetJobData.bossInfo.activeTimeDesc
+                  // handle empty string case
+                  if (activeTimeDescForCompare === '') {
+                    activeTimeDescForCompare = '半年前活跃'
+                  }
+                  const indexOfActiveText = activeDescList.indexOf(activeTimeDescForCompare)
                   if (
                     markAsNotActiveSelectedTimeRange > 0 &&
                     indexOfActiveText > 0 && indexOfActiveText <= markAsNotActiveSelectedTimeRange
@@ -1532,10 +1537,23 @@ async function toRecommendPage (hooks) {
                 return false
               }
             );
-            const res = await addFriendResponse.json()
-            return res
+            await sleepWithRandomDelay(3000)
+            let res
+            try {
+              res = await addFriendResponse.json()
+              return res
+            }
+            catch(err) {
+              await sleep(2000)
+              if (page.url().startsWith('https://www.zhipin.com/web/geek/chat')) {
+                throw new Error('PAGE_JUMPED_TO_CHAT_PAGE')
+              }
+              else {
+                throw err
+              }
+            }
           }
-          const waitAndHandleChatSuccess = async () => {
+          const waitAndHandleChatSuccess = async ({ hasGoToChatPage = false } = {}) => {
             await hooks.newChatStartup?.promise(
               targetJobData,
               {
@@ -1547,13 +1565,22 @@ async function toRecommendPage (hooks) {
 
             await storeStorage(page).catch(() => void 0)
             await sleepWithRandomDelay(1500)
+            if (hasGoToChatPage) {
+              await page.goBack()
+              await page.waitForFunction(() => {
+                return location.href.startsWith(`https://www.zhipin.com/web/geek/jobs`) && document.readyState === 'complete'
+              })
+              await sleepWithRandomDelay(2000)
+            }
             const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
-            await closeDialogButtonProxy.click()
-            await sleepWithRandomDelay(2000)
+            if (closeDialogButtonProxy) {
+              await closeDialogButtonProxy.click()
+              await sleepWithRandomDelay(2000)
+            }
           }
-          const handleAddFriendResponse = async (res) => {
+          const handleAddFriendResponse = async (res, { hasGoToChatPage = false } = {}) => {
             if (res.code === 0) {
-              await waitAndHandleChatSuccess()
+              await waitAndHandleChatSuccess({ hasGoToChatPage })
             }
             else if (
               res.zpData.bizCode === 1 &&
@@ -1601,9 +1628,21 @@ async function toRecommendPage (hooks) {
               throw new Error('STARTUP_CHAT_ERROR_WITH_UNKNOWN_ERROR')
             }
           }
-          const res = await waitAddFriendResponse()
-          await handleAddFriendResponse(res)
-          // #endregion
+          let res
+          try {
+            res = await waitAddFriendResponse()
+            await handleAddFriendResponse(res)
+          }
+          catch (err) {
+            if (err instanceof Error && err.message === 'PAGE_JUMPED_TO_CHAT_PAGE') {
+              await handleAddFriendResponse({
+                code: 0
+              }, { hasGoToChatPage: true })
+            }
+            else {
+              throw err
+            }
+          }
         } catch (err) {
           if (err instanceof Error) {
             switch (err.message) {
