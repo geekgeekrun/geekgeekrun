@@ -1,3 +1,4 @@
+import { resolve } from 'path'
 import { AUTO_CHAT_ERROR_EXIT_CODE } from '../../common/enums/auto-start-chat'
 import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
 import { saveAndGetCurrentRunRecord } from '../flow/OPEN_SETTING_WINDOW/utils/db'
@@ -43,7 +44,7 @@ export async function runCommon({ mode }) {
   }
   const args =
     process.env.NODE_ENV === 'development'
-      ? [process.argv[1], `--mode=${mode}`, `--run-record-id=${currentRunRecord?.id || 0}`]
+      ? [resolve(process.argv[1]), `--mode=${mode}`, `--run-record-id=${currentRunRecord?.id || 0}`]
       : [`--mode=${mode}`, `--run-record-id=${currentRunRecord?.id || 0}`]
   await sendToDaemon(
     {

@@ -54,6 +54,39 @@ importers:
         specifier: ^7.6.0
         version: 7.6.0
 
+  packages/boss-auto-browse-and-chat:
+    dependencies:
+      '@geekgeekrun/puppeteer-extra-plugin-laodeng':
+        specifier: workspace:*
+        version: link:../laodeng
+      '@geekgeekrun/sqlite-plugin':
+        specifier: workspace:*
+        version: link:../sqlite-plugin
+      '@geekgeekrun/utils':
+        specifier: workspace:*
+        version: link:../utils
+      ghost-cursor:
+        specifier: ^1.3.1
+        version: 1.4.2
+      json5:
+        specifier: ^2.2.3
+        version: 2.2.3
+      puppeteer:
+        specifier: 24.19.0
+        version: 24.19.0(typescript@5.3.3)
+      puppeteer-extra:
+        specifier: 3.3.6
+        version: 3.3.6(puppeteer@24.19.0)
+      puppeteer-extra-plugin-anonymize-ua:
+        specifier: 2.4.6
+        version: 2.4.6(patch_hash=5bafoxpvwneq2ywcyjznkii37m)(puppeteer-extra@3.3.6)
+      puppeteer-extra-plugin-stealth:
+        specifier: 2.11.2
+        version: 2.11.2(puppeteer-extra@3.3.6)
+      tapable:
+        specifier: ^2.2.1
+        version: 2.2.1
+
   packages/dingtalk-plugin: {}
 
   packages/geek-auto-start-chat-with-boss:
@@ -104,6 +137,18 @@ importers:
       electron:
         specifier: 28.2.0
         version: 28.2.0
+
+  packages/run-core-of-boss-auto-browse:
+    dependencies:
+      '@geekgeekrun/boss-auto-browse-and-chat':
+        specifier: workspace:*
+        version: link:../boss-auto-browse-and-chat
+      '@geekgeekrun/sqlite-plugin':
+        specifier: workspace:*
+        version: link:../sqlite-plugin
+      '@geekgeekrun/utils':
+        specifier: workspace:*
+        version: link:../utils
 
   packages/run-core-of-geek-auto-start-chat-with-boss:
     dependencies:
@@ -159,6 +204,9 @@ importers:
       '@electron-toolkit/utils':
         specifier: ^3.0.0
         version: 3.0.0(electron@39.2.7)
+      '@geekgeekrun/boss-auto-browse-and-chat':
+        specifier: workspace:*
+        version: link:../boss-auto-browse-and-chat
       '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
         specifier: workspace:*
         version: link:../launch-bosszhipin-login-page-with-preload-extension
@@ -1687,6 +1735,10 @@ packages:
   /@tsconfig/node16@1.0.4:
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
 
+  /@types/bezier-js@4.1.3:
+    resolution: {integrity: sha512-FNVVCu5mx/rJCWBxLTcL7oOajmGtWtBTDjq6DSUWUI12GeePivrZZXz+UgE0D6VYsLEjvExRO03z4hVtu3pTEQ==}
+    dev: false
+
   /@types/cacheable-request@6.0.3:
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
     dependencies:
@@ -2704,6 +2756,10 @@ packages:
       prebuild-install: 7.1.3
     dev: false
 
+  /bezier-js@6.1.4:
+    resolution: {integrity: sha512-PA0FW9ZpcHbojUCMu28z9Vg/fNkwTj5YhusSAjHHDfHDGLxJ6YUKrAN2vk1fP2MMOxVw4Oko16FMlRGVBGqLKg==}
+    dev: false
+
   /binary-extensions@2.2.0:
     resolution: {integrity: sha512-jDctJ/IVQbZoJykoeHbhXpOlNBqGNcwXJKJog42E5HDPUwQTSdjCHdihjj0DlnheQ7blbT6dHOafNAiS8ooQKA==}
     engines: {node: '>=8'}
@@ -3223,13 +3279,8 @@ packages:
     resolution: {integrity: sha512-vjAczensTgRcqDERK0SR2XMwsF/tSvnvlv6VcF2GIhg6Sx4yOIt/irsr1RDJsKiIyBzJDpCoXiWWq28MqH2cnQ==}
     dev: false
 
-  /dayjs@1.11.13:
-    resolution: {integrity: sha512-oaMBel6gjolK862uaPQOVTA7q3TZhuSvuMQAAglQDOWYO9A91IrAOUJEyKVlqJlHE0vq5p5UXxzdPfMH/x6xNg==}
-    dev: true
-
   /dayjs@1.11.19:
     resolution: {integrity: sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==}
-    dev: false
 
   /de-indent@1.0.2:
     resolution: {integrity: sha512-e/1zu3xH5MQryN2zdVaF0OrdNLUbvWxzMbi+iNA6Bky7l1RoP8a2fIbRocyHclXt/arDrrR6lL3TqFD9pMQTsg==}
@@ -3595,7 +3646,7 @@ packages:
       '@types/lodash-es': 4.17.12
       '@vueuse/core': 9.13.0(vue@3.4.15)
       async-validator: 4.2.5
-      dayjs: 1.11.13
+      dayjs: 1.11.19
       escape-html: 1.0.3
       lodash: 4.17.21
       lodash-es: 4.17.21
@@ -4254,6 +4305,16 @@ packages:
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color
+
+  /ghost-cursor@1.4.2:
+    resolution: {integrity: sha512-NPMuH05Ik9h99zrAb4fvAzhB4T6MqKwdPoI+Me0IJWN3676j4UoAsjKN/cJq5AG4zyZwAEPPggZXHVU0P57/5g==}
+    dependencies:
+      '@types/bezier-js': 4.1.3
+      bezier-js: 6.1.4
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /github-from-package@0.0.0:
     resolution: {integrity: sha512-SyHy3T1v2NUXn29OsWdxmK6RwHD+vkj3v8en8AOBZ1wBQ/hCAQ5bAQTD02kW4W9tUp/3Qh6J8r9EvntiyCmOOw==}

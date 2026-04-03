@@ -61,6 +61,34 @@ const runMode = commandlineArgs['mode']
       await import('./flow/LAUNCH_DAEMON')
       break
     }
+    case 'bossAutoBrowseAndChatMain': {
+      const { waitForProcessHandShakeAndRunAutoChat } = await import(
+        './flow/BOSS_AUTO_BROWSE_AND_CHAT_MAIN/index'
+      )
+      waitForProcessHandShakeAndRunAutoChat()
+      break
+    }
+    case 'bossRecommendMain': {
+      const { waitForProcessHandShakeAndRunAutoChat } = await import(
+        './flow/BOSS_RECOMMEND_MAIN/index'
+      )
+      waitForProcessHandShakeAndRunAutoChat()
+      break
+    }
+    case 'bossChatPageMain': {
+      const { waitForProcessHandShakeAndRunAutoChat } = await import(
+        './flow/BOSS_CHAT_PAGE_MAIN/index'
+      )
+      waitForProcessHandShakeAndRunAutoChat()
+      break
+    }
+    case 'bossChatDebugMain': {
+      const { waitForProcessHandShakeAndRunDebug } = await import(
+        './flow/BOSS_CHAT_DEBUG_MAIN/index'
+      )
+      waitForProcessHandShakeAndRunDebug()
+      break
+    }
     // #endregion
 
     // #region user entry

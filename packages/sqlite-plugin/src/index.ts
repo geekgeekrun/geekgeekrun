@@ -20,6 +20,8 @@ import { VMarkAsNotSuitLog } from "./entity/VMarkAsNotSuitLog"
 import { ChatMessageRecord } from './entity/ChatMessageRecord'
 import { LlmModelUsageRecord } from './entity/LlmModelUsageRecord'
 import { JobHireStatusRecord } from './entity/JobHireStatusRecord'
+import { CandidateInfo } from './entity/CandidateInfo'
+import { CandidateContactLog } from './entity/CandidateContactLog'
 
 import {
   saveChatStartupRecord,
@@ -38,6 +40,7 @@ import { AddColumnForMarkAsNotSuitLog1746092370665 } from "./migrations/17460923
 import { Init1000000000000 } from "./migrations/1000000000000-Init";
 import { AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526 } from "./migrations/1752380078526-AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog";
 import { AddJobHireStatusTable1766466476822 } from "./migrations/1766466476822-AddJobHireStatusTable";
+import { AddCandidateTables1766466476823 } from "./migrations/1766466476823-AddCandidateTables";
 import chunk from 'lodash/chunk'
 import * as typeorm from 'typeorm'
 
@@ -69,6 +72,8 @@ export function initDb(dbFilePath) {
       ChatMessageRecord,
       LlmModelUsageRecord,
       JobHireStatusRecord,
+      CandidateInfo,
+      CandidateContactLog,
     ],
     migrations: [
       Init1000000000000,
@@ -76,7 +81,8 @@ export function initDb(dbFilePath) {
       UpdateBossInfoTable1732032381304,
       AddColumnForMarkAsNotSuitLog1746092370665,
       AddJobSourceColumnForChatStartupLogAndMarkAsNotSuitLog1752380078526,
-      AddJobHireStatusTable1766466476822
+      AddJobHireStatusTable1766466476822,
+      AddCandidateTables1766466476823
     ],
     migrationsRun: true
   });
@@ -95,26 +101,30 @@ export default class SqlitePlugin {
   userInfo = null
 
   apply(hooks) {
-    hooks.pageGotten.tap(
-      'SqlitePlugin',
-      (page) => {
-        page.on('response', async (response) => {
-          const ds = await this.initPromise;
-          if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
-            const data = await response.json()
-            if (data.code === 0) {
-              await saveJobInfoFromRecommendPage(await ds, data.zpData)
-              await saveJobHireStatusRecord(await ds, {
-                encryptJobId: data.zpData.jobInfo.encryptId,
-                hireStatus: JobHireStatus.HIRING,
-                lastSeenDate: new Date()
-              })
+    // 仅当调用方提供对应 hook 时才注册（geek 端有 pageGotten/userInfoResponse 等，招聘端是 beforeBrowserLaunch/onCandidateListLoaded 等，无则跳过）
+    if (hooks.pageGotten) {
+      hooks.pageGotten.tap(
+        'SqlitePlugin',
+        (page) => {
+          page.on('response', async (response) => {
+            const ds = await this.initPromise;
+            if (response.url().startsWith('https://www.zhipin.com/wapi/zpgeek/job/detail.json')) {
+              const data = await response.json()
+              if (data.code === 0) {
+                await saveJobInfoFromRecommendPage(await ds, data.zpData)
+                await saveJobHireStatusRecord(await ds, {
+                  encryptJobId: data.zpData.jobInfo.encryptId,
+                  hireStatus: JobHireStatus.HIRING,
+                  lastSeenDate: new Date()
+                })
+              }
             }
-          }
-        })
-      }
-    )
-    hooks.userInfoResponse.tapPromise(
+          })
+        }
+      )
+    }
+    if (hooks.userInfoResponse) {
+      hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
       async (userInfoResponse) => {
         if (!userInfoResponse || userInfoResponse.code !== 0) {
@@ -134,7 +144,9 @@ export default class SqlitePlugin {
         return await userInfoRepository.save(user);
       }
     );
-    hooks.mainFlowWillLaunch.tapPromise(
+    }
+    if (hooks.mainFlowWillLaunch) {
+      hooks.mainFlowWillLaunch.tapPromise(
       "SqlitePlugin",
       async ({
         jobNotMatchStrategy,
@@ -212,40 +224,47 @@ export default class SqlitePlugin {
         }
       }
     );
+    }
 
-    hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async (_jobInfo) => {
-      const ds = await this.initPromise;
-      await saveJobInfoFromRecommendPage(ds, _jobInfo);
-    });
-
-    hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async ({ jobInfo }) => {
-      const ds = await this.initPromise;
-      return await saveJobHireStatusRecord(ds, {
-        encryptJobId: jobInfo.encryptId,
-        hireStatus: JobHireStatus.HIRING,
-        lastSeenDate: new Date()
+    if (hooks.jobDetailIsGetFromRecommendList) {
+      hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async (_jobInfo) => {
+        const ds = await this.initPromise;
+        await saveJobInfoFromRecommendPage(ds, _jobInfo);
       });
-    });
 
-    hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo, { chatStartupFrom = ChatStartupFrom.AutoFromRecommendList, jobSource = undefined } = {}) => {
-      const ds = await this.initPromise;
-      return await saveChatStartupRecord(ds, _jobInfo, this.userInfo, {
-        autoStartupChatRecordId: this.runRecordId,
-        chatStartupFrom,
-        jobSource
+      hooks.jobDetailIsGetFromRecommendList.tapPromise("SqlitePlugin", async ({ jobInfo }) => {
+        const ds = await this.initPromise;
+        return await saveJobHireStatusRecord(ds, {
+          encryptJobId: jobInfo.encryptId,
+          hireStatus: JobHireStatus.HIRING,
+          lastSeenDate: new Date()
+        });
       });
-    });
+    }
 
-    hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined, markOp = undefined, jobSource = undefined } = {}) => {
-      const ds = await this.initPromise;
-      return await saveMarkAsNotSuitRecord(ds, _jobInfo, this.userInfo, {
-        autoStartupChatRecordId: this.runRecordId,
-        markFrom,
-        markReason,
-        extInfo,
-        markOp,
-        jobSource
+    if (hooks.newChatStartup) {
+      hooks.newChatStartup.tapPromise("SqlitePlugin", async (_jobInfo, { chatStartupFrom = ChatStartupFrom.AutoFromRecommendList, jobSource = undefined } = {}) => {
+        const ds = await this.initPromise;
+        return await saveChatStartupRecord(ds, _jobInfo, this.userInfo, {
+          autoStartupChatRecordId: this.runRecordId,
+          chatStartupFrom,
+          jobSource
+        });
       });
-    });
+    }
+
+    if (hooks.jobMarkedAsNotSuit) {
+      hooks.jobMarkedAsNotSuit.tapPromise("SqlitePlugin", async (_jobInfo, { markFrom = ChatStartupFrom.AutoFromRecommendList, markReason = undefined, extInfo = undefined, markOp = undefined, jobSource = undefined } = {}) => {
+        const ds = await this.initPromise;
+        return await saveMarkAsNotSuitRecord(ds, _jobInfo, this.userInfo, {
+          autoStartupChatRecordId: this.runRecordId,
+          markFrom,
+          markReason,
+          extInfo,
+          markOp,
+          jobSource
+        });
+      });
+    }
   }
 }
