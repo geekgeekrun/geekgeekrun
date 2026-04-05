@@ -310,7 +310,12 @@ const mainLoop = async () => {
       console.log(`close browser failed`, err)
     }
     try {
-      await loginWithCookieAssistant()
+      try {
+        await app.dock?.show()
+        await loginWithCookieAssistant()
+      } finally {
+        await app.dock?.hide()
+      }
       bossCookies = readStorageFile('boss-cookies.json')
       cookieCheckResult = checkCookieListFormat(bossCookies)
     } catch (err) {
@@ -370,8 +375,12 @@ const mainLoop = async () => {
       console.log(`close browser failed`, err)
     }
     try {
-      // popup login dialog, then update login status
-      await loginWithCookieAssistant()
+      try {
+        await app.dock?.show()
+        await loginWithCookieAssistant()
+      } finally {
+        await app.dock?.hide()
+      }
     } catch (err) {
       await dialog.showMessageBox({
         type: `error`,

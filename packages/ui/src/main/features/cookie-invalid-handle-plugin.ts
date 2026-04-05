@@ -18,7 +18,19 @@ export class CookieInvalidHandlePlugin {
         }
         try {
           // popup login dialog, then update login status
-          await loginWithCookieAssistant()
+          let app
+          try {
+            app = (await import('electron')).app
+          } catch {
+            //
+          }
+          // popup login dialog, then update login status
+          try {
+            await app?.dock?.show()
+            await loginWithCookieAssistant()
+          } finally {
+            await app?.dock?.hide()
+          }
           await sleep(2000)
           const newCookies = readStorageFile('boss-cookies.json')
           isValid = checkCookieListFormat(newCookies)
@@ -82,7 +94,19 @@ export class CookieInvalidHandlePlugin {
       }
       try {
         // popup login dialog, then update login status
-        await loginWithCookieAssistant()
+        let app
+        try {
+          app = (await import('electron')).app
+        } catch {
+          //
+        }
+        // popup login dialog, then update login status
+        try {
+          await app?.dock?.show()
+          await loginWithCookieAssistant()
+        } finally {
+          await app?.dock?.hide()
+        }
       } catch (e) {
         if (e?.message === 'USER_CANCELLED_LOGIN') {
           sendToDaemon({
