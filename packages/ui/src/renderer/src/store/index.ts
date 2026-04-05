@@ -22,13 +22,13 @@ export const useUpdateStore = defineStore('update', () => {
 
 export const useTaskManagerStore = defineStore('taskManager', () => {
   const runningTasks = ref<unknown[]>([])
-  function getRunningTasks() {
+  async function getRunningTasks() {
     const { ipcRenderer } = electron
-    ipcRenderer.invoke('get-task-manager-list').then(res => {
-      runningTasks.value = res.workers ?? []
-    })
+    const res = await ipcRenderer.invoke('get-task-manager-list')
+    runningTasks.value = res.workers ?? []
   }
   const throttledGetRunningTasks = throttle(getRunningTasks, 2000)
   setInterval(throttledGetRunningTasks, 2 * 1000)
+  getRunningTasks()
   return { runningTasks, getRunningTasks: throttledGetRunningTasks }
 })
