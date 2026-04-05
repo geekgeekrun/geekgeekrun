@@ -66,6 +66,7 @@ const runAutoChat = async () => {
     })
     sendToDaemon({
       type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
       data: {
         type: 'prerequisite-step-by-step-check',
         step: {
@@ -80,6 +81,7 @@ const runAutoChat = async () => {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
       type: 'prerequisite-step-by-step-check',
       step: {
@@ -183,6 +185,7 @@ export const waitForProcessHandShakeAndRunAutoChat = async () => {
   )
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
       type: 'prerequisite-step-by-step-check',
       step: {

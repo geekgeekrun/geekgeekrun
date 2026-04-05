@@ -27,6 +27,7 @@ export class CookieInvalidHandlePlugin {
           if (e?.message === 'USER_CANCELLED_LOGIN') {
             sendToDaemon({
               type: 'worker-to-gui-message',
+              workerId: process.env.GEEKGEEKRUND_WORKER_ID,
               data: {
                 type: 'prerequisite-step-by-step-check',
                 step: {
@@ -42,6 +43,7 @@ export class CookieInvalidHandlePlugin {
       }
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
           type: 'prerequisite-step-by-step-check',
           step: {
@@ -56,6 +58,7 @@ export class CookieInvalidHandlePlugin {
       if (userInfoResponse.code === 0) {
         sendToDaemon({
           type: 'worker-to-gui-message',
+          workerId: process.env.GEEKGEEKRUND_WORKER_ID,
           data: {
             type: 'prerequisite-step-by-step-check',
             step: {
@@ -74,6 +77,7 @@ export class CookieInvalidHandlePlugin {
         if (e?.message === 'USER_CANCELLED_LOGIN') {
           sendToDaemon({
             type: 'worker-to-gui-message',
+            workerId: process.env.GEEKGEEKRUND_WORKER_ID,
             data: {
               type: 'prerequisite-step-by-step-check',
               step: {

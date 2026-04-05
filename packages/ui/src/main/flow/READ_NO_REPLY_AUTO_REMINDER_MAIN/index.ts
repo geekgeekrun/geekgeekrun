@@ -314,6 +314,7 @@ const mainLoop = async () => {
       })
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
           type: 'prerequisite-step-by-step-check',
           step: {
@@ -328,6 +329,7 @@ const mainLoop = async () => {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
       type: 'prerequisite-step-by-step-check',
       step: {
@@ -366,6 +368,7 @@ const mainLoop = async () => {
       })
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
           type: 'prerequisite-step-by-step-check',
           step: {
@@ -385,6 +388,7 @@ const mainLoop = async () => {
   ) {
     sendToDaemon({
       type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
       data: {
         type: 'prerequisite-step-by-step-check',
         step: {
@@ -418,6 +422,7 @@ const mainLoop = async () => {
       await storeStorage(pageMapByName.boss)
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
           type: 'prerequisite-step-by-step-check',
           step: {
@@ -432,6 +437,7 @@ const mainLoop = async () => {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
       type: 'prerequisite-step-by-step-check',
       step: {
@@ -681,6 +687,7 @@ export async function runEntry() {
   )
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
       type: 'prerequisite-step-by-step-check',
       step: {
@@ -707,6 +714,7 @@ export async function runEntry() {
     })
     sendToDaemon({
       type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
       data: {
         type: 'prerequisite-step-by-step-check',
         step: {
@@ -720,6 +728,7 @@ export async function runEntry() {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
       type: 'prerequisite-step-by-step-check',
       step: {
