@@ -103,7 +103,7 @@ const server = net.createServer((socket) => {
 
 // 处理消息
 function handleMessage(socket, message) {
-  console.log('收到消息:', message);
+  message.type !== 'get-status' && console.log('收到消息:', message);
   const _callbackUuid = message._callbackUuid
   if (message.type === 'ping') {
     sendResponse(socket, _callbackUuid, {
@@ -329,6 +329,7 @@ function startWorker({ workerId, command, args, env }, restartCount = 0) {
     status: 'running',
     startTime: Date.now(),
     restartCount, // 使用传入的重启次数
+    runtimeStorage: {},
     // socket: null, // 工具进程的TCP连接，稍后由工具进程注册
     // lastHeartbeat: null,
     command,
@@ -390,6 +391,7 @@ function getWorkersStatus() {
       status: workerInfo.status,
       uptime: Date.now() - workerInfo.startTime,
       restartCount: workerInfo.restartCount || 0,
+      runtimeStorage: workerInfo.runtimeStorage || {},
       // connected: workerInfo.socket !== null && !workerInfo.socket.destroyed,
       // lastHeartbeat: workerInfo.lastHeartbeat,
       command: workerInfo.command,
