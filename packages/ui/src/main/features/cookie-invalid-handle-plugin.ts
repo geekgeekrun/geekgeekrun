@@ -8,9 +8,14 @@ import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/run
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export class CookieInvalidHandlePlugin {
   apply(hooks) {
-    hooks.cookieWillSet.tapPromise('CookieInvalidHandlePlugin', async (cookies) => {
+    hooks.cookieWillSet.tapPromise('CookieInvalidHandlePlugin', async ({ cookies, browser } = {}) => {
       let isValid = checkCookieListFormat(cookies)
       while (!isValid) {
+        try {
+          browser && (await browser.close())
+        } catch (err) {
+          console.log(`close browser failed`, err)
+        }
         try {
           // popup login dialog, then update login status
           await loginWithCookieAssistant()
@@ -54,7 +59,7 @@ export class CookieInvalidHandlePlugin {
         }
       })
     })
-    hooks.userInfoResponse.tapPromise('CookieInvalidHandlePlugin', async (userInfoResponse) => {
+    hooks.userInfoResponse.tapPromise('CookieInvalidHandlePlugin', async ({ userInfoResponse, browser } = {}) => {
       if (userInfoResponse.code === 0) {
         sendToDaemon({
           type: 'worker-to-gui-message',
@@ -69,6 +74,11 @@ export class CookieInvalidHandlePlugin {
           }
         })
         return
+      }
+      try {
+        browser && (await browser.close())
+      } catch (err) {
+        console.log(`close browser failed`, err)
       }
       try {
         // popup login dialog, then update login status

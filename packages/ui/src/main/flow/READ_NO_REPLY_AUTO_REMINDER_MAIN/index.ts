@@ -89,7 +89,9 @@ const onlyRemindBossWithoutBlockCompanyName =
   readConfigFile('boss.json').autoReminder?.onlyRemindBossWithoutBlockCompanyName ??
   !!blockCompanyNameRegExp
 
-const openContentSource = readConfigFile('boss.json').autoReminder?.openContentSource ?? OPEN_CONTENT_SOURCE.CONSTANT_CONTENT
+const openContentSource =
+  readConfigFile('boss.json').autoReminder?.openContentSource ??
+  OPEN_CONTENT_SOURCE.CONSTANT_CONTENT
 const constantOpenContent = (() => {
   let constantOpenContent = readConfigFile('boss.json').autoReminder?.constantOpenContent ?? ''
   if (constantOpenContent?.trim?.()) {
@@ -303,6 +305,11 @@ const mainLoop = async () => {
   let cookieCheckResult = checkCookieListFormat(bossCookies)
   while (!cookieCheckResult) {
     try {
+      browser && (await browser.close())
+    } catch (err) {
+      console.log(`close browser failed`, err)
+    }
+    try {
       await loginWithCookieAssistant()
       bossCookies = readStorageFile('boss-cookies.json')
       cookieCheckResult = checkCookieListFormat(bossCookies)
@@ -357,6 +364,11 @@ const mainLoop = async () => {
   // #region
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
     writeStorageFile('boss-cookies.json', [])
+    try {
+      browser && (await browser.close())
+    } catch (err) {
+      console.log(`close browser failed`, err)
+    }
     try {
       // popup login dialog, then update login status
       await loginWithCookieAssistant()
