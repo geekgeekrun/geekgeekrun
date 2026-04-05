@@ -28,7 +28,7 @@ export class CookieInvalidHandlePlugin {
             sendToDaemon({
               type: 'worker-to-gui-message',
               data: {
-                type: 'prerequisite-step-by-step-checkstep-by-step-check',
+                type: 'prerequisite-step-by-step-check',
                 step: {
                   id: 'basic-cookie-check',
                   status: 'rejected'
@@ -43,7 +43,7 @@ export class CookieInvalidHandlePlugin {
       sendToDaemon({
         type: 'worker-to-gui-message',
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'basic-cookie-check',
             status: 'fulfilled'
@@ -57,7 +57,7 @@ export class CookieInvalidHandlePlugin {
         sendToDaemon({
           type: 'worker-to-gui-message',
           data: {
-            type: 'prerequisite-step-by-step-checkstep-by-step-check',
+            type: 'prerequisite-step-by-step-check',
             step: {
               id: 'login-status-check',
               status: 'fulfilled'
@@ -75,7 +75,7 @@ export class CookieInvalidHandlePlugin {
           sendToDaemon({
             type: 'worker-to-gui-message',
             data: {
-              type: 'prerequisite-step-by-step-checkstep-by-step-check',
+              type: 'prerequisite-step-by-step-check',
               step: {
                 id: 'login-status-check',
                 status: 'rejected'

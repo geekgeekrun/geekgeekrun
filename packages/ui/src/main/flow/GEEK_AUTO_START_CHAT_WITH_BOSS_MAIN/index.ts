@@ -67,7 +67,7 @@ const runAutoChat = async () => {
     sendToDaemon({
       type: 'worker-to-gui-message',
       data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        type: 'prerequisite-step-by-step-check',
         step: {
           id: 'puppeteer-executable-check',
           status: 'rejected'
@@ -81,7 +81,7 @@ const runAutoChat = async () => {
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'puppeteer-executable-check',
         status: 'fulfilled'
@@ -184,7 +184,7 @@ export const waitForProcessHandShakeAndRunAutoChat = async () => {
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'worker-launch',
         status: 'fulfilled'

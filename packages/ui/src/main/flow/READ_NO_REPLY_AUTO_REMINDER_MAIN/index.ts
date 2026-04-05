@@ -315,7 +315,7 @@ const mainLoop = async () => {
       sendToDaemon({
         type: 'worker-to-gui-message',
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'basic-cookie-check',
             status: 'rejected'
@@ -329,7 +329,7 @@ const mainLoop = async () => {
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'basic-cookie-check',
         status: 'fulfilled'
@@ -367,7 +367,7 @@ const mainLoop = async () => {
       sendToDaemon({
         type: 'worker-to-gui-message',
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'login-status-check',
             status: 'rejected'
@@ -386,7 +386,7 @@ const mainLoop = async () => {
     sendToDaemon({
       type: 'worker-to-gui-message',
       data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        type: 'prerequisite-step-by-step-check',
         step: {
           id: 'login-status-check',
           status: 'rejected'
@@ -419,7 +419,7 @@ const mainLoop = async () => {
       sendToDaemon({
         type: 'worker-to-gui-message',
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'login-status-check',
             status: 'rejected'
@@ -433,7 +433,7 @@ const mainLoop = async () => {
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'login-status-check',
         status: 'fulfilled'
@@ -682,7 +682,7 @@ export async function runEntry() {
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'worker-launch',
         status: 'fulfilled'
@@ -708,7 +708,7 @@ export async function runEntry() {
     sendToDaemon({
       type: 'worker-to-gui-message',
       data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        type: 'prerequisite-step-by-step-check',
         step: {
           id: 'puppeteer-executable-check',
           status: 'rejected'
@@ -721,7 +721,7 @@ export async function runEntry() {
   sendToDaemon({
     type: 'worker-to-gui-message',
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'puppeteer-executable-check',
         status: 'fulfilled'

@@ -121,10 +121,7 @@ watch(
 
 const { ipcRenderer } = electron
 function messageHandler(ev, { data }) {
-  if (
-    data.type !== 'prerequisite-step-by-step-checkstep-by-step-check' ||
-    data.runRecordId !== props.runRecordId
-  ) {
+  if (data.type !== 'prerequisite-step-by-step-check' || data.runRecordId !== props.runRecordId) {
     return
   }
   const { id: stepId, status: stepStatus } = data.step
