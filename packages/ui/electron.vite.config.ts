@@ -63,14 +63,16 @@ export default defineConfig({
       rollupOptions: {
         external: []
       },
-      minify: process.env.NODE_ENV === 'development' ? undefined : 'terser'
+      minify: process.env.NODE_ENV === 'development' ? undefined : 'terser',
+      watch: process.env.NODE_ENV === 'development' ? {} : undefined
     },
     plugins: mainPlugins
   },
   preload: {
     plugins: preloadPlugins,
     build: {
-      minify: process.env.NODE_ENV === 'development' ? undefined : 'terser'
+      minify: process.env.NODE_ENV === 'development' ? undefined : 'terser',
+      watch: process.env.NODE_ENV === 'development' ? {} : undefined
     }
   },
   renderer: {
