@@ -1,6 +1,6 @@
 {
   "name": "@geekgeekrun/puppeteer-extra-plugin-laodeng",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "laodeng",
   "main": "./index.js",
   "author": "geekgeekrun",
