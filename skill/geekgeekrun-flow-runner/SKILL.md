@@ -5,7 +5,7 @@ description: "Manage GeekGeekRun auto-chat by calling the repo's PowerShell wrap
 
 # GeekGeekRun Flow Runner
 
-Use this skill as a thin orchestration layer over the repo scripts in [`F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner`](F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner). Do not click the UI or automate browser actions from the skill. Only call the scripts and interpret their JSON output.
+Use this skill as a thin orchestration layer over the repo scripts in `skill/geekgeekrun-flow-runner`. Do not click the UI or automate browser actions from the skill. Only call the scripts and interpret their JSON output.
 
 ## Available Flow
 
@@ -13,20 +13,20 @@ Use this skill as a thin orchestration layer over the repo scripts in [`F:\Git\g
 
 ## Script Root
 
-Use absolute script paths when invoking PowerShell:
+Use repo-relative script paths when invoking PowerShell:
 
 ```powershell
-$GGR_SCRIPTS = "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts"
+$GGR_SCRIPTS = ".\skill\geekgeekrun-flow-runner\scripts"
 ```
 
-The scripts resolve the repo root from their own location. Do not hardcode `F:\Git\geekgeekrun` anywhere outside the command lines.
+The scripts resolve the repo root from their own location. Do not hardcode a machine-specific repo path.
 
 ## Core Commands
 
 Check one flow before acting:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\status-flow.ps1" -Flow auto-chat
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\status-flow.ps1" -Flow auto-chat
 ```
 
 For `auto-chat`, `status-flow.ps1` can also return `startupReady` from the repo runtime:
@@ -38,13 +38,13 @@ For `auto-chat`, `status-flow.ps1` can also return `startupReady` from the repo 
 Start auto-chat:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1"
 ```
 
 Stop one flow:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\stop-flow.ps1" -Flow auto-chat
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\stop-flow.ps1" -Flow auto-chat
 ```
 
 `stop-flow.ps1` now returns JSON that can include:
@@ -62,14 +62,14 @@ Important:
 Authoritative follow-up query:
 
 ```powershell
-python "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\get-run-stop-summary.py" --flow auto-chat --run-record-id "<runRecordId>"
+python ".\skill\geekgeekrun-flow-runner\scripts\get-run-stop-summary.py" --flow auto-chat --run-record-id "<runRecordId>"
 ```
 
 ## Auto-Chat Rules
 
 `start-auto-chat.ps1` now has a repo-managed default profile strategy. If no arguments are passed, it reads:
 
-- [`F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\defaults\auto-chat.json`](F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\defaults\auto-chat.json)
+- `skill/geekgeekrun-flow-runner/defaults/auto-chat.json`
 
 The default scheme is:
 
@@ -79,13 +79,13 @@ The default scheme is:
 Use plain startup first:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1"
 ```
 
 If auto-chat needs a temporary override, pass `-UserDataDir`.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1" -UserDataDir "F:\Git\geekgeekrun\.runtime\user-data\auto-chat"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1" -UserDataDir ".\.runtime\user-data\auto-chat"
 ```
 
 When `-UserDataDir` is provided and `-SessionInjectionMode` is omitted, the script defaults to `none`. Keep that default unless you are intentionally running a session-injection experiment.
@@ -94,12 +94,43 @@ If the user previously completed manual login in a fixed `userDataDir`, restart 
 
 ## Optional Config Patch
 
-Start scripts accept either `-ConfigPatchJson` or `-ConfigPatchFile`. They patch `C:\Users\greed\.geekgeekrun\config\boss.json` before launch.
+Start scripts accept either `-ConfigPatchJson` or `-ConfigPatchFile`. They patch `C:\Users\<your-user>\.geekgeekrun\config\boss.json` before launch.
 
 Example:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "F:\Git\geekgeekrun\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1" -ConfigPatchJson '{"expectSalaryLow":9,"expectSalaryHigh":20}'
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1" -ConfigPatchJson '{"expectSalaryLow":9,"expectSalaryHigh":20}'
+```
+
+## Current-Branch Tuning
+
+When tuning `auto-chat` on the current feature branch, these knobs are enforced by the runtime:
+
+- `jobSourceList.search.children`
+- `expectJobNameRegExpStr`
+- `expectJobTypeRegExpStr`
+- `expectJobDescRegExpStr`
+- `jobDetailRegExpMatchLogic`
+- `expectCityList`
+- `expectWorkExpList`
+- `expectSalaryLow` / `expectSalaryHigh`
+- `blockCompanyNameRegExpStr`
+- `markAsNotActiveSelectedTimeRange`
+- `combineRecommendJobFilterType`
+- `staticCombineRecommendJobFilterConditions`
+- `fieldsForUseCommonConfig`
+- `combinedMatching`
+- `searchSourceRequireTechStack`
+- `searchSourceTechStackRegExpStr`
+- `searchKeywordDegradation`
+- `reliabilityProtection`
+
+For targeted search-mode runs, narrow the search keywords first and then tighten the three job-detail regex fields. Prefer backend-leaning titles over broad AI terms so the search result set does not drift into product, support, ops, or pure algorithm roles. If search quality still drifts, use `combinedMatching`, `searchSourceRequireTechStack`, and `searchKeywordDegradation` together instead of relying on title regex alone.
+
+Targeted search patch example:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1" -ConfigPatchFile ".\skill\geekgeekrun-flow-runner\defaults\auto-chat-search-targeted.json"
 ```
 
 ## Expected OpenClaw Flow

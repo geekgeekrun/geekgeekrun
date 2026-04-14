@@ -119,6 +119,45 @@ BOSS不明原因已读不回？简历就是投不出去？
 
 <img width="1024" alt="image" src="https://github.com/user-attachments/assets/f0c7453d-454e-494a-8c03-246107b1384f" />
 
+## Skill 模块
+
+仓库内提供了一个可直接调用脚本的 skill 模块：
+
+- 路径：`skill/geekgeekrun-flow-runner`
+- 说明：通过 PowerShell 脚本统一管理 `auto-chat` 的启动、状态查询、停止与停止后的摘要查询
+
+### 简要使用说明
+
+1. 启动自动开聊
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\start-auto-chat.ps1"
+   ```
+
+2. 查询运行状态
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\status-flow.ps1" -Flow auto-chat
+   ```
+
+3. 停止流程
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File ".\skill\geekgeekrun-flow-runner\scripts\stop-flow.ps1" -Flow auto-chat
+   ```
+
+4. 如返回了 `runRecordId`，再查询权威摘要
+
+   ```powershell
+   python ".\skill\geekgeekrun-flow-runner\scripts\get-run-stop-summary.py" --flow auto-chat --run-record-id "<runRecordId>"
+   ```
+
+### 配置说明
+
+- 仓库内的 [`packages/geek-auto-start-chat-with-boss/default-config-file/boss.json`](./packages/geek-auto-start-chat-with-boss/default-config-file/boss.json) 是 example/default 配置模板，用于说明字段结构和默认值
+- 实际运行时请使用用户目录下的真实配置文件，例如 `C:\Users\<your-user>\.geekgeekrun\config\boss.json`
+- 不要把个人求职偏好、Cookie、localStorage 等运行时配置提交到仓库
+
 
 ## 系统要求
 - 操作系统及处理器

@@ -20,6 +20,14 @@
   "expectCityList": [],
   "expectCityNotMatchStrategy": 3,
   "strategyScopeOptionWhenMarkJobCityNotMatch": 2,
+  "expectSalaryLow": null,
+  "expectSalaryHigh": null,
+  "expectSalaryCalculateWay": 1,
+  "expectSalaryNotMatchStrategy": 3,
+  "strategyScopeOptionWhenMarkSalaryNotMatch": 2,
+  "expectWorkExpList": [],
+  "expectWorkExpNotMatchStrategy": 3,
+  "strategyScopeOptionWhenMarkJobWorkExpNotMatch": 2,
   "jobDetailRegExpMatchLogic": 1,
   "autoReminder": {
     "throttleIntervalMinutes": 10,
@@ -28,7 +36,19 @@
     "rechatContentSource": 1,
     "recentMessageQuantityForLlm": 8,
     "rechatLlmFallback": 1,
-    "onlyRemindBossWithExpectJobType": true
+    "onlyRemindBossWithExpectJobType": true,
+    "openclaw": {
+      "enabled": false,
+      "launcherAgentId": "qq-boss-orchestrator",
+      "conversationAgentId": "boss-chat-agent",
+      "agentId": "boss-chat-agent",
+      "channelName": "boss",
+      "transport": "gateway",
+      "autoWake": true,
+      "autoReply": true,
+      "lowConfidenceThreshold": 0.65,
+      "timeoutSeconds": 120
+    }
   },
   "jobSourceList": [
     {
@@ -40,5 +60,40 @@
   "sageTimeOpTimes": 100,
   "sageTimePauseMinute": 15,
   "blockCompanyNameRegExpStr": "",
-  "fieldsForUseCommonConfig": {}
+  "blockCompanyNameRegMatchStrategy": 3,
+  "fieldsForUseCommonConfig": {},
+  "cityMode": "soft",
+  "reliabilityProtection": {
+    "enabled": false,
+    "unreliableThreshold": 10,
+    "actionOnThreshold": "skipSource"
+  },
+  "combinedMatching": {
+    "enabled": false,
+    "includeKeywords": {
+      "title": [],
+      "positionType": [],
+      "description": []
+    },
+    "excludeKeywords": {
+      "title": [],
+      "positionType": [],
+      "description": []
+    },
+    "synonymGroups": [],
+    "scoreThreshold": 1,
+    "fieldWeights": {
+      "title": 1,
+      "positionType": 1,
+      "description": 1,
+      "regex": 0.5
+    }
+  },
+  "searchKeywordDegradation": {
+    "enabled": false,
+    "degradationThreshold": 10,
+    "actionOnDegradation": "skipKeyword"
+  },
+  "searchSourceRequireTechStack": false,
+  "searchSourceTechStackRegExpStr": ""
 }

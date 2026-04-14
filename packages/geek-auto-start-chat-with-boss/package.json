@@ -1,15 +1,1 @@
-{
-  "name": "@geekgeekrun/geek-auto-start-chat-with-boss",
-  "private": true,
-  "version": "1.0.0",
-  "description": "geek-auto-start-chat-with-boss",
-  "module": "./index.mjs",
-  "type": "module",
-  "scripts": {
-  },
-  "author": "geekgeekrun",
-  "license": "ISC",
-  "dependencies": {
-    "@geekgeekrun/utils": "workspace:*"
-  }
-}
+{   "name": "@geekgeekrun/geek-auto-start-chat-with-boss",   "private": true,   "version": "1.0.0",   "description": "geek-auto-start-chat-with-boss",   "module": "./index.mjs",   "type": "module",   "scripts": {   },   "author": "geekgeekrun",   "license": "ISC",   "dependencies": {     "@geekgeekrun/sqlite-plugin": "workspace:*",     "@geekgeekrun/utils": "workspace:*"   } }
