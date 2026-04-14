@@ -80,9 +80,22 @@ async function request(message, timeoutMs = 8000) {
 }
 
 async function main() {
-  const [command, arg] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const timeoutFlagIndex = argv.findIndex((item) => item === '--timeout-ms');
+  let timeoutMs = 8000;
+  if (timeoutFlagIndex >= 0) {
+    const rawTimeout = argv[timeoutFlagIndex + 1];
+    const parsedTimeout = Number.parseInt(rawTimeout ?? '', 10);
+    if (!Number.isFinite(parsedTimeout) || parsedTimeout <= 0) {
+      throw new Error(`invalid --timeout-ms value: ${rawTimeout}`);
+    }
+    timeoutMs = parsedTimeout;
+    argv.splice(timeoutFlagIndex, 2);
+  }
+
+  const [command, arg] = argv;
   if (!command) {
-    throw new Error('usage: node daemon-client.mjs <ping|get-status|stop-worker> [workerId]');
+    throw new Error('usage: node daemon-client.mjs [--timeout-ms N] <ping|get-status|stop-worker> [workerId]');
   }
 
   let message;
@@ -103,7 +116,7 @@ async function main() {
       throw new Error(`unsupported command: ${command}`);
   }
 
-  const result = await request(message);
+  const result = await request(message, timeoutMs);
   console.log(JSON.stringify(result, null, 2));
 }
 
