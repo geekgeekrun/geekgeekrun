@@ -1,0 +1,57 @@
+{
+  "jobSourceList": [
+    {
+      "type": "recommend",
+      "enabled": false
+    },
+    {
+      "type": "expect",
+      "enabled": false
+    },
+    {
+      "type": "search",
+      "enabled": true,
+      "children": [
+        {
+          "enabled": true,
+          "keyword": "AI后端开发工程师"
+        },
+        {
+          "enabled": true,
+          "keyword": "智能体后端工程师"
+        },
+        {
+          "enabled": true,
+          "keyword": "LLM后端开发工程师"
+        },
+        {
+          "enabled": true,
+          "keyword": "RAG开发工程师"
+        },
+        {
+          "enabled": true,
+          "keyword": "MCP开发工程师"
+        },
+        {
+          "enabled": true,
+          "keyword": "AI应用开发工程师"
+        },
+        {
+          "enabled": true,
+          "keyword": "大模型后端开发工程师"
+        }
+      ]
+    }
+  ],
+  "expectJobNameRegExpStr": "(AI\\s*Agent|智能体|LLM|RAG|大模型|MCP).*(后端|开发|工程师|平台)|(后端|开发|工程师|平台).*(AI\\s*Agent|智能体|LLM|RAG|大模型|MCP)",
+  "expectJobTypeRegExpStr": "(Python|Java|Go|Golang|后端开发|其他后端开发|服务端开发|平台开发|平台工程)",
+  "expectJobDescRegExpStr": "(Python|FastAPI|Django|Flask|Java|Spring\\s*Boot|Go|Golang|Gin|Node\\.js|TypeScript|LangChain|LangGraph|RAG|MCP|OpenAI|Anthropic|Docker|Redis|MySQL|PostgreSQL|向量数据库|Embedding|模型部署|服务端|后端|API|工作流|工具调用|函数调用|Agent框架|智能体框架)",
+  "jobDetailRegExpMatchLogic": 1,
+  "expectWorkExpList": [
+    "经验不限",
+    "1年以内",
+    "1-3年",
+    "在校/应届"
+  ],
+  "markAsNotActiveSelectedTimeRange": 6
+}
