@@ -7,6 +7,7 @@ export enum MarkAsNotSuitReason {
   JOB_WORK_EXP_NOT_SUIT = 5,
   JOB_SALARY_NOT_SUIT = 6,
   COMPANY_NAME_NOT_SUIT = 7,
+  POSTER_TITLE_NOT_SUIT = 8,
 }
 
 export enum MarkAsNotSuitOp {

@@ -1559,6 +1559,56 @@
                         max-h-6lh
                       />
                     </el-form-item>
+                    <div class="col-span-2 mt10px">
+                      <el-checkbox
+                        v-if="!formContent.fieldsForUseCommonConfig.jobDetail"
+                        v-model="formContent.isPosterHrFilterEnabled"
+                        >仅保留人事/招聘方发布的岗位</el-checkbox
+                      >
+                      <el-checkbox
+                        v-else
+                        :model-value="commonJobConditionConfig.isPosterHrFilterEnabled"
+                        disabled
+                        inert
+                        >仅保留人事/招聘方发布的岗位</el-checkbox
+                      >
+                    </div>
+                    <el-form-item
+                      v-if="!formContent.fieldsForUseCommonConfig.jobDetail && formContent.isPosterHrFilterEnabled"
+                      mb0
+                      prop="posterHrTitleRegExpStr"
+                      class="col-span-2"
+                    >
+                      <div ref="posterHrTitleRegExpSectionEl" font-size-12px>
+                        BOSS身份正则白名单（不区分大小写）
+                      </div>
+                      <el-input
+                        v-model="formContent.posterHrTitleRegExpStr"
+                        type="textarea"
+                        placeholder="HR|HRBP|HRG|Recruiter|Talent Acquisition|招聘|人事|人力|人资"
+                        :autosize="{ minRows: 2 }"
+                        max-h-6lh
+                        @blur="
+                          formContent.posterHrTitleRegExpStr =
+                            formContent.posterHrTitleRegExpStr?.trim() ?? ''
+                        "
+                      />
+                    </el-form-item>
+                    <el-form-item
+                      v-else-if="formContent.fieldsForUseCommonConfig.jobDetail && commonJobConditionConfig.isPosterHrFilterEnabled"
+                      mb0
+                      class="col-span-2"
+                    >
+                      <div font-size-12px>BOSS身份正则白名单（不区分大小写）</div>
+                      <el-input
+                        :model-value="commonJobConditionConfig.posterHrTitleRegExpStr"
+                        disabled
+                        inert
+                        type="textarea"
+                        :autosize="{ minRows: 2 }"
+                        max-h-6lh
+                      />
+                    </el-form-item>
                   </div>
                 </div>
                 <div
@@ -1567,7 +1617,10 @@
                       formContent: !formContent.fieldsForUseCommonConfig.jobDetail
                         ? formContent
                         : commonJobConditionConfig
-                    })
+                    }) ||
+                    (!formContent.fieldsForUseCommonConfig.jobDetail
+                      ? formContent.isPosterHrFilterEnabled
+                      : commonJobConditionConfig.isPosterHrFilterEnabled)
                   "
                   :style="{
                     width: '400px',
@@ -1576,13 +1629,62 @@
                     flex: `0 0 auto`
                   }"
                 >
-                  <div class="mt10px lh-2em font-size-12px">
+                  <div
+                    v-if="
+                      !isJobDetailRegExpEmpty({
+                        formContent: !formContent.fieldsForUseCommonConfig.jobDetail
+                          ? formContent
+                          : commonJobConditionConfig
+                      })
+                    "
+                    class="mt10px lh-2em font-size-12px"
+                  >
                     当前职位名称/类型/描述不符合投递条件时：
                   </div>
-                  <el-form-item mb0>
+                  <el-form-item
+                    v-if="
+                      !isJobDetailRegExpEmpty({
+                        formContent: !formContent.fieldsForUseCommonConfig.jobDetail
+                          ? formContent
+                          : commonJobConditionConfig
+                      })
+                    "
+                    mb0
+                  >
                     <el-select
                       v-model="formContent.jobNotMatchStrategy"
                       @change="(value) => gtagRenderer('job_not_match_strategy_changed', { value })"
+                    >
+                      <el-option
+                        v-for="op in strategyOptionWhenCurrentJobNotMatch"
+                        :key="op.value"
+                        :label="op.name"
+                        :value="op.value"
+                        >{{ op.name }}</el-option
+                      >
+                    </el-select>
+                  </el-form-item>
+                  <div
+                    v-if="
+                      (!formContent.fieldsForUseCommonConfig.jobDetail
+                        ? formContent.isPosterHrFilterEnabled
+                        : commonJobConditionConfig.isPosterHrFilterEnabled)
+                    "
+                    class="mt10px lh-2em font-size-12px"
+                  >
+                    当前职位发布者身份不匹配时：
+                  </div>
+                  <el-form-item
+                    v-if="
+                      (!formContent.fieldsForUseCommonConfig.jobDetail
+                        ? formContent.isPosterHrFilterEnabled
+                        : commonJobConditionConfig.isPosterHrFilterEnabled)
+                    "
+                    mb0
+                  >
+                    <el-select
+                      v-model="formContent.posterHrNotMatchStrategy"
+                      @change="(value) => gtagRenderer('poster_hr_not_match_strategy_changed', { value })"
                     >
                       <el-option
                         v-for="op in strategyOptionWhenCurrentJobNotMatch"
@@ -1749,6 +1851,7 @@ import {
   ensureSalaryRangeCorrect,
   getRuleOfExpectJobNameRegExpStr,
   getRuleOfExpectJobDescRegExpStr,
+  getRuleOfPosterHrTitleRegExpStr,
   getRuleOfBlockCompanyNameRegExpStr,
   expectCompanyTemplateList,
   blockCompanyNameRegExpTemplateList,
@@ -1779,6 +1882,9 @@ const formContent = ref({
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
   expectJobDescRegExpStr: '',
+  isPosterHrFilterEnabled: false,
+  posterHrTitleRegExpStr: '',
+  posterHrNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
   jobNotMatchStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
   jobNotActiveStrategy: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
   markAsNotActiveSelectedTimeRange: 7,
@@ -1898,6 +2004,13 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   formContent.value.expectJobNameRegExpStr = res.config['boss.json'].expectJobNameRegExpStr?.trim()
   formContent.value.expectJobTypeRegExpStr = res.config['boss.json'].expectJobTypeRegExpStr?.trim()
   formContent.value.expectJobDescRegExpStr = res.config['boss.json'].expectJobDescRegExpStr?.trim()
+  formContent.value.isPosterHrFilterEnabled = res.config['boss.json']?.isPosterHrFilterEnabled ?? false
+  formContent.value.posterHrTitleRegExpStr = res.config['boss.json']?.posterHrTitleRegExpStr?.trim() ?? ''
+  formContent.value.posterHrNotMatchStrategy = strategyOptionWhenCurrentJobNotMatch
+    .map((it) => it.value)
+    .includes(res.config['boss.json']?.posterHrNotMatchStrategy)
+    ? res.config['boss.json'].posterHrNotMatchStrategy
+    : MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
 
   formContent.value.jobNotMatchStrategy = strategyOptionWhenCurrentJobNotMatch
     .map((it) => it.value)
@@ -1985,6 +2098,10 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
       res.config['common-job-condition-config.json']?.expectJobTypeRegExpStr ?? '',
     expectJobDescRegExpStr:
       res.config['common-job-condition-config.json']?.expectJobDescRegExpStr ?? '',
+    isPosterHrFilterEnabled:
+      res.config['common-job-condition-config.json']?.isPosterHrFilterEnabled ?? false,
+    posterHrTitleRegExpStr:
+      res.config['common-job-condition-config.json']?.posterHrTitleRegExpStr ?? '',
     jobDetailRegExpMatchLogic:
       res.config['common-job-condition-config.json']?.jobDetailRegExpMatchLogic ??
       JobDetailRegExpMatchLogic.EVERY,
@@ -2004,6 +2121,7 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
 
 const jobSourceFormItemSectionEl = ref()
 const jobDetailRegExpSectionEl = ref()
+const posterHrTitleRegExpSectionEl = ref()
 const blockCompanyNameRegExpSectionEl = ref()
 const formRules = {
   expectJobNameRegExpStr: {
@@ -2017,6 +2135,10 @@ const formRules = {
   expectJobDescRegExpStr: {
     trigger: 'blur',
     validator: getRuleOfExpectJobDescRegExpStr({ gtagRenderer, jobDetailRegExpSectionEl })
+  },
+  posterHrTitleRegExpStr: {
+    trigger: 'blur',
+    validator: getRuleOfPosterHrTitleRegExpStr({ gtagRenderer, posterHrTitleRegExpSectionEl })
   },
   __jobSourceList: {
     trigger: null,
@@ -2409,7 +2531,9 @@ const fillCommonConfigField = (field) => {
         'jobDetailRegExpMatchLogic',
         'expectJobNameRegExpStr',
         'expectJobTypeRegExpStr',
-        'expectJobDescRegExpStr'
+        'expectJobDescRegExpStr',
+        'isPosterHrFilterEnabled',
+        'posterHrTitleRegExpStr'
       ]
       break
     }
