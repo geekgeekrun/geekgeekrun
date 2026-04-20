@@ -86,6 +86,15 @@ export default function initIpc() {
     if (hasOwn(payload, 'expectJobDescRegExpStr')) {
       bossConfig.expectJobDescRegExpStr = payload.expectJobDescRegExpStr
     }
+    if (hasOwn(payload, 'isPosterHrFilterEnabled')) {
+      bossConfig.isPosterHrFilterEnabled = payload.isPosterHrFilterEnabled
+    }
+    if (hasOwn(payload, 'posterHrTitleRegExpStr')) {
+      bossConfig.posterHrTitleRegExpStr = payload.posterHrTitleRegExpStr
+    }
+    if (hasOwn(payload, 'posterHrNotMatchStrategy')) {
+      bossConfig.posterHrNotMatchStrategy = payload.posterHrNotMatchStrategy
+    }
     if (hasOwn(payload, 'jobNotMatchStrategy')) {
       bossConfig.jobNotMatchStrategy = payload.jobNotMatchStrategy
     }
