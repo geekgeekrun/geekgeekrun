@@ -699,7 +699,7 @@ async function toRecommendPage (hooks) {
   hooks.pageLoaded?.call()
 
   let userInfoResponse = await userInfoPromise
-  await hooks.userInfoResponse?.promise(userInfoResponse)
+  await hooks.userInfoResponse?.promise({ userInfoResponse, browser })
   if (userInfoResponse?.code !== 0) {
     autoStartChatEventBus.emit('LOGIN_STATUS_INVALID', {
       userInfoResponse
@@ -1713,7 +1713,7 @@ export async function mainLoop (hooks) {
     //set cookies
     const bossCookies = readStorageFile('boss-cookies.json')
     const bossLocalStorage = readStorageFile('boss-local-storage.json')
-    await hooks.cookieWillSet?.promise(bossCookies)
+    await hooks.cookieWillSet?.promise({ cookies: bossCookies, browser })
     for(let i = 0; i < bossCookies.length; i++){
       if (Object.hasOwn(bossCookies[i], 'sameSite')) {
         bossCookies[i].sameSite = 'unspecified'

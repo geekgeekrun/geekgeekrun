@@ -3,17 +3,37 @@ import minimist from 'minimist'
 import { loginWithCookieAssistant } from './login-with-cookie-assistant'
 import { checkCookieListFormat } from '../../common/utils/cookie'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
-import { readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import {
+  readStorageFile,
+  writeStorageFile
+} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
 export class CookieInvalidHandlePlugin {
   apply(hooks) {
-    hooks.cookieWillSet.tapPromise('CookieInvalidHandlePlugin', async (cookies) => {
+    hooks.cookieWillSet.tapPromise('CookieInvalidHandlePlugin', async ({ cookies, browser } = {}) => {
       let isValid = checkCookieListFormat(cookies)
       while (!isValid) {
         try {
+          browser && (await browser.close())
+        } catch (err) {
+          console.log(`close browser failed`, err)
+        }
+        try {
           // popup login dialog, then update login status
-          await loginWithCookieAssistant()
+          let app
+          try {
+            app = (await import('electron')).app
+          } catch {
+            //
+          }
+          // popup login dialog, then update login status
+          try {
+            await app?.dock?.show()
+            await loginWithCookieAssistant()
+          } finally {
+            await app?.dock?.hide()
+          }
           await sleep(2000)
           const newCookies = readStorageFile('boss-cookies.json')
           isValid = checkCookieListFormat(newCookies)
@@ -27,8 +47,9 @@ export class CookieInvalidHandlePlugin {
           if (e?.message === 'USER_CANCELLED_LOGIN') {
             sendToDaemon({
               type: 'worker-to-gui-message',
+              workerId: process.env.GEEKGEEKRUND_WORKER_ID,
               data: {
-                type: 'prerequisite-step-by-step-checkstep-by-step-check',
+                type: 'prerequisite-step-by-step-check',
                 step: {
                   id: 'basic-cookie-check',
                   status: 'rejected'
@@ -42,8 +63,9 @@ export class CookieInvalidHandlePlugin {
       }
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'basic-cookie-check',
             status: 'fulfilled'
@@ -52,12 +74,13 @@ export class CookieInvalidHandlePlugin {
         }
       })
     })
-    hooks.userInfoResponse.tapPromise('CookieInvalidHandlePlugin', async (userInfoResponse) => {
+    hooks.userInfoResponse.tapPromise('CookieInvalidHandlePlugin', async ({ userInfoResponse, browser } = {}) => {
       if (userInfoResponse.code === 0) {
         sendToDaemon({
           type: 'worker-to-gui-message',
+          workerId: process.env.GEEKGEEKRUND_WORKER_ID,
           data: {
-            type: 'prerequisite-step-by-step-checkstep-by-step-check',
+            type: 'prerequisite-step-by-step-check',
             step: {
               id: 'login-status-check',
               status: 'fulfilled'
@@ -68,14 +91,33 @@ export class CookieInvalidHandlePlugin {
         return
       }
       try {
+        browser && (await browser.close())
+      } catch (err) {
+        console.log(`close browser failed`, err)
+      }
+      await writeStorageFile('boss-cookies.json', [])
+      try {
         // popup login dialog, then update login status
-        await loginWithCookieAssistant()
+        let app
+        try {
+          app = (await import('electron')).app
+        } catch {
+          //
+        }
+        // popup login dialog, then update login status
+        try {
+          await app?.dock?.show()
+          await loginWithCookieAssistant()
+        } finally {
+          await app?.dock?.hide()
+        }
       } catch (e) {
         if (e?.message === 'USER_CANCELLED_LOGIN') {
           sendToDaemon({
             type: 'worker-to-gui-message',
+            workerId: process.env.GEEKGEEKRUND_WORKER_ID,
             data: {
-              type: 'prerequisite-step-by-step-checkstep-by-step-check',
+              type: 'prerequisite-step-by-step-check',
               step: {
                 id: 'login-status-check',
                 status: 'rejected'

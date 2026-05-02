@@ -89,7 +89,9 @@ const onlyRemindBossWithoutBlockCompanyName =
   readConfigFile('boss.json').autoReminder?.onlyRemindBossWithoutBlockCompanyName ??
   !!blockCompanyNameRegExp
 
-const openContentSource = readConfigFile('boss.json').autoReminder?.openContentSource ?? OPEN_CONTENT_SOURCE.CONSTANT_CONTENT
+const openContentSource =
+  readConfigFile('boss.json').autoReminder?.openContentSource ??
+  OPEN_CONTENT_SOURCE.CONSTANT_CONTENT
 const constantOpenContent = (() => {
   let constantOpenContent = readConfigFile('boss.json').autoReminder?.constantOpenContent ?? ''
   if (constantOpenContent?.trim?.()) {
@@ -303,7 +305,17 @@ const mainLoop = async () => {
   let cookieCheckResult = checkCookieListFormat(bossCookies)
   while (!cookieCheckResult) {
     try {
-      await loginWithCookieAssistant()
+      browser && (await browser.close())
+    } catch (err) {
+      console.log(`close browser failed`, err)
+    }
+    try {
+      try {
+        await app.dock?.show()
+        await loginWithCookieAssistant()
+      } finally {
+        await app.dock?.hide()
+      }
       bossCookies = readStorageFile('boss-cookies.json')
       cookieCheckResult = checkCookieListFormat(bossCookies)
     } catch (err) {
@@ -314,8 +326,9 @@ const mainLoop = async () => {
       })
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'basic-cookie-check',
             status: 'rejected'
@@ -328,8 +341,9 @@ const mainLoop = async () => {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'basic-cookie-check',
         status: 'fulfilled'
@@ -356,8 +370,17 @@ const mainLoop = async () => {
   if (currentPageUrl.startsWith('https://www.zhipin.com/web/user/')) {
     writeStorageFile('boss-cookies.json', [])
     try {
-      // popup login dialog, then update login status
-      await loginWithCookieAssistant()
+      browser && (await browser.close())
+    } catch (err) {
+      console.log(`close browser failed`, err)
+    }
+    try {
+      try {
+        await app.dock?.show()
+        await loginWithCookieAssistant()
+      } finally {
+        await app.dock?.hide()
+      }
     } catch (err) {
       await dialog.showMessageBox({
         type: `error`,
@@ -366,8 +389,9 @@ const mainLoop = async () => {
       })
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'login-status-check',
             status: 'rejected'
@@ -385,8 +409,9 @@ const mainLoop = async () => {
   ) {
     sendToDaemon({
       type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
       data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        type: 'prerequisite-step-by-step-check',
         step: {
           id: 'login-status-check',
           status: 'rejected'
@@ -418,8 +443,9 @@ const mainLoop = async () => {
       await storeStorage(pageMapByName.boss)
       sendToDaemon({
         type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID,
         data: {
-          type: 'prerequisite-step-by-step-checkstep-by-step-check',
+          type: 'prerequisite-step-by-step-check',
           step: {
             id: 'login-status-check',
             status: 'rejected'
@@ -432,8 +458,9 @@ const mainLoop = async () => {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'login-status-check',
         status: 'fulfilled'
@@ -656,7 +683,7 @@ const mainLoop = async () => {
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
-    v = 3000
+    v = 5000
   }
 
   return v
@@ -681,8 +708,9 @@ export async function runEntry() {
   )
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'worker-launch',
         status: 'fulfilled'
@@ -707,8 +735,9 @@ export async function runEntry() {
     })
     sendToDaemon({
       type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
       data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        type: 'prerequisite-step-by-step-check',
         step: {
           id: 'puppeteer-executable-check',
           status: 'rejected'
@@ -720,8 +749,9 @@ export async function runEntry() {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'puppeteer-executable-check',
         status: 'fulfilled'

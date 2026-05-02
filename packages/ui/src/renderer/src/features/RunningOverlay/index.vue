@@ -55,7 +55,7 @@
 </template>
 
 <script lang="ts" setup>
-// import { useTaskManagerStore } from '@renderer/store'
+import { useTaskManagerStore } from '@renderer/store'
 import { getAutoStartChatSteps } from '../../../../common/prerequisite-step-by-step-check'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import {
@@ -71,12 +71,12 @@ const props = defineProps({
     type: Number
   }
 })
-// const taskManagerStore = useTaskManagerStore()
-// const runningTaskInfo = computed(() => {
-//   return taskManagerStore.runningTasks?.find((it) => {
-//     return it.workerId === props.workerId
-//   })
-// })
+const taskManagerStore = useTaskManagerStore()
+const runningTaskInfo = computed(() => {
+  return taskManagerStore.runningTasks?.find((it) => {
+    return it.workerId === props.workerId
+  })
+})
 const steps = ref([])
 const stepsForRender = computed(() => {
   const clonedSteps = JSON.parse(JSON.stringify(steps.value))
@@ -101,9 +101,43 @@ function fillEmptySteps() {
   steps.value = arr
   currentRunningStatus.value = RUNNING_STATUS_ENUM.RUNNING
 }
-watch(() => props.runRecordId, fillEmptySteps, {
-  immediate: true
-})
+
+function applyRuntimeStepStatus() {
+  const task = runningTaskInfo.value
+  if (!task?.runtimeStorage?.stepStatusMapByStepId) {
+    return
+  }
+  const stepMap = task.runtimeStorage.stepStatusMapByStepId
+  steps.value = getAutoStartChatSteps().map((step) => {
+    const saved = stepMap[step.id]
+    if (!saved || !saved.step) {
+      return step
+    }
+    return {
+      ...step,
+      status: saved.step.status
+    }
+  })
+}
+
+watch(
+  () => props.runRecordId,
+  () => {
+    fillEmptySteps()
+    applyRuntimeStepStatus()
+  },
+  {
+    immediate: true
+  }
+)
+
+watch(
+  () => taskManagerStore.runningTasks,
+  () => {
+    applyRuntimeStepStatus()
+  },
+  { deep: true }
+)
 watch(
   () => stepsForRender.value,
   (v) => {
@@ -121,10 +155,7 @@ watch(
 
 const { ipcRenderer } = electron
 function messageHandler(ev, { data }) {
-  if (
-    data.type !== 'prerequisite-step-by-step-checkstep-by-step-check' ||
-    data.runRecordId !== props.runRecordId
-  ) {
+  if (data.type !== 'prerequisite-step-by-step-check' || data.runRecordId !== props.runRecordId) {
     return
   }
   const { id: stepId, status: stepStatus } = data.step

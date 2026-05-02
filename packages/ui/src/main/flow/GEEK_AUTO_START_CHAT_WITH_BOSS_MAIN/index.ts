@@ -30,7 +30,7 @@ process.on('SIGTERM', () => {
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
-    v = 3000
+    v = 5000
   }
 
   return v
@@ -66,8 +66,9 @@ const runAutoChat = async () => {
     })
     sendToDaemon({
       type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID,
       data: {
-        type: 'prerequisite-step-by-step-checkstep-by-step-check',
+        type: 'prerequisite-step-by-step-check',
         step: {
           id: 'puppeteer-executable-check',
           status: 'rejected'
@@ -80,8 +81,9 @@ const runAutoChat = async () => {
   }
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'puppeteer-executable-check',
         status: 'fulfilled'
@@ -183,8 +185,9 @@ export const waitForProcessHandShakeAndRunAutoChat = async () => {
   )
   sendToDaemon({
     type: 'worker-to-gui-message',
+    workerId: process.env.GEEKGEEKRUND_WORKER_ID,
     data: {
-      type: 'prerequisite-step-by-step-checkstep-by-step-check',
+      type: 'prerequisite-step-by-step-check',
       step: {
         id: 'worker-launch',
         status: 'fulfilled'
