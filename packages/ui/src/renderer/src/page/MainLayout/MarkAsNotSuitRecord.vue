@@ -224,7 +224,8 @@ const markReasonTopicMap = {
   [MarkAsNotSuitReason.JOB_CITY_NOT_SUIT]: '工作地不合适',
   [MarkAsNotSuitReason.JOB_WORK_EXP_NOT_SUIT]: '工作经验不合适',
   [MarkAsNotSuitReason.JOB_SALARY_NOT_SUIT]: '薪资不合适',
-  [MarkAsNotSuitReason.COMPANY_NAME_NOT_SUIT]: '公司名称不匹配'
+  [MarkAsNotSuitReason.COMPANY_NAME_NOT_SUIT]: '公司名称不匹配',
+  [MarkAsNotSuitReason.POSTER_TITLE_NOT_SUIT]: '发布者身份不匹配'
 }
 
 function formatMarkReason(row: VMarkAsNotSuitLog) {
@@ -293,6 +294,22 @@ function formatMarkReason(row: VMarkAsNotSuitLog) {
         }
       })()
       return [extInfo?.chosenReasonInUi?.text && `BOSS选项内容：${extInfo.chosenReasonInUi.text}`]
+        .filter(Boolean)
+        .join('\n')
+    }
+    case MarkAsNotSuitReason.POSTER_TITLE_NOT_SUIT: {
+      const extInfo = (() => {
+        try {
+          return JSON.parse(row.extInfo)
+        } catch {
+          return null
+        }
+      })()
+      return [
+        extInfo?.posterTitle && `BOSS身份：${extInfo.posterTitle}`,
+        extInfo?.posterHrTitleRegExpStr && `匹配规则：${extInfo.posterHrTitleRegExpStr}`,
+        extInfo?.chosenReasonInUi?.text && `BOSS选项内容：${extInfo.chosenReasonInUi.text}`
+      ]
         .filter(Boolean)
         .join('\n')
     }

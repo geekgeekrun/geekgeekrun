@@ -53,8 +53,10 @@ const main = async () => {
     cookieWillSet: new SyncHook(['cookies']),
     userInfoResponse: new AsyncSeriesHook(['userInfo']),
     mainFlowWillLaunch: new AsyncSeriesHook(['args']),
+    jobDetailIsGetFromRecommendList: new AsyncSeriesHook(['positionInfoDetail']),
     newChatWillStartup: new AsyncSeriesHook(['positionInfoDetail']),
     newChatStartup: new AsyncSeriesHook(['positionInfoDetail', 'chatRunningContext']),
+    jobMarkedAsNotSuit: new AsyncSeriesHook(['positionInfoDetail', 'markDetail']),
     noPositionFoundForCurrentJob: new SyncHook(),
     noPositionFoundAfterTraverseAllJob: new SyncHook(),
     errorEncounter: new SyncHook(['errorInfo']),
@@ -63,7 +65,7 @@ const main = async () => {
     sageTimeExit: new AsyncSeriesHook(['args'])
   }
   initPlugins(hooks)
-  await hooks.daemonInitialized.callAsync()
+  await hooks.daemonInitialized.promise()
   while (true) {
     try {
       await mainLoop(hooks)
