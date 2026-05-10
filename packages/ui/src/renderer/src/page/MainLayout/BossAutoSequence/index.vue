@@ -43,8 +43,12 @@
           <span>自动顺序执行</span>
         </template>
         <p class="desc">
-          依次执行「推荐牛人 - 自动开聊」和「沟通页」两个任务，配置分别在对应页面中设置。
+          按队列逐职位自动执行「推荐牛人」和「沟通页」两个任务。各自的运行策略请分别在对应页面配置：
         </p>
+        <div class="preflight-links">
+          <RouterLink :to="{ name: 'BossAutoBrowseAndChat' }">→ 推荐牛人 - 自动开聊（运行策略配置）</RouterLink>
+          <RouterLink :to="{ name: 'BossChatPage' }">→ 沟通（运行策略配置）</RouterLink>
+        </div>
         <div class="action-bar">
           <el-button type="primary" :loading="isSaving" @click="handleSubmit">
             开始自动顺序执行！
@@ -96,6 +100,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onActivated } from 'vue'
+import { RouterLink } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
 import { RUNNING_STATUS_ENUM } from '../../../../../common/enums/auto-start-chat'
@@ -123,7 +128,14 @@ const isSavingQueue = ref(false)
 const loadJobsList = async () => {
   try {
     const result = await ipcRenderer.invoke('fetch-boss-jobs-config')
-    jobsList.value = result?.jobs ?? []
+    jobsList.value = (result?.jobs ?? []).map((j: any) => ({
+      ...j,
+      sequence: {
+        enabled: j.sequence?.enabled ?? true,
+        runRecommend: j.sequence?.runRecommend ?? true,
+        runChat: j.sequence?.runChat ?? true
+      }
+    }))
   } catch (err) {
     console.error(err)
   }
@@ -187,10 +199,24 @@ const handleStopButtonClick = async () => {
   }
 
   .desc {
-    margin: 0 0 1em;
+    margin: 0 0 0.5em;
     font-size: 14px;
     color: #606266;
     line-height: 1.6;
+  }
+
+  .preflight-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 1em;
+
+    a {
+      font-size: 13px;
+      color: #2faa9e;
+      text-decoration: none;
+      &:hover { text-decoration: underline; }
+    }
   }
 
   .queue-save-bar {

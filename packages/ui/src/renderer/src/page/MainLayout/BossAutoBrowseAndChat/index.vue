@@ -3,22 +3,22 @@
     <div class="main__wrap">
       <el-form ref="formRef" :model="formContent" label-position="top">
         <el-card class="config-section">
-          <el-form-item label="招呼语（全局默认）" prop="autoChat.greetingMessage">
+          <el-form-item label="招呼语" prop="autoChat.greetingMessage">
             <el-input
               v-model="formContent.autoChat.greetingMessage"
               type="textarea"
               :autosize="{ minRows: 1 }"
-              placeholder="向候选人发送的第一条消息（各职位可在「职位配置」页覆盖）"
+              placeholder="向候选人发送的第一条消息"
             />
           </el-form-item>
-          <el-form-item label="每次最多开聊人数（全局默认）" prop="autoChat.maxChatPerRun">
+          <el-form-item label="每次最多开聊人数" prop="autoChat.maxChatPerRun">
             <el-input-number
               v-model="formContent.autoChat.maxChatPerRun"
               :min="1"
               :max="200"
               controls-position="right"
             />
-            <div class="form-tip">单轮运行中最多向多少人发送招呼；各职位可在「职位配置」页覆盖</div>
+            <div class="form-tip">单轮运行中最多向多少人发送招呼</div>
           </el-form-item>
           <el-form-item label="两次开聊间隔（毫秒）">
             <div class="range-input-wrap">

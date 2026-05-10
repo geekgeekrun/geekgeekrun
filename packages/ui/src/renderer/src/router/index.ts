@@ -175,7 +175,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'BossDebugTool',
         component: () => import('@renderer/page/MainLayout/BossDebugTool/index.vue'),
         meta: {
-          title: '招聘端调试工具'
+          title: '调试与测试工具'
         }
       },
       {

@@ -2,9 +2,24 @@
   <div class="group-item">
     <div class="group-title">招聘BOSS</div>
     <div flex flex-col class="link-list">
+
+      <div class="nav-sub-label">账号配置</div>
+      <a href="javascript:void(0)" @click="handleClickRecruiterLogin">
+        编辑登录凭据<TopRight w-1em h-1em mr10px />
+      </a>
+      <RouterLink :to="{ name: 'BossLlmConfig' }">
+        配置大语言模型
+      </RouterLink>
+      <a href="javascript:void(0)" @click="handleLaunchRecruiterBossSite">
+        手动逛逛<TopRight w-1em h-1em mr10px />
+      </a>
+
+      <div class="nav-sub-label">职位配置</div>
       <RouterLink :to="{ name: 'BossJobConfig' }">
         职位配置
       </RouterLink>
+
+      <div class="nav-sub-label">自动化执行</div>
       <RouterLink :to="{ name: 'BossAutoBrowseAndChat' }">
         推荐牛人 - 自动开聊
       </RouterLink>
@@ -14,21 +29,15 @@
       <RouterLink :to="{ name: 'BossAutoSequence' }">
         自动顺序执行
       </RouterLink>
+
+      <div class="nav-sub-label">集成与工具</div>
       <RouterLink :to="{ name: 'WebhookIntegration' }">
         Webhook / 外部集成
       </RouterLink>
-      <a href="javascript:void(0)" @click="handleClickRecruiterLogin">
-        编辑登录凭据<TopRight w-1em h-1em mr10px />
-      </a>
-      <a href="javascript:void(0)" @click="handleLaunchRecruiterBossSite">
-        手动逛逛<TopRight w-1em h-1em mr10px />
-      </a>
       <RouterLink :to="{ name: 'BossDebugTool' }">
-        招聘端调试工具
+        调试与测试工具
       </RouterLink>
-      <RouterLink :to="{ name: 'BossLlmConfig' }">
-        配置大语言模型
-      </RouterLink>
+
     </div>
   </div>
 </template>
