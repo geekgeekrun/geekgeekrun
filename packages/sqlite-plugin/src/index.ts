@@ -126,7 +126,7 @@ export default class SqlitePlugin {
     if (hooks.userInfoResponse) {
       hooks.userInfoResponse.tapPromise(
       "SqlitePlugin",
-      async (userInfoResponse) => {
+      async ({ userInfoResponse } = {}) => {
         if (!userInfoResponse || userInfoResponse.code !== 0) {
           return;
         }

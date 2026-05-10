@@ -7,7 +7,7 @@ import { AUTO_CHAT_ERROR_EXIT_CODE } from './enums.mjs'
 const rerunInterval = (() => {
   let v = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)
   if (isNaN(v)) {
-    v = 3000
+    v = 5000
   }
 
   return v

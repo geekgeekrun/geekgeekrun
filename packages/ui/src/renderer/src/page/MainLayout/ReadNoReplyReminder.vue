@@ -318,7 +318,7 @@
     >
       <RunningOverlay
         ref="runningOverlayRef"
-        worker-id="readNoReplyAutoReminderMain"
+        :worker-id="CURRENT_WORKER_ID"
         :run-record-id="runRecordId"
       >
         <template #op-buttons="{ currentRunningStatus }">
@@ -351,7 +351,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { dayjs, ElForm, ElMessage, ElMessageBox, ElSelect, ElOption } from 'element-plus'
 import { useRouter } from 'vue-router'
 import {
@@ -366,6 +366,7 @@ import mittBus from '../../utils/mitt'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
 import { DEFAULT_CONSTANT_OPEN_CONTENT_SEGS } from '../../../../common/constant'
+import { useTaskManagerStore } from '@renderer/store'
 const gtagRenderer = (name, params?: object) => {
   return baseGtagRenderer(name, {
     scene: 'rnrr-config',
@@ -607,6 +608,24 @@ async function checkIsCanRun() {
 }
 const runRecordId = ref(null)
 const runningOverlayRef = ref(null)
+const taskManagerStore = useTaskManagerStore()
+const CURRENT_WORKER_ID = 'readNoReplyAutoReminderMain'
+
+onMounted(async () => {
+  await taskManagerStore.getRunningTasks()
+  const existingWorker = taskManagerStore.runningTasks?.find(
+    (it) => it.workerId === CURRENT_WORKER_ID
+  )
+  if (existingWorker) {
+    runRecordId.value = existingWorker.runtimeStorage?.stepStatusMapByStepId
+      ? Object.values(existingWorker.runtimeStorage.stepStatusMapByStepId)[0]?.runRecordId
+      : null
+    if (runRecordId.value) {
+      runningOverlayRef.value?.show()
+    }
+  }
+})
+
 const handleSubmit = async () => {
   gtagRenderer('run_read_no_reply_reminder_clicked', {
     throttle_interval_minutes: formContent.value.autoReminder.throttleIntervalMinutes,

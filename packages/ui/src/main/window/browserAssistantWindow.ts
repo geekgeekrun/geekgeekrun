@@ -40,7 +40,9 @@ export function createBrowserAssistantWindow(
     },
     ...opt
   })
-
+  browserAssistantWindow!.setAlwaysOnTop(true, 'normal')
+  browserAssistantWindow!.focus()
+  browserAssistantWindow!.setAlwaysOnTop(false)
   browserAssistantWindow.on('ready-to-show', () => {
     browserAssistantWindow!.show()
   })

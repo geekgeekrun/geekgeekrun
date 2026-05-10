@@ -103,7 +103,7 @@ const server = net.createServer((socket) => {
 
 // 处理消息
 function handleMessage(socket, message) {
-  console.log('收到消息:', message);
+  message.type !== 'get-status' && console.log('收到消息:', message);
   const _callbackUuid = message._callbackUuid
   if (message.type === 'ping') {
     sendResponse(socket, _callbackUuid, {
@@ -143,6 +143,23 @@ function handleMessage(socket, message) {
       return
     }
     case 'worker-to-gui-message': {
+      // 将 prerequisite step 状态写入 worker 的 runtimeStorage
+      if (
+        workerInfo &&
+        message.data?.type === 'prerequisite-step-by-step-check' &&
+        message.data?.step?.id
+      ) {
+        workerInfo.runtimeStorage = workerInfo.runtimeStorage || {}
+        workerInfo.runtimeStorage.stepStatusMapByStepId =
+          workerInfo.runtimeStorage.stepStatusMapByStepId || {}
+        workerInfo.runtimeStorage.stepStatusMapByStepId[
+          message.data.step.id
+        ] = {
+          step: message.data.step,
+          runRecordId: message.data.runRecordId
+        }
+      }
+
       // 转发工具进程消息到GUI客户端
       broadcastToGUI({
         type: 'worker-to-gui-message',
@@ -329,6 +346,9 @@ function startWorker({ workerId, command, args, env }, restartCount = 0) {
     status: 'running',
     startTime: Date.now(),
     restartCount, // 使用传入的重启次数
+    runtimeStorage: {
+      stepStatusMapByStepId: {}
+    },
     // socket: null, // 工具进程的TCP连接，稍后由工具进程注册
     // lastHeartbeat: null,
     command,
@@ -390,6 +410,7 @@ function getWorkersStatus() {
       status: workerInfo.status,
       uptime: Date.now() - workerInfo.startTime,
       restartCount: workerInfo.restartCount || 0,
+      runtimeStorage: workerInfo.runtimeStorage || {},
       // connected: workerInfo.socket !== null && !workerInfo.socket.destroyed,
       // lastHeartbeat: workerInfo.lastHeartbeat,
       command: workerInfo.command,

@@ -1681,7 +1681,7 @@
     >
       <RunningOverlay
         ref="runningOverlayRef"
-        worker-id="geekAutoStartWithBossMain"
+        :worker-id="CURRENT_WORKER_ID"
         :run-record-id="runRecordId"
       >
         <template #op-buttons="{ currentRunningStatus }">
@@ -1714,7 +1714,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch, nextTick, onUnmounted } from 'vue'
+import { computed, onBeforeUnmount, ref, watch, onUnmounted, onMounted } from 'vue'
 import { ElForm, ElMessage } from 'element-plus'
 import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
@@ -1742,6 +1742,7 @@ import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.v
 import expectJobFilterTemplateList from './expectJobFilterTemplateList'
 import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
 import { RUNNING_STATUS_ENUM } from '../../../../../common/enums/auto-start-chat'
+import { useTaskManagerStore } from '@renderer/store'
 import {
   getJobDetailRegExpMatchLogicConfig,
   isJobDetailRegExpEmpty,
@@ -2084,6 +2085,24 @@ const formRules = {
 const formRef = ref<InstanceType<typeof ElForm>>()
 const runRecordId = ref(null)
 const runningOverlayRef = ref(null)
+const taskManagerStore = useTaskManagerStore()
+const CURRENT_WORKER_ID = 'geekAutoStartWithBossMain'
+
+onMounted(async () => {
+  await taskManagerStore.getRunningTasks()
+  const existingWorker = taskManagerStore.runningTasks?.find(
+    (it) => it.workerId === CURRENT_WORKER_ID
+  )
+  if (existingWorker) {
+    runRecordId.value = existingWorker.runtimeStorage?.stepStatusMapByStepId
+      ? Object.values(existingWorker.runtimeStorage.stepStatusMapByStepId)[0]?.runRecordId
+      : null
+    if (runRecordId.value) {
+      runningOverlayRef.value?.show()
+    }
+  }
+})
+
 const handleSubmit = async () => {
   gtagRenderer('save_config_and_launch_clicked', {
     has_dingtalk_robot_token: !!formContent.value?.dingtalkRobotAccessToken,

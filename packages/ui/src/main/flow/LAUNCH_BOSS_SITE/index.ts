@@ -374,6 +374,9 @@ export async function launchBossSite() {
   })
   let [page] = await browser.pages()
   for (let i = 0; i < bossCookies.length; i++) {
+    if (Object.hasOwn(bossCookies[i], 'sameSite')) {
+      bossCookies[i].sameSite = 'unspecified'
+    }
     await page.setCookie(bossCookies[i])
   }
 
