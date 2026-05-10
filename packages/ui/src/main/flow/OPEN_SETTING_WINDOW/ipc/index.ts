@@ -991,6 +991,12 @@ export default function initIpc() {
         ...payload.recommendPage
       }
     }
+    if (payload.advanced && typeof payload.advanced === 'object') {
+      bossRecruiterConfig.advanced = bossRecruiterConfig.advanced || {}
+      if (typeof payload.advanced.persistProfile === 'boolean') {
+        bossRecruiterConfig.advanced.persistProfile = payload.advanced.persistProfile
+      }
+    }
 
     const candidateFilterConfig = readBossConfigFile('candidate-filter.json') || {}
     if (hasOwn(payload, 'expectCityList')) {

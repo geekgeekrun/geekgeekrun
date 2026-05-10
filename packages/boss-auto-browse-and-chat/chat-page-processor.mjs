@@ -323,6 +323,7 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
     page: existingPage,
     getCapturedText,
     clearCapturedText,
+    peekCapturedText,
     jobId = null,
     retryCandidate = null,
     processContext = null
@@ -636,7 +637,9 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         let stableCount = 0
         while (Date.now() < canvasDeadline) {
           await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
-          const currentCount = await page.evaluate(() => (window.__canvasCapturedText || []).length)
+          const currentCount = typeof peekCapturedText === 'function'
+            ? await peekCapturedText(page)
+            : await page.evaluate(() => (window.__canvasCapturedText || []).length)
           if (currentCount > 0 && currentCount === lastCount) {
             stableCount++
             if (stableCount >= STABLE_POLLS_NEEDED) break

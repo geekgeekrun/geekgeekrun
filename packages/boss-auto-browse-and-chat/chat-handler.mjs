@@ -66,7 +66,7 @@ export async function viewCandidateDetail (frame, candidateItem, options = {}) {
 
   if (getInterceptedData) {
     const intercepted = getInterceptedData()
-    const resumeResult = await getResumeData(frame, intercepted)
+    const resumeResult = await getResumeData(frame, intercepted, { getCapturedText: options.getCapturedText })
     if (resumeResult.source === 'api' && resumeResult.data) {
       resumeSource = 'api'
       resumeText = typeof resumeResult.data === 'string' ? resumeResult.data : JSON.stringify(resumeResult.data)

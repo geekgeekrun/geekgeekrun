@@ -34,6 +34,21 @@ async function handle(p) {
           if (nativeSourceMap.has(this)) {
             return nativeSourceMap.get(this);
           }
+          // Path-based extra registrations
+          try {
+            const extras = window.__laodengExtraNativeSources;
+            if (extras && extras.size) {
+              for (const [path, src] of extras) {
+                const parts = path.split(".");
+                let obj = window;
+                for (let i = 0; i < parts.length; i++) {
+                  if (obj == null) break;
+                  obj = obj[parts[i]];
+                }
+                if (obj === this) return src;
+              }
+            }
+          } catch (_) {}
           return nativeFunctionToString.call(this);
         },
       });
@@ -143,6 +158,31 @@ class Plugin extends PuppeteerExtraPlugin {
   }
 }
 
-module.exports = function (pluginConfig) {
+/**
+ * Register a fake native source for a function in the target page.
+ * Must be called AFTER the laodeng plugin has been applied to the browser.
+ * The wrapped function should already exist (or be created shortly after) — this
+ * adds a deferred registration that runs on every new document.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} accessorPath - dotted path to the wrapped function in window scope, e.g. "CanvasRenderingContext2D.prototype.fillText"
+ * @param {string} fakeNativeSource - what `.toString()` should return, e.g. "function fillText() { [native code] }"
+ */
+async function registerFakeNativeSource(page, accessorPath, fakeNativeSource) {
+  await page.evaluateOnNewDocument(
+    function (path, src) {
+      try {
+        if (!window.__laodengExtraNativeSources) window.__laodengExtraNativeSources = new Map();
+        window.__laodengExtraNativeSources.set(path, src);
+      } catch (_) {}
+    },
+    accessorPath,
+    fakeNativeSource
+  );
+}
+
+const pluginFactory = function (pluginConfig) {
   return new Plugin(pluginConfig);
 };
+pluginFactory.registerFakeNativeSource = registerFakeNativeSource;
+module.exports = pluginFactory;

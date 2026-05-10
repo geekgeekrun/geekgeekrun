@@ -141,103 +141,134 @@ export function parseGeekInfoFromIntercepted (interceptedMap) {
 // Canvas 文字 Hook（与 laodeng 兼容）— 非 BOSS 自带，可能被反爬检测，沟通页请用 API 拦截
 // ---------------------------------------------------------------------------
 
+const CANVAS_HOOK_DEBUG = process.env.GEEKGEEKRUN_CANVAS_HOOK_DEBUG === '1'
+
 /**
- * 在页面上通过 evaluateOnNewDocument 注入 Canvas fillText hook，将绘制文字收集到主页面 window.__canvasCapturedText。
+ * 在页面上通过 evaluateOnNewDocument 注入 Canvas fillText hook，将绘制文字收集到主页面随机命名的 marker 属性上。
  *
  * 实现原理：
  *   - evaluateOnNewDocument 会在主页面和每一个 iframe 中各执行一次。
  *   - 在线简历 iframe 带有 sandbox 属性且不含 allow-same-origin，主页面无法访问其 contentWindow，
  *     因此必须在 iframe 自身的执行上下文内直接 hook CanvasRenderingContext2D.prototype.fillText。
  *   - iframe 内 hook 到的文字通过 window.top.postMessage 批量发回主页面（同 origin 或跨 origin 均可用）。
- *   - 主页面监听 message 事件并累积到 window.__canvasCapturedText。
+ *   - 主页面监听 message 事件并累积到随机命名的 window 属性。
+ *
+ * 反检测：marker 属性名（capturedTextProp / messageKey / hookedFlag）每次调用本函数时随机生成，
+ * 不同 session 不同；同时通过 laodeng.registerFakeNativeSource 让 fillText 包装函数的 toString 返回原生外观。
  *
  * @param {import('puppeteer').Page} page - Puppeteer 页面实例（必须在 page.goto 之前调用）
- * @returns {Promise<{ getCapturedText: (page: import('puppeteer').Page) => Promise<Array<{text: string, x: number, y: number}>> }>}
+ * @returns {Promise<{ getCapturedText: (page: import('puppeteer').Page) => Promise<Array<{text: string, x: number, y: number}>>, clearCapturedText: (page: import('puppeteer').Page) => Promise<void>, peekCapturedText: (page: import('puppeteer').Page) => Promise<number> }>}
  */
 export async function setupCanvasTextHook (page) {
-  // 转发浏览器内部 [canvasHook] 日志到 Node 侧，便于调试
-  page.on('console', (msg) => {
-    const text = msg.text()
-    if (text.startsWith('[canvasHook]')) {
-      console.log('[canvasHook-browser]', text)
-    }
-  })
+  const markerSuffix = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
+  const capturedTextProp = '__cct_' + markerSuffix
+  const messageKey = '__mk_' + markerSuffix
+  const hookedFlag = '_h_' + markerSuffix
 
-  await page.evaluateOnNewDocument(() => {
-    // 此脚本在每个 frame（主页面 + 所有 iframe）中各执行一次。
-    // 策略：
-    //   主页面 → 初始化收集数组，监听来自 iframe 的 postMessage
-    //   iframe  → 直接 hook 当前窗口的 fillText，批量 postMessage 到 window.top
-
-    const isTopFrame = (window === window.top)
-
-    if (isTopFrame) {
-      window.__canvasCapturedText = []
-      window.addEventListener('message', (evt) => {
-        if (evt.data && evt.data.__bossCanvasHook && Array.isArray(evt.data.__bossCanvasHook)) {
-          if (!window.__canvasCapturedText) window.__canvasCapturedText = []
-          for (const item of evt.data.__bossCanvasHook) {
-            window.__canvasCapturedText.push(item)
-          }
-          console.log('[canvasHook] main received ' + evt.data.__bossCanvasHook.length + ' items, total ' + window.__canvasCapturedText.length)
-        }
-      })
-      console.log('[canvasHook] main: message listener set')
-    }
-
-    // 在当前 window（无论是主页面还是 iframe）上 hook fillText
-    try {
-      const proto = window.CanvasRenderingContext2D?.prototype
-      if (!proto) { console.log('[canvasHook] CanvasRenderingContext2D.prototype not found'); return }
-      if (proto._bossHooked) { console.log('[canvasHook] already hooked, skip'); return }
-      proto._bossHooked = true
-
-      const origFillText = proto.fillText
-      if (typeof origFillText !== 'function') { console.log('[canvasHook] fillText is not a function'); return }
-
-      // 批量缓冲，用 setTimeout(0) 在一个事件循环 tick 后统一发送（WASM 会在同一个同步调用栈内连续 fillText）
-      const captured = []
-      let flushScheduled = false
-      const flush = () => {
-        flushScheduled = false
-        if (captured.length === 0) return
-        const items = captured.splice(0)
-        if (isTopFrame) {
-          if (!window.__canvasCapturedText) window.__canvasCapturedText = []
-          for (const item of items) window.__canvasCapturedText.push(item)
-          console.log('[canvasHook] main fillText wrote ' + items.length + ' items')
-        } else {
-          try {
-            window.top.postMessage({ __bossCanvasHook: items }, '*')
-            console.log('[canvasHook] iframe postMessage sent ' + items.length + ' items')
-          } catch (e) {
-            console.log('[canvasHook] postMessage failed: ' + e.message)
-          }
-        }
+  // 转发浏览器内部 [canvasHook] 日志到 Node 侧（仅 debug 模式）
+  if (CANVAS_HOOK_DEBUG) {
+    page.on('console', (msg) => {
+      const text = msg.text()
+      if (text.startsWith('[canvasHook]')) {
+        console.log('[canvasHook-browser]', text)
       }
-      const scheduleFlush = () => {
-        if (!flushScheduled) { flushScheduled = true; setTimeout(flush, 0) }
-      }
+    })
+  }
 
-      Object.defineProperty(proto, 'fillText', {
-        value: new Proxy(origFillText, {
-          apply (target, thisArg, args) {
-            const [text, x, y] = args
-            if (typeof text === 'string' && text.trim()) {
-              captured.push({ text, x: Number(x) || 0, y: Number(y) || 0 })
-              scheduleFlush()
+  // 注册 fillText 包装的伪原生 toString（依赖 laodeng 已被 puppeteer.use 装载）
+  try {
+    const laodengMod = await import('@geekgeekrun/puppeteer-extra-plugin-laodeng')
+    const registerFakeNativeSource =
+      laodengMod.registerFakeNativeSource ?? laodengMod.default?.registerFakeNativeSource
+    if (typeof registerFakeNativeSource === 'function') {
+      await registerFakeNativeSource(
+        page,
+        'CanvasRenderingContext2D.prototype.fillText',
+        'function fillText() { [native code] }'
+      )
+    }
+  } catch (e) {
+    // non-fatal: hook still works, just one more detectable surface
+  }
+
+  await page.evaluateOnNewDocument(
+    (capturedTextProp, messageKey, hookedFlag, DEBUG) => {
+      // 此脚本在每个 frame（主页面 + 所有 iframe）中各执行一次。
+      const isTopFrame = (window === window.top)
+
+      if (isTopFrame) {
+        window[capturedTextProp] = []
+        window.addEventListener('message', (evt) => {
+          if (evt.data && evt.data[messageKey] && Array.isArray(evt.data[messageKey])) {
+            if (!window[capturedTextProp]) window[capturedTextProp] = []
+            for (const item of evt.data[messageKey]) {
+              window[capturedTextProp].push(item)
             }
-            return Reflect.apply(target, thisArg, args)
+            if (DEBUG) console.log('[canvasHook] main received ' + evt.data[messageKey].length + ' items, total ' + window[capturedTextProp].length)
           }
-        }),
-        writable: true,
-        configurable: true
-      })
-      console.log('[canvasHook] fillText hook installed, isTopFrame=' + isTopFrame + ' href=' + window.location.href)
-    } catch (e) {
-      console.log('[canvasHook] hook install error: ' + e.message)
-    }
-  })
+        })
+        if (DEBUG) console.log('[canvasHook] main: message listener set')
+      }
+
+      // 在当前 window（无论是主页面还是 iframe）上 hook fillText
+      try {
+        const proto = window.CanvasRenderingContext2D?.prototype
+        if (!proto) { if (DEBUG) console.log('[canvasHook] CanvasRenderingContext2D.prototype not found'); return }
+        if (proto[hookedFlag]) { if (DEBUG) console.log('[canvasHook] already hooked, skip'); return }
+        proto[hookedFlag] = true
+
+        const origFillText = proto.fillText
+        if (typeof origFillText !== 'function') { if (DEBUG) console.log('[canvasHook] fillText is not a function'); return }
+
+        const captured = []
+        let flushScheduled = false
+        const flush = () => {
+          flushScheduled = false
+          if (captured.length === 0) return
+          const items = captured.splice(0)
+          if (isTopFrame) {
+            if (!window[capturedTextProp]) window[capturedTextProp] = []
+            for (const item of items) window[capturedTextProp].push(item)
+            if (DEBUG) console.log('[canvasHook] main fillText wrote ' + items.length + ' items')
+          } else {
+            try {
+              const payload = {}
+              payload[messageKey] = items
+              window.top.postMessage(payload, '*')
+              if (DEBUG) console.log('[canvasHook] iframe postMessage sent ' + items.length + ' items')
+            } catch (e) {
+              if (DEBUG) console.log('[canvasHook] postMessage failed: ' + e.message)
+            }
+          }
+        }
+        const scheduleFlush = () => {
+          if (!flushScheduled) { flushScheduled = true; setTimeout(flush, 0) }
+        }
+
+        Object.defineProperty(proto, 'fillText', {
+          value: new Proxy(origFillText, {
+            apply (target, thisArg, args) {
+              const [text, x, y] = args
+              if (typeof text === 'string' && text.trim()) {
+                captured.push({ text, x: Number(x) || 0, y: Number(y) || 0 })
+                scheduleFlush()
+              }
+              return Reflect.apply(target, thisArg, args)
+            }
+          }),
+          writable: true,
+          configurable: true
+        })
+        if (DEBUG) console.log('[canvasHook] fillText hook installed, isTopFrame=' + isTopFrame + ' href=' + window.location.href)
+      } catch (e) {
+        if (DEBUG) console.log('[canvasHook] hook install error: ' + e.message)
+      }
+    },
+    capturedTextProp,
+    messageKey,
+    hookedFlag,
+    CANVAS_HOOK_DEBUG
+  )
 
   /**
    * 从主页面读取当前收集的 Canvas 文字并清空。
@@ -245,14 +276,13 @@ export async function setupCanvasTextHook (page) {
    * @returns {Promise<Array<{text: string, x: number, y: number}>>}
    */
   async function getCapturedText (p) {
-    // 给浏览器 150ms 处理待发送的 setTimeout(0)/postMessage 队列
     await p.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)))
-    const result = await p.evaluate(() => {
-      const arr = window.__canvasCapturedText || []
+    const result = await p.evaluate((prop) => {
+      const arr = window[prop] || []
       const copy = arr.map(({ text, x, y }) => ({ text, x, y }))
-      window.__canvasCapturedText = []
+      window[prop] = []
       return copy
-    })
+    }, capturedTextProp)
     return result
   }
 
@@ -261,10 +291,20 @@ export async function setupCanvasTextHook (page) {
    * @param {import('puppeteer').Page} p - 同一页面实例
    */
   async function clearCapturedText (p) {
-    await p.evaluate(() => { window.__canvasCapturedText = [] })
+    await p.evaluate((prop) => { window[prop] = [] }, capturedTextProp)
   }
 
-  return { getCapturedText, clearCapturedText }
+  /**
+   * Peek at how many canvas text items have been captured so far, without consuming them.
+   * Used for "stable count" polling to detect when Canvas rendering has finished.
+   * @param {import('puppeteer').Page} p
+   * @returns {Promise<number>}
+   */
+  async function peekCapturedText (p) {
+    return p.evaluate((prop) => (window[prop] || []).length, capturedTextProp)
+  }
+
+  return { getCapturedText, clearCapturedText, peekCapturedText }
 }
 
 // ---------------------------------------------------------------------------
@@ -316,13 +356,15 @@ export function extractResumeText (capturedTextArray) {
 // ---------------------------------------------------------------------------
 
 /**
- * 优先从拦截的 API 数据中取简历，若无则从页面 window.__canvasCapturedText 中提取（需先调用 setupCanvasTextHook）。
+ * 优先从拦截的 API 数据中取简历，若无则从页面 Canvas hook 中提取（需先调用 setupCanvasTextHook）。
  *
  * @param {import('puppeteer').Page} page - Puppeteer 页面实例
  * @param {Map<string, unknown>} interceptedData - setupNetworkInterceptor 返回的 getInterceptedData() 的结果
+ * @param {{ getCapturedText?: (page: import('puppeteer').Page) => Promise<Array<{text: string, x: number, y: number}>> }} [opts]
+ *   opts.getCapturedText — setupCanvasTextHook 返回的同名函数（支持随机 marker 名）；不传时降级读 window.__canvasCapturedText（旧行为，仅向后兼容）
  * @returns {Promise<{ source: 'api' | 'canvas', data: unknown }>} source 为 'api' 时 data 为 API 响应对象；为 'canvas' 时为 extractResumeText 的结果（字符串数组）
  */
-export async function getResumeData (page, interceptedData) {
+export async function getResumeData (page, interceptedData, opts = {}) {
   if (interceptedData && interceptedData.size > 0) {
     const firstEntry = interceptedData.entries().next()
     if (!firstEntry.done) {
@@ -330,12 +372,21 @@ export async function getResumeData (page, interceptedData) {
       return { source: 'api', data: { path, ...(typeof data === 'object' && data !== null ? data : { value: data }) } }
     }
   }
-  const captured = await page.evaluate(() => {
-    const arr = window.__canvasCapturedText || []
-    const copy = arr.map(({ text, x, y }) => ({ text, x, y }))
-    window.__canvasCapturedText = []
-    return copy
-  })
+
+  // Canvas fallback: use getCapturedText closure if provided (supports randomized marker names)
+  // Fall back to legacy window.__canvasCapturedText for callers that don't yet pass it
+  const getCapturedTextFn = opts.getCapturedText
+  let captured
+  if (typeof getCapturedTextFn === 'function') {
+    captured = await getCapturedTextFn(page)
+  } else {
+    captured = await page.evaluate(() => {
+      const arr = window.__canvasCapturedText || []
+      const copy = arr.map(({ text, x, y }) => ({ text, x, y }))
+      window.__canvasCapturedText = []
+      return copy
+    })
+  }
   const lines = extractResumeText(captured)
   return { source: 'canvas', data: lines }
 }

@@ -18,6 +18,9 @@ import { parseCandidateList, filterCandidates, scrollAndLoadMore } from './candi
 import { processCandidate, checkDailyLimit, clickNotInterested } from './chat-handler.mjs'
 import { dismissBlockingOverlays } from './dialog-dismisser.mjs'
 import { setLevel, debug as logDebug, info as logInfo, warn as logWarn, error as logError } from './logger.mjs'
+import { preflightGhostCursor, randomizeInitialCursorPosition } from './humanMouse.mjs'
+import { buildRecruiterLaunchOptions } from './launch-options.mjs'
+import { checkpointRiskControl } from './risk-detector.mjs'
 
 export { default as startBossChatPageProcess } from './chat-page-processor.mjs'
 
@@ -54,7 +57,9 @@ export async function initPuppeteer () {
   puppeteer.use(StealthPlugin())
   puppeteer.use(LaodengPlugin())
   puppeteer.use(AnonymizeUaPlugin({ makeWindows: false }))
-  logDebug('[boss-auto-browse] initPuppeteer: 插件已注册')
+  // ghost-cursor preflight：fail-fast，避免后续静默退化为裸 page.click()
+  await preflightGhostCursor()
+  logDebug('[boss-auto-browse] initPuppeteer: 插件已注册（含 ghost-cursor preflight）')
   return {
     puppeteer,
     StealthPlugin,
@@ -106,17 +111,14 @@ const localStoragePageUrl = 'https://www.zhipin.com/desktop/'
  */
 export async function launchBrowserAndNavigateToChat () {
   if (!puppeteer) await initPuppeteer()
-  const headless = process.env.HEADLESS === '1'
-  const browser = await puppeteer.launch({
-    headless,
-    ignoreHTTPSErrors: true,
-    protocolTimeout: 120000,
-    defaultViewport: { width: 1440, height: 900 - 140 }
-  })
+  const launchOpts = await buildRecruiterLaunchOptions()
+  const browser = await puppeteer.launch(launchOpts)
   const page = (await browser.pages())[0]
+  await randomizeInitialCursorPosition(page).catch(() => {})
   const bossCookies = readStorageFile('boss-cookies.json')
   const bossLocalStorage = readStorageFile('boss-local-storage.json')
-  if (Array.isArray(bossCookies) && bossCookies.length > 0) {
+  // persistProfile=true 时 profile 已持久化 cookies，跳过注入避免用过期文件覆盖有效 session
+  if (!launchOpts.userDataDir && Array.isArray(bossCookies) && bossCookies.length > 0) {
     await page.setCookie(...bossCookies)
   }
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
@@ -251,20 +253,12 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
     } else {
       await hooks.beforeBrowserLaunch?.promise?.()
 
-      const headlessEnv = process.env.HEADLESS
-      const headless = headlessEnv === '1'
-      logDebug('[boss-auto-browse] 即将启动浏览器', { headless, HEADLESS_env: headlessEnv ?? null })
-      browser = await puppeteer.launch({
-        headless,
-        ignoreHTTPSErrors: true,
-        protocolTimeout: 120000,
-        defaultViewport: {
-          width: 1440,
-          height: 900 - 140
-        }
-      })
+      const launchOpts = await buildRecruiterLaunchOptions()
+      logDebug('[boss-auto-browse] 即将启动浏览器', { headless: launchOpts.headless, persistProfile: !!launchOpts.userDataDir })
+      browser = await puppeteer.launch(launchOpts)
 
       page = (await browser.pages())[0]
+      await randomizeInitialCursorPosition(page).catch(() => {})
 
       await hooks.afterBrowserLaunch?.promise?.()
     }
@@ -276,7 +270,9 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
     // 直接导航到推荐牛人页（注入 Cookie / localStorage 后 goto；复用浏览器时若已在推荐页可跳过 goto）
     // -----------------------------------------------------------------------
     await hooks.beforeNavigateToRecommend?.promise?.()
-    if (Array.isArray(bossCookies) && bossCookies.length > 0) {
+    // persistProfile=true 时 profile 已持久化 cookies，跳过注入避免用过期文件覆盖有效 session
+    const persistProfile = (readConfigFile('boss-recruiter.json') || {})?.advanced?.persistProfile === true
+    if (!persistProfile && Array.isArray(bossCookies) && bossCookies.length > 0) {
       await page.setCookie(...bossCookies)
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
@@ -577,10 +573,16 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
           logInfo('[boss-auto-browse] ✓ 已向', candidate.geekName, '发送招呼（本次共', chatCount, '人）')
         } else {
           logInfo('[boss-auto-browse] ✗', candidate.geekName, '开聊失败：', chatResult.reason)
-          if (chatResult.reason === 'DAILY_LIMIT_REACHED' || chatResult.reason === 'RISK_CONTROL') {
+          if (chatResult.reason === 'DAILY_LIMIT_REACHED') {
             break mainLoop
           }
+          // 'RISK_CONTROL' 落到下面统一 checkpoint 处理
         }
+
+        // 每位候选人处理完都做一次 checkpoint：检测到验证则在循环内等待用户完成，避免崩出 catch + 3s 重试导致连环触发
+        // 不传 expectedUrlPrefix：仅依赖 !detectRiskControl 判断完成，避免 URL query-params 导致误判超时
+        const cpStatus = await checkpointRiskControl(page, { log: logWarn })
+        if (cpStatus === 'timed-out') break mainLoop
       }
 
       // e. 滚动加载 / 翻页（在 iframe frame 内操作）
