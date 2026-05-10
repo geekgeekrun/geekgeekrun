@@ -1,33 +1,32 @@
 <template>
   <div class="debug-tool__wrap">
     <div class="main__wrap">
-      <!-- 顶部控制栏 -->
-      <el-card class="section">
-        <div class="section-title">招聘端调试工具</div>
-        <div class="section-desc">
-          启动浏览器并打开沟通页，在右侧手动选中一条会话，再用下方按钮测试各项功能。<br />
-          <strong>Tab A</strong> 需要浏览器已就绪；<strong>Tab B「LLM 筛选」</strong>的「运行评估」和「生成 Rubric」不需要浏览器。
-        </div>
-        <div class="action-bar">
-          <el-button
-            type="primary"
-            :loading="isLaunching"
-            :disabled="isReady"
-            @click="handleLaunch"
-          >
-            {{ isReady ? '浏览器已启动' : '启动浏览器' }}
-          </el-button>
-          <el-button :disabled="!isReady" @click="handleClose">关闭浏览器</el-button>
-          <el-tag v-if="isReady" type="success">已就绪</el-tag>
-          <el-tag v-else-if="isLaunching" type="warning">启动中...</el-tag>
-          <el-tag v-else type="info">未启动</el-tag>
-        </div>
-      </el-card>
-
       <!-- Tab 切换 -->
       <el-tabs v-model="activeTab" class="debug-tabs">
         <!-- ── Tab A: 简历操作 ── -->
-        <el-tab-pane label="简历操作" name="resume">
+        <el-tab-pane label="简历操作（需要浏览器）" name="resume">
+          <!-- 浏览器控制栏：仅在 Tab A 显示 -->
+          <el-card class="section">
+            <div class="section-title">浏览器控制</div>
+            <div class="section-desc">
+              启动浏览器并打开沟通页，在右侧手动选中一条会话，再用下方按钮测试各项功能。
+            </div>
+            <div class="action-bar">
+              <el-button
+                type="primary"
+                :loading="isLaunching"
+                :disabled="isReady"
+                @click="handleLaunch"
+              >
+                {{ isReady ? '浏览器已启动' : '启动浏览器' }}
+              </el-button>
+              <el-button :disabled="!isReady" @click="handleClose">关闭浏览器</el-button>
+              <el-tag v-if="isReady" type="success">已就绪</el-tag>
+              <el-tag v-else-if="isLaunching" type="warning">启动中...</el-tag>
+              <el-tag v-else type="info">未启动</el-tag>
+            </div>
+          </el-card>
+
           <el-card class="section" :class="{ disabled: !isReady }">
             <div class="section-title">当前会话操作</div>
             <div class="cmd-grid">
@@ -48,13 +47,16 @@
         </el-tab-pane>
 
         <!-- ── Tab B: LLM 筛选 ── -->
-        <el-tab-pane label="LLM 筛选" name="llm">
+        <el-tab-pane label="LLM 筛选测试（无需浏览器）" name="llm">
 
           <!-- 区域 1：生成 Rubric（工作流起点） -->
           <el-card class="section">
             <div class="section-title">区域 1：生成 Rubric</div>
             <div class="section-desc">
-              输入 JD → 自动生成评分标准。生成后可直接编辑 JSON，再点「用于评估」传到区域 2。
+              输入 JD → 自动生成评分标准。生成后可直接编辑 JSON，再点「用于评估」传到区域 3。<br />
+              <strong>注意：</strong>此处生成的 Rubric 仅用于测试，不会自动保存。如需持久保存，请在
+              <RouterLink :to="{ name: 'BossJobConfig' }" style="color: #2faa9e;">职位配置</RouterLink>
+              页面为具体职位生成并保存。
             </div>
 
             <div class="llm-label">岗位描述（JD）</div>
@@ -277,6 +279,7 @@
 
 <script lang="ts" setup>
 import { ref, nextTick, onMounted, onUnmounted, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
 const { ipcRenderer } = electron

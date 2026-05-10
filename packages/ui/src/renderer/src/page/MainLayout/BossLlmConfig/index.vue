@@ -8,6 +8,41 @@
       </div>
     </div>
 
+    <!-- 各用途默认模型（前置显示，方便快速查看当前生效模型） -->
+    <el-card class="section" style="margin-bottom: 0">
+      <div class="section-title">各用途默认模型</div>
+      <div class="section-desc">指定每种用途优先使用哪个模型。未选则跟随第一个启用的模型。</div>
+      <div class="form-row-2">
+        <el-form-item
+          v-for="purpose in purposes"
+          :key="purpose.key"
+          :label="purpose.label"
+        >
+          <el-select
+            v-model="purposeDefaultModelId[purpose.key]"
+            clearable
+            placeholder="（跟随第一个启用的模型）"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="m in allEnabledModels"
+              :key="m.id"
+              :label="m.displayName"
+              :value="m.id"
+            />
+          </el-select>
+        </el-form-item>
+      </div>
+      <el-alert
+        v-if="allEnabledModels.length === 0"
+        type="info"
+        show-icon
+        :closable="false"
+        title="尚未添加任何启用的模型，请在下方添加服务商和模型后再设置默认模型"
+        style="margin-top: 4px"
+      />
+    </el-card>
+
     <!-- Provider 列表 -->
     <div v-if="providers.length" class="provider-list">
       <el-card
@@ -148,33 +183,6 @@
         </template>
       </el-dropdown>
     </div>
-
-    <!-- 各用途默认模型 -->
-    <el-card class="section" style="margin-top: 16px">
-      <div class="section-title">各用途默认模型</div>
-      <div class="section-desc">当同一用途有多个模型时，指定优先使用哪一个。</div>
-      <div class="form-row-2">
-        <el-form-item
-          v-for="purpose in purposes"
-          :key="purpose.key"
-          :label="purpose.label"
-        >
-          <el-select
-            v-model="purposeDefaultModelId[purpose.key]"
-            clearable
-            placeholder="（跟随第一个启用的模型）"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="m in allEnabledModels"
-              :key="m.id"
-              :label="m.displayName"
-              :value="m.id"
-            />
-          </el-select>
-        </el-form-item>
-      </div>
-    </el-card>
 
     <!-- 操作栏 -->
     <div class="action-bar">

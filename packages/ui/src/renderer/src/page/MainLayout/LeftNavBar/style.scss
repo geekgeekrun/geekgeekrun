@@ -5,6 +5,19 @@
     padding: 0.25em 0;
   }
   .link-list {
+    .nav-sub-label {
+      color: #b0bcba;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.6em 0 0.15em 1em;
+      margin-top: 0.2em;
+      &:first-child {
+        margin-top: 0;
+        padding-top: 0.15em;
+      }
+    }
     a {
       display: flex;
       align-items: center;

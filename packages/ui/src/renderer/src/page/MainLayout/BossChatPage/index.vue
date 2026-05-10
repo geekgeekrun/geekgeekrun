@@ -22,9 +22,19 @@
                   <el-checkbox v-model="row.sequence.enabled" />
                 </template>
               </el-table-column>
+              <el-table-column label="执行推荐牛人" width="120" align="center">
+                <template #default="{ row }">
+                  <el-checkbox v-model="row.sequence.runRecommend" :disabled="!row.sequence.enabled" />
+                </template>
+              </el-table-column>
+              <el-table-column label="执行沟通页" width="110" align="center">
+                <template #default="{ row }">
+                  <el-checkbox v-model="row.sequence.runChat" :disabled="!row.sequence.enabled" />
+                </template>
+              </el-table-column>
             </el-table>
             <div style="margin-top: 8px; font-size: 12px; color: #909399;">
-              勾选的职位将在处理沟通页时被依次扫描。若全部不勾选则不处理任何职位。
+              勾选的职位将在处理沟通页时被依次扫描。若全部不勾选则不处理任何职位。「执行推荐牛人」和「执行沟通页」列在「自动顺序执行」模式下生效。
             </div>
           </template>
         </el-card>

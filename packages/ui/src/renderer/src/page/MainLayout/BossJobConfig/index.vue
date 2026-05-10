@@ -27,8 +27,8 @@
           <el-form :model="job" label-position="top" class="job-form">
             <!-- ── 两页通用筛选 ── -->
             <div class="section-label">
-              <span>候选人筛选条件</span>
-              <el-tag size="small">推荐牛人页 + 沟通页</el-tag>
+              <span>候选人基础筛选</span>
+              <el-tag size="small">推荐牛人页 + 沟通页 均生效</el-tag>
             </div>
 
             <div class="filter-row">
@@ -70,55 +70,55 @@
             </div>
 
             <div class="filter-row">
-              <el-checkbox v-model="job.filter.expectWorkExpMinEnabled" />
-              <el-form-item label="工作经验下限（年）" class="flex-1">
-                <el-input-number
-                  v-model="job.filter.expectWorkExpRange[0]"
-                  :min="0"
-                  controls-position="right"
-                  :disabled="!job.filter.expectWorkExpMinEnabled"
-                  placeholder="最少"
-                />
+              <el-checkbox
+                :model-value="job.filter.expectWorkExpMinEnabled || job.filter.expectWorkExpMaxEnabled"
+                @change="(v) => { job.filter.expectWorkExpMinEnabled = v; job.filter.expectWorkExpMaxEnabled = v }"
+              />
+              <el-form-item label="工作经验范围（年）" class="flex-1">
+                <div class="range-input-wrap">
+                  <el-input-number
+                    v-model="job.filter.expectWorkExpRange[0]"
+                    :min="0"
+                    controls-position="right"
+                    :disabled="!job.filter.expectWorkExpMinEnabled && !job.filter.expectWorkExpMaxEnabled"
+                    placeholder="最少"
+                  />
+                  <span class="range-sep">~</span>
+                  <el-input-number
+                    v-model="job.filter.expectWorkExpRange[1]"
+                    :min="0"
+                    controls-position="right"
+                    :disabled="!job.filter.expectWorkExpMinEnabled && !job.filter.expectWorkExpMaxEnabled"
+                    placeholder="最多（99=不限）"
+                  />
+                </div>
               </el-form-item>
             </div>
 
             <div class="filter-row">
-              <el-checkbox v-model="job.filter.expectWorkExpMaxEnabled" />
-              <el-form-item label="工作经验上限（年）" class="flex-1">
-                <el-input-number
-                  v-model="job.filter.expectWorkExpRange[1]"
-                  :min="0"
-                  controls-position="right"
-                  :disabled="!job.filter.expectWorkExpMaxEnabled"
-                  placeholder="最多（99=不限）"
-                />
-              </el-form-item>
-            </div>
-
-            <div class="filter-row">
-              <el-checkbox v-model="job.filter.expectSalaryMinEnabled" />
-              <el-form-item label="期望薪资下限（K/月）" class="flex-1">
-                <el-input-number
-                  v-model="job.filter.expectSalaryRange[0]"
-                  :min="0"
-                  controls-position="right"
-                  :disabled="!job.filter.expectSalaryMinEnabled"
-                  placeholder="最低（0=不限）"
-                />
+              <el-checkbox
+                :model-value="job.filter.expectSalaryMinEnabled || job.filter.expectSalaryMaxEnabled"
+                @change="(v) => { job.filter.expectSalaryMinEnabled = v; job.filter.expectSalaryMaxEnabled = v }"
+              />
+              <el-form-item label="期望薪资范围（K/月）" class="flex-1">
+                <div class="range-input-wrap">
+                  <el-input-number
+                    v-model="job.filter.expectSalaryRange[0]"
+                    :min="0"
+                    controls-position="right"
+                    :disabled="!job.filter.expectSalaryMinEnabled && !job.filter.expectSalaryMaxEnabled"
+                    placeholder="最低"
+                  />
+                  <span class="range-sep">~</span>
+                  <el-input-number
+                    v-model="job.filter.expectSalaryRange[1]"
+                    :min="0"
+                    controls-position="right"
+                    :disabled="!job.filter.expectSalaryMinEnabled && !job.filter.expectSalaryMaxEnabled"
+                    placeholder="最高"
+                  />
+                </div>
                 <div class="form-tip">填 8 表示 8K；填 8000 表示 8000 元/月（会自动换算成 8K）</div>
-              </el-form-item>
-            </div>
-
-            <div class="filter-row">
-              <el-checkbox v-model="job.filter.expectSalaryMaxEnabled" />
-              <el-form-item label="期望薪资上限（K/月）" class="flex-1">
-                <el-input-number
-                  v-model="job.filter.expectSalaryRange[1]"
-                  :min="0"
-                  controls-position="right"
-                  :disabled="!job.filter.expectSalaryMaxEnabled"
-                  placeholder="最高（0=不限）"
-                />
               </el-form-item>
             </div>
 
@@ -133,16 +133,17 @@
                   <el-option value="exclude" label="不通过（排除）" />
                   <el-option value="include" label="通过（不因薪资排除）" />
                 </el-select>
+                <div class="form-tip">仅在启用薪资范围筛选时生效</div>
               </el-form-item>
             </div>
 
             <!-- ── 沟通页专属 ── -->
             <div class="section-label">
               <span>简历全文筛选</span>
-              <el-tag size="small" type="success">仅沟通页</el-tag>
+              <el-tag size="small" type="warning">仅沟通页生效，推荐牛人页不使用此项</el-tag>
             </div>
 
-            <div class="form-tip resume-filter-tip">勾选一个或多个筛选模块；全部不勾选则不筛选</div>
+            <div class="form-tip resume-filter-tip">勾选一个或多个筛选模块；全部不勾选则不筛选简历全文</div>
 
             <div class="filter-row resume-module-row">
               <el-checkbox v-model="job.filter.resumeKeywordsEnabled" label="关键词匹配" />
@@ -904,6 +905,17 @@ function addDimension(job: JobItem) {
 
     .resume-module-content {
       margin-left: 24px;
+    }
+
+    .range-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .range-sep {
+        color: #999;
+        flex-shrink: 0;
+      }
     }
 
     .form-tip {
