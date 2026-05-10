@@ -9,6 +9,7 @@
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { getResumeData, extractResumeText } from './resume-extractor.mjs'
 import { createHumanCursor } from './humanMouse.mjs'
+import { safeClickElement, dismissBlockingOverlays } from './dialog-dismisser.mjs'
 import { debug as logDebug, info as logInfo, warn as logWarn } from './logger.mjs'
 import {
   CANDIDATE_ITEM_SELECTOR,
@@ -314,34 +315,28 @@ export async function startChatWithCandidate (frame, _candidate, _greetingMessag
 
   // 1. 点击"打招呼"按钮（拟人轨迹）；在 iframe frame 内按 candidateIndex 找到对应 item
   // Puppeteer 24.x boundingBox() 已自动叠加 iframe 偏移，返回 page 绝对坐标，直接使用
+  // 点击前先扫一下主页面是否有挡住操作的浮层（治理公告 / 意向沟通 等突发弹窗）
+  if (mainPage && mainPage !== frame) {
+    await dismissBlockingOverlays(mainPage, { maxRounds: 2 }).catch(() => 0)
+  }
   try {
+    let startBtn
     if (typeof candidateIndex === 'number' && CANDIDATE_ITEM_SELECTOR) {
       const items = await frame.$$(CANDIDATE_ITEM_SELECTOR)
       const item = items[candidateIndex]
-      if (!item) {
-        return { success: false, reason: 'CHAT_BUTTON_NOT_FOUND' }
-      }
-      const startBtn = await item.$(CHAT_START_BUTTON_SELECTOR)
-      if (!startBtn) {
-        return { success: false, reason: 'CHAT_BUTTON_NOT_FOUND' }
-      }
-      const box = await startBtn.boundingBox()
-      if (box) {
-        await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
-      } else {
-        await startBtn.click()
-      }
+      if (!item) return { success: false, reason: 'CHAT_BUTTON_NOT_FOUND' }
+      startBtn = await item.$(CHAT_START_BUTTON_SELECTOR)
     } else {
-      const startBtn = await frame.waitForSelector(CHAT_START_BUTTON_SELECTOR, { timeout: 8000 })
-      if (!startBtn) {
-        return { success: false, reason: 'CHAT_BUTTON_NOT_FOUND' }
-      }
-      const box = await startBtn.boundingBox()
-      if (box) {
-        await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
-      } else {
-        await startBtn.click()
-      }
+      startBtn = await frame.waitForSelector(CHAT_START_BUTTON_SELECTOR, { timeout: 8000 })
+    }
+    if (!startBtn) return { success: false, reason: 'CHAT_BUTTON_NOT_FOUND' }
+    // 「打招呼」按钮在 iframe 内，遮挡几乎都来自主页面 —— 这里直接 cursor.click，
+    // safeClickElement 在 frame 上下文做 elementFromPoint 不可靠，改为提前 sweep 主页面
+    const box = await startBtn.boundingBox()
+    if (box) {
+      await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
+    } else {
+      await startBtn.click()
     }
   } catch {
     return { success: false, reason: 'CHAT_BUTTON_NOT_FOUND' }
@@ -365,21 +360,37 @@ export async function startChatWithCandidate (frame, _candidate, _greetingMessag
   }
 
   // 2. 等待"已向牛人发送招呼"弹窗并点击"知道了"（弹窗在主页面，不在 iframe 内）
+  // 优先用 known selector；找不到则用启发式扫描兜底（应对弹窗结构变动）。
+  // 若弹窗始终未出现（selector 超时 + 启发式也没关掉任何浮层），视为招呼可能未发出，
+  // 返回 GREETING_SENT_DIALOG_NOT_APPEARED 而非乐观地返回 OK，防止误计成功次数。
   if (GREETING_SENT_KNOW_BTN_SELECTOR) {
+    let handled = false
     try {
       const knowBtn = await mainPage.waitForSelector(GREETING_SENT_KNOW_BTN_SELECTOR, { timeout: 6000 })
       if (knowBtn) {
-        const box = await knowBtn.boundingBox()
-        if (box) {
-          await cursor.click({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
-        } else {
-          await knowBtn.click()
-        }
+        const r = await safeClickElement({
+          ctx: mainPage, page: mainPage, element: knowBtn, cursor,
+          logPrefix: '[chat-handler:greet-know]'
+        })
+        // 仅当真正点击成功时认为已处理；clicked=false 时落到下方启发式兜底
+        handled = r.clicked === true && !r.error
+        if (r.error) logWarn('[chat-handler] safeClickElement 报告 error=', r.error)
       }
       await sleepWithRandomDelay(500)
     } catch {
-      // 弹窗未出现不是致命错误，继续
-      logWarn('[chat-handler] "知道了"弹窗未出现，继续尝试后续步骤')
+      // selector 超时，留给启发式兜底
+    }
+    if (!handled) {
+      const closed = await dismissBlockingOverlays(mainPage, { maxRounds: 2 }).catch(() => 0)
+      if (closed > 0) {
+        logInfo('[chat-handler] 启发式关闭了发送招呼后的浮层')
+        handled = true
+      } else {
+        // 弹窗既没有通过 selector 出现，也没有被启发式识别到——
+        // 不能确认招呼已发，提前返回失败，避免误报成功
+        logWarn('[chat-handler] 招呼确认弹窗（"知道了"）始终未出现，招呼可能未被发送')
+        return { success: false, reason: 'GREETING_SENT_DIALOG_NOT_APPEARED' }
+      }
     }
   }
 

@@ -16,6 +16,7 @@ import {
 import { setupNetworkInterceptor, setupCanvasTextHook } from './resume-extractor.mjs'
 import { parseCandidateList, filterCandidates, scrollAndLoadMore } from './candidate-processor.mjs'
 import { processCandidate, checkDailyLimit, clickNotInterested } from './chat-handler.mjs'
+import { dismissBlockingOverlays } from './dialog-dismisser.mjs'
 import { setLevel, debug as logDebug, info as logInfo, warn as logWarn, error as logError } from './logger.mjs'
 
 export { default as startBossChatPageProcess } from './chat-page-processor.mjs'
@@ -63,32 +64,36 @@ export async function initPuppeteer () {
 }
 
 /**
- * 关闭登录后弹出的「治理公告」弹窗（点击「我已知晓」确认按钮）。
- * 该弹窗在每次登录后必现，不处理会导致后续自动化操作卡死超时。
+ * 关闭登录后弹出的「治理公告」等任何挡住操作的浮层。
+ *
+ * 历史上这里只针对 GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR 硬编码点击，
+ * 现改为：先等待已知治理公告 selector 出现（提示性），再调用通用的 dismissBlockingOverlays
+ * 启发式扫描——这样新冒出的弹窗也能被自动关掉，不必每次手工加 selector。
  * @param {import('puppeteer').Page} page
  */
 export async function dismissGovernanceNoticeDialog (page) {
-  try {
-    const confirmBtn = await page
-      .waitForSelector(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR, { timeout: 10000 })
-      .catch(() => null)
-    if (!confirmBtn) return
-    logInfo('[boss-auto-browse] 检测到「治理公告」弹窗，点击「我已知晓」关闭...')
-    try {
+  // 给已知的治理公告一点时间冒出来；超时也没关系——通用扫描兜底
+  await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { timeout: 10000 }).catch(() => null)
+  const closed = await dismissBlockingOverlays(page, { maxRounds: 3 }).catch(() => 0)
+  if (closed > 0) {
+    logInfo(`[boss-auto-browse] 自动关闭了 ${closed} 个登录后浮层（含治理公告）`)
+    await sleep(300)
+  }
+  // 兜底：若启发式没识别到治理公告（例如关闭按钮文案变了），再尝试硬编码 selector
+  const stillThere = await page.$(GOVERNANCE_NOTICE_DIALOG_SELECTOR).catch(() => null)
+  if (stillThere) {
+    logWarn('[boss-auto-browse] 启发式未关闭治理公告，回退到硬编码 selector')
+    const confirmBtn = await page.$(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR).catch(() => null)
+    if (confirmBtn) {
       const box = await confirmBtn.boundingBox().catch(() => null)
       if (box) {
-        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2).catch(() => {})
       } else {
-        await confirmBtn.click()
+        await confirmBtn.click().catch(() => {})
       }
-    } catch {
-      await confirmBtn.click().catch(() => {})
+      await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { hidden: true, timeout: 5000 }).catch(() => {})
+      await sleep(300)
     }
-    await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { hidden: true, timeout: 5000 }).catch(() => {})
-    logInfo('[boss-auto-browse] 「治理公告」弹窗已关闭')
-    await sleep(300)
-  } catch {
-    // 弹窗不存在或关闭失败时静默继续
   }
 }
 

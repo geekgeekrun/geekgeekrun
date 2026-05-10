@@ -13,6 +13,7 @@
 import { extractResumeText, parseGeekInfoFromIntercepted } from './resume-extractor.mjs'
 import { sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { createHumanCursor } from './humanMouse.mjs'
+import { dismissBlockingOverlays } from './dialog-dismisser.mjs'
 import {
   CHAT_PAGE_ONLINE_RESUME_SELECTOR,
   CHAT_PAGE_ONLINE_RESUME_IFRAME_SELECTOR,
@@ -26,8 +27,7 @@ import {
   CHAT_PAGE_ATTACH_RESUME_DIALOG_CLOSE_SELECTOR,
   CHAT_PAGE_TAB_ALL_SELECTOR,
   CHAT_PAGE_ITEM_SELECTOR,
-  CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR,
-  CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR
+  CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR
 } from './constant.mjs'
 
 /**
@@ -162,6 +162,7 @@ export async function requestAttachmentResume (page, options = {}) {
   const cursor = options.cursor ?? await createHumanCursor(page)
 
   // 请求前先检测并关闭 tutorial/意向沟通弹窗，避免遮挡附件简历按钮或误点
+  // 已知 selector 优先 → 启发式扫描兜底（应对未知新弹窗）
   const intentKnowBtn = await page.$(CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR).catch(() => null)
   if (intentKnowBtn) {
     console.log('[requestAttachmentResume] 检测到意向沟通/tutorial 弹窗，先关闭...')
@@ -170,10 +171,14 @@ export async function requestAttachmentResume (page, options = {}) {
       await page.waitForSelector(CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR, { hidden: true, timeout: 3000 })
       console.log('[requestAttachmentResume] tutorial 弹窗已关闭')
     } catch {
-      const closeIcon = await page.$(CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR).catch(() => null)
-      if (closeIcon) await closeIcon.click().catch(() => {})
+      // 留给启发式兜底
     }
     await sleepWithRandomDelay(300, 600)
+  }
+  const extraClosed = await dismissBlockingOverlays(page, { maxRounds: 2 }).catch(() => 0)
+  if (extraClosed > 0) {
+    console.log('[requestAttachmentResume] 启发式额外关闭了', extraClosed, '个浮层')
+    await sleepWithRandomDelay(200, 400)
   }
 
   // 检查是否有残留的确认弹窗（上一个候选人流程遗留，v-if 未关闭）
