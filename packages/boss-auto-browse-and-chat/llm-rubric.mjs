@@ -87,7 +87,7 @@ export function getEnabledLlmClient (purpose = 'resume_screening', preferModelId
 /**
  * 根据 Rubric 评估简历。
  * @param {string} resumeText - 简历全文
- * @param {{ knockouts?: string[], dimensions?: Array<{ name: string, weight: number, criteria: Record<string, string> }>, passThreshold?: number }} rubricConfig
+ * @param {{ knockouts?: string[], dimensions?: Array<{ name: string, weight: number, criteria: Record<string, string> }>, passThreshold?: number, _scoring_note?: string }} rubricConfig
  * @param {{ modelId?: string | null }} [options]
  * @returns {Promise<{ isPassed: boolean, totalScore: number, reason: string }>} 失败时默认通过
  */
@@ -100,6 +100,7 @@ export async function evaluateResumeByRubric (resumeText, rubricConfig, options 
   const knockouts = Array.isArray(rubricConfig?.knockouts) ? rubricConfig.knockouts : []
   const dimensions = Array.isArray(rubricConfig?.dimensions) ? rubricConfig.dimensions : []
   const passThreshold = typeof rubricConfig?.passThreshold === 'number' ? rubricConfig.passThreshold : 75
+  const scoringNote = typeof rubricConfig?._scoring_note === 'string' ? rubricConfig._scoring_note : null
 
   if (dimensions.length === 0) {
     return { isPassed: true, totalScore: 100, reason: '无评分维度，默认通过' }
@@ -131,6 +132,10 @@ ${dimensionsDesc}
   "dimension_scores": { "维度名": 1或3或5, ... },
   "reasoning": "简要判断理由"
 }`
+
+  if (scoringNote) {
+    systemContent += `\n\n【评分说明】\n${scoringNote}`
+  }
 
   try {
     logInfo(LOG, 'evaluateResumeByRubric start', {

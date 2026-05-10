@@ -705,7 +705,8 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
           result = await evaluateResumeByRubric(resumeText, {
             knockouts: llmConfig.rubric?.knockouts,
             dimensions: llmConfig.rubric?.dimensions,
-            passThreshold: llmConfig.passThreshold ?? 75
+            passThreshold: llmConfig.rubric?.passThreshold ?? llmConfig.passThreshold ?? 75,
+            _scoring_note: llmConfig.rubric?._scoring_note
           })
           pass = result.isPassed
           filterReason = result.reason || ''
