@@ -7,6 +7,7 @@ import { sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { readConfigFile, getMergedJobConfig } from './runtime-file-utils.mjs'
 import { setupNetworkInterceptor, parseGeekInfoFromIntercepted } from './resume-extractor.mjs'
 import { createHumanCursor } from './humanMouse.mjs'
+import { dismissBlockingOverlays } from './dialog-dismisser.mjs'
 import {
   openOnlineResume,
   getOnlineResumeText,
@@ -22,7 +23,6 @@ import {
   BOSS_CHAT_PAGE_URL,
   CHAT_PAGE_ACTIVE_NAME_SELECTOR,
   CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR,
-  CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR,
   CHAT_PAGE_ITEM_SELECTOR,
   CHAT_PAGE_ITEM_UNREAD_SELECTOR,
   CHAT_PAGE_ALL_FILTER_SELECTOR,
@@ -323,6 +323,7 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
     page: existingPage,
     getCapturedText,
     clearCapturedText,
+    peekCapturedText,
     jobId = null,
     retryCandidate = null,
     processContext = null
@@ -494,6 +495,7 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
       }
 
       // 关闭「意向沟通」提示弹窗（BOSS 每次新浏览器会话打开某些会话时会弹出，遮挡右侧操作按钮）
+      // 优先用已知 selector 快速路径；失败则启发式扫描兜底（应对 BOSS 弹窗结构变动）
       {
         const intentKnowBtn = await page.$(CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR).catch(() => null)
         if (intentKnowBtn) {
@@ -506,22 +508,20 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
               await intentKnowBtn.click().catch(() => {})
             }
           } catch {
-            const closeIconEl = await page.$(CHAT_PAGE_INTENT_DIALOG_CLOSE_SELECTOR).catch(() => null)
-            if (closeIconEl) {
-              const closeIconBox = await closeIconEl.boundingBox().catch(() => null)
-              if (closeIconBox) {
-                await cursor.click({ x: closeIconBox.x + closeIconBox.width / 2, y: closeIconBox.y + closeIconBox.height / 2 })
-              } else {
-                await closeIconEl.click().catch(() => {})
-              }
-            }
+            // 留给启发式兜底
           }
           try {
             await page.waitForSelector(CHAT_PAGE_INTENT_DIALOG_KNOW_BTN_SELECTOR, { hidden: true, timeout: 3000 })
             logDebug(`${LOG}   → 「意向沟通」弹窗已关闭`)
           } catch {
-            logWarn(`${LOG}   → 「意向沟通」弹窗 3s 内未消失，继续执行（可能影响按钮点击）`)
+            logWarn(`${LOG}   → 「意向沟通」弹窗 3s 内未消失，启发式兜底...`)
           }
+          await sleepWithRandomDelay(200, 400)
+        }
+        // 启发式兜底：扫一遍主页面剩余浮层（治理公告补刀 / 未知新弹窗）
+        const closed = await dismissBlockingOverlays(page, { maxRounds: 2 }).catch(() => 0)
+        if (closed > 0) {
+          logInfo(`${LOG}   → 启发式额外关闭了 ${closed} 个浮层`)
           await sleepWithRandomDelay(200, 400)
         }
       }
@@ -637,7 +637,9 @@ export default async function startBossChatPageProcess (hooksFromCaller, options
         let stableCount = 0
         while (Date.now() < canvasDeadline) {
           await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
-          const currentCount = await page.evaluate(() => (window.__canvasCapturedText || []).length)
+          const currentCount = typeof peekCapturedText === 'function'
+            ? await peekCapturedText(page)
+            : await page.evaluate(() => (window.__canvasCapturedText || []).length)
           if (currentCount > 0 && currentCount === lastCount) {
             stableCount++
             if (stableCount >= STABLE_POLLS_NEEDED) break

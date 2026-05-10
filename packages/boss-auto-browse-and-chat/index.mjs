@@ -16,7 +16,11 @@ import {
 import { setupNetworkInterceptor, setupCanvasTextHook } from './resume-extractor.mjs'
 import { parseCandidateList, filterCandidates, scrollAndLoadMore } from './candidate-processor.mjs'
 import { processCandidate, checkDailyLimit, clickNotInterested } from './chat-handler.mjs'
+import { dismissBlockingOverlays } from './dialog-dismisser.mjs'
 import { setLevel, debug as logDebug, info as logInfo, warn as logWarn, error as logError } from './logger.mjs'
+import { preflightGhostCursor, randomizeInitialCursorPosition } from './humanMouse.mjs'
+import { buildRecruiterLaunchOptions } from './launch-options.mjs'
+import { checkpointRiskControl } from './risk-detector.mjs'
 
 export { default as startBossChatPageProcess } from './chat-page-processor.mjs'
 
@@ -53,7 +57,9 @@ export async function initPuppeteer () {
   puppeteer.use(StealthPlugin())
   puppeteer.use(LaodengPlugin())
   puppeteer.use(AnonymizeUaPlugin({ makeWindows: false }))
-  logDebug('[boss-auto-browse] initPuppeteer: 插件已注册')
+  // ghost-cursor preflight：fail-fast，避免后续静默退化为裸 page.click()
+  await preflightGhostCursor()
+  logDebug('[boss-auto-browse] initPuppeteer: 插件已注册（含 ghost-cursor preflight）')
   return {
     puppeteer,
     StealthPlugin,
@@ -63,32 +69,36 @@ export async function initPuppeteer () {
 }
 
 /**
- * 关闭登录后弹出的「治理公告」弹窗（点击「我已知晓」确认按钮）。
- * 该弹窗在每次登录后必现，不处理会导致后续自动化操作卡死超时。
+ * 关闭登录后弹出的「治理公告」等任何挡住操作的浮层。
+ *
+ * 历史上这里只针对 GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR 硬编码点击，
+ * 现改为：先等待已知治理公告 selector 出现（提示性），再调用通用的 dismissBlockingOverlays
+ * 启发式扫描——这样新冒出的弹窗也能被自动关掉，不必每次手工加 selector。
  * @param {import('puppeteer').Page} page
  */
 export async function dismissGovernanceNoticeDialog (page) {
-  try {
-    const confirmBtn = await page
-      .waitForSelector(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR, { timeout: 10000 })
-      .catch(() => null)
-    if (!confirmBtn) return
-    logInfo('[boss-auto-browse] 检测到「治理公告」弹窗，点击「我已知晓」关闭...')
-    try {
+  // 给已知的治理公告一点时间冒出来；超时也没关系——通用扫描兜底
+  await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { timeout: 10000 }).catch(() => null)
+  const closed = await dismissBlockingOverlays(page, { maxRounds: 3 }).catch(() => 0)
+  if (closed > 0) {
+    logInfo(`[boss-auto-browse] 自动关闭了 ${closed} 个登录后浮层（含治理公告）`)
+    await sleep(300)
+  }
+  // 兜底：若启发式没识别到治理公告（例如关闭按钮文案变了），再尝试硬编码 selector
+  const stillThere = await page.$(GOVERNANCE_NOTICE_DIALOG_SELECTOR).catch(() => null)
+  if (stillThere) {
+    logWarn('[boss-auto-browse] 启发式未关闭治理公告，回退到硬编码 selector')
+    const confirmBtn = await page.$(GOVERNANCE_NOTICE_DIALOG_CONFIRM_BTN_SELECTOR).catch(() => null)
+    if (confirmBtn) {
       const box = await confirmBtn.boundingBox().catch(() => null)
       if (box) {
-        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2).catch(() => {})
       } else {
-        await confirmBtn.click()
+        await confirmBtn.click().catch(() => {})
       }
-    } catch {
-      await confirmBtn.click().catch(() => {})
+      await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { hidden: true, timeout: 5000 }).catch(() => {})
+      await sleep(300)
     }
-    await page.waitForSelector(GOVERNANCE_NOTICE_DIALOG_SELECTOR, { hidden: true, timeout: 5000 }).catch(() => {})
-    logInfo('[boss-auto-browse] 「治理公告」弹窗已关闭')
-    await sleep(300)
-  } catch {
-    // 弹窗不存在或关闭失败时静默继续
   }
 }
 
@@ -101,17 +111,14 @@ const localStoragePageUrl = 'https://www.zhipin.com/desktop/'
  */
 export async function launchBrowserAndNavigateToChat () {
   if (!puppeteer) await initPuppeteer()
-  const headless = process.env.HEADLESS === '1'
-  const browser = await puppeteer.launch({
-    headless,
-    ignoreHTTPSErrors: true,
-    protocolTimeout: 120000,
-    defaultViewport: { width: 1440, height: 900 - 140 }
-  })
+  const launchOpts = await buildRecruiterLaunchOptions()
+  const browser = await puppeteer.launch(launchOpts)
   const page = (await browser.pages())[0]
+  await randomizeInitialCursorPosition(page).catch(() => {})
   const bossCookies = readStorageFile('boss-cookies.json')
   const bossLocalStorage = readStorageFile('boss-local-storage.json')
-  if (Array.isArray(bossCookies) && bossCookies.length > 0) {
+  // persistProfile=true 时 profile 已持久化 cookies，跳过注入避免用过期文件覆盖有效 session
+  if (!launchOpts.userDataDir && Array.isArray(bossCookies) && bossCookies.length > 0) {
     await page.setCookie(...bossCookies)
   }
   await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
@@ -246,20 +253,12 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
     } else {
       await hooks.beforeBrowserLaunch?.promise?.()
 
-      const headlessEnv = process.env.HEADLESS
-      const headless = headlessEnv === '1'
-      logDebug('[boss-auto-browse] 即将启动浏览器', { headless, HEADLESS_env: headlessEnv ?? null })
-      browser = await puppeteer.launch({
-        headless,
-        ignoreHTTPSErrors: true,
-        protocolTimeout: 120000,
-        defaultViewport: {
-          width: 1440,
-          height: 900 - 140
-        }
-      })
+      const launchOpts = await buildRecruiterLaunchOptions()
+      logDebug('[boss-auto-browse] 即将启动浏览器', { headless: launchOpts.headless, persistProfile: !!launchOpts.userDataDir })
+      browser = await puppeteer.launch(launchOpts)
 
       page = (await browser.pages())[0]
+      await randomizeInitialCursorPosition(page).catch(() => {})
 
       await hooks.afterBrowserLaunch?.promise?.()
     }
@@ -271,7 +270,9 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
     // 直接导航到推荐牛人页（注入 Cookie / localStorage 后 goto；复用浏览器时若已在推荐页可跳过 goto）
     // -----------------------------------------------------------------------
     await hooks.beforeNavigateToRecommend?.promise?.()
-    if (Array.isArray(bossCookies) && bossCookies.length > 0) {
+    // persistProfile=true 时 profile 已持久化 cookies，跳过注入避免用过期文件覆盖有效 session
+    const persistProfile = (readConfigFile('boss-recruiter.json') || {})?.advanced?.persistProfile === true
+    if (!persistProfile && Array.isArray(bossCookies) && bossCookies.length > 0) {
       await page.setCookie(...bossCookies)
     }
     await setDomainLocalStorage(browser, localStoragePageUrl, bossLocalStorage || {})
@@ -572,10 +573,16 @@ export default async function startBossAutoBrowse (hooksFromCaller, opts = {}) {
           logInfo('[boss-auto-browse] ✓ 已向', candidate.geekName, '发送招呼（本次共', chatCount, '人）')
         } else {
           logInfo('[boss-auto-browse] ✗', candidate.geekName, '开聊失败：', chatResult.reason)
-          if (chatResult.reason === 'DAILY_LIMIT_REACHED' || chatResult.reason === 'RISK_CONTROL') {
+          if (chatResult.reason === 'DAILY_LIMIT_REACHED') {
             break mainLoop
           }
+          // 'RISK_CONTROL' 落到下面统一 checkpoint 处理
         }
+
+        // 每位候选人处理完都做一次 checkpoint：检测到验证则在循环内等待用户完成，避免崩出 catch + 3s 重试导致连环触发
+        // 不传 expectedUrlPrefix：仅依赖 !detectRiskControl 判断完成，避免 URL query-params 导致误判超时
+        const cpStatus = await checkpointRiskControl(page, { log: logWarn })
+        if (cpStatus === 'timed-out') break mainLoop
       }
 
       // e. 滚动加载 / 翻页（在 iframe frame 内操作）

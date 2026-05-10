@@ -90,6 +90,22 @@
           </el-form-item>
         </el-card>
 
+        <el-card class="config-section">
+          <el-form-item mb0>
+            <div class="section-title">高级反检测（实验性）</div>
+          </el-form-item>
+          <el-form-item>
+            <el-checkbox v-model="formContent.advancedPersistProfile">
+              持久化浏览器 profile（更难被识别为新设备）
+            </el-checkbox>
+            <div class="form-tip">
+              启用后 BOSS 看到的是「老设备」而非「每次都是新设备」，能显著降低人工验证触发率。<br>
+              副作用：bot 运行期间不能在系统 Chrome 同时登录 BOSS（会被挤掉）；profile 文件夹长期会占用 1-2GB 磁盘空间。<br>
+              路径：<code>~/.geekgeekrun/storage/boss-chrome-profile/</code>
+            </div>
+          </el-form-item>
+        </el-card>
+
         <div class="action-bar">
           <el-button :loading="isSaving" @click="handleSave">仅保存配置</el-button>
           <el-button type="primary" :loading="isSaving" @click="handleSubmit">
@@ -167,7 +183,8 @@ const formContent = reactive({
   recommendSkipViewedCandidates: false,
   recommendRerunIntervalMs: 3000,
   recommendDelayBetweenNotInterestedMs: [800, 2500] as [number, number],
-  recommendKeepBrowserOpenAfterRun: false
+  recommendKeepBrowserOpenAfterRun: false,
+  advancedPersistProfile: false
 })
 
 onMounted(async () => {
@@ -194,6 +211,9 @@ onMounted(async () => {
         : [800, 2500]
     formContent.recommendKeepBrowserOpenAfterRun =
       recommendPage.keepBrowserOpenAfterRun ?? false
+
+    const advanced = recruiterConfig.advanced ?? {}
+    formContent.advancedPersistProfile = advanced.persistProfile ?? false
   } catch (err) {
     console.error(err)
   }
@@ -213,6 +233,9 @@ const doSave = async () => {
       rerunIntervalMs: formContent.recommendRerunIntervalMs,
       delayBetweenNotInterestedMs: formContent.recommendDelayBetweenNotInterestedMs,
       keepBrowserOpenAfterRun: formContent.recommendKeepBrowserOpenAfterRun
+    },
+    advanced: {
+      persistProfile: formContent.advancedPersistProfile
     }
   }
   await ipcRenderer.invoke('save-boss-recruiter-config', JSON.stringify(payload))
