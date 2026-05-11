@@ -23,4 +23,4 @@ database.sqlite
 *.sqlite3
 *.db
 *.db-journal
-.env.local
+.env.local.worktrees
