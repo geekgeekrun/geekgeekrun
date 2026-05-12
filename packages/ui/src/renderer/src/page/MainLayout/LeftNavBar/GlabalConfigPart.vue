@@ -2,13 +2,13 @@
   <div class="group-item">
     <div class="group-title">全局设置</div>
     <div flex flex-col class="link-list">
-      <a href="javascript:void(0)" @click="handleClickConfigCommonJobCondition">
+      <a v-if="showJobCondition" href="javascript:void(0)" @click="handleClickConfigCommonJobCondition">
         公共职位筛选条件
       </a>
       <a href="javascript:void(0)" @click="handleClickBrowserSetting">
         编辑浏览器偏好<TopRight w-1em h-1em mr10px />
       </a>
-      <a href="javascript:void(0)" @click="handleClickConfigLlm">
+      <a v-if="showLlmConfig" href="javascript:void(0)" @click="handleClickConfigLlm">
         配置大语言模型
         <div>
           <el-tooltip
@@ -47,6 +47,10 @@
 </template>
 
 <script lang="ts" setup>
+withDefaults(defineProps<{ showJobCondition?: boolean; showLlmConfig?: boolean }>(), {
+  showJobCondition: true,
+  showLlmConfig: true
+})
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { ElMessage } from 'element-plus'
 import { TopRight, QuestionFilled } from '@element-plus/icons-vue'

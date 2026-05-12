@@ -12,6 +12,8 @@ import { MarkAsNotSuitLog } from "./entity/MarkAsNotSuitLog";
 import { ChatMessageRecord } from "./entity/ChatMessageRecord";
 import { LlmModelUsageRecord } from "./entity/LlmModelUsageRecord";
 import { JobHireStatusRecord } from "./entity/JobHireStatusRecord";
+import { CandidateInfo } from "./entity/CandidateInfo";
+import { CandidateContactLog } from "./entity/CandidateContactLog";
 
 function getBossInfoIfIsEqual (savedOne, currentOne) {
   if (savedOne === currentOne) {
@@ -387,4 +389,67 @@ export async function getJobHireStatusRecord(
     }
   })
   return result
+}
+
+// --- Candidate (recruiter side) handlers ---
+
+export async function createOrUpdateCandidateInfo(
+  ds: DataSource,
+  payload: Partial<CandidateInfo>
+) {
+  const repo = ds.getRepository(CandidateInfo);
+  const now = new Date();
+  const existing = payload.encryptGeekId
+    ? await repo.findOne({ where: { encryptGeekId: payload.encryptGeekId } })
+    : null;
+  if (existing) {
+    Object.assign(existing, payload, { updatedAt: now });
+    return await repo.save(existing);
+  }
+  const entity = new CandidateInfo();
+  Object.assign(entity, payload, { createdAt: now, updatedAt: now });
+  return await repo.save(entity);
+}
+
+export async function insertCandidateContactLog(
+  ds: DataSource,
+  payload: Partial<CandidateContactLog>
+) {
+  const repo = ds.getRepository(CandidateContactLog);
+  const entity = new CandidateContactLog();
+  const now = new Date();
+  Object.assign(entity, payload, { createdAt: now });
+  return await repo.save(entity);
+}
+
+export async function queryCandidateByEncryptId(
+  ds: DataSource,
+  encryptGeekId: string
+) {
+  const repo = ds.getRepository(CandidateInfo);
+  return await repo.findOne({
+    where: { encryptGeekId }
+  });
+}
+
+/** Recent contact logs for recruiter webhook "last run" payload. Returns unique encryptGeekIds by most recent contact first. */
+export async function getRecentCandidateContactLogs(
+  ds: DataSource,
+  limit = 50
+): Promise<Array<{ encryptGeekId: string; contactTime: Date }>> {
+  const repo = ds.getRepository(CandidateContactLog);
+  const rows = await repo.find({
+    order: { contactTime: 'DESC' },
+    take: limit * 2,
+    select: ['encryptGeekId', 'contactTime']
+  });
+  const seen = new Set<string>();
+  const result: Array<{ encryptGeekId: string; contactTime: Date }> = [];
+  for (const r of rows) {
+    if (seen.has(r.encryptGeekId)) continue;
+    seen.add(r.encryptGeekId);
+    result.push({ encryptGeekId: r.encryptGeekId, contactTime: r.contactTime });
+    if (result.length >= limit) break;
+  }
+  return result;
 }

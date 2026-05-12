@@ -30,12 +30,19 @@
     "node": "20.16.0"
   },
   "engines": {
-    "pnpm": ">=8.15.9 <9.0.0"
+    "pnpm": ">=8.15.9"
   },
   "pnpm": {
     "patchedDependencies": {
       "find-chrome-bin@2.0.4": "patches/find-chrome-bin@2.0.4.patch",
       "puppeteer-extra-plugin-anonymize-ua@2.4.6": "patches/puppeteer-extra-plugin-anonymize-ua@2.4.6.patch"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "better-sqlite3",
+      "electron",
+      "esbuild",
+      "puppeteer"
+    ]
   }
 }

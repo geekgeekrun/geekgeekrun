@@ -26,6 +26,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
+    "@geekgeekrun/boss-auto-browse-and-chat": "workspace:*",
     "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
     "@geekgeekrun/pm": "workspace:*",
     "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",

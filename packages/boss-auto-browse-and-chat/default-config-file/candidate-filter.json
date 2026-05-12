@@ -1,0 +1,10 @@
+{
+  "expectCityList": [],
+  "expectEducationRegExpStr": "",
+  "expectWorkExpRange": [0, 99],
+  "expectSalaryRange": [0, 0],
+  "expectSalaryWhenNegotiable": "exclude",
+  "expectSkillKeywords": [],
+  "blockCandidateNameRegExpStr": "",
+  "skipViewedCandidates": false
+}

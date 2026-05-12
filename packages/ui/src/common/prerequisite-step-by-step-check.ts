@@ -16,3 +16,18 @@ export const getAutoStartChatSteps = () => [
     describe: '登录状态检查'
   }
 ]
+
+export const getBossAutoBrowseSteps = () => [
+  {
+    id: 'worker-launch',
+    describe: '启动子进程'
+  },
+  {
+    id: 'puppeteer-executable-check',
+    describe: 'Puppeteer 可执行程序检查'
+  },
+  {
+    id: 'login-status-check',
+    describe: '登录状态检查（若浏览器弹出请以招聘者身份登录）'
+  }
+]

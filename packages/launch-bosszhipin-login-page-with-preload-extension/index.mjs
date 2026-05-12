@@ -31,7 +31,9 @@ export async function main() {
   const browser = await puppeteer.launch({
     headless: false,
     pipe: true,
-    enableExtensions: [editThisCookieExtensionPath]
+    enableExtensions: [editThisCookieExtensionPath],
+    defaultViewport: null,
+    args: ['--window-size=1440,900']
   })
 
   const closeAttachedSet = new WeakSet()
