@@ -24,8 +24,7 @@ import {
 import { PageReq } from '../../../../common/types/pagination'
 import { pipeWriteRegardlessError } from '../../utils/pipe'
 import { WriteStream } from 'node:fs'
-// eslint-disable-next-line vue/prefer-import-from-vue
-import { hasOwn } from '@vue/shared'
+const hasOwn = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj, key)
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
 import {
@@ -1149,6 +1148,248 @@ export default function initIpc() {
     return { ok: true }
   })
   // ── end 调试工具 LLM 接口 ──────────────────────────────────────────────────────
+
+  // ── 配置管理：导出 / 预览导入 / 导入 ─────────────────────────────────────────
+
+  ipcMain.handle('export-recruiter-config', async (_, payload: {
+    sections: {
+      recruiter?: boolean
+      jobs?: boolean
+      llm?: boolean
+      includeApiKeys?: boolean
+      webhook?: boolean
+      session?: boolean
+    }
+  }) => {
+    const {
+      readConfigFile: readBossConfigFile,
+      readStorageFile: readBossStorageFile,
+      readBossJobsConfig,
+      readBossLlmConfig
+    } = await import('@geekgeekrun/boss-auto-browse-and-chat/runtime-file-utils.mjs')
+
+    const bundle: any = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      sections: {}
+    }
+
+    if (payload.sections.recruiter) {
+      bundle.sections.recruiter = {
+        bossRecruiter: readBossConfigFile('boss-recruiter.json'),
+        candidateFilter: readBossConfigFile('candidate-filter.json')
+      }
+    }
+
+    if (payload.sections.jobs) {
+      bundle.sections.jobs = readBossJobsConfig()
+    }
+
+    if (payload.sections.llm) {
+      const llmConfig = readBossLlmConfig()
+      if (!payload.sections.includeApiKeys && Array.isArray(llmConfig.providers)) {
+        llmConfig.providers = llmConfig.providers.map((p: any) => ({ ...p, apiKey: '__REDACTED__' }))
+      }
+      bundle.sections.llm = llmConfig
+    }
+
+    if (payload.sections.webhook) {
+      bundle.sections.webhook = readBossConfigFile('webhook.json') ?? {}
+    }
+
+    if (payload.sections.session) {
+      bundle.sections.session = {
+        cookies: readBossStorageFile('boss-cookies.json'),
+        localStorage: readBossStorageFile('boss-local-storage.json')
+      }
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const result = await dialog.showSaveDialog({
+      defaultPath: `geekgeekrun-config-${dateStr}.json`,
+      filters: [{ name: 'JSON 配置文件', extensions: ['json'] }]
+    })
+
+    if (result.canceled || !result.filePath) {
+      return { success: false }
+    }
+
+    const fsPromises = await import('node:fs/promises')
+    await fsPromises.writeFile(result.filePath, JSON.stringify(bundle, null, 2), 'utf-8')
+    return { success: true, filePath: result.filePath }
+  })
+
+  ipcMain.handle('preview-recruiter-config-import', async (_, payload: { bundleJson: string }) => {
+    let bundle: any
+    try {
+      bundle = JSON.parse(payload.bundleJson)
+    } catch {
+      return { valid: false, error: '文件解析失败，请确认是有效的 JSON 文件' }
+    }
+
+    if (bundle.version !== 1) {
+      return { valid: false, error: `不支持的配置文件版本: ${bundle.version}` }
+    }
+
+    const sections = bundle.sections || {}
+    const summary: Array<{
+      key: string
+      label: string
+      description: string
+      hasSecurityWarning?: boolean
+      apiKeysRedacted?: boolean
+    }> = []
+
+    if (sections.recruiter) {
+      summary.push({ key: 'recruiter', label: '基础配置', description: '招聘策略 + 候选人筛选条件' })
+    }
+    if (sections.jobs) {
+      const jobCount = (sections.jobs.jobs || []).length
+      summary.push({ key: 'jobs', label: '职位配置', description: `${jobCount} 个职位（含 Rubric）` })
+    }
+    if (sections.llm) {
+      const providerCount = (sections.llm.providers || []).length
+      const hasRedacted = (sections.llm.providers || []).some((p: any) => p.apiKey === '__REDACTED__')
+      summary.push({
+        key: 'llm',
+        label: 'LLM 配置',
+        description: `${providerCount} 个 Provider${hasRedacted ? '（API Key 已脱敏，导入后需手动补填）' : ''}`,
+        apiKeysRedacted: hasRedacted
+      })
+    }
+    if (sections.webhook) {
+      summary.push({ key: 'webhook', label: 'Webhook 配置', description: 'Webhook / 外部集成' })
+    }
+    if (sections.session) {
+      summary.push({
+        key: 'session',
+        label: '登录会话',
+        description: '含 Cookie，导入后将替换当前登录状态',
+        hasSecurityWarning: true
+      })
+    }
+
+    return { valid: true, exportedAt: bundle.exportedAt, summary }
+  })
+
+  ipcMain.handle('import-recruiter-config', async (_, payload: {
+    bundleJson: string
+    selectedSections: string[]
+  }) => {
+    const {
+      readConfigFile: readBossConfigFile,
+      writeConfigFile: writeBossConfigFile,
+      readStorageFile: readBossStorageFile,
+      writeStorageFile: writeBossStorageFile,
+      readBossJobsConfig,
+      writeBossJobsConfig,
+      readBossLlmConfig,
+      writeBossLlmConfig
+    } = await import('@geekgeekrun/boss-auto-browse-and-chat/runtime-file-utils.mjs')
+
+    let bundle: any
+    try {
+      bundle = JSON.parse(payload.bundleJson)
+    } catch {
+      return { success: false, error: '文件解析失败' }
+    }
+
+    if (bundle.version !== 1) {
+      return { success: false, error: `不支持的配置文件版本: ${bundle.version}` }
+    }
+
+    const selected = new Set(payload.selectedSections)
+    const sections = bundle.sections || {}
+
+    // Backup existing configs before writing
+    const backup: Record<string, any> = {}
+    if (selected.has('recruiter') && sections.recruiter) {
+      backup['boss-recruiter.json'] = readBossConfigFile('boss-recruiter.json')
+      backup['candidate-filter.json'] = readBossConfigFile('candidate-filter.json')
+    }
+    if (selected.has('jobs') && sections.jobs) {
+      backup['boss-jobs-config.json'] = readBossJobsConfig()
+    }
+    if (selected.has('llm') && sections.llm) {
+      backup['boss-llm.json'] = readBossLlmConfig()
+    }
+    if (selected.has('webhook') && sections.webhook) {
+      backup['webhook.json'] = readBossConfigFile('webhook.json')
+    }
+    if (selected.has('session') && sections.session) {
+      backup['boss-cookies.json'] = readBossStorageFile('boss-cookies.json')
+      backup['boss-local-storage.json'] = readBossStorageFile('boss-local-storage.json')
+    }
+
+    const written: string[] = []
+    try {
+      if (selected.has('recruiter') && sections.recruiter) {
+        await writeBossConfigFile('boss-recruiter.json', sections.recruiter.bossRecruiter)
+        written.push('boss-recruiter.json')
+        await writeBossConfigFile('candidate-filter.json', sections.recruiter.candidateFilter)
+        written.push('candidate-filter.json')
+      }
+
+      if (selected.has('jobs') && sections.jobs) {
+        await writeBossJobsConfig(sections.jobs)
+        written.push('boss-jobs-config.json')
+      }
+
+      if (selected.has('llm') && sections.llm) {
+        const llmToWrite = JSON.parse(JSON.stringify(sections.llm))
+        if (Array.isArray(llmToWrite.providers)) {
+          const existingProviderMap = new Map(
+            (backup['boss-llm.json']?.providers || []).map((p: any) => [p.id, p])
+          )
+          llmToWrite.providers = llmToWrite.providers.map((p: any) => {
+            if (p.apiKey === '__REDACTED__') {
+              const existing: any = existingProviderMap.get(p.id)
+              return { ...p, apiKey: existing?.apiKey ?? '' }
+            }
+            return p
+          })
+        }
+        await writeBossLlmConfig(llmToWrite)
+        written.push('boss-llm.json')
+      }
+
+      if (selected.has('webhook') && sections.webhook) {
+        await writeBossConfigFile('webhook.json', sections.webhook)
+        written.push('webhook.json')
+      }
+
+      if (selected.has('session') && sections.session) {
+        await writeBossStorageFile('boss-cookies.json', sections.session.cookies)
+        written.push('boss-cookies.json')
+        await writeBossStorageFile('boss-local-storage.json', sections.session.localStorage)
+        written.push('boss-local-storage.json')
+      }
+
+      return { success: true, importedSections: payload.selectedSections }
+    } catch (err: any) {
+      // Rollback all written files
+      try {
+        for (const fileName of written) {
+          if (backup[fileName] !== undefined) {
+            if (fileName === 'boss-cookies.json' || fileName === 'boss-local-storage.json') {
+              await writeBossStorageFile(fileName, backup[fileName])
+            } else if (fileName === 'boss-jobs-config.json') {
+              await writeBossJobsConfig(backup[fileName] ?? { jobs: [] })
+            } else if (fileName === 'boss-llm.json') {
+              await writeBossLlmConfig(backup[fileName])
+            } else {
+              await writeBossConfigFile(fileName, backup[fileName])
+            }
+          }
+        }
+      } catch {
+        // ignore rollback errors
+      }
+      return { success: false, error: err?.message ?? '导入失败，已还原至原始配置' }
+    }
+  })
+
+  // ── end 配置管理 ──────────────────────────────────────────────────────────────
 
   ipcMain.handle('sync-boss-job-list', async (ev) => {
     const { setLevel, debug: logDebug, info: logInfo } = await import(

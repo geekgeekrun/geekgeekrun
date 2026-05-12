@@ -37,6 +37,9 @@
       <RouterLink :to="{ name: 'BossDebugTool' }">
         调试与测试工具
       </RouterLink>
+      <RouterLink :to="{ name: 'BossConfigManager' }">
+        配置管理
+      </RouterLink>
 
     </div>
   </div>

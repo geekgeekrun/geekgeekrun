@@ -185,6 +185,14 @@ const routes: Array<RouteRecordRaw> = [
         meta: {
           title: '招聘端大语言模型配置'
         }
+      },
+      {
+        name: 'BossConfigManager',
+        path: 'BossConfigManager',
+        component: () => import('@renderer/page/MainLayout/BossConfigManager/index.vue'),
+        meta: {
+          title: '配置管理'
+        }
       }
     ]
   },
