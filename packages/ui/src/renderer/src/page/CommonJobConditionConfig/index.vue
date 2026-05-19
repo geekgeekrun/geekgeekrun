@@ -570,6 +570,32 @@
                     "
                   />
                 </el-form-item>
+                <div class="col-span-2 mt10px">
+                  <el-checkbox v-model="formContent.isPosterHrFilterEnabled"
+                    >仅保留人事/招聘方发布的岗位</el-checkbox
+                  >
+                </div>
+                <el-form-item
+                  v-if="formContent.isPosterHrFilterEnabled"
+                  mb0
+                  prop="posterHrTitleRegExpStr"
+                  class="col-span-2"
+                >
+                  <div ref="posterHrTitleRegExpSectionEl" font-size-12px>
+                    BOSS身份正则白名单（不区分大小写）
+                  </div>
+                  <el-input
+                    v-model="formContent.posterHrTitleRegExpStr"
+                    type="textarea"
+                    placeholder="HR|HRBP|HRG|Recruiter|Talent Acquisition|招聘|人事|人力|人资"
+                    :autosize="{ minRows: 2 }"
+                    max-h-6lh
+                    @blur="
+                      formContent.posterHrTitleRegExpStr =
+                        formContent.posterHrTitleRegExpStr?.trim() ?? ''
+                    "
+                  />
+                </el-form-item>
               </div>
             </div>
           </div>
@@ -612,6 +638,7 @@ import {
   getRuleOfExpectJobNameRegExpStr,
   getRuleOfExpectJobDescRegExpStr,
   getRuleOfExpectJobTypeRegExpStr,
+  getRuleOfPosterHrTitleRegExpStr,
   getRuleOfBlockCompanyNameRegExpStr,
   jobDetailRegExpMatchLogicOptions,
   getHandlerForExpectSalaryCalculateWayChanged,
@@ -634,6 +661,8 @@ const formContent = ref({
   expectJobNameRegExpStr: '',
   expectJobTypeRegExpStr: '',
   expectJobDescRegExpStr: '',
+  isPosterHrFilterEnabled: false,
+  posterHrTitleRegExpStr: '',
   expectSalaryCalculateWay: SalaryCalculateWay.ANNUAL_PACKAGE,
   expectSalaryHigh: null,
   expectSalaryLow: null,
@@ -641,6 +670,7 @@ const formContent = ref({
 })
 
 const jobDetailRegExpSectionEl = ref<HTMLDivElement>()
+const posterHrTitleRegExpSectionEl = ref<HTMLDivElement>()
 const blockCompanyNameRegExpSectionEl = ref<HTMLDivElement>()
 const formRules = computed(() => ({
   expectJobNameRegExpStr: {
@@ -654,6 +684,10 @@ const formRules = computed(() => ({
   expectJobDescRegExpStr: {
     trigger: 'blur',
     validator: getRuleOfExpectJobDescRegExpStr({ gtagRenderer, jobDetailRegExpSectionEl })
+  },
+  posterHrTitleRegExpStr: {
+    trigger: 'blur',
+    validator: getRuleOfPosterHrTitleRegExpStr({ gtagRenderer, posterHrTitleRegExpSectionEl })
   },
   blockCompanyNameRegExpStr: {
     trigger: 'blur',
