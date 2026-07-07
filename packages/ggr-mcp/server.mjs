@@ -1,79 +1,47 @@
-import { createAgentService } from './lib/agent-service.mjs'
 import { createMcpServer } from './lib/mcp-stdio.mjs'
 
-const service = createAgentService()
+const state = {
+  running: false,
+  pid: null,
+  mode: 'semi_auto',
+  headless: true,
+  lastError: null,
+}
 
 const tools = [
   {
+    name: 'boss_get_status',
+    description: 'Return the current local controller status. This V0 scaffold does not expose cookies or localStorage.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    handler: () => state,
+  },
+  {
     name: 'boss_start_agent',
-    description: 'Start the local GeekGeekRun daemon for BOSS automation. V0 controls process lifecycle only and does not send chat messages.',
+    description: 'Record a requested start. Process launch is intentionally left for the local service implementation.',
     inputSchema: {
       type: 'object',
       properties: {
-        headless: {
-          type: 'boolean',
-          description: 'Run Chromium without a visible window after the local headless patch is applied.',
-          default: true,
-        },
-        mode: {
-          type: 'string',
-          enum: ['semi_auto', 'manual', 'auto'],
-          description: 'Execution mode label for the controller. V0 records it for status; message sending is not implemented.',
-          default: 'semi_auto',
-        },
-        configPatch: {
-          type: 'object',
-          description: 'Optional config patch. Use either { fileName, patch } or { "boss.json": { ... } }.',
-        },
+        headless: { type: 'boolean', default: true },
+        mode: { type: 'string', enum: ['semi_auto', 'manual', 'auto'], default: 'semi_auto' },
       },
       additionalProperties: false,
     },
-    handler: async args => service.start(args),
+    handler: args => {
+      state.running = false
+      state.headless = args.headless ?? true
+      state.mode = args.mode ?? 'semi_auto'
+      state.lastError = 'Process lifecycle service is not wired yet.'
+      return state
+    },
   },
   {
     name: 'boss_stop_agent',
-    description: 'Stop the local GeekGeekRun daemon if it is running.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
+    description: 'Record a requested stop. Process launch is intentionally left for the local service implementation.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    handler: () => {
+      state.running = false
+      return state
     },
-    handler: async () => service.stop(),
-  },
-  {
-    name: 'boss_get_status',
-    description: 'Return the local GeekGeekRun daemon status without exposing cookies or localStorage.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
-    handler: () => service.getStatus(),
-  },
-  {
-    name: 'boss_update_config',
-    description: 'Patch a safe GeekGeekRun config file under ~/.geekgeekrun/config.',
-    inputSchema: {
-      type: 'object',
-      required: ['fileName', 'patch'],
-      properties: {
-        fileName: {
-          type: 'string',
-          enum: [
-            'boss.json',
-            'common-job-condition-config.json',
-            'target-company-list.json',
-            'llm.json',
-            'dingtalk.json',
-          ],
-        },
-        patch: {
-          description: 'Object patch for object config files; array replacement for target-company-list.json.',
-        },
-      },
-      additionalProperties: false,
-    },
-    handler: async args => service.updateConfig(args),
   },
 ]
 
