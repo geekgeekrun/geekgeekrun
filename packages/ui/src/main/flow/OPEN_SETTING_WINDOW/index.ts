@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createMainWindow } from '../../window/mainWindow'
+import { initTray } from '../../features/tray'
 import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
@@ -30,6 +31,8 @@ export function openSettingWindow() {
       optimizer.watchWindowShortcuts(window)
     })
 
+    initTray()
+    app.dock?.hide()
     createMainWindow()
 
     // IPC test
@@ -46,11 +49,10 @@ export function openSettingWindow() {
     gtag('ui_ready')
   })
 
-  // Quit when all windows are closed, except on macOS. There, it's common
-  // for applications and their menu bar to stay active until the user quits
-  // explicitly with Cmd + Q.
+  // In menubar mode, closing all windows should keep the app alive. The Tray
+  // quit item is responsible for intentionally exiting the app.
   app.on('window-all-closed', () => {
-    app.quit()
+    // keep daemon and tray alive
   })
 
   // In this file you can include the rest of your app"s specific main process
@@ -86,6 +88,5 @@ export function openSettingWindow() {
       }
     )
   })
-  app.on('window-all-closed', closeDaemonClient)
   app.on('before-quit', closeDaemonClient)
 }

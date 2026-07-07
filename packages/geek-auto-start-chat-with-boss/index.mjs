@@ -1700,7 +1700,7 @@ export async function mainLoop (hooks) {
   }
   try {
     browser = await puppeteer.launch({
-      headless: false,
+      headless: process.env.GGR_HEADLESS === 'true',
       ignoreHTTPSErrors: true,
       defaultViewport: {
         width: 1440,

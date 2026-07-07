@@ -2,9 +2,35 @@ import { BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { openDevTools } from '../commands'
 import { daemonEE } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+
 export let mainWindow: BrowserWindow | null = null
+let shouldQuit = false
+
+export function allowMainWindowQuit() {
+  shouldQuit = true
+}
+
+export function showMainWindow() {
+  if (!mainWindow) {
+    createMainWindow()
+    return
+  }
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore()
+  }
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+export function hideMainWindow() {
+  mainWindow?.hide()
+}
 
 export function createMainWindow(): BrowserWindow {
+  if (mainWindow) {
+    return mainWindow
+  }
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -25,13 +51,20 @@ export function createMainWindow(): BrowserWindow {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
   mainWindow.on('ready-to-show', async () => {
     process.env.NODE_ENV === 'development' &&
       setTimeout(() => {
         mainWindow && openDevTools(mainWindow)
       }, 500)
+  })
+
+  mainWindow.on('close', (event) => {
+    if (!shouldQuit) {
+      event.preventDefault()
+      hideMainWindow()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

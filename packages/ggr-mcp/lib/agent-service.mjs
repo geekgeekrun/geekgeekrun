@@ -70,23 +70,6 @@ export function createAgentService ({ repoRoot = defaultRepoRoot() } = {}) {
     }
   }
 
-  async function ensureHeadlessPatch () {
-    const filePath = path.join(repoRoot, 'packages/geek-auto-start-chat-with-boss/index.mjs')
-    const source = await fs.readFile(filePath, 'utf8')
-    const patched = "headless: process.env.GGR_HEADLESS === 'true'"
-
-    if (source.includes(patched)) {
-      return { filePath, changed: false, alreadyPatched: true }
-    }
-
-    if (!source.includes('headless: false')) {
-      throw new Error('Unable to apply headless patch: expected `headless: false` was not found.')
-    }
-
-    await fs.writeFile(filePath, source.replace('headless: false', patched))
-    return { filePath, changed: true, alreadyPatched: false }
-  }
-
   async function updateConfig ({ fileName, patch }) {
     if (!CONFIG_FILES.has(fileName)) {
       throw new Error(`Unsupported config file: ${fileName}`)
@@ -136,7 +119,6 @@ export function createAgentService ({ repoRoot = defaultRepoRoot() } = {}) {
     }
 
     const configResults = await applyConfigPatch(configPatch)
-    const patchResult = headless ? await ensureHeadlessPatch() : null
     const daemonPath = path.join(repoRoot, 'packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs')
 
     child = spawn(process.execPath, [daemonPath], {
@@ -158,7 +140,6 @@ export function createAgentService ({ repoRoot = defaultRepoRoot() } = {}) {
     status.exitCode = null
     status.signal = null
     status.lastError = null
-    status.headlessPatch = patchResult
     status.configPatch = configResults
 
     child.stdout.on('data', chunk => pushLines(status.recentStdout, chunk))
@@ -206,6 +187,5 @@ export function createAgentService ({ repoRoot = defaultRepoRoot() } = {}) {
     stop,
     getStatus: snapshot,
     updateConfig,
-    ensureHeadlessPatch,
   }
 }
