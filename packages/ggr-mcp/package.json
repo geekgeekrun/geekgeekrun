@@ -5,6 +5,6 @@
   "type": "module",
   "scripts": {
     "start": "node ./server.mjs",
-    "test": "node ./test/smoke.mjs"
+    "test": "node ./test/check.mjs"
   }
 }
