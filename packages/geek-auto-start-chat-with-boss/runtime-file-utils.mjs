@@ -14,6 +14,9 @@ import defaultJobNotSuitReasonCodeToTextCacheStorage from './default-storage-fil
 import defaultCommonJobConditionConfig from './default-config-file/common-job-condition-config.json' assert { type: 'json' }
 export const configFileNameList = ['boss.json', 'dingtalk.json', 'target-company-list.json', 'llm.json', 'common-job-condition-config.json']
 
+const PRIVATE_DIR_MODE = 0o700
+const PRIVATE_FILE_MODE = 0o600
+
 const defaultConfigFileContentMap = {
   'boss.json': JSON.stringify(defaultBossConf),
   'dingtalk.json': JSON.stringify(defaultDingtalkConf),
@@ -26,20 +29,49 @@ export const configFolderPath = path.join(
   runtimeFolderPath,
   'config'
 )
+const chmodSyncQuietly = (filePath, mode) => {
+  try {
+    fs.chmodSync(filePath, mode)
+  } catch {}
+}
+
+const backupCorruptFile = (filePath) => {
+  if (!fs.existsSync(filePath)) {
+    return
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  fs.renameSync(filePath, `${filePath}.corrupt-${timestamp}.bak`)
+}
+
+const ensurePrivateDirSync = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true, mode: PRIVATE_DIR_MODE })
+  }
+  chmodSyncQuietly(dirPath, PRIVATE_DIR_MODE)
+}
+
+const writePrivateFileSync = (filePath, content) => {
+  ensurePrivateDirSync(path.dirname(filePath))
+  fs.writeFileSync(filePath, content, { mode: PRIVATE_FILE_MODE })
+  chmodSyncQuietly(filePath, PRIVATE_FILE_MODE)
+}
+
+const writePrivateFile = async (filePath, content) => {
+  await fsPromise.mkdir(path.dirname(filePath), { recursive: true, mode: PRIVATE_DIR_MODE })
+  await fsPromise.chmod(path.dirname(filePath), PRIVATE_DIR_MODE).catch(() => {})
+  await fsPromise.writeFile(filePath, content, { mode: PRIVATE_FILE_MODE })
+  await fsPromise.chmod(filePath, PRIVATE_FILE_MODE).catch(() => {})
+}
+
 export const writeConfigFile = async (fileName, content, { isSync } = {}) => {
   const filePath = path.join(configFolderPath, fileName)
   const fileContent = JSON.stringify(content)
   if (isSync) {
-    fs.writeFileSync(
-      filePath,
-      fileContent
-    )
+    writePrivateFileSync(filePath, fileContent)
   }
   else {
-    return fsPromise.writeFile(
-      filePath,
-      fileContent
-    )
+    return writePrivateFile(filePath, fileContent)
   }
 }
 if (
@@ -120,17 +152,9 @@ if (
 }
 
 const ensureRuntimeFolderPathExist = () => {
-  if (!fs.existsSync(runtimeFolderPath)) {
-    fs.mkdirSync(runtimeFolderPath)
-  }
+  ensurePrivateDirSync(runtimeFolderPath)
   ;['config', 'storage'].forEach(dirPath => {
-    if (!fs.existsSync(
-      path.join(runtimeFolderPath, dirPath)
-    )) {
-      fs.mkdirSync(
-        path.join(runtimeFolderPath, dirPath)
-      )
-    }
+    ensurePrivateDirSync(path.join(runtimeFolderPath, dirPath))
   })
 }
 export const ensureConfigFileExist = () => {
@@ -140,7 +164,7 @@ export const ensureConfigFileExist = () => {
       if (!fs.existsSync(
         path.join(configFolderPath, fileName)
       )) {
-        fs.writeFileSync(
+        writePrivateFileSync(
           path.join(configFolderPath, fileName),
           defaultConfigFileContentMap[fileName]
         )
@@ -159,11 +183,12 @@ export const readConfigFile = (fileName) => {
 
   let o
   try {
+    chmodSyncQuietly(joinedPath, PRIVATE_FILE_MODE)
     o = JSON.parse(
       fs.readFileSync(joinedPath)
     )
   } catch {
-    fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
+    backupCorruptFile(joinedPath)
     if (defaultConfigFileContentMap[fileName]) {
       ensureConfigFileExist()
       o = JSON.parse(defaultConfigFileContentMap[fileName])
@@ -193,7 +218,7 @@ export const ensureStorageFileExist = () => {
       if (!fs.existsSync(
         path.join(storageFilePath, fileName)
       )) {
-        fs.writeFileSync(
+        writePrivateFileSync(
           path.join(storageFilePath, fileName),
           defaultStorageFileContentMap[fileName]
         )
@@ -214,6 +239,7 @@ export const readStorageFile = (fileName, { isJson } = {}) => {
 
   let o
   try {
+    chmodSyncQuietly(joinedPath, PRIVATE_FILE_MODE)
     const content = fs.readFileSync(joinedPath)
     if (isJson) {
       o = JSON.parse(content)
@@ -222,7 +248,7 @@ export const readStorageFile = (fileName, { isJson } = {}) => {
       o = content.toString()
     }
   } catch {
-    fs.existsSync(joinedPath) && fs.unlinkSync(joinedPath)
+    backupCorruptFile(joinedPath)
     ensureStorageFileExist()
     if (isJson) {
       o = JSON.parse(defaultStorageFileContentMap[fileName] ?? 'null')
@@ -244,10 +270,7 @@ export const writeStorageFile = async (fileName, content, { isJson } = {}) => {
   } else {
     fileContent = content
   }
-  return fsPromise.writeFile(
-    filePath,
-    fileContent
-  )
+  return writePrivateFile(filePath, fileContent)
 }
 
 export const getPublicDbFilePath = () => {

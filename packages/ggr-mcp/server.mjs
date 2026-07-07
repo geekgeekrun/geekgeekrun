@@ -1,47 +1,51 @@
 import { createMcpServer } from './lib/mcp-stdio.mjs'
+import { createAgentService } from './lib/agent-service.mjs'
 
-const state = {
-  running: false,
-  pid: null,
-  mode: 'semi_auto',
-  headless: true,
-  lastError: null,
-}
+const agentService = createAgentService()
 
 const tools = [
   {
     name: 'boss_get_status',
-    description: 'Return the current local controller status. This V0 scaffold does not expose cookies or localStorage.',
+    description: 'Return the current local controller status. This does not expose cookies or localStorage.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    handler: () => state,
+    handler: () => agentService.getStatus(),
   },
   {
     name: 'boss_start_agent',
-    description: 'Record a requested start. Process launch is intentionally left for the local service implementation.',
+    description: 'Start the GeekGeekRun BOSS daemon as a local child process.',
     inputSchema: {
       type: 'object',
       properties: {
         headless: { type: 'boolean', default: true },
         mode: { type: 'string', enum: ['semi_auto', 'manual', 'auto'], default: 'semi_auto' },
+        configPatch: {},
       },
       additionalProperties: false,
     },
-    handler: args => {
-      state.running = false
-      state.headless = args.headless ?? true
-      state.mode = args.mode ?? 'semi_auto'
-      state.lastError = 'Process lifecycle service is not wired yet.'
-      return state
-    },
+    handler: args => agentService.start(args),
   },
   {
     name: 'boss_stop_agent',
-    description: 'Record a requested stop. Process launch is intentionally left for the local service implementation.',
+    description: 'Stop the local GeekGeekRun BOSS daemon child process.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    handler: () => {
-      state.running = false
-      return state
+    handler: () => agentService.stop(),
+  },
+  {
+    name: 'boss_update_config',
+    description: 'Update one supported GeekGeekRun config file under ~/.geekgeekrun/config.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fileName: {
+          type: 'string',
+          enum: ['boss.json', 'common-job-condition-config.json', 'target-company-list.json', 'llm.json', 'dingtalk.json'],
+        },
+        patch: {},
+      },
+      required: ['fileName', 'patch'],
+      additionalProperties: false,
     },
+    handler: args => agentService.updateConfig(args),
   },
 ]
 

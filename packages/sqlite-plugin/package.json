@@ -19,6 +19,6 @@
   "scripts": {
     "dev": "rimraf dist && tsc --outDir dist --watch true",
     "build": "rimraf dist && tsc --outDir dist",
-    "postinstall": "npm run build || exit 0;"
+    "postinstall": "npm run build"
   }
 }

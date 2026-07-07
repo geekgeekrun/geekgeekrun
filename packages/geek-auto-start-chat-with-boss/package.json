@@ -6,6 +6,7 @@
   "module": "./index.mjs",
   "type": "module",
   "scripts": {
+    "test": "node ./test/runtime-file-utils-check.mjs"
   },
   "author": "geekgeekrun",
   "license": "ISC",

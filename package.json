@@ -6,7 +6,9 @@
   "module": "./main/index.mjs",
   "type": "module",
   "scripts": {
-    "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs"
+    "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs",
+    "start:ggr-mcp": "node ./packages/ggr-mcp/server.mjs",
+    "test:ggr-mcp": "node ./packages/ggr-mcp/test/check.mjs"
   },
   "author": "geekgeekrun",
   "license": "ISC",
@@ -30,9 +32,25 @@
     "node": "20.16.0"
   },
   "engines": {
-    "pnpm": ">=8.15.9 <9.0.0"
+    "pnpm": ">=8.15.9"
   },
+  "packageManager": "pnpm@10.33.2",
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "puppeteer",
+      "better-sqlite3",
+      "electron",
+      "electron@28.2.0",
+      "electron@39.2.7",
+      "@parcel/watcher",
+      "@discordjs/opus",
+      "@whiskeysockets/baileys",
+      "koffi",
+      "node-llama-cpp",
+      "protobufjs",
+      "sharp"
+    ],
     "patchedDependencies": {
       "find-chrome-bin@2.0.4": "patches/find-chrome-bin@2.0.4.patch",
       "puppeteer-extra-plugin-anonymize-ua@2.4.6": "patches/puppeteer-extra-plugin-anonymize-ua@2.4.6.patch"
