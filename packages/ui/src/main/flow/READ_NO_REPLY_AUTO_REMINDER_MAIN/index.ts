@@ -42,6 +42,20 @@ import initPublicIpc from '../../utils/initPublicIpc'
 import { getLastUsedAndAvailableBrowser } from '../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { configWithBrowserAssistant } from '../../features/config-with-browser-assistant'
 import { DEFAULT_CONSTANT_OPEN_CONTENT_SEGS } from '../../../common/constant'
+import {
+  HR_REPLY_DECISION,
+  classifyHrMessage,
+  buildAutoReply,
+  buildReviewDraft,
+  validateAutoReply,
+  appendApprovalRequest
+} from '../../features/hr-reply-policy.mjs'
+import {
+  readApprovalQueue,
+  markAutoReplySent,
+  markAutoReplyFailed,
+  markAutoReplyExpired
+} from '../../../../../ggr-controller/index.mjs'
 
 process.on('SIGTERM', () => {
   console.log('收到SIGTERM信号，正在退出')
@@ -88,6 +102,7 @@ const blockCompanyNameRegExp = (() => {
 const onlyRemindBossWithoutBlockCompanyName =
   readConfigFile('boss.json').autoReminder?.onlyRemindBossWithoutBlockCompanyName ??
   !!blockCompanyNameRegExp
+const agentReplyPolicy = readConfigFile('boss.json').agentReplyPolicy
 
 const openContentSource =
   readConfigFile('boss.json').autoReminder?.openContentSource ??
@@ -107,6 +122,7 @@ const constantOpenContent = (() => {
 })()
 
 const dbInitPromise = initDb(getPublicDbFilePath())
+let lastHeadlessLoggedChatMessageKey = ''
 
 export const pageMapByName: {
   boss?: Page | null
@@ -200,6 +216,16 @@ async function saveCurrentChatRecord(page) {
   // Headless 模式终端日志 — 发送聊天消息
   if (process.env.GGR_HEADLESS === 'true' && chatRecordList.length > 0) {
     const latestMsg = chatRecordList[chatRecordList.length - 1]
+    const messageKey = [
+      latestMsg.mid,
+      latestMsg.style,
+      latestMsg.time ? Number(latestMsg.time) : '',
+      latestMsg.text ?? latestMsg.imageUrl ?? ''
+    ].join('|')
+    if (messageKey === lastHeadlessLoggedChatMessageKey) {
+      return
+    }
+    lastHeadlessLoggedChatMessageKey = messageKey
     try {
       const conversationInfo = await page.evaluate(
         'document.querySelector(".chat-conversation .chat-im.chat-editor")?.__vue__?.conversation$'
@@ -223,6 +249,122 @@ async function saveCurrentChatRecord(page) {
       // daemon not connected — ignore
     }
   }
+}
+
+
+function normalizeApprovalMatchText(value: unknown) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim()
+}
+
+function isSameApprovalText(expected: unknown, actual: unknown) {
+  const expectedText = normalizeApprovalMatchText(expected)
+  const actualText = normalizeApprovalMatchText(actual)
+  return Boolean(expectedText) && expectedText === actualText
+}
+
+function isSameApprovalField(expected: unknown, actual: unknown) {
+  const expectedText = normalizeApprovalMatchText(expected)
+  const actualText = normalizeApprovalMatchText(actual)
+  return !expectedText || !actualText || expectedText === actualText
+}
+
+function approvalMatchesCurrentChatContext(approval: any, context: any) {
+  return (
+    isSameApprovalField(approval.hrName, context.hrName) &&
+    isSameApprovalField(approval.company, context.company) &&
+    isSameApprovalField(approval.jobTitle, context.jobTitle)
+  )
+}
+
+async function notifyApprovedReplyStatus(data: Record<string, unknown>) {
+  try {
+    sendToDaemon({
+      type: 'worker-to-gui-message',
+      workerId: process.env.GEEKGEEKRUND_WORKER_ID ?? 'readNoReplyAutoReminderMain',
+      data
+    })
+  } catch {
+    // ignore GUI notification failures; queue status is the source of truth
+  }
+}
+
+async function consumeApprovedAutoReplyForCurrentChat({
+  page,
+  selectedFriendInfo,
+  conversationInfo,
+  latestHistoryMessage
+}: {
+  page: Page
+  selectedFriendInfo: any
+  conversationInfo: any
+  latestHistoryMessage: any
+}) {
+  const latestHrMessage = normalizeApprovalMatchText(latestHistoryMessage?.text)
+  if (!latestHistoryMessage || latestHistoryMessage.isSelf || !latestHrMessage) {
+    return false
+  }
+
+  const currentContext = {
+    hrName: selectedFriendInfo?.bossName ?? selectedFriendInfo?.name ?? conversationInfo?.bossName ?? '',
+    company: selectedFriendInfo?.brandName ?? conversationInfo?.brandName ?? '',
+    jobTitle: selectedFriendInfo?.positionName ?? conversationInfo?.positionName ?? ''
+  }
+  const approvedQueue = await readApprovalQueue({ includeAll: true })
+  const approvedItems = approvedQueue.filter((item: any) => item.status === 'approved_auto_reply')
+  const contextMatchedItem = approvedItems.find((item: any) =>
+    approvalMatchesCurrentChatContext(item, currentContext)
+  )
+
+  if (!contextMatchedItem) {
+    return false
+  }
+
+  if (!isSameApprovalText(contextMatchedItem.latestHrMessage, latestHrMessage)) {
+    await markAutoReplyExpired({
+      id: contextMatchedItem.id,
+      reason: 'latest HR message changed before worker could send approved reply'
+    })
+    await notifyApprovedReplyStatus({
+      type: 'auto-reply-approval-expired',
+      id: contextMatchedItem.id,
+      latestHrMessage
+    })
+    return true
+  }
+
+  const draftReply = normalizeApprovalMatchText(contextMatchedItem.draftReply)
+  if (!draftReply) {
+    await markAutoReplyFailed({
+      id: contextMatchedItem.id,
+      reason: 'approved draft is empty before send'
+    })
+    await notifyApprovedReplyStatus({
+      type: 'auto-reply-send-failed',
+      id: contextMatchedItem.id,
+      reason: 'approved draft is empty before send'
+    })
+    return true
+  }
+
+  try {
+    await sendMessage(page, draftReply)
+    await markAutoReplySent({ id: contextMatchedItem.id })
+    await notifyApprovedReplyStatus({
+      type: 'approved-auto-reply-sent',
+      id: contextMatchedItem.id
+    })
+    gtag('hr_approved_reply_sent')
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    await markAutoReplyFailed({ id: contextMatchedItem.id, reason })
+    await notifyApprovedReplyStatus({
+      type: 'auto-reply-send-failed',
+      id: contextMatchedItem.id,
+      reason
+    })
+  }
+
+  return true
 }
 
 async function checkJobIsClosed() {
@@ -539,7 +681,14 @@ const mainLoop = async () => {
           !it.lastText.includes('你撤回了')) ||
           canNotConfirmIfHasReadMsgTemplateList.some((regExp) => regExp.test(it.lastText))) &&
           !it.unreadCount) ||
-          (!it.lastIsSelf && it.lastText === '开场问题，期待你的回答'))
+          (!it.lastIsSelf && it.lastText === '开场问题，期待你的回答') ||
+          (!it.lastIsSelf &&
+            !!it.lastText?.trim?.() &&
+            !it.lastText.includes('你撤回了') &&
+            (Boolean(it.unreadCount) ||
+              /[?？吗么呢]|简历|介绍|方便|沟通|薪资|面试|到岗|电话|微信|邮箱|项目|经历|学历|证书|外包|驻场|加班|出差|离职/.test(
+                it.lastText
+              ))))
       )
     })
 
@@ -634,14 +783,14 @@ const mainLoop = async () => {
         // ignore
       }
     }
+    const selectedFriendInfoForReplyPolicy = (await pageMapByName.boss?.evaluate(
+      `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`
+    )) as any
     if (onlyRemindBossWithExpectJobType) {
-      const selectedFriendInfo = await pageMapByName.boss?.evaluate(
-        `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`
-      )
-      if (!selectedFriendInfo) {
+      if (!selectedFriendInfoForReplyPolicy) {
         isExpectJobTypeMatch = false
       } else {
-        const jobType = selectedFriendInfo?.positionName
+        const jobType = selectedFriendInfoForReplyPolicy?.positionName
         if (!jobType) {
           isExpectJobTypeMatch = false
         } else {
@@ -650,9 +799,9 @@ const mainLoop = async () => {
         }
       }
     }
-    const conversationInfo = await pageMapByName.boss?.evaluate(
+    const conversationInfo = (await pageMapByName.boss?.evaluate(
       `document.querySelector('.chat-conversation .chat-im.chat-editor')?.__vue__?.conversation$`
-    )
+    )) as any
 
     const historyMessageList =
       (
@@ -662,12 +811,73 @@ const mainLoop = async () => {
       )?.filter(messageForSaveFilter) ?? []
 
     const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
+    const latestHistoryMessage = historyMessageList[historyMessageList.length - 1] as any
     const isJobClosed = await checkJobIsClosed()
-    if (
+    const approvedReplyHandled =
       !isJobClosed &&
       isExpectJobTypeMatch &&
-      historyMessageList[historyMessageList.length - 1].isSelf &&
-      historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&
+      (await consumeApprovedAutoReplyForCurrentChat({
+        page: pageMapByName.boss!,
+        selectedFriendInfo: selectedFriendInfoForReplyPolicy,
+        conversationInfo,
+        latestHistoryMessage
+      }))
+
+    if (approvedReplyHandled) {
+      cursorToContinueFind += 1
+    } else if (!isJobClosed && isExpectJobTypeMatch && latestHistoryMessage && !latestHistoryMessage.isSelf) {
+      const latestHrMessage = String(latestHistoryMessage.text ?? '').trim()
+      const classification = classifyHrMessage(latestHrMessage, agentReplyPolicy)
+      const autoReply = buildAutoReply(classification, { userName: 'Toby' })
+      const validation = autoReply ? validateAutoReply(autoReply) : { ok: false, reason: 'no auto reply draft' }
+
+      if (classification.decision === HR_REPLY_DECISION.AUTO_REPLY && validation.ok) {
+        await sendMessage(pageMapByName.boss!, autoReply)
+        gtag('hr_whitelist_auto_reply_sent', { intent: classification.intent })
+      } else if (classification.decision === HR_REPLY_DECISION.NEEDS_APPROVAL) {
+        let reviewDraft = ''
+        let reviewDraftReason = ''
+        try {
+          const messageList = historyMessageList
+            .filter((it) => it.bizType !== 101)
+            .slice(-recentMessageQuantityForLlm)
+          reviewDraft = buildReviewDraft(classification, await getGptContent(messageList))
+        } catch (error) {
+          reviewDraftReason = `model review draft failed: ${error instanceof Error ? error.message : String(error)}`
+        }
+        await appendApprovalRequest({
+          hrName: selectedFriendInfoForReplyPolicy?.bossName ?? selectedFriendInfoForReplyPolicy?.name ?? conversationInfo?.bossName ?? '',
+          company: selectedFriendInfoForReplyPolicy?.brandName ?? conversationInfo?.brandName ?? '',
+          jobTitle: selectedFriendInfoForReplyPolicy?.positionName ?? conversationInfo?.positionName ?? '',
+          latestHrMessage,
+          detectedIntent: classification.intent,
+          draftReply: reviewDraft,
+          draftSource: reviewDraft ? 'model_review_draft' : 'none',
+          draftSafety: 'needs_human_review',
+          reason: [classification.reason, reviewDraftReason].filter(Boolean).join('; ')
+        })
+        try {
+          sendToDaemon({
+            type: 'worker-to-gui-message',
+            workerId: process.env.GEEKGEEKRUND_WORKER_ID ?? 'readNoReplyAutoReminderMain',
+            data: {
+              type: 'approval-required',
+              latestHrMessage,
+              detectedIntent: classification.intent,
+              reason: classification.reason
+            }
+          })
+        } catch {
+          // ignore GUI notification failures; the approval queue is already written
+        }
+        gtag('hr_reply_approval_required', { intent: classification.intent })
+      }
+      cursorToContinueFind += 1
+    } else if (
+      !isJobClosed &&
+      isExpectJobTypeMatch &&
+      latestHistoryMessage?.isSelf &&
+      latestHistoryMessage?.status === MsgStatus.HAS_READ &&
       ((conversationInfo &&
         Object.hasOwn(conversationInfo, 'bothTalked') &&
         !conversationInfo.bothTalked) ||
