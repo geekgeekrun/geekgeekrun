@@ -30,6 +30,31 @@
     "rechatLlmFallback": 1,
     "onlyRemindBossWithExpectJobType": true
   },
+  "agentReplyPolicy": {
+    "enabled": true,
+    "mode": "whitelist",
+    "autoReplyConfidenceThreshold": 0.85,
+    "allowedIntents": [
+      "ASK_RESUME",
+      "ASK_SELF_INTRO",
+      "ASK_JOB_SEARCH_STATUS",
+      "ASK_AVAILABLE_TO_CHAT"
+    ],
+    "requireApprovalIntents": [
+      "ASK_SALARY",
+      "ASK_AVAILABILITY_DATE",
+      "ASK_INTERVIEW_TIME",
+      "ASK_PRIVATE_INFO",
+      "ASK_PROJECT_DETAIL",
+      "ASK_WORK_HISTORY",
+      "ASK_CREDENTIALS",
+      "ASK_LOCATION_OR_RELOCATION",
+      "ASK_OUTSOURCING_OR_ONSITE",
+      "ASK_OVERTIME_OR_SHIFT",
+      "ASK_REASON_FOR_LEAVING",
+      "UNKNOWN"
+    ]
+  },
   "jobSourceList": [
     {
       "type": "expect",

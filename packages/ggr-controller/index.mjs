@@ -285,7 +285,7 @@ export async function readApprovalQueue({ queueFilePath = defaultApprovalQueueFi
   return includeAll ? queue : queue.filter((item) => item.status === 'pending')
 }
 
-async function updateApprovalRequest({ id, status, queueFilePath = defaultApprovalQueueFilePath(), reason = '' }) {
+async function updateApprovalRequest({ id, status, queueFilePath = defaultApprovalQueueFilePath(), reason = '', extra = {} }) {
   if (!id) {
     throw new Error('approval id is required')
   }
@@ -300,16 +300,33 @@ async function updateApprovalRequest({ id, status, queueFilePath = defaultApprov
   Object.assign(item, {
     status,
     reviewedAt: new Date().toISOString(),
-    reviewReason: reason
+    reviewReason: reason,
+    ...extra
   })
   await writePrivateJson(queueFilePath, queue)
   return item
 }
 
-export function approveReply(options) {
-  return updateApprovalRequest({ ...options, status: 'approved' })
+export function approveAutoReply(options) {
+  return updateApprovalRequest({ ...options, status: 'approved_auto_reply' })
 }
 
-export function rejectReply(options) {
-  return updateApprovalRequest({ ...options, status: 'rejected' })
+export function requireHumanIntervention(options) {
+  return updateApprovalRequest({ ...options, status: 'human_required' })
+}
+
+export function markAutoReplySent(options) {
+  return updateApprovalRequest({
+    ...options,
+    status: 'auto_reply_sent',
+    extra: { sentAt: new Date().toISOString() }
+  })
+}
+
+export function markAutoReplyFailed(options) {
+  return updateApprovalRequest({ ...options, status: 'auto_reply_failed' })
+}
+
+export function markAutoReplyExpired(options) {
+  return updateApprovalRequest({ ...options, status: 'auto_reply_expired' })
 }
