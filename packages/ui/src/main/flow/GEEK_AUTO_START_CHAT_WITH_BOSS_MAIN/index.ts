@@ -121,6 +121,24 @@ const runAutoChat = async () => {
   }
   initPlugins(hooks)
 
+  // Headless 模式终端日志 — 发送岗位信息
+  if (process.env.GGR_HEADLESS === 'true') {
+    hooks.newChatStartup.tapPromise('HeadlessTerminalJobLogger', async (positionInfoDetail) => {
+      try {
+        await sendToDaemon({
+          type: 'worker-to-gui-message',
+          workerId: process.env.GEEKGEEKRUND_WORKER_ID ?? 'geekAutoStartWithBossMain',
+          data: {
+            type: 'chat-started',
+            position: positionInfoDetail
+          }
+        })
+      } catch {
+        // daemon not connected — ignore
+      }
+    })
+  }
+
   gtag('run_auto_chat_with_boss_main_ready')
 
   autoStartChatEventBus.once('LOGIN_STATUS_INVALID', () => {

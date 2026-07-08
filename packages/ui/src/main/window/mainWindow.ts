@@ -51,7 +51,10 @@ export function createMainWindow(): BrowserWindow {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
+    // 在 headless 模式下不显示 Dashboard 窗口，日志走终端
+    if (process.env.GGR_HEADLESS !== 'true') {
+      mainWindow?.show()
+    }
   })
   mainWindow.on('ready-to-show', async () => {
     process.env.NODE_ENV === 'development' &&
@@ -86,6 +89,15 @@ export function createMainWindow(): BrowserWindow {
   daemonEE.on('message', (message) => {
     if (message.type === 'worker-to-gui-message') {
       mainWindow?.webContents?.send('worker-to-gui-message', message)
+      // headless 模式下日志打到终端
+      if (process.env.GGR_HEADLESS === 'true') {
+        const data = message.data
+        if (typeof data === 'string') {
+          console.log(`[worker] ${data}`)
+        } else if (data?.message) {
+          console.log(`[worker] ${data.message}`)
+        }
+      }
     }
   })
   daemonEE.on('error', (err) => {

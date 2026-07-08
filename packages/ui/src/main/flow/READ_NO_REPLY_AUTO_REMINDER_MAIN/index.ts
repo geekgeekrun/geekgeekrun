@@ -196,6 +196,33 @@ async function saveCurrentChatRecord(page) {
   })
 
   await saveChatMessageRecord(ds, chatRecordList)
+
+  // Headless 模式终端日志 — 发送聊天消息
+  if (process.env.GGR_HEADLESS === 'true' && chatRecordList.length > 0) {
+    const latestMsg = chatRecordList[chatRecordList.length - 1]
+    try {
+      const conversationInfo = await page.evaluate(
+        'document.querySelector(".chat-conversation .chat-im.chat-editor")?.__vue__?.conversation$'
+      )
+      const hrName = bossInfo?.name ?? conversationInfo?.bossName ?? ''
+      const company = conversationInfo?.brandName ?? ''
+      await sendToDaemon({
+        type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID ?? 'readNoReplyAutoReminderMain',
+        data: {
+          type: 'chat-message',
+          direction: latestMsg.style,
+          text: latestMsg.text ?? '',
+          msgType: latestMsg.type ?? 'text',
+          imageUrl: latestMsg.imageUrl ?? '',
+          hrName,
+          company
+        }
+      })
+    } catch {
+      // daemon not connected — ignore
+    }
+  }
 }
 
 async function checkJobIsClosed() {
@@ -581,6 +608,32 @@ const mainLoop = async () => {
     await sleepWithRandomDelay(1500)
     // check if expect job type match
     let isExpectJobTypeMatch = true
+
+    // Headless 模式终端日志 — 当前对话的企业和岗位
+    if (process.env.GGR_HEADLESS === 'true') {
+      try {
+        const selectedFriendInfo = await pageMapByName.boss?.evaluate(
+          'document.querySelector(".chat-conversation")?.__vue__?.selectedFriend$'
+        )
+        if (selectedFriendInfo) {
+          const brand = selectedFriendInfo.brandName ?? ''
+          const pos = selectedFriendInfo.positionName ?? ''
+          const hr = selectedFriendInfo.bossName ?? selectedFriendInfo.name ?? ''
+          if (brand || pos) {
+            await sendToDaemon({
+              type: 'worker-to-gui-message',
+              workerId: process.env.GEEKGEEKRUND_WORKER_ID ?? 'readNoReplyAutoReminderMain',
+              data: {
+                type: 'worker-log',
+                text: `查看对话 — ${brand} / ${pos}${hr ? ` (HR: ${hr})` : ''}`
+              }
+            })
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
     if (onlyRemindBossWithExpectJobType) {
       const selectedFriendInfo = await pageMapByName.boss?.evaluate(
         `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`

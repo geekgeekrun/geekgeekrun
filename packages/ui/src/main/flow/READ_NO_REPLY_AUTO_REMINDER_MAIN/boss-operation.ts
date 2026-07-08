@@ -11,6 +11,7 @@ import { formatResumeJsonToMarkdown } from '../../../common/utils/resume'
 import { SINGLE_ITEM_DEFAULT_SERVE_WEIGHT } from '../../../common/constant'
 import { LlmModelUsageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/LlmModelUsageRecord'
 import gtag from '../../utils/gtag'
+import { sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
 
 export const sendLookForwardReplyEmotion = async (page: Page) => {
   const emotionEntryButtonProxy = await page.$('.chat-conversation .message-controls .btn-emotion')
@@ -289,4 +290,25 @@ export async function sendMessage(page: Page, textToSend: string) {
   await sleep(1000)
   const sendButtonSelector = `.chat-conversation .message-controls .chat-op .btn-send:not(.disabled)`
   await page.click(sendButtonSelector)
+
+  // Headless 模式终端日志 — 显示模型回复
+  if (process.env.GGR_HEADLESS === 'true' && textToSend) {
+    try {
+      const conversationInfo = await page.evaluate(
+        'document.querySelector(".chat-conversation .chat-im.chat-editor")?.__vue__?.conversation$'
+      )
+      await sendToDaemon({
+        type: 'worker-to-gui-message',
+        workerId: process.env.GEEKGEEKRUND_WORKER_ID ?? 'readNoReplyAutoReminderMain',
+        data: {
+          type: 'llm-reply',
+          text: textToSend,
+          hrName: conversationInfo?.bossName ?? '',
+          company: conversationInfo?.brandName ?? ''
+        }
+      })
+    } catch {
+      // daemon not connected — ignore
+    }
+  }
 }

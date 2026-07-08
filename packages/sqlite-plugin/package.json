@@ -20,5 +20,6 @@
     "dev": "rimraf dist && tsc --outDir dist --watch true",
     "build": "rimraf dist && tsc --outDir dist",
     "postinstall": "npm run build"
-  }
+  },
+  "private": true
 }

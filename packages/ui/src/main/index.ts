@@ -86,7 +86,7 @@ const runMode = commandlineArgs['mode']
       globalThis.GEEKGEEKRUN_PROCESS_ROLE = 'ui'
       await launchDaemon()
       const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
-      openSettingWindow()
+      openSettingWindow({ headless: process.env.GGR_HEADLESS === 'true' })
       break
     }
     // #region

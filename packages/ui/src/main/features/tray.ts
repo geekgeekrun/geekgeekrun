@@ -21,6 +21,14 @@ function getTrayIcon() {
 function setHeadlessEnabled(value: boolean) {
   isHeadlessEnabled = value
   process.env.GGR_HEADLESS = String(value)
+  if (value) {
+    // 开启 headless → 隐藏 Dashboard
+    hideMainWindow()
+    console.log('[GeekGeekRun] Headless 模式：Dashboard 已隐藏，日志输出到终端')
+  } else {
+    // 关闭 headless → 显示 Dashboard
+    showMainWindow()
+  }
   refreshTrayMenu()
 }
 

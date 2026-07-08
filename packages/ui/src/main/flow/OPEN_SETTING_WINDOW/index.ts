@@ -2,13 +2,16 @@ import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createMainWindow } from '../../window/mainWindow'
 import { initTray } from '../../features/tray'
+import { startHeadlessTerminalLogger } from '../../features/headless-terminal-logger'
 import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
 import { sendToDaemon, closeDaemonClient } from './connect-to-daemon'
 
-export function openSettingWindow() {
+export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
+  const isHeadless = headless ?? process.env.GGR_HEADLESS === 'true'
+
   // TODO: singleton lock; how can we check if there is another process should run as singleton with arguments?
   if (!app.requestSingleInstanceLock()) {
     // TODO: log
@@ -27,24 +30,32 @@ export function openSettingWindow() {
     // Default open or close DevTools by F12 in development
     // and ignore CommandOrControl + R in production.
     // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-    app.on('browser-window-created', (_, window) => {
-      optimizer.watchWindowShortcuts(window)
-    })
+    if (!isHeadless) {
+      app.on('browser-window-created', (_, window) => {
+        optimizer.watchWindowShortcuts(window)
+      })
+    }
 
     initTray()
     app.dock?.hide()
-    createMainWindow()
+    if (!isHeadless) {
+      createMainWindow()
+    } else {
+      startHeadlessTerminalLogger()
+    }
 
     // IPC test
     ipcMain.on('ping', () => console.log('pong'))
     initPublicIpc()
     initIpc()
 
-    app.on('activate', function () {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
-    })
+    if (!isHeadless) {
+      app.on('activate', function () {
+        // On macOS it's common to re-create a window in the app when the
+        // dock icon is clicked and there are no other windows open.
+        if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+      })
+    }
 
     gtag('ui_ready')
   })
