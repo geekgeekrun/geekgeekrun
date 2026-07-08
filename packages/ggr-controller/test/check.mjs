@@ -5,7 +5,9 @@ import path from 'node:path'
 import {
   createLocalProcessController,
   createDaemonController,
+  approveReply,
   readApprovalQueue,
+  rejectReply,
   updateRuntimeConfig,
   TASKS
 } from '../index.mjs'
@@ -98,6 +100,12 @@ await fs.writeFile(queueFilePath, JSON.stringify([
 const pending = await readApprovalQueue({ queueFilePath })
 assert.equal(pending.length, 1)
 assert.equal(pending[0].id, '1')
+const approved = await approveReply({ id: '1', queueFilePath })
+assert.equal(approved.status, 'approved')
+assert.equal((await readApprovalQueue({ queueFilePath })).length, 0)
+const rejected = await rejectReply({ id: '2', queueFilePath, reason: 'not safe' })
+assert.equal(rejected.status, 'rejected')
+assert.equal(rejected.reviewReason, 'not safe')
 await fs.writeFile(queueFilePath, '{bad json')
 assert.deepEqual(await readApprovalQueue({ queueFilePath }), [])
 

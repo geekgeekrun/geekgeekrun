@@ -1,7 +1,13 @@
 import { app, dialog, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 import { runCommon } from './run-common'
-import { createDaemonController, TASKS } from '../../../../ggr-controller/index.mjs'
+import {
+  approveReply,
+  createDaemonController,
+  readApprovalQueue,
+  rejectReply,
+  TASKS
+} from '../../../../ggr-controller/index.mjs'
 import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
 import { allowMainWindowQuit, hideMainWindow, showMainWindow } from '../window/mainWindow'
 
@@ -9,6 +15,7 @@ let tray: Tray | null = null
 let isHeadlessEnabled = process.env.GGR_HEADLESS === 'true'
 let isBossRunning = false
 let isBossStopping = false
+let pendingApprovalCount = 0
 
 const BOSS_WORKER_ID = TASKS.AUTO_CHAT.workerId
 const controller = createDaemonController({
@@ -62,10 +69,74 @@ async function syncBossWorkerStateFromDaemon() {
   syncBossWorkerState(status.worker ? [status.worker] : [])
 }
 
+async function syncApprovalQueueState() {
+  pendingApprovalCount = (await readApprovalQueue()).length
+  refreshTrayMenu()
+}
+
+function formatApprovalDetail(request: Record<string, unknown>, index: number, total: number) {
+  return [
+    `${index + 1}/${total}`,
+    request.company ? `公司：${request.company}` : '',
+    request.jobTitle ? `岗位：${request.jobTitle}` : '',
+    request.hrName ? `HR：${request.hrName}` : '',
+    '',
+    `HR 问题：${request.latestHrMessage ?? ''}`,
+    request.draftReply ? `建议回复：${request.draftReply}` : '建议回复：暂无',
+    request.reason ? `原因：${request.reason}` : ''
+  ].filter(Boolean).join('\n')
+}
+
+async function reviewApprovalQueue() {
+  const approvals = await readApprovalQueue()
+  if (!approvals.length) {
+    pendingApprovalCount = 0
+    refreshTrayMenu()
+    await dialog.showMessageBox({ type: 'info', message: '暂无待审批回复' })
+    return
+  }
+
+  let index = 0
+  while (index < approvals.length) {
+    const request = approvals[index]
+    const result = await dialog.showMessageBox({
+      type: 'question',
+      title: '待审批回复',
+      message: '是否通过这条 HR 回复？',
+      detail: formatApprovalDetail(request, index, approvals.length),
+      buttons: ['通过', '拒绝', '跳过', '关闭'],
+      defaultId: 2,
+      cancelId: 3
+    })
+
+    if (result.response === 0) {
+      await approveReply({ id: request.id })
+      approvals.splice(index, 1)
+      continue
+    }
+    if (result.response === 1) {
+      await rejectReply({ id: request.id })
+      approvals.splice(index, 1)
+      continue
+    }
+    if (result.response === 2) {
+      index += 1
+      continue
+    }
+    break
+  }
+  await syncApprovalQueueState()
+}
+
 function subscribeDaemonEvents() {
   daemonEE.on('message', (message) => {
     if (message.type === 'status') {
       syncBossWorkerState(message.workers)
+      return
+    }
+
+    if (message.type === 'worker-to-gui-message' && message.data?.type === 'approval-required') {
+      void syncApprovalQueueState().catch(showTrayError)
       return
     }
 
@@ -134,6 +205,11 @@ function refreshTrayMenu() {
         click: () => void showBossAgentStatus().catch(showTrayError)
       },
       {
+        label: `待审批回复 (${pendingApprovalCount})`,
+        enabled: pendingApprovalCount > 0,
+        click: () => void reviewApprovalQueue().catch(showTrayError)
+      },
+      {
         label: 'Headless 模式',
         type: 'checkbox',
         checked: isHeadlessEnabled,
@@ -170,6 +246,7 @@ export function initTray() {
   subscribeDaemonEvents()
   refreshTrayMenu()
   void syncBossWorkerStateFromDaemon().catch(showTrayError)
+  void syncApprovalQueueState().catch(showTrayError)
 
   tray.on('click', () => showMainWindow())
   return tray

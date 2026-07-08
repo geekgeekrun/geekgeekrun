@@ -76,6 +76,13 @@ async function readJsonIfPresent(filePath, fallback) {
   }
 }
 
+async function writePrivateJson(filePath, value) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true, mode: PRIVATE_DIR_MODE })
+  await fs.chmod(path.dirname(filePath), PRIVATE_DIR_MODE).catch(() => {})
+  await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, { mode: PRIVATE_FILE_MODE })
+  await fs.chmod(filePath, PRIVATE_FILE_MODE).catch(() => {})
+}
+
 export async function updateRuntimeConfig({ fileName, patch }) {
   if (!CONFIG_FILES.has(fileName)) {
     throw new Error(`Unsupported config file: ${fileName}`)
@@ -98,8 +105,7 @@ export async function updateRuntimeConfig({ fileName, patch }) {
     ? patch
     : { ...(await readJsonIfPresent(filePath, {})), ...patch }
 
-  await fs.writeFile(filePath, `${JSON.stringify(nextConfig, null, 2)}\n`, { mode: PRIVATE_FILE_MODE })
-  await fs.chmod(filePath, PRIVATE_FILE_MODE).catch(() => {})
+  await writePrivateJson(filePath, nextConfig)
   return { fileName, written: true }
 }
 
@@ -277,4 +283,33 @@ export async function readApprovalQueue({ queueFilePath = defaultApprovalQueueFi
     return []
   }
   return includeAll ? queue : queue.filter((item) => item.status === 'pending')
+}
+
+async function updateApprovalRequest({ id, status, queueFilePath = defaultApprovalQueueFilePath(), reason = '' }) {
+  if (!id) {
+    throw new Error('approval id is required')
+  }
+  const queue = await readJsonIfPresent(queueFilePath, [])
+  if (!Array.isArray(queue)) {
+    throw new Error('approval queue must be an array')
+  }
+  const item = queue.find((request) => request.id === id)
+  if (!item) {
+    throw new Error(`Approval request not found: ${id}`)
+  }
+  Object.assign(item, {
+    status,
+    reviewedAt: new Date().toISOString(),
+    reviewReason: reason
+  })
+  await writePrivateJson(queueFilePath, queue)
+  return item
+}
+
+export function approveReply(options) {
+  return updateApprovalRequest({ ...options, status: 'approved' })
+}
+
+export function rejectReply(options) {
+  return updateApprovalRequest({ ...options, status: 'rejected' })
 }
