@@ -21,6 +21,10 @@
   "expectCityNotMatchStrategy": 3,
   "strategyScopeOptionWhenMarkJobCityNotMatch": 2,
   "jobDetailRegExpMatchLogic": 1,
+  "allowSalaryUnits": ["month", "day"],
+  "expectDailySalaryLow": 120,
+  "expectDailySalaryHigh": 350,
+  "unknownSalaryStrategy": "allow",
   "autoReminder": {
     "throttleIntervalMinutes": 10,
     "rechatLimitDay": 21,

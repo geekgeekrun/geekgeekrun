@@ -8,5 +8,9 @@
   "jobDetailRegExpMatchLogic": 1,
   "expectSalaryCalculateWay": 1,
   "expectSalaryLow": null,
-  "expectSalaryHigh": null
+  "expectSalaryHigh": null,
+  "allowSalaryUnits": ["month", "day"],
+  "expectDailySalaryLow": 120,
+  "expectDailySalaryHigh": 350,
+  "unknownSalaryStrategy": "allow"
 }

@@ -20,7 +20,7 @@ import {
 } from './combineCalculator.mjs'
 import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
 import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
-import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
+import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog.js'
 import {
   MarkAsNotSuitReason,
   MarkAsNotSuitOp,
@@ -162,8 +162,32 @@ const expectSalaryCalculateWay = (
     :
     commonJobConditionConfig.expectSalaryCalculateWay
 ) ?? SalaryCalculateWay.MONTH_SALARY
+const allowSalaryUnits = (
+  !fieldsForUseCommonConfig.salary ?
+    readConfigFile('boss.json').allowSalaryUnits
+    :
+    commonJobConditionConfig.allowSalaryUnits
+) ?? ['month', 'day']
+const expectDailySalaryLow = parseFloat(
+  !fieldsForUseCommonConfig.salary ?
+    readConfigFile('boss.json').expectDailySalaryLow
+    :
+    commonJobConditionConfig.expectDailySalaryLow
+) || null
+const expectDailySalaryHigh = parseFloat(
+  !fieldsForUseCommonConfig.salary ?
+    readConfigFile('boss.json').expectDailySalaryHigh
+    :
+    commonJobConditionConfig.expectDailySalaryHigh
+) || null
+const unknownSalaryStrategy = (
+  !fieldsForUseCommonConfig.salary ?
+    readConfigFile('boss.json').unknownSalaryStrategy
+    :
+    commonJobConditionConfig.unknownSalaryStrategy
+) ?? 'allow'
 const expectSalaryNotMatchStrategy = readConfigFile('boss.json').expectSalaryNotMatchStrategy ?? MarkAsNotSuitOp.NO_OP
-const isSalaryFilterEnabled = expectSalaryLow || expectSalaryHigh
+const isSalaryFilterEnabled = expectSalaryLow || expectSalaryHigh || expectDailySalaryLow || expectDailySalaryHigh || unknownSalaryStrategy === 'skip'
 const strategyScopeOptionWhenMarkSalaryNotMatch = readConfigFile('boss.json').strategyScopeOptionWhenMarkSalaryNotMatch ?? StrategyScopeOptionWhenMarkJobNotMatch.ONLY_COMPANY_MATCHED_JOB
 
 // work exp
@@ -942,19 +966,66 @@ async function toRecommendPage (hooks) {
                 throw new Error('CANNOT_FIND_EXCEPT_JOB_IN_THIS_FILTER_CONDITION')
               }
               let jobListData = []
+              function checkIfSalarySuit(salaryDesc) {
+                const salaryData = parseSalary(salaryDesc)
+                if (!allowSalaryUnits.includes(salaryData.unit)) {
+                  return false
+                }
+                if (salaryData.unit === 'unknown' || salaryData.unit === 'negotiable') {
+                  return unknownSalaryStrategy !== 'skip'
+                }
+                if (salaryData.unit === 'day') {
+                  let ourSalaryInterval = [expectDailySalaryLow ?? null, expectDailySalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
+                  }
+                  return hasIntersection([salaryData.low ?? null, salaryData.high ?? null], ourSalaryInterval)
+                }
+                if (salaryData.unit === 'hour') {
+                  return true
+                }
+                if (expectSalaryCalculateWay === SalaryCalculateWay.MONTH_SALARY) {
+                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
+                  }
+                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null]
+                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
+                }
+                else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
+                  const salaryDataMonth = salaryData.month || 12
+                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
+                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
+                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
+                  }
+                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null].map(
+                    it =>
+                      it === null ? null : (it * salaryDataMonth / 10)
+                  )
+                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
+                }
+                return true
+              }
+              function shouldSkipJobFromListSalary(salaryDesc) {
+                const salaryData = parseSalary(salaryDesc)
+                if (!allowSalaryUnits.includes(salaryData.unit)) {
+                  return true
+                }
+                return (salaryData.unit === 'unknown' || salaryData.unit === 'negotiable') && unknownSalaryStrategy === 'skip'
+              }
               async function updateJobListData () {
                 jobListData = await page.evaluate(`document.querySelector('.page-jobs-main')?.__vue__?.jobList`)
                 // due to city can get from list immediately
                 // so just set those job which city is not suit to blockJobNotSuit
                 // to skip view detail
 
-                // skip invalid salaryData (兼职、日结、实习 etc)
-                jobListData.forEach(it => {
-                  const salaryData = parseSalary(it.salaryDesc)
-                  if (!salaryData.high || !salaryData.low) {
-                    blockJobNotSuit.add(it.encryptJobId)
-                  }
-                })
+                if (isSalaryFilterEnabled) {
+                  jobListData.forEach(it => {
+                    if (shouldSkipJobFromListSalary(it.salaryDesc)) {
+                      blockJobNotSuit.add(it.encryptJobId)
+                    }
+                  })
+                }
                 if (
                   (
                     expectCityNotMatchStrategy === MarkAsNotSuitOp.NO_OP && 
@@ -984,30 +1055,6 @@ async function toRecommendPage (hooks) {
               let hasReachLastPage = false
               let targetJobIndex = -1
               let targetJobData, selectedJobData // they show be same; one is from list, another is from detail
-              function checkIfSalarySuit(salaryDesc) {
-                const salaryData = parseSalary(salaryDesc)
-                if (expectSalaryCalculateWay === SalaryCalculateWay.MONTH_SALARY) {
-                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
-                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
-                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
-                  }
-                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null]
-                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
-                }
-                else if (expectSalaryCalculateWay === SalaryCalculateWay.ANNUAL_PACKAGE) {
-                  const salaryDataMonth = salaryData.month || 12
-                  let ourSalaryInterval = [expectSalaryLow ?? null, expectSalaryHigh ?? null]
-                  if (ourSalaryInterval.every(it => !isNaN(parseFloat(it)))) {
-                    ourSalaryInterval = ourSalaryInterval.sort((a, b) => a - b)
-                  }
-                  const theirSalaryInterval = [salaryData.low ?? null, salaryData.high ?? null].map(
-                    it =>
-                      it === null ? null : (it * salaryDataMonth / 10)
-                  )
-                  return hasIntersection(theirSalaryInterval, ourSalaryInterval)
-                }
-                return true
-              }
               function getTempTargetJobIndexToCheckDetail () {
                 return jobListData.findIndex(it => {
                   return !blockBossNotNewChat.has(it.encryptBossId) &&
