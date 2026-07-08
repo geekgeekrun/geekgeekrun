@@ -2,10 +2,10 @@ import { app, dialog, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 import { runCommon } from './run-common'
 import {
-  approveReply,
+  approveAutoReply,
   createDaemonController,
   readApprovalQueue,
-  rejectReply,
+  requireHumanIntervention,
   TASKS
 } from '../../../../ggr-controller/index.mjs'
 import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
@@ -82,7 +82,7 @@ function formatApprovalDetail(request: Record<string, unknown>, index: number, t
     request.hrName ? `HR：${request.hrName}` : '',
     '',
     `HR 问题：${request.latestHrMessage ?? ''}`,
-    request.draftReply ? `建议回复：${request.draftReply}` : '建议回复：暂无',
+    request.draftReply ? `AI 草稿：${request.draftReply}` : 'AI 草稿：暂无',
     request.reason ? `原因：${request.reason}` : ''
   ].filter(Boolean).join('\n')
 }
@@ -92,7 +92,7 @@ async function reviewApprovalQueue() {
   if (!approvals.length) {
     pendingApprovalCount = 0
     refreshTrayMenu()
-    await dialog.showMessageBox({ type: 'info', message: '暂无待审批回复' })
+    await dialog.showMessageBox({ type: 'info', message: '暂无AI 自动回复审批' })
     return
   }
 
@@ -101,21 +101,21 @@ async function reviewApprovalQueue() {
     const request = approvals[index]
     const result = await dialog.showMessageBox({
       type: 'question',
-      title: '待审批回复',
-      message: '是否通过这条 HR 回复？',
+      title: 'AI 自动回复审批',
+      message: '是否允许 AI 自动回复这条 HR 消息？',
       detail: formatApprovalDetail(request, index, approvals.length),
-      buttons: ['通过', '拒绝', '跳过', '关闭'],
+      buttons: ['允许 AI 自动回复', '转人工处理', '跳过', '关闭'],
       defaultId: 2,
       cancelId: 3
     })
 
     if (result.response === 0) {
-      await approveReply({ id: request.id })
+      await approveAutoReply({ id: request.id })
       approvals.splice(index, 1)
       continue
     }
     if (result.response === 1) {
-      await rejectReply({ id: request.id })
+      await requireHumanIntervention({ id: request.id, reason: 'AI auto reply was not approved; manual handling required' })
       approvals.splice(index, 1)
       continue
     }
@@ -205,7 +205,7 @@ function refreshTrayMenu() {
         click: () => void showBossAgentStatus().catch(showTrayError)
       },
       {
-        label: `待审批回复 (${pendingApprovalCount})`,
+        label: `AI 自动回复审批 (${pendingApprovalCount})`,
         enabled: pendingApprovalCount > 0,
         click: () => void reviewApprovalQueue().catch(showTrayError)
       },

@@ -5,9 +5,12 @@ import path from 'node:path'
 import {
   createLocalProcessController,
   createDaemonController,
-  approveReply,
+  approveAutoReply,
   readApprovalQueue,
-  rejectReply,
+  requireHumanIntervention,
+  markAutoReplySent,
+  markAutoReplyFailed,
+  markAutoReplyExpired,
   updateRuntimeConfig,
   TASKS
 } from '../index.mjs'
@@ -95,17 +98,26 @@ const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-controller-'))
 const queueFilePath = path.join(tmpDir, 'queue.json')
 await fs.writeFile(queueFilePath, JSON.stringify([
   { id: '1', status: 'pending', latestHrMessage: '薪资多少？' },
-  { id: '2', status: 'approved', latestHrMessage: 'ok' }
+  { id: '2', status: 'approved_auto_reply', latestHrMessage: 'ok' }
 ]))
 const pending = await readApprovalQueue({ queueFilePath })
 assert.equal(pending.length, 1)
 assert.equal(pending[0].id, '1')
-const approved = await approveReply({ id: '1', queueFilePath })
-assert.equal(approved.status, 'approved')
+const approved = await approveAutoReply({ id: '1', queueFilePath })
+assert.equal(approved.status, 'approved_auto_reply')
 assert.equal((await readApprovalQueue({ queueFilePath })).length, 0)
-const rejected = await rejectReply({ id: '2', queueFilePath, reason: 'not safe' })
-assert.equal(rejected.status, 'rejected')
-assert.equal(rejected.reviewReason, 'not safe')
+const humanRequired = await requireHumanIntervention({ id: '2', queueFilePath, reason: 'not safe' })
+assert.equal(humanRequired.status, 'human_required')
+assert.equal(humanRequired.reviewReason, 'not safe')
+const sent = await markAutoReplySent({ id: '1', queueFilePath })
+assert.equal(sent.status, 'auto_reply_sent')
+assert.ok(sent.sentAt)
+const failed = await markAutoReplyFailed({ id: '1', queueFilePath, reason: 'send failed' })
+assert.equal(failed.status, 'auto_reply_failed')
+assert.equal(failed.reviewReason, 'send failed')
+const expired = await markAutoReplyExpired({ id: '1', queueFilePath, reason: 'context changed' })
+assert.equal(expired.status, 'auto_reply_expired')
+assert.equal(expired.reviewReason, 'context changed')
 await fs.writeFile(queueFilePath, '{bad json')
 assert.deepEqual(await readApprovalQueue({ queueFilePath }), [])
 

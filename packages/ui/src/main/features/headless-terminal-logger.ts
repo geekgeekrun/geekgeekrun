@@ -8,31 +8,13 @@ function getFullTimestamp(): string {
   return new Date().toLocaleString('zh-CN', { hour12: false })
 }
 
-/** Format HR name+company for display */
-function formatSender(info?: { bossName?: string; brandName?: string; companyName?: string }): string {
-  const name = info?.bossName || ''
-  const company = info?.brandName || info?.companyName || ''
-  if (name && company) return `${name} @ ${company}`
-  if (name) return name
-  if (company) return company
-  return 'HR'
-}
-
-function formatJob(positionInfo: Record<string, unknown>): string {
-  try {
-    const jobInfo = (positionInfo?.jobInfo || positionInfo) as Record<string, unknown> | undefined
-    const bossInfo = positionInfo?.bossInfo as Record<string, unknown> | undefined
-    if (!jobInfo) return ''
-    const parts: string[] = []
-    if (jobInfo.jobName) parts.push(String(jobInfo.jobName))
-    if (jobInfo.positionName) parts.push(`(${jobInfo.positionName})`)
-    if (jobInfo.salaryDesc) parts.push(String(jobInfo.salaryDesc))
-    if (bossInfo?.brandName) parts.push(`@ ${bossInfo.brandName}`)
-    if (bossInfo?.name) parts.push(`- ${bossInfo.name}`)
-    return parts.join(' ') || JSON.stringify(jobInfo)
-  } catch {
-    return ''
-  }
+function redactTerminalText(value: unknown): string {
+  return String(value ?? '')
+    .replace(/1[3-9]\d{9}/g, '[手机号]')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu, '[邮箱]')
+    .replace(/微信[:：]?\s*[\w-]{4,}/giu, '微信:[已隐藏]')
+    .replace(/\b\d+\s*[kK]\b/g, '[薪资]')
+    .replace(/\d+万/g, '[薪资]')
 }
 
 type DaemonMessage = Record<string, unknown> & { type?: string; data?: Record<string, unknown> }
@@ -83,7 +65,7 @@ function printDaemonMessage(message: DaemonMessage) {
         // ✅ AI 发送的消息
         case 'llm-reply':
         case 'ai-reply': {
-          const text = (msgData.text ?? msgData.message ?? '') as string
+          const text = redactTerminalText(msgData.text ?? msgData.message ?? '')
           if (!text) break
           const target = msgData.hrName
             ? `${msgData.hrName}${msgData.company ? ` @ ${msgData.company}` : ''}`
@@ -94,7 +76,7 @@ function printDaemonMessage(message: DaemonMessage) {
 
         // ✅ HR 回复的消息
         case 'hr-reply': {
-          const hrText = (msgData.text ?? msgData.message ?? '') as string
+          const hrText = redactTerminalText(msgData.text ?? msgData.message ?? '')
           const sender = msgData.hrName
             ? `${msgData.hrName}${msgData.company ? ` @ ${msgData.company}` : ''}`
             : 'HR'
@@ -104,7 +86,7 @@ function printDaemonMessage(message: DaemonMessage) {
             const files = msgData.files as Array<{ name?: string; url?: string }> | string
             const filesArr = Array.isArray(files) ? files : []
             for (const f of filesArr) {
-              console.log(`  📎  文件: ${f.name || f.url || '(未知文件)'}`)
+              console.log(`  📎  文件: ${f.name || '(已隐藏文件地址)'}`)
             }
           }
           break
@@ -113,7 +95,7 @@ function printDaemonMessage(message: DaemonMessage) {
         // ✅ 聊天消息（AI ↔ HR 双方）
         case 'chat-message': {
           const direction = String(msgData.direction ?? '')
-          const text = (msgData.text ?? '') as string
+          const text = redactTerminalText(msgData.text ?? '')
           const msgType = String(msgData.msgType ?? 'text')
           const sender = msgData.hrName
             ? `${msgData.hrName}${msgData.company ? ` @ ${msgData.company}` : ''}`
@@ -129,7 +111,7 @@ function printDaemonMessage(message: DaemonMessage) {
           // 文件附件（图片、简历等）
           else if (msgType === 'image') {
             const imgUrl = (msgData.imageUrl ?? '') as string
-            console.log(`  ${prefix} ${label}: 📷 [图片]${imgUrl ? ` ${imgUrl}` : ''}`)
+            console.log(`  ${prefix} ${label}: 📷 [图片]${imgUrl ? ' [地址已隐藏]' : ''}`)
           } else if (msgType === 'resume') {
             console.log(`  ${prefix} ${label}: 📄 [简历文件]${text ? ` ${text}` : ''}`)
           } else {
@@ -165,14 +147,16 @@ function printDaemonMessage(message: DaemonMessage) {
           if (msgType && !['pong', 'user-process-register'].includes(msgType)) {
             // 尝试提取有用文本
             const text =
-              (msgData.text as string) ||
-              (msgData.message as string) ||
-              (msgData.content as string) ||
-              ''
+              redactTerminalText(
+                (msgData.text as string) ||
+                (msgData.message as string) ||
+                (msgData.content as string) ||
+                ''
+              )
             if (text) {
               console.log(`  [${msgType}] ${text}`)
             } else {
-              console.log(`  [${msgType}]`, JSON.stringify(msgData).slice(0, 200))
+              console.log(`  [${msgType}]`, redactTerminalText(JSON.stringify(msgData)).slice(0, 200))
             }
           }
       }
@@ -184,7 +168,7 @@ function printDaemonMessage(message: DaemonMessage) {
       break
 
     case 'worker-exited':
-      console.log(`[${ts}] 🛑 worker ${message.workerId} (code: ${message.exitCode})`)
+      console.log(`[${ts}] 🛑 worker ${message.workerId} (code: ${message.code})`)
       break
 
     case 'worker-error':
