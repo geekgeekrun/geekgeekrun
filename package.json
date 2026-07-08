@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs",
     "start:ggr-mcp": "node ./packages/ggr-mcp/server.mjs",
-    "test": "node ./packages/ggr-mcp/test/check.mjs && node ./packages/ui/test/check.mjs",
+    "test": "node ./packages/ggr-controller/test/check.mjs && node ./packages/ggr-mcp/test/check.mjs && node ./packages/ui/test/check.mjs",
     "test:ggr-mcp": "node ./packages/ggr-mcp/test/check.mjs",
     "test:ui": "node ./packages/ui/test/check.mjs"
   },

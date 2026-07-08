@@ -1,6 +1,7 @@
 import { app, dialog, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 import { runCommon } from './run-common'
+import { createDaemonController, TASKS } from '../../../../ggr-controller/index.mjs'
 import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
 import { allowMainWindowQuit, hideMainWindow, showMainWindow } from '../window/mainWindow'
 
@@ -9,7 +10,11 @@ let isHeadlessEnabled = process.env.GGR_HEADLESS === 'true'
 let isBossRunning = false
 let isBossStopping = false
 
-const BOSS_WORKER_ID = 'geekAutoStartWithBossMain'
+const BOSS_WORKER_ID = TASKS.AUTO_CHAT.workerId
+const controller = createDaemonController({
+  sendToDaemon,
+  runTask: runCommon
+})
 
 function getTrayIcon() {
   const iconPath = path.join(app.getAppPath(), 'resources/icon.png')
@@ -40,11 +45,8 @@ async function showTrayError(error: unknown) {
 }
 
 async function getBossWorker() {
-  const status = (await sendToDaemon(
-    { type: 'get-status' },
-    { needCallback: true }
-  )) as { workers?: Array<{ workerId?: string; pid?: number }> } | undefined
-  return status?.workers?.find((worker) => worker.workerId === BOSS_WORKER_ID)
+  const status = await controller.getTaskStatus(BOSS_WORKER_ID)
+  return status.worker as { workerId?: string; pid?: number } | null
 }
 
 function syncBossWorkerState(workers: Array<{ workerId?: string }> = []) {
@@ -56,8 +58,8 @@ function syncBossWorkerState(workers: Array<{ workerId?: string }> = []) {
 }
 
 async function syncBossWorkerStateFromDaemon() {
-  const worker = await getBossWorker()
-  syncBossWorkerState(worker ? [worker] : [])
+  const status = await controller.getTaskStatus(BOSS_WORKER_ID)
+  syncBossWorkerState(status.worker ? [status.worker] : [])
 }
 
 function subscribeDaemonEvents() {
@@ -81,7 +83,7 @@ function subscribeDaemonEvents() {
 
 async function startBossAgent() {
   process.env.GGR_HEADLESS = String(isHeadlessEnabled)
-  const { isAlreadyRunning } = await runCommon({ mode: BOSS_WORKER_ID })
+  const { isAlreadyRunning } = await controller.startTask(BOSS_WORKER_ID)
   isBossRunning = true
   refreshTrayMenu()
   await dialog.showMessageBox({
@@ -100,10 +102,7 @@ async function stopBossAgent() {
 
   isBossStopping = true
   refreshTrayMenu()
-  await sendToDaemon(
-    { type: 'stop-worker', workerId: BOSS_WORKER_ID },
-    { needCallback: true }
-  )
+  await controller.stopTask(BOSS_WORKER_ID)
   await dialog.showMessageBox({ type: 'info', message: '自动开聊停止请求已发送' })
 }
 

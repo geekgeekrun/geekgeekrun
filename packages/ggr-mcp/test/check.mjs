@@ -27,6 +27,8 @@ assert.match(coreSource, /headless:\s*process\.env\.GGR_HEADLESS\s*===\s*['"]tru
 assert.doesNotMatch(coreSource, /headless:\s*false/, 'core must not hard-code visible browser mode')
 
 const agentSource = await read('packages/ggr-mcp/lib/agent-service.mjs')
+assert.match(agentSource, /ggr-controller\/index\.mjs/, 'ggr-mcp agent service must use the shared controller package')
+assert.match(agentSource, /createLocalProcessController/, 'ggr-mcp agent service must create a local process controller')
 assert.doesNotMatch(agentSource, /ensureHeadlessPatch/, 'ggr-mcp must not patch source files at runtime')
 assert.doesNotMatch(agentSource, /source\.replace\(['"]headless:\s*false/, 'ggr-mcp must not rewrite Puppeteer source')
 
