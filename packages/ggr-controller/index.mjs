@@ -23,7 +23,19 @@ const CONFIG_FILES = new Set([
   'llm.json',
   'dingtalk.json'
 ])
-const ARRAY_CONFIG_FILES = new Set(['target-company-list.json', 'llm.json'])
+const ARRAY_CONFIG_FILES = new Set(['target-company-list.json'])
+const APP_DATA_RESOURCES = Object.freeze({
+  job_intention: Object.freeze({ fileName: 'common-job-condition-config.json', writable: true }),
+  opening_message: Object.freeze({ fileName: 'boss.json', writable: true }),
+  reply_policy: Object.freeze({ fileName: 'boss.json', writable: true }),
+  target_companies: Object.freeze({ fileName: 'target-company-list.json', writable: true, array: true }),
+  blacklist_companies: Object.freeze({ fileName: 'boss.json', writable: true }),
+  llm_config: Object.freeze({ fileName: 'llm.json', writable: true }),
+  notification_config: Object.freeze({ fileName: 'dingtalk.json', writable: true }),
+  runtime_status: Object.freeze({ type: 'runtime_status', writable: false })
+})
+const REDACTED_VALUE = '[redacted]'
+const SENSITIVE_FIELD_PATTERN = /(apiKey|accessKey|key|token|password|webhook)/i
 const RECENT_LINE_LIMIT = 80
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
@@ -37,6 +49,10 @@ function defaultApprovalQueueFilePath() {
   return path.join(os.homedir(), '.geekgeekrun', 'storage', 'hr-reply-approval-queue.json')
 }
 
+function defaultConfigDir() {
+  return path.join(os.homedir(), '.geekgeekrun/config')
+}
+
 function pushLines(target, chunk) {
   const lines = String(chunk).split(/\r?\n/).filter(Boolean)
   target.push(...lines)
@@ -47,6 +63,38 @@ function pushLines(target, chunk) {
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function deepMergeConfig(base, patch) {
+  if (!isPlainObject(base) || !isPlainObject(patch)) {
+    return patch
+  }
+  const next = { ...base }
+  for (const [key, value] of Object.entries(patch)) {
+    next[key] = isPlainObject(value) && isPlainObject(next[key]) ? deepMergeConfig(next[key], value) : value
+  }
+  return next
+}
+
+function redactAppData(value) {
+  if (Array.isArray(value)) {
+    return value.map(redactAppData)
+  }
+  if (!isPlainObject(value)) {
+    return value
+  }
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
+    key,
+    SENSITIVE_FIELD_PATTERN.test(key) ? REDACTED_VALUE : redactAppData(entry)
+  ]))
+}
+
+function getAppDataResource(resource) {
+  const definition = APP_DATA_RESOURCES[resource]
+  if (!definition) {
+    throw new Error(`Unsupported app data resource: ${resource}`)
+  }
+  return definition
 }
 
 function assertTaskId(workerId) {
@@ -83,7 +131,7 @@ async function writePrivateJson(filePath, value) {
   await fs.chmod(filePath, PRIVATE_FILE_MODE).catch(() => {})
 }
 
-export async function updateRuntimeConfig({ fileName, patch }) {
+export async function updateRuntimeConfig({ fileName, patch, configDir = defaultConfigDir() }) {
   if (!CONFIG_FILES.has(fileName)) {
     throw new Error(`Unsupported config file: ${fileName}`)
   }
@@ -96,17 +144,39 @@ export async function updateRuntimeConfig({ fileName, patch }) {
     throw new Error(`${fileName} patch must be an object.`)
   }
 
-  const configDir = path.join(os.homedir(), '.geekgeekrun/config')
   const filePath = path.join(configDir, fileName)
   await fs.mkdir(configDir, { recursive: true, mode: PRIVATE_DIR_MODE })
   await fs.chmod(configDir, PRIVATE_DIR_MODE).catch(() => {})
 
   const nextConfig = ARRAY_CONFIG_FILES.has(fileName)
     ? patch
-    : { ...(await readJsonIfPresent(filePath, {})), ...patch }
+    : deepMergeConfig(await readJsonIfPresent(filePath, {}), patch)
 
   await writePrivateJson(filePath, nextConfig)
   return { fileName, written: true }
+}
+
+export async function readAppData({ resource, configDir = defaultConfigDir() }) {
+  const definition = getAppDataResource(resource)
+  if (definition.type === 'runtime_status') {
+    return { resource, type: definition.type, data: null }
+  }
+  const data = await readJsonIfPresent(path.join(configDir, definition.fileName), definition.array ? [] : {})
+  return {
+    resource,
+    fileName: definition.fileName,
+    writable: Boolean(definition.writable),
+    data: redactAppData(data)
+  }
+}
+
+export async function updateAppData({ resource, patch, configDir = defaultConfigDir() }) {
+  const definition = getAppDataResource(resource)
+  if (!definition.writable) {
+    throw new Error(`App data resource is read-only: ${resource}`)
+  }
+  await updateRuntimeConfig({ fileName: definition.fileName, patch, configDir })
+  return readAppData({ resource, configDir })
 }
 
 async function applyConfigPatch(configPatch) {

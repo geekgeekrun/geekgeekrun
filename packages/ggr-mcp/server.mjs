@@ -2,11 +2,22 @@ import { createMcpServer } from './lib/mcp-stdio.mjs'
 import { createAgentService } from './lib/agent-service.mjs'
 
 const agentService = createAgentService()
+const appDataResources = [
+  'job_intention',
+  'opening_message',
+  'reply_policy',
+  'target_companies',
+  'blacklist_companies',
+  'llm_config',
+  'notification_config',
+  'runtime_status'
+]
+const writableAppDataResources = appDataResources.filter((resource) => resource !== 'runtime_status')
 
 const tools = [
   {
     name: 'boss_get_status',
-    description: 'Return the current local controller status. This does not expose cookies or localStorage.',
+    description: 'Return the current local controller status.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     handler: () => agentService.getStatus()
   },
@@ -32,7 +43,7 @@ const tools = [
   },
   {
     name: 'boss_update_config',
-    description: 'Update one supported GeekGeekRun config file under ~/.geekgeekrun/config.',
+    description: 'Update one supported GeekGeekRun config file.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -48,8 +59,35 @@ const tools = [
     handler: args => agentService.updateConfig(args)
   },
   {
+    name: 'boss_read_app_data',
+    description: 'Read one whitelisted user-level GeekGeekRun app-data resource.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        resource: { type: 'string', enum: appDataResources }
+      },
+      required: ['resource'],
+      additionalProperties: false
+    },
+    handler: args => agentService.readAppData(args)
+  },
+  {
+    name: 'boss_update_app_data',
+    description: 'Update one whitelisted user-level GeekGeekRun app-data resource.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        resource: { type: 'string', enum: writableAppDataResources },
+        patch: {}
+      },
+      required: ['resource', 'patch'],
+      additionalProperties: false
+    },
+    handler: args => agentService.updateAppData(args)
+  },
+  {
     name: 'boss_list_ai_reply_approvals',
-    description: 'List AI auto-reply approval requests. By default returns only pending requests. Does not expose queue file paths.',
+    description: 'List AI auto-reply approval requests. By default returns only pending requests.',
     inputSchema: {
       type: 'object',
       properties: {

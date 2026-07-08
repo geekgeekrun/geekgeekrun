@@ -13,15 +13,24 @@ async function read(relativePath) {
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-mcp-'))
 const queueFilePath = path.join(tempDir, 'hr-reply-approval-queue.json')
+const configDir = path.join(tempDir, 'config')
+await fs.mkdir(configDir, { recursive: true })
+await fs.writeFile(path.join(configDir, 'boss.json'), JSON.stringify({ openingMessage: 'hello mcp', nested: { keep: true } }, null, 2))
 await fs.writeFile(queueFilePath, JSON.stringify([
   { id: 'pending-1', status: 'pending', draftReply: '您好，可以继续聊', latestHrMessage: '方便聊吗' },
   { id: 'sent-1', status: 'auto_reply_sent', draftReply: '已发送', latestHrMessage: '你好' }
 ], null, 2))
-const service = createAgentService({ approvalQueueFilePath: queueFilePath })
+const service = createAgentService({ approvalQueueFilePath: queueFilePath, configDir })
 const status = service.getStatus()
 
 assert.equal(status.running, false)
 assert.equal(status.pid, null)
+
+const mcpOpeningData = await service.readAppData({ resource: 'opening_message' })
+assert.equal(mcpOpeningData.data.openingMessage, 'hello mcp')
+const updatedMcpOpening = await service.updateAppData({ resource: 'opening_message', patch: { openingMessage: 'hello mcp updated' } })
+assert.equal(updatedMcpOpening.data.openingMessage, 'hello mcp updated')
+assert.equal(updatedMcpOpening.data.nested.keep, true)
 
 const pendingApprovals = await service.listAiReplyApprovals()
 assert.equal(pendingApprovals.length, 1)
@@ -43,7 +52,7 @@ assert.equal(humanRequired.reviewReason, 'needs owner review')
 assert.equal('ensureHeadlessPatch' in service, false, 'agent service must not mutate source files to enable headless mode')
 
 await assert.rejects(
-  service.updateConfig({ fileName: 'secrets.json', patch: {} }),
+  service.updateConfig({ fileName: 'unsupported.json', patch: {} }),
   /Unsupported config file/
 )
 
@@ -54,6 +63,8 @@ assert.doesNotMatch(coreSource, /headless:\s*false/, 'core must not hard-code vi
 const agentSource = await read('packages/ggr-mcp/lib/agent-service.mjs')
 assert.match(agentSource, /ggr-controller\/index\.mjs/, 'ggr-mcp agent service must use the shared controller package')
 assert.match(agentSource, /createLocalProcessController/, 'ggr-mcp agent service must create a local process controller')
+assert.match(agentSource, /readAppData/, 'ggr-mcp agent service must expose app-data reads')
+assert.match(agentSource, /updateAppData/, 'ggr-mcp agent service must expose app-data updates')
 assert.match(agentSource, /readApprovalQueue/, 'ggr-mcp agent service must expose user-level approval queue reads')
 assert.match(agentSource, /approveAutoReply/, 'ggr-mcp agent service must expose approving AI auto replies')
 assert.match(agentSource, /requireHumanIntervention/, 'ggr-mcp agent service must expose marking replies for human intervention')
@@ -64,6 +75,8 @@ assert.doesNotMatch(agentSource, /ensureHeadlessPatch/, 'ggr-mcp must not patch 
 assert.doesNotMatch(agentSource, /source\.replace\(['"]headless:\s*false/, 'ggr-mcp must not rewrite Puppeteer source')
 
 const serverSource = await read('packages/ggr-mcp/server.mjs')
+assert.match(serverSource, /boss_read_app_data/, 'ggr-mcp must expose app-data reads to Hermes')
+assert.match(serverSource, /boss_update_app_data/, 'ggr-mcp must expose app-data updates to Hermes')
 assert.match(serverSource, /boss_list_ai_reply_approvals/, 'ggr-mcp must expose listing AI reply approvals to Hermes')
 assert.match(serverSource, /boss_approve_auto_reply/, 'ggr-mcp must expose allowing AI auto replies to Hermes')
 assert.match(serverSource, /boss_require_human_intervention/, 'ggr-mcp must expose manual handoff to Hermes')

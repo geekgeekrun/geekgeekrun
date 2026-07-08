@@ -12,6 +12,8 @@ import {
   markAutoReplyFailed,
   markAutoReplyExpired,
   updateRuntimeConfig,
+  readAppData,
+  updateAppData,
   TASKS
 } from '../index.mjs'
 
@@ -133,10 +135,6 @@ try {
   assert.equal(bossConfig.headlessTerminalLoggerForTest, true)
   const files = await fs.readdir(configDir)
   assert.ok(files.some((fileName) => fileName.startsWith('boss.json.corrupt-') && fileName.endsWith('.bak')))
-  await assert.rejects(
-    () => updateRuntimeConfig({ fileName: 'llm.json', patch: { model: 'x' } }),
-    /llm\.json must be replaced with an array/
-  )
 } finally {
   process.env.HOME = oldHome
   await fs.rm(tempHome, { recursive: true, force: true })
