@@ -2,3 +2,19 @@ node_modules
 database.sqlite
 .env.local
 
+# IDE / editor configs
+.claude/
+.codegraph/
+.cursor/
+.gemini/
+.mcp.json
+opencode.jsonc
+
+# AI agent context files
+AGENTS.md
+GEMINI.md
+
+# Design docs / planning (not program code)
+docs/superpowers/plans/
+docs/superpowers/specs/
+
