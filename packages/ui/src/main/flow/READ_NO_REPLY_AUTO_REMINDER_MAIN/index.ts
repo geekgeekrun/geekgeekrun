@@ -10,17 +10,17 @@ import {
   getPublicDbFilePath,
   readConfigFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord'
+import { ChatMessageRecord } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatMessageRecord.js'
 import {
   saveChatMessageRecord,
   getJobHireStatusRecord,
   saveJobHireStatusRecord
-} from '@geekgeekrun/sqlite-plugin/dist/handlers'
+} from '@geekgeekrun/sqlite-plugin/dist/handlers.js'
 import {
   writeStorageFile,
   readStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
+import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo.js'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import {
   AUTO_CHAT_ERROR_EXIT_CODE,
@@ -29,7 +29,7 @@ import {
   RECHAT_LLM_FALLBACK
 } from '../../../common/enums/auto-start-chat'
 import gtag from '../../utils/gtag'
-import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums'
+import { JobHireStatus } from '@geekgeekrun/sqlite-plugin/dist/enums.js'
 import dayjs from 'dayjs'
 import cheerio from 'cheerio'
 import { connectToDaemon, sendToDaemon } from '../OPEN_SETTING_WINDOW/connect-to-daemon'
