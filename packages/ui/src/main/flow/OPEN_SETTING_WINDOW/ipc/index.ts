@@ -59,6 +59,70 @@ import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/util
 import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
 import { ensureConfigFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
+const WORKER_STOP_TIMEOUT_MS = 15000
+const workerExitHandlerByMode = new Map<string, (message: any) => void>()
+
+function subscribeToWorkerExit(mode: string) {
+  if (workerExitHandlerByMode.has(mode)) {
+    return
+  }
+  const handler = (message: any) => {
+    if (message.workerId !== mode || message.type !== 'worker-exited') {
+      return
+    }
+    mainWindow?.webContents.send('worker-exited', message)
+    if (!message.restarting) {
+      daemonEE.off('message', handler)
+      workerExitHandlerByMode.delete(mode)
+    }
+  }
+  workerExitHandlerByMode.set(mode, handler)
+  daemonEE.on('message', handler)
+}
+
+function waitForWorkerExit(workerId: string) {
+  let handler: (message: any) => void
+  let timeout: ReturnType<typeof setTimeout>
+  const cleanup = () => {
+    daemonEE.off('message', handler)
+    clearTimeout(timeout)
+  }
+  const promise = new Promise<void>((resolve, reject) => {
+    handler = (message: any) => {
+      if (message.workerId === workerId && message.type === 'worker-exited') {
+        cleanup()
+        resolve()
+      }
+    }
+    daemonEE.on('message', handler)
+    timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error(`Timed out waiting for worker to exit: ${workerId}`))
+    }, WORKER_STOP_TIMEOUT_MS)
+  })
+  return { promise, cleanup }
+}
+
+async function stopWorkerAndNotify({ workerId, stoppingEvent, stoppedEvent }) {
+  mainWindow?.webContents.send(stoppingEvent)
+  const waitForExit = waitForWorkerExit(workerId)
+  try {
+    await sendToDaemon(
+      {
+        type: 'stop-worker',
+        workerId
+      },
+      {
+        needCallback: true
+      }
+    )
+    await waitForExit.promise
+    mainWindow?.webContents.send(stoppedEvent)
+  } finally {
+    waitForExit.cleanup()
+  }
+}
+
 export default function initIpc() {
   ipcMain.handle('save-config-file-from-ui', async (ev, payload) => {
     payload = JSON.parse(payload)
@@ -190,83 +254,31 @@ export default function initIpc() {
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
     const mode = 'geekAutoStartWithBossMain'
     const { runRecordId } = await runCommon({ mode })
-    daemonEE.on('message', function handler(message) {
-      if (message.workerId !== mode) {
-        return
-      }
-      if (message.type === 'worker-exited') {
-        mainWindow?.webContents.send('worker-exited', message)
-      }
-    })
+    subscribeToWorkerExit(mode)
     return { runRecordId }
   })
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
     const mode = 'readNoReplyAutoReminderMain'
     const { runRecordId } = await runCommon({ mode })
-    daemonEE.on('message', function handler(message) {
-      if (message.workerId !== mode) {
-        return
-      }
-      if (message.type === 'worker-exited') {
-        mainWindow?.webContents.send('worker-exited', message)
-      }
-    })
+    subscribeToWorkerExit(mode)
     return { runRecordId }
   })
 
   ipcMain.handle('stop-geek-auto-start-chat-with-boss', async () => {
-    mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopping')
-    const p = new Promise((resolve) => {
-      daemonEE.on('message', function handler(message) {
-        if (message.workerId !== 'geekAutoStartWithBossMain') {
-          return
-        }
-        if (message.type === 'worker-exited') {
-          daemonEE.off('message', handler)
-          resolve(undefined)
-        }
-      })
+    await stopWorkerAndNotify({
+      workerId: 'geekAutoStartWithBossMain',
+      stoppingEvent: 'geek-auto-start-chat-with-boss-stopping',
+      stoppedEvent: 'geek-auto-start-chat-with-boss-stopped'
     })
-    await sendToDaemon(
-      {
-        type: 'stop-worker',
-        workerId: 'geekAutoStartWithBossMain'
-      },
-      {
-        needCallback: true
-      }
-    )
-
-    await p
-    mainWindow?.webContents.send('geek-auto-start-chat-with-boss-stopped')
   })
 
   ipcMain.handle('stop-read-no-reply-auto-reminder', async () => {
-    mainWindow?.webContents.send('read-no-reply-auto-reminder-stopping')
-    const p = new Promise((resolve) => {
-      daemonEE.on('message', function handler(message) {
-        if (message.workerId !== 'readNoReplyAutoReminderMain') {
-          return
-        }
-        if (message.type === 'worker-exited') {
-          daemonEE.off('message', handler)
-          resolve(undefined)
-        }
-      })
+    await stopWorkerAndNotify({
+      workerId: 'readNoReplyAutoReminderMain',
+      stoppingEvent: 'read-no-reply-auto-reminder-stopping',
+      stoppedEvent: 'read-no-reply-auto-reminder-stopped'
     })
-    await sendToDaemon(
-      {
-        type: 'stop-worker',
-        workerId: 'readNoReplyAutoReminderMain'
-      },
-      {
-        needCallback: true
-      }
-    )
-
-    await p
-    mainWindow?.webContents.send('read-no-reply-auto-reminder-stopped')
   })
 
   ipcMain.handle('get-task-manager-list', async () => {

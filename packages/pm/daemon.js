@@ -373,8 +373,11 @@ function stopWorker(workerId) {
     console.log(`工具进程 ${workerId} 不存在，但已标记为停止（防止重启）`);
     // 通知GUI客户端
     broadcastToGUI({
-      type: 'worker-disconnected',
+      type: 'worker-exited',
       workerId: workerId,
+      code: null,
+      signal: null,
+      restarting: false,
       message: `工具进程 ${workerId} 已停止`
     });
     // 延迟发送状态更新

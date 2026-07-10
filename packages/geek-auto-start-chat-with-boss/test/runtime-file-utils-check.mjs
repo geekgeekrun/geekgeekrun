@@ -14,6 +14,20 @@ try {
   await runtime.writeConfigFile('boss.json', { ok: true })
   assert.equal((await fs.stat(configPath)).mode & 0o777, 0o600)
 
+  await assert.rejects(
+    () => runtime.writeStorageFile('../outside-storage.json', { shouldNotWrite: true }),
+    /Unsupported storage file/
+  )
+  assert.throws(() => runtime.readStorageFile('../config/llm.json'), /Unsupported storage file/)
+  await assert.rejects(
+    () => fs.stat(path.join(tempHome, '.geekgeekrun/outside-storage.json')),
+    /ENOENT/
+  )
+
+  runtime.ensureStorageFileExist()
+  await runtime.writeStorageFile('ipc-pipe-name', 'test-pipe', { isJson: false })
+  assert.equal(runtime.readStorageFile('ipc-pipe-name', { isJson: false }), 'test-pipe')
+
   await fs.writeFile(configPath, '{bad json', { mode: 0o600 })
   runtime.readConfigFile('boss.json')
 

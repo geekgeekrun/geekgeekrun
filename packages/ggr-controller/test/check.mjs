@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
+import { execFile as execFileCallback } from 'node:child_process'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { promisify } from 'node:util'
 import {
   createLocalProcessController,
   createDaemonController,
@@ -16,6 +18,8 @@ import {
   updateAppData,
   TASKS
 } from '../index.mjs'
+
+const execFile = promisify(execFileCallback)
 
 assert.equal(TASKS.AUTO_CHAT.workerId, 'geekAutoStartWithBossMain')
 assert.equal(TASKS.READ_NO_REPLY.workerId, 'readNoReplyAutoReminderMain')
@@ -120,6 +124,41 @@ assert.equal(failed.reviewReason, 'send failed')
 const expired = await markAutoReplyExpired({ id: '1', queueFilePath, reason: 'context changed' })
 assert.equal(expired.status, 'auto_reply_expired')
 assert.equal(expired.reviewReason, 'context changed')
+
+const concurrentQueueFilePath = path.join(tmpDir, 'concurrent-queue.json')
+await fs.writeFile(
+  concurrentQueueFilePath,
+  JSON.stringify(Array.from({ length: 12 }, (_, index) => ({ id: `concurrent-${index}`, status: 'pending' })))
+)
+await Promise.all(
+  Array.from({ length: 12 }, (_, index) =>
+    approveAutoReply({ id: `concurrent-${index}`, queueFilePath: concurrentQueueFilePath })
+  )
+)
+const concurrentQueue = await readApprovalQueue({ includeAll: true, queueFilePath: concurrentQueueFilePath })
+assert.ok(concurrentQueue.every((item) => item.status === 'approved_auto_reply'))
+
+const multiProcessQueueFilePath = path.join(tmpDir, 'multi-process-queue.json')
+await fs.writeFile(
+  multiProcessQueueFilePath,
+  JSON.stringify(Array.from({ length: 8 }, (_, index) => ({ id: `process-${index}`, status: 'pending' })))
+)
+const controllerModuleUrl = new URL('../index.mjs', import.meta.url).href
+const approveScript = `import { approveAutoReply } from ${JSON.stringify(controllerModuleUrl)}; await approveAutoReply({ id: process.argv[1], queueFilePath: process.argv[2] })`
+await Promise.all(
+  Array.from({ length: 8 }, (_, index) =>
+    execFile(process.execPath, [
+      '--input-type=module',
+      '--eval',
+      approveScript,
+      `process-${index}`,
+      multiProcessQueueFilePath
+    ])
+  )
+)
+const multiProcessQueue = await readApprovalQueue({ includeAll: true, queueFilePath: multiProcessQueueFilePath })
+assert.ok(multiProcessQueue.every((item) => item.status === 'approved_auto_reply'))
+
 await fs.writeFile(queueFilePath, '{bad json')
 assert.deepEqual(await readApprovalQueue({ queueFilePath }), [])
 

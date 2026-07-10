@@ -82,4 +82,20 @@ assert.equal(pending[0].latestHrMessage, request.latestHrMessage)
 assert.equal(pending[0].draftSource, 'model_review_draft')
 assert.equal(pending[0].draftSafety, 'needs_human_review')
 
+const concurrentQueueFilePath = path.join(tmpDir, 'concurrent-approval-queue.json')
+await Promise.all(
+  Array.from({ length: 12 }, (_, index) =>
+    appendApprovalRequest(
+      {
+        ...request,
+        hrName: `招聘者${index}`,
+        latestHrMessage: `审批消息${index}`
+      },
+      { queueFilePath: concurrentQueueFilePath }
+    )
+  )
+)
+const concurrentPending = await getPendingApprovalRequests({ queueFilePath: concurrentQueueFilePath })
+assert.equal(concurrentPending.length, 12)
+
 console.log('hr reply policy check passed')

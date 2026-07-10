@@ -38,6 +38,17 @@ assert.match(traySource, /syncBossWorkerStateFromDaemon\(\)/, 'tray must load in
 const openSettingWindowSource = await read('packages/ui/src/main/flow/OPEN_SETTING_WINDOW/index.ts')
 assert.match(openSettingWindowSource, /initTray\(/, 'setting window flow must initialize the tray')
 
+const settingIpcSource = await read('packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts')
+assert.match(settingIpcSource, /workerExitHandlerByMode/, 'worker exit forwarding must keep only one listener per worker')
+assert.match(settingIpcSource, /WORKER_STOP_TIMEOUT_MS/, 'stopping a worker must have a bounded wait')
+
+const daemonSource = await read('packages/pm/daemon.js')
+assert.match(
+  daemonSource,
+  /if \(!workerInfo\)[\s\S]{0,500}type:\s*'worker-exited'/,
+  'stopping an already-exited worker must emit the terminal event awaited by the UI'
+)
+
 const mainWindowSource = await read('packages/ui/src/main/window/mainWindow.ts')
 assert.match(mainWindowSource, /function\s+showMainWindow\(/, 'main window module must expose showMainWindow for tray actions')
 assert.match(mainWindowSource, /function\s+hideMainWindow\(/, 'main window module must expose hideMainWindow for tray actions')

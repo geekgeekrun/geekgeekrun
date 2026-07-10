@@ -1,7 +1,5 @@
-import fs from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
+import { readApprovalQueue, updateApprovalQueue } from '../../../../ggr-controller/index.mjs'
 
 export const HR_REPLY_DECISION = Object.freeze({
   AUTO_REPLY: 'AUTO_REPLY',
@@ -184,28 +182,6 @@ export function validateAutoReply(text) {
   return { ok: true, reason: '' }
 }
 
-function defaultQueueFilePath() {
-  return path.join(os.homedir(), '.geekgeekrun', 'storage', 'hr-reply-approval-queue.json')
-}
-
-async function readQueue(queueFilePath) {
-  try {
-    const data = JSON.parse(await fs.readFile(queueFilePath, 'utf8'))
-    return Array.isArray(data) ? data : []
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return []
-    }
-    throw error
-  }
-}
-
-async function writeQueue(queueFilePath, queue) {
-  await fs.mkdir(path.dirname(queueFilePath), { recursive: true, mode: 0o700 })
-  await fs.writeFile(queueFilePath, `${JSON.stringify(queue, null, 2)}\n`, { mode: 0o600 })
-  await fs.chmod(queueFilePath, 0o600).catch(() => {})
-}
-
 function requestDedupeKey(request) {
   return createHash('sha256')
     .update([
@@ -218,38 +194,38 @@ function requestDedupeKey(request) {
 }
 
 export async function appendApprovalRequest(request, options = {}) {
-  const queueFilePath = options.queueFilePath ?? defaultQueueFilePath()
-  const queue = await readQueue(queueFilePath)
-  const dedupeKey = request.dedupeKey ?? requestDedupeKey(request)
-  const existing = queue.find((item) => item.dedupeKey === dedupeKey && item.status === 'pending')
+  return updateApprovalQueue({
+    queueFilePath: options.queueFilePath,
+    updater(queue) {
+      const dedupeKey = request.dedupeKey ?? requestDedupeKey(request)
+      const existing = queue.find((item) => item.dedupeKey === dedupeKey && item.status === 'pending')
 
-  if (existing) {
-    return { created: false, request: existing }
-  }
+      if (existing) {
+        return { created: false, request: existing }
+      }
 
-  const nextRequest = {
-    id: request.id ?? randomUUID(),
-    dedupeKey,
-    createdAt: request.createdAt ?? new Date().toISOString(),
-    hrName: request.hrName ?? '',
-    company: request.company ?? '',
-    jobTitle: request.jobTitle ?? '',
-    latestHrMessage: request.latestHrMessage ?? '',
-    detectedIntent: request.detectedIntent ?? HR_REPLY_INTENT.UNKNOWN,
-    draftReply: request.draftReply ?? '',
-    draftSource: request.draftSource ?? (request.draftReply ? 'model_review_draft' : 'none'),
-    draftSafety: request.draftSafety ?? 'needs_human_review',
-    reason: request.reason ?? '',
-    status: request.status ?? 'pending'
-  }
+      const nextRequest = {
+        id: request.id ?? randomUUID(),
+        dedupeKey,
+        createdAt: request.createdAt ?? new Date().toISOString(),
+        hrName: request.hrName ?? '',
+        company: request.company ?? '',
+        jobTitle: request.jobTitle ?? '',
+        latestHrMessage: request.latestHrMessage ?? '',
+        detectedIntent: request.detectedIntent ?? HR_REPLY_INTENT.UNKNOWN,
+        draftReply: request.draftReply ?? '',
+        draftSource: request.draftSource ?? (request.draftReply ? 'model_review_draft' : 'none'),
+        draftSafety: request.draftSafety ?? 'needs_human_review',
+        reason: request.reason ?? '',
+        status: request.status ?? 'pending'
+      }
 
-  queue.push(nextRequest)
-  await writeQueue(queueFilePath, queue)
-  return { created: true, request: nextRequest }
+      queue.push(nextRequest)
+      return { created: true, request: nextRequest }
+    }
+  })
 }
 
 export async function getPendingApprovalRequests(options = {}) {
-  const queueFilePath = options.queueFilePath ?? defaultQueueFilePath()
-  const queue = await readQueue(queueFilePath)
-  return queue.filter((item) => item.status === 'pending')
+  return readApprovalQueue({ queueFilePath: options.queueFilePath })
 }

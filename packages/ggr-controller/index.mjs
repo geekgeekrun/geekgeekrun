@@ -39,6 +39,9 @@ const SENSITIVE_FIELD_PATTERN = /(apiKey|accessKey|key|token|password|webhook)/i
 const RECENT_LINE_LIMIT = 80
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
+const APPROVAL_QUEUE_LOCK_TIMEOUT_MS = 5000
+const APPROVAL_QUEUE_LOCK_STALE_MS = 30000
+const APPROVAL_QUEUE_LOCK_RETRY_MS = 25
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function defaultRepoRoot() {
@@ -127,8 +130,45 @@ async function readJsonIfPresent(filePath, fallback) {
 async function writePrivateJson(filePath, value) {
   await fs.mkdir(path.dirname(filePath), { recursive: true, mode: PRIVATE_DIR_MODE })
   await fs.chmod(path.dirname(filePath), PRIVATE_DIR_MODE).catch(() => {})
-  await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, { mode: PRIVATE_FILE_MODE })
-  await fs.chmod(filePath, PRIVATE_FILE_MODE).catch(() => {})
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
+  await fs.writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode: PRIVATE_FILE_MODE })
+  await fs.chmod(temporaryPath, PRIVATE_FILE_MODE).catch(() => {})
+  await fs.rename(temporaryPath, filePath)
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function withApprovalQueueLock(queueFilePath, operation) {
+  const lockPath = `${queueFilePath}.lock`
+  const deadline = Date.now() + APPROVAL_QUEUE_LOCK_TIMEOUT_MS
+  let lockHandle
+
+  await fs.mkdir(path.dirname(queueFilePath), { recursive: true, mode: PRIVATE_DIR_MODE })
+  while (!lockHandle) {
+    try {
+      lockHandle = await fs.open(lockPath, 'wx', PRIVATE_FILE_MODE)
+    } catch (error) {
+      if (error?.code !== 'EEXIST') {
+        throw error
+      }
+      const lockInfo = await fs.stat(lockPath).catch(() => null)
+      if (lockInfo && Date.now() - lockInfo.mtimeMs > APPROVAL_QUEUE_LOCK_STALE_MS) {
+        await fs.unlink(lockPath).catch(() => {})
+        continue
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out waiting for approval queue lock: ${queueFilePath}`)
+      }
+      await sleep(APPROVAL_QUEUE_LOCK_RETRY_MS)
+    }
+  }
+
+  try {
+    return await operation()
+  } finally {
+    await lockHandle.close().catch(() => {})
+    await fs.unlink(lockPath).catch(() => {})
+  }
 }
 
 export async function updateRuntimeConfig({ fileName, patch, configDir = defaultConfigDir() }) {
@@ -348,33 +388,50 @@ export function createDaemonController({ sendToDaemon, runTask }) {
 }
 
 export async function readApprovalQueue({ queueFilePath = defaultApprovalQueueFilePath(), includeAll = false } = {}) {
-  const queue = await readJsonIfPresent(queueFilePath, [])
-  if (!Array.isArray(queue)) {
-    return []
+  return withApprovalQueueLock(queueFilePath, async () => {
+    const queue = await readJsonIfPresent(queueFilePath, [])
+    if (!Array.isArray(queue)) {
+      return []
+    }
+    return includeAll ? queue : queue.filter((item) => item.status === 'pending')
+  })
+}
+
+export async function updateApprovalQueue({ queueFilePath = defaultApprovalQueueFilePath(), updater } = {}) {
+  if (typeof updater !== 'function') {
+    throw new Error('approval queue updater is required')
   }
-  return includeAll ? queue : queue.filter((item) => item.status === 'pending')
+  return withApprovalQueueLock(queueFilePath, async () => {
+    const queue = await readJsonIfPresent(queueFilePath, [])
+    if (!Array.isArray(queue)) {
+      throw new Error('approval queue must be an array')
+    }
+    const result = await updater(queue)
+    await writePrivateJson(queueFilePath, queue)
+    return result
+  })
 }
 
 async function updateApprovalRequest({ id, status, queueFilePath = defaultApprovalQueueFilePath(), reason = '', extra = {} }) {
   if (!id) {
     throw new Error('approval id is required')
   }
-  const queue = await readJsonIfPresent(queueFilePath, [])
-  if (!Array.isArray(queue)) {
-    throw new Error('approval queue must be an array')
-  }
-  const item = queue.find((request) => request.id === id)
-  if (!item) {
-    throw new Error(`Approval request not found: ${id}`)
-  }
-  Object.assign(item, {
-    status,
-    reviewedAt: new Date().toISOString(),
-    reviewReason: reason,
-    ...extra
+  return updateApprovalQueue({
+    queueFilePath,
+    updater(queue) {
+      const item = queue.find((request) => request.id === id)
+      if (!item) {
+        throw new Error(`Approval request not found: ${id}`)
+      }
+      Object.assign(item, {
+        status,
+        reviewedAt: new Date().toISOString(),
+        reviewReason: reason,
+        ...extra
+      })
+      return item
+    }
   })
-  await writePrivateJson(queueFilePath, queue)
-  return item
 }
 
 export function approveAutoReply(options) {

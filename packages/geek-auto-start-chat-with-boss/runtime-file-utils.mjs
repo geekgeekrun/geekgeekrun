@@ -204,12 +204,28 @@ export const storageFilePath = path.join(
   runtimeFolderPath,
   'storage'
 )
-export const storageFileNameList = ['boss-cookies.json', 'boss-local-storage.json', 'job-not-suit-reason-code-to-text-cache.json']
+export const storageFileNameList = [
+  'boss-cookies.json',
+  'boss-local-storage.json',
+  'job-not-suit-reason-code-to-text-cache.json'
+]
+const storageFileNameSet = new Set([
+  ...storageFileNameList,
+  'ipc-pipe-name',
+  'auto-reminder-resume-system-message-template.md',
+  'auto-reminder-open-message-template.md'
+])
 
 const defaultStorageFileContentMap = {
   'boss-cookies.json': JSON.stringify(defaultBossCookieStorage),
   'boss-local-storage.json': JSON.stringify(defaultBossLocalStorageStorage),
   'job-not-suit-reason-code-to-text-cache.json': JSON.stringify(defaultJobNotSuitReasonCodeToTextCacheStorage)
+}
+const getStorageFilePath = (fileName) => {
+  if (!storageFileNameSet.has(fileName)) {
+    throw new Error(`Unsupported storage file: ${fileName}`)
+  }
+  return path.join(storageFilePath, fileName)
 }
 export const ensureStorageFileExist = () => {
   ensureRuntimeFolderPathExist()
@@ -229,7 +245,7 @@ export const ensureStorageFileExist = () => {
 
 export const readStorageFile = (fileName, { isJson } = {}) => {
   isJson = isJson ?? true
-  const joinedPath = path.join(storageFilePath, fileName)
+  const joinedPath = getStorageFilePath(fileName)
 
   if (!fs.existsSync(
     joinedPath
@@ -263,7 +279,7 @@ export const readStorageFile = (fileName, { isJson } = {}) => {
 
 export const writeStorageFile = async (fileName, content, { isJson } = {}) => {
   isJson = isJson ?? true
-  const filePath = path.join(storageFilePath, fileName)
+  const filePath = getStorageFilePath(fileName)
   let fileContent
   if (isJson) {
     fileContent = JSON.stringify(content)
