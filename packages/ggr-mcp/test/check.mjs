@@ -2,14 +2,93 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { PassThrough } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 import { createAgentService } from '../lib/agent-service.mjs'
+import { createMcpServer } from '../lib/mcp-stdio.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+
+async function readJsonLine(stream, timeoutMs = 250) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timed out waiting for newline-delimited MCP response')), timeoutMs)
+    stream.once('data', (chunk) => {
+      clearTimeout(timeout)
+      resolve(JSON.parse(chunk.toString().trim()))
+    })
+  })
+}
 
 async function read(relativePath) {
   return fs.readFile(path.join(repoRoot, relativePath), 'utf8')
 }
+
+const protocolInput = new PassThrough()
+const protocolOutput = new PassThrough()
+createMcpServer({ name: 'ggr-mcp-test', version: '0.1.0', tools: [] }).start({
+  input: protocolInput,
+  output: protocolOutput
+})
+const initializeResponsePromise = readJsonLine(protocolOutput)
+protocolInput.write(`${JSON.stringify({
+  jsonrpc: '2.0',
+  id: 1,
+  method: 'initialize',
+  params: { protocolVersion: '2024-11-05' }
+})}\n`)
+const initializeResponse = await initializeResponsePromise
+assert.equal(initializeResponse.id, 1)
+assert.equal(initializeResponse.result.serverInfo.name, 'ggr-mcp-test')
+
+let validatedToolCallCount = 0
+const validationInput = new PassThrough()
+const validationOutput = new PassThrough()
+createMcpServer({
+  name: 'ggr-mcp-validation-test',
+  version: '0.1.0',
+  tools: [{
+    name: 'validated_tool',
+    description: 'test tool',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        enabled: { type: 'boolean' },
+        mode: { type: 'string', enum: ['auto'] }
+      },
+      required: ['enabled', 'mode'],
+      additionalProperties: false
+    },
+    handler: (args) => {
+      validatedToolCallCount++
+      return args
+    }
+  }]
+}).start({ input: validationInput, output: validationOutput })
+
+async function callValidatedTool(id, args) {
+  const responsePromise = readJsonLine(validationOutput)
+  validationInput.write(`${JSON.stringify({
+    jsonrpc: '2.0',
+    id,
+    method: 'tools/call',
+    params: { name: 'validated_tool', arguments: args }
+  })}\n`)
+  return responsePromise
+}
+
+for (const [id, args] of [
+  [2, { enabled: 'false', mode: 'auto' }],
+  [3, { enabled: false }],
+  [4, { enabled: false, mode: 'manual' }],
+  [5, { enabled: false, mode: 'auto', extra: true }]
+]) {
+  const invalidResponse = await callValidatedTool(id, args)
+  assert.equal(invalidResponse.result.isError, true)
+}
+assert.equal(validatedToolCallCount, 0)
+const validResponse = await callValidatedTool(6, { enabled: false, mode: 'auto' })
+assert.equal(validResponse.result.isError, undefined)
+assert.equal(validatedToolCallCount, 1)
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-mcp-'))
 const queueFilePath = path.join(tempDir, 'hr-reply-approval-queue.json')
@@ -75,6 +154,8 @@ assert.doesNotMatch(agentSource, /ensureHeadlessPatch/, 'ggr-mcp must not patch 
 assert.doesNotMatch(agentSource, /source\.replace\(['"]headless:\s*false/, 'ggr-mcp must not rewrite Puppeteer source')
 
 const serverSource = await read('packages/ggr-mcp/server.mjs')
+assert.doesNotMatch(serverSource, /['"]semi_auto['"]|['"]manual['"]/, 'ggr-mcp must not advertise unsupported agent modes')
+assert.match(serverSource, /enum:\s*\[['"]auto['"]\]/, 'ggr-mcp must expose the supported automatic mode')
 assert.match(serverSource, /boss_read_app_data/, 'ggr-mcp must expose app-data reads to Hermes')
 assert.match(serverSource, /boss_update_app_data/, 'ggr-mcp must expose app-data updates to Hermes')
 assert.match(serverSource, /boss_list_ai_reply_approvals/, 'ggr-mcp must expose listing AI reply approvals to Hermes')

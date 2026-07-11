@@ -48,13 +48,34 @@ const local = createLocalProcessController({
 })
 
 assert.equal(local.getStatus().running, false)
-const started = await local.start({ headless: true, mode: 'semi_auto' })
+await assert.rejects(
+  () => local.start({ headless: true, mode: 'semi_auto' }),
+  /Unsupported agent mode/
+)
+const started = await local.start({ headless: true, mode: 'auto' })
 assert.equal(started.running, true)
 assert.equal(started.pid, 12345)
 assert.equal(started.headless, true)
-assert.equal(started.mode, 'semi_auto')
+assert.equal(started.mode, 'auto')
 const stopped = await local.stop()
 assert.equal(stopped.running, false)
+
+let concurrentSpawnCount = 0
+const concurrentLocal = createLocalProcessController({
+  spawnProcess: () => ({
+    pid: 30000 + ++concurrentSpawnCount,
+    stdout: { on: () => {} },
+    stderr: { on: () => {} },
+    once: () => {},
+    kill: () => {}
+  })
+})
+const concurrentStarts = await Promise.all([
+  concurrentLocal.start({ mode: 'auto' }),
+  concurrentLocal.start({ mode: 'auto' })
+])
+assert.equal(concurrentSpawnCount, 1)
+assert.equal(concurrentStarts[0].pid, concurrentStarts[1].pid)
 
 let emitBrokenChild
 const brokenLocal = createLocalProcessController({
@@ -168,6 +189,23 @@ process.env.HOME = tempHome
 try {
   const configDir = path.join(tempHome, '.geekgeekrun/config')
   await fs.mkdir(configDir, { recursive: true })
+  await fs.writeFile(path.join(configDir, 'llm.json'), JSON.stringify([
+    { providerApiSecret: 'sk-sensitive', apiKey: 'also-sensitive', model: 'test-model' }
+  ]))
+  const redactedLlmConfig = await readAppData({ resource: 'llm_config', configDir })
+  assert.equal(redactedLlmConfig.data[0].providerApiSecret, '[redacted]')
+  assert.equal(redactedLlmConfig.data[0].apiKey, '[redacted]')
+  const updatedLlmConfig = await updateAppData({
+    resource: 'llm_config',
+    patch: [{ providerApiSecret: 'sk-updated', model: 'updated-model' }],
+    configDir
+  })
+  assert.equal(updatedLlmConfig.data[0].providerApiSecret, '[redacted]')
+  assert.equal(updatedLlmConfig.data[0].model, 'updated-model')
+  const storedLlmConfig = JSON.parse(await fs.readFile(path.join(configDir, 'llm.json'), 'utf8'))
+  assert.equal(Array.isArray(storedLlmConfig), true)
+  assert.equal(storedLlmConfig[0].providerApiSecret, 'sk-updated')
+
   await fs.writeFile(path.join(configDir, 'boss.json'), '{bad json')
   await updateRuntimeConfig({ fileName: 'boss.json', patch: { headlessTerminalLoggerForTest: true } })
   const bossConfig = JSON.parse(await fs.readFile(path.join(tempHome, '.geekgeekrun/config/boss.json'), 'utf8'))

@@ -23,22 +23,23 @@ const CONFIG_FILES = new Set([
   'llm.json',
   'dingtalk.json'
 ])
-const ARRAY_CONFIG_FILES = new Set(['target-company-list.json'])
+const ARRAY_CONFIG_FILES = new Set(['target-company-list.json', 'llm.json'])
 const APP_DATA_RESOURCES = Object.freeze({
   job_intention: Object.freeze({ fileName: 'common-job-condition-config.json', writable: true }),
   opening_message: Object.freeze({ fileName: 'boss.json', writable: true }),
   reply_policy: Object.freeze({ fileName: 'boss.json', writable: true }),
   target_companies: Object.freeze({ fileName: 'target-company-list.json', writable: true, array: true }),
   blacklist_companies: Object.freeze({ fileName: 'boss.json', writable: true }),
-  llm_config: Object.freeze({ fileName: 'llm.json', writable: true }),
+  llm_config: Object.freeze({ fileName: 'llm.json', writable: true, array: true }),
   notification_config: Object.freeze({ fileName: 'dingtalk.json', writable: true }),
   runtime_status: Object.freeze({ type: 'runtime_status', writable: false })
 })
 const REDACTED_VALUE = '[redacted]'
-const SENSITIVE_FIELD_PATTERN = /(apiKey|accessKey|key|token|password|webhook)/i
+const SENSITIVE_FIELD_PATTERN = /(apiKey|accessKey|key|token|password|secret|credential|webhook)/i
 const RECENT_LINE_LIMIT = 80
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
+const SUPPORTED_AGENT_MODES = new Set(['auto'])
 const APPROVAL_QUEUE_LOCK_TIMEOUT_MS = 5000
 const APPROVAL_QUEUE_LOCK_STALE_MS = 30000
 const APPROVAL_QUEUE_LOCK_RETRY_MS = 25
@@ -246,10 +247,12 @@ function makeLocalSnapshot(status) {
 export function createLocalProcessController({ repoRoot = defaultRepoRoot(), spawnProcess = nodeSpawn } = {}) {
   let child = null
   let stopping = false
+  let startPromise = null
+  let stopPromise = null
   const status = {
     running: false,
     pid: null,
-    mode: 'semi_auto',
+    mode: 'auto',
     headless: true,
     startedAt: null,
     exitedAt: null,
@@ -273,11 +276,7 @@ export function createLocalProcessController({ repoRoot = defaultRepoRoot(), spa
     stopping = false
   }
 
-  async function start({ headless = true, mode = 'semi_auto', configPatch } = {}) {
-    if (child) {
-      return makeLocalSnapshot(status)
-    }
-
+  async function startOnce({ headless, mode, configPatch }) {
     const configResults = await applyConfigPatch(configPatch)
     const daemonPath = path.join(repoRoot, 'packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs')
 
@@ -285,8 +284,7 @@ export function createLocalProcessController({ repoRoot = defaultRepoRoot(), spa
       cwd: repoRoot,
       env: {
         ...process.env,
-        GGR_HEADLESS: String(Boolean(headless)),
-        GGR_AGENT_MODE: mode
+        GGR_HEADLESS: String(Boolean(headless))
       },
       stdio: ['ignore', 'pipe', 'pipe']
     })
@@ -315,7 +313,32 @@ export function createLocalProcessController({ repoRoot = defaultRepoRoot(), spa
     return makeLocalSnapshot(status)
   }
 
-  async function stop() {
+  async function start({ headless = true, mode = 'auto', configPatch } = {}) {
+    if (!SUPPORTED_AGENT_MODES.has(mode)) {
+      throw new Error(`Unsupported agent mode: ${mode}`)
+    }
+    if (stopPromise) {
+      await stopPromise
+    }
+    if (child) {
+      return makeLocalSnapshot(status)
+    }
+    if (startPromise) {
+      return startPromise
+    }
+
+    const pendingStart = startOnce({ headless, mode, configPatch })
+    startPromise = pendingStart
+    try {
+      return await pendingStart
+    } finally {
+      if (startPromise === pendingStart) {
+        startPromise = null
+      }
+    }
+  }
+
+  async function stopOnce() {
     if (!child) {
       return makeLocalSnapshot(status)
     }
@@ -335,6 +358,28 @@ export function createLocalProcessController({ repoRoot = defaultRepoRoot(), spa
     }
 
     return makeLocalSnapshot(status)
+  }
+
+  async function stop() {
+    if (startPromise) {
+      await startPromise.catch(() => {})
+    }
+    if (!child) {
+      return makeLocalSnapshot(status)
+    }
+    if (stopPromise) {
+      return stopPromise
+    }
+
+    const pendingStop = stopOnce()
+    stopPromise = pendingStop
+    try {
+      return await pendingStop
+    } finally {
+      if (stopPromise === pendingStop) {
+        stopPromise = null
+      }
+    }
   }
 
   return {

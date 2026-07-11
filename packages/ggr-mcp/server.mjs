@@ -23,12 +23,12 @@ const tools = [
   },
   {
     name: 'boss_start_agent',
-    description: 'Start the GeekGeekRun BOSS daemon as a local child process.',
+    description: 'Start the automatic GeekGeekRun BOSS chat agent as a local child process.',
     inputSchema: {
       type: 'object',
       properties: {
         headless: { type: 'boolean', default: true },
-        mode: { type: 'string', enum: ['semi_auto', 'manual', 'auto'], default: 'semi_auto' },
+        mode: { type: 'string', enum: ['auto'], default: 'auto' },
         configPatch: {}
       },
       additionalProperties: false

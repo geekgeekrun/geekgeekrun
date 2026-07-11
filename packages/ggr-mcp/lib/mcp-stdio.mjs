@@ -49,9 +49,66 @@ function asToolError (error) {
   }
 }
 
-function getContentLength (header) {
-  const match = header.match(/content-length:\s*(\d+)/i)
-  return match ? Number(match[1]) : null
+function isPlainObject (value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function validateSchema (value, schema = {}, path = 'arguments') {
+  if (Array.isArray(schema.enum) && !schema.enum.some(item => Object.is(item, value))) {
+    return `${path} must be one of: ${schema.enum.join(', ')}`
+  }
+
+  switch (schema.type) {
+    case 'object': {
+      if (!isPlainObject(value)) {
+        return `${path} must be an object`
+      }
+      for (const requiredKey of schema.required ?? []) {
+        if (!Object.hasOwn(value, requiredKey)) {
+          return `${path}.${requiredKey} is required`
+        }
+      }
+      if (schema.additionalProperties === false) {
+        const supportedKeys = new Set(Object.keys(schema.properties ?? {}))
+        const extraKey = Object.keys(value).find(key => !supportedKeys.has(key))
+        if (extraKey) {
+          return `${path}.${extraKey} is not supported`
+        }
+      }
+      for (const [key, propertySchema] of Object.entries(schema.properties ?? {})) {
+        if (!Object.hasOwn(value, key)) {
+          continue
+        }
+        const error = validateSchema(value[key], propertySchema, `${path}.${key}`)
+        if (error) {
+          return error
+        }
+      }
+      return null
+    }
+    case 'array': {
+      if (!Array.isArray(value)) {
+        return `${path} must be an array`
+      }
+      if (schema.items) {
+        for (let index = 0; index < value.length; index++) {
+          const error = validateSchema(value[index], schema.items, `${path}[${index}]`)
+          if (error) {
+            return error
+          }
+        }
+      }
+      return null
+    }
+    case 'string':
+    case 'boolean':
+    case 'number':
+      return typeof value === schema.type ? null : `${path} must be a ${schema.type}`
+    case 'integer':
+      return Number.isInteger(value) ? null : `${path} must be an integer`
+    default:
+      return null
+  }
 }
 
 export function createMcpServer ({ name, version, tools }) {
@@ -60,7 +117,7 @@ export function createMcpServer ({ name, version, tools }) {
 
   function writeMessage (message, output = process.stdout) {
     const body = JSON.stringify(message)
-    output.write(`Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`)
+    output.write(`${body}\n`)
   }
 
   async function handleRequest (message) {
@@ -99,7 +156,12 @@ export function createMcpServer ({ name, version, tools }) {
       }
 
       try {
-        return rpcResult(id, asToolContent(await tool.handler(params?.arguments ?? {})))
+        const args = params?.arguments ?? {}
+        const validationError = validateSchema(args, tool.inputSchema)
+        if (validationError) {
+          return rpcResult(id, asToolError(new Error(`Invalid tool arguments: ${validationError}`)))
+        }
+        return rpcResult(id, asToolContent(await tool.handler(args)))
       } catch (error) {
         return rpcResult(id, asToolError(error))
       }
@@ -129,27 +191,16 @@ export function createMcpServer ({ name, version, tools }) {
 
   function drainBuffer (output) {
     while (inputBuffer.length) {
-      const headerEnd = inputBuffer.indexOf('\r\n\r\n')
-      if (headerEnd < 0) {
+      const lineEnd = inputBuffer.indexOf('\n')
+      if (lineEnd < 0) {
         return
       }
 
-      const header = inputBuffer.subarray(0, headerEnd).toString('utf8')
-      const contentLength = getContentLength(header)
-      if (!Number.isInteger(contentLength) || contentLength < 0) {
-        writeMessage(rpcError(null, ERROR_CODE.INVALID_REQUEST, 'Missing or invalid Content-Length header'), output)
-        inputBuffer = Buffer.alloc(0)
-        return
+      const payload = inputBuffer.subarray(0, lineEnd).toString('utf8').trim()
+      inputBuffer = inputBuffer.subarray(lineEnd + 1)
+      if (!payload) {
+        continue
       }
-
-      const bodyStart = headerEnd + 4
-      const bodyEnd = bodyStart + contentLength
-      if (inputBuffer.length < bodyEnd) {
-        return
-      }
-
-      const payload = inputBuffer.subarray(bodyStart, bodyEnd).toString('utf8')
-      inputBuffer = inputBuffer.subarray(bodyEnd)
       void handlePayload(payload, output)
     }
   }
