@@ -48,6 +48,33 @@ assert.match(
   /if \(!workerInfo\)[\s\S]{0,500}type:\s*'worker-exited'/,
   'stopping an already-exited worker must emit the terminal event awaited by the UI'
 )
+assert.match(
+  daemonSource,
+  /case 'start-worker':[\s\S]{0,500}stoppedWorkers\.delete\(workerId\)[\s\S]{0,500}startWorker\(/,
+  'an explicit worker start must clear any stale stop marker'
+)
+assert.match(
+  daemonSource,
+  /if \(!workerInfo\)[\s\S]{0,500}stoppedWorkers\.delete\(workerId\)/,
+  'stopping an absent worker must not leave a stale stop marker'
+)
+
+const autoChatSource = await read('packages/geek-auto-start-chat-with-boss/index.mjs')
+assert.doesNotMatch(
+  autoChatSource,
+  /const allowedAreas\s*=\s*\[['"]南山['"]/,
+  'auto chat must not apply a hard-coded district allowlist'
+)
+assert.doesNotMatch(
+  autoChatSource,
+  /const CUSTOM_OPENING\s*=\s*customOpeningMessage\s*\|\|/,
+  'auto chat must not invent an opening message when the user configured none'
+)
+assert.doesNotMatch(
+  autoChatSource,
+  /SOC monitoring experience and built AI agent tools/,
+  'auto chat must not send a developer-specific fallback opening message'
+)
 
 const mainWindowSource = await read('packages/ui/src/main/window/mainWindow.ts')
 assert.match(mainWindowSource, /function\s+showMainWindow\(/, 'main window module must expose showMainWindow for tray actions')

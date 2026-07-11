@@ -1546,14 +1546,6 @@ async function toRecommendPage (hooks) {
                     // just skip
                     continue continueFind
                   }
-                  // Filter by area: only accept jobs in 南山/蛇口/前海
-                  const jobAddress = (targetJobData.jobInfo?.address || targetJobData.jobInfo?.locationName || '').toLowerCase()
-                  const allowedAreas = ['南山', '蛇口', '前海', '后海', '科技园', '深圳湾', '南头', '西丽', '桃源']
-                  if (!allowedAreas.some(area => jobAddress.includes(area))) {
-                    // Skip jobs outside target area
-                    console.log('skip job outside target area:', jobAddress.substring(0, 30))
-                    continue continueFind
-                  }
                   const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
                   if (startChatButtonInnerHTML !== '立即沟通') {
                     blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
@@ -1633,7 +1625,7 @@ async function toRecommendPage (hooks) {
             await storeStorage(page).catch(() => void 0)
             await sleepWithRandomDelay(1500)
 
-            const CUSTOM_OPENING = customOpeningMessage || 'Hi, I noticed you are hiring for technical support/operations. I have SOC monitoring experience and built AI agent tools. Fluent in English & Mandarin. Would love to discuss further!'
+            const CUSTOM_OPENING = customOpeningMessage
 
             // Try to find and interact with the greet dialog first
             const greetSendBtn = await page.$('.greet-boss-dialog .greet-boss-footer .btn-primary, .greet-boss-dialog .greet-boss-footer button:not(.cancel-btn)')

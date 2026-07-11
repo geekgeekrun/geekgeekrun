@@ -194,6 +194,7 @@ function handleMessage(socket, message) {
         console.log(`工具进程 ${workerId} 已在运行`);
         return;
       }
+      stoppedWorkers.delete(workerId);
       startWorker({
         workerId,
         command,
@@ -371,6 +372,7 @@ function stopWorker(workerId) {
   console.log(`停止工具进程: ${workerId} (已添加到停止列表)`);
   if (!workerInfo) {
     console.log(`工具进程 ${workerId} 不存在，但已标记为停止（防止重启）`);
+    stoppedWorkers.delete(workerId);
     // 通知GUI客户端
     broadcastToGUI({
       type: 'worker-exited',
