@@ -15,7 +15,7 @@ const rerunInterval = (() => {
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 function runWithDaemon () {
   const subProcessOfCore = childProcess.spawn(
-    `node`,
+    process.execPath,
     [path.join(
       __dirname,
       'main.mjs'

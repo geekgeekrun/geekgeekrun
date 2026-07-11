@@ -65,7 +65,7 @@ const main = async () => {
     sageTimeExit: new AsyncSeriesHook(['args'])
   }
   initPlugins(hooks)
-  await hooks.daemonInitialized.callAsync()
+  await hooks.daemonInitialized.callAsync(() => {})
   while (true) {
     try {
       await mainLoop(hooks)

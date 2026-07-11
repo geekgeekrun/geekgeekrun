@@ -18,8 +18,8 @@ import {
   checkAnyCombineBossRecommendFilterHasCondition,
   formatStaticCombineFilters,
 } from './combineCalculator.mjs'
-import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
-import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
+import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json' with {type: 'json'}
+import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json' with {type: 'json'}
 import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog.js'
 import {
   MarkAsNotSuitReason,
@@ -29,14 +29,14 @@ import {
   JobDetailRegExpMatchLogic,
   JobSource,
   CombineRecommendJobFilterType
-} from '@geekgeekrun/sqlite-plugin/dist/enums'
+} from '@geekgeekrun/sqlite-plugin/dist/enums.js'
 import {
   activeDescList,
   RECOMMEND_JOB_ENTRY_SELECTOR,
   USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
   SEARCH_BOX_SELECTOR,
 } from './constant.mjs'
-import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
+import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser.js"
 import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
 import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
@@ -123,6 +123,7 @@ const targetCompanyList = (
     commonJobConditionConfig.expectCompanies
 ).filter(it => !!it.trim());
 const combineRecommendJobFilterType = readConfigFile('boss.json').combineRecommendJobFilterType ?? CombineRecommendJobFilterType.ANY_COMBINE
+const customOpeningMessage = readConfigFile('boss.json').openingMessage || ''
 
 const anyCombineRecommendJobFilter = readConfigFile('boss.json').anyCombineRecommendJobFilter
 const staticCombineRecommendJobFilterConditions = readConfigFile('boss.json').staticCombineRecommendJobFilterConditions ?? []
@@ -1049,6 +1050,17 @@ async function toRecommendPage (hooks) {
                     }
                   }
                 }
+                // Apply area/district address filter if configured
+                const expectAreaList = readConfigFile('boss.json').expectAreaList ?? []
+                if (Array.isArray(expectAreaList) && expectAreaList.length) {
+                  for (const it of jobListData) {
+                    const addr = it.address || ''
+                    if (!expectAreaList.some(area => addr.includes(area))) {
+                      console.log(`area filter: skip job ${it.jobName} (${addr}) - no match for ${expectAreaList.join('/')}`)
+                      blockJobNotSuit.add(it.encryptJobId)
+                    }
+                  }
+                }
               }
               await updateJobListData()
 
@@ -1534,6 +1546,14 @@ async function toRecommendPage (hooks) {
                     // just skip
                     continue continueFind
                   }
+                  // Filter by area: only accept jobs in 南山/蛇口/前海
+                  const jobAddress = (targetJobData.jobInfo?.address || targetJobData.jobInfo?.locationName || '').toLowerCase()
+                  const allowedAreas = ['南山', '蛇口', '前海', '后海', '科技园', '深圳湾', '南头', '西丽', '桃源']
+                  if (!allowedAreas.some(area => jobAddress.includes(area))) {
+                    // Skip jobs outside target area
+                    console.log('skip job outside target area:', jobAddress.substring(0, 30))
+                    continue continueFind
+                  }
                   const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
                   if (startChatButtonInnerHTML !== '立即沟通') {
                     blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
@@ -1612,17 +1632,87 @@ async function toRecommendPage (hooks) {
 
             await storeStorage(page).catch(() => void 0)
             await sleepWithRandomDelay(1500)
-            if (hasGoToChatPage) {
-              await page.goBack()
-              await page.waitForFunction(() => {
-                return location.href.startsWith(`https://www.zhipin.com/web/geek/jobs`) && document.readyState === 'complete'
-              })
-              await sleepWithRandomDelay(2000)
-            }
-            const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
-            if (closeDialogButtonProxy) {
-              await closeDialogButtonProxy.click()
-              await sleepWithRandomDelay(2000)
+
+            const CUSTOM_OPENING = customOpeningMessage || 'Hi, I noticed you are hiring for technical support/operations. I have SOC monitoring experience and built AI agent tools. Fluent in English & Mandarin. Would love to discuss further!'
+
+            // Try to find and interact with the greet dialog first
+            const greetSendBtn = await page.$('.greet-boss-dialog .greet-boss-footer .btn-primary, .greet-boss-dialog .greet-boss-footer button:not(.cancel-btn)')
+            if (greetSendBtn) {
+              console.log('greet dialog: clicking send')
+              await greetSendBtn.click()
+              await sleepWithRandomDelay(3000)
+              // Send custom opening on the chat page (we're already there due to addFriend redirect)
+              if (CUSTOM_OPENING.trim()) {
+                try {
+                  // Try to find chat input on the current page
+                  const chatInput = await page.waitForSelector(
+                    '.chat-input-box, .chat-input, [contenteditable="true"], textarea',
+                    { timeout: 10000 }
+                  )
+                  if (chatInput) {
+                    await chatInput.click()
+                    await sleep(500)
+                    await chatInput.type(CUSTOM_OPENING, { delay: 30 })
+                    await sleep(500)
+                    const sendBtn = await page.$(
+                      '.chat-controls .icon-message-send, .chat-input-box .btn-send, [data-testid="send-button"]'
+                    )
+                    if (sendBtn) { await sendBtn.click() }
+                    else { await page.keyboard.press('Enter') }
+                    console.log('custom opening sent on chat page')
+                    await sleep(1000)
+                  }
+                } catch(_e) { /* chat input not found */ }
+              }
+              // Go back to jobs page after sending
+              if (page.url().startsWith('https://www.zhipin.com/web/geek/chat')) {
+                await page.goBack()
+                await page.waitForFunction(() => {
+                  return location.href.startsWith('https://www.zhipin.com/web/geek/jobs') && document.readyState === 'complete'
+                })
+                await sleepWithRandomDelay(2000)
+              } else {
+                await page.goto('https://www.zhipin.com/web/geek/jobs/recommend', { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
+                await sleepWithRandomDelay(2000)
+              }
+            } else {
+              // No greet dialog found - try to handle hasGoToChatPage case
+              if (hasGoToChatPage) {
+                // Page already jumped to chat page, send custom opening here before going back
+                if (CUSTOM_OPENING.trim()) {
+                  try {
+                    const chatInput = await page.waitForSelector(
+                      '.chat-input-box, .chat-input, [contenteditable="true"], textarea',
+                      { timeout: 5000 }
+                    )
+                    if (chatInput) {
+                      await chatInput.click()
+                      await sleep(500)
+                      await chatInput.type(CUSTOM_OPENING, { delay: 30 })
+                      await sleep(500)
+                      const sendBtn = await page.$(
+                        '.chat-controls .icon-message-send, .chat-input-box .btn-send, [data-testid="send-button"]'
+                      )
+                      if (sendBtn) { await sendBtn.click() }
+                      else { await page.keyboard.press('Enter') }
+                      console.log('custom opening sent on chat page (no greet dialog)')
+                      await sleep(1000)
+                    }
+                  } catch(_e) { /* chat input not found */ }
+                }
+                // Then go back to jobs page
+                await page.goBack()
+                await page.waitForFunction(() => {
+                  return location.href.startsWith('https://www.zhipin.com/web/geek/jobs') && document.readyState === 'complete'
+                })
+                await sleepWithRandomDelay(2000)
+              } else {
+                const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
+                if (closeDialogButtonProxy) {
+                  await closeDialogButtonProxy.click()
+                  await sleepWithRandomDelay(2000)
+                }
+              }
             }
           }
           const handleAddFriendResponse = async (res, { hasGoToChatPage = false } = {}) => {
