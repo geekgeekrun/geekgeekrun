@@ -218,8 +218,10 @@ BOSS不明原因已读不回？简历就是投不出去？
 | `boss_stop_agent` | 停止正在運行的 daemon |
 | `boss_update_config` | 更新 boss.json / llm.json / dingtalk.json 等配置文件 |
 | `boss_read_app_data` | 讀取 job_intention / opening_message / reply_policy 等運行時數據 |
-| `boss_update_app_data` | 更新運行時數據 |
+| `boss_update_app_data` | 更新運行時數據（包括 openingMessage、area 篩選等） |
 | `boss_list_ai_reply_approvals` | 列出需要人工確認的自動回覆 |
+| `boss_approve_auto_reply` | 核准 AI 自動回覆 |
+| `boss_require_human_intervention` | 標記需要人工介入 |
 
 ### 傳輸層
 
@@ -247,6 +249,19 @@ cd packages/ggr-mcp
 pnpm test        # 執行回歸測試
 pnpm start       # 啟動 stdio MCP 伺服器
 ```
+
+### Node.js 版本相容性
+
+本專案在開發及運行時，需要注意 Node.js 版本：
+
+- **支援版本**: Node.js **v24.14.0** / **v25.9.0** / **v20.11.1**
+- **已知問題**: 於 Node.js ≥ v22.12 時，JSON 模組匯入須使用 `with {type: 'json'}` 替代舊版 `assert {type: 'json'}`；原生模組 `better-sqlite3` 需與當前 Node.js 版本重建
+- **啟動方式**（如使用 nvm）:
+  ```sh
+  nvm use 24
+  cd packages/geek-auto-start-chat-with-boss
+  node daemon-main.mjs
+  ```
 
 測試覆蓋：inputSchema 校驗、secret 脫敏、LLM 數組配置讀寫、並發生命週期防護、模式驗證。
 
