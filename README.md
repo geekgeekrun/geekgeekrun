@@ -205,4 +205,49 @@ BOSS不明原因已读不回？简历就是投不出去？
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=geekgeekrun/geekgeekrun&type=Date" />
 </picture>
 
-感谢支持
+## MCP Server（ggr-mcp）
+
+本專案提供了標準 MCP（Model Context Protocol）伺服器，讓 AI Agent（如 Claude、Hermes、Codex）可以直接透過 MCP 協議操控 BOSS 直聘自動開聊流程，無需手動操作瀏覽器。
+
+### 功能一覽
+
+| 工具 | 說明 |
+|------|------|
+| `boss_get_status` | 查詢當前 daemon 運行狀態（pid、運行時間、stdout/stderr） |
+| `boss_start_agent` | 啟動 BOSS 開聊 daemon（僅支援 `auto` 模式） |
+| `boss_stop_agent` | 停止正在運行的 daemon |
+| `boss_update_config` | 更新 boss.json / llm.json / dingtalk.json 等配置文件 |
+| `boss_read_app_data` | 讀取 job_intention / opening_message / reply_policy 等運行時數據 |
+| `boss_update_app_data` | 更新運行時數據 |
+| `boss_list_ai_reply_approvals` | 列出需要人工確認的自動回覆 |
+
+### 傳輸層
+
+採用 **Streamable HTTP** 或 **stdio** 傳輸，支援 ND-JSON 格式的 JSON-RPC 請求，確保與所有標準 MCP 客戶端相容。
+
+### 安全性
+
+- `providerApiSecret`、`apiKey`、`token`、`password`、`credential`、`webhook` 等敏感字段會自動脫敏顯示為 `[redacted]`
+- 配置檔案儲存時保留原始值，僅在讀取回傳時脫敏
+- 支援 `additionalProperties: false` 校驗，拒絕未知參數
+
+### Hermes Agent 整合
+
+`ggr-mcp` 已內置於 Hermes Agent 配置中，啟動 Hermes 即自動載入。在 Hermes 中可直接調用上述工具，無需額外設定。
+
+```
+hermes mcp list
+# ggr-mcp  node .../ggr-mcp/server.mjs  ✓ enabled
+```
+
+### 開發
+
+```sh
+cd packages/ggr-mcp
+pnpm test        # 執行回歸測試
+pnpm start       # 啟動 stdio MCP 伺服器
+```
+
+測試覆蓋：inputSchema 校驗、secret 脫敏、LLM 數組配置讀寫、並發生命週期防護、模式驗證。
+
+感謝支持
