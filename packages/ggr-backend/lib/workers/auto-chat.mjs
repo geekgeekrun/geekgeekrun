@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { createWorkerReporter } from './worker-reporter.mjs'
 
 const WORKER_ID = 'geekAutoStartWithBossMain'
 
@@ -29,7 +30,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { createAutoChatRuntime } = await import('./auto-chat-runtime.mjs')
   await runAutoChat({
     runtime: await createAutoChatRuntime(),
-    taskReporter: { emit: (event, data) => console.log(JSON.stringify({ event, data })) },
+    taskReporter: createWorkerReporter(),
     shouldStop: async () => stopping
   })
 }

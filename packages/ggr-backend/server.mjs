@@ -76,14 +76,20 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     },
     async stop() {
       if (closed) return
-      await task.stopAll?.()
-      await browser.close?.()
-      await records.close?.()
-      await rpc.stop()
-      await config.close?.()
-      await logger.close?.()
       started = false
       closed = true
+      const cleanups = [
+        () => task.stopAll?.(),
+        () => browser.close?.(),
+        () => records.close?.(),
+        () => rpc.stop(),
+        () => config.close?.(),
+        () => logger.close?.()
+      ]
+      const settled = await Promise.allSettled(cleanups.map((cleanup) => Promise.resolve().then(cleanup)))
+      const failures = settled.filter(({ status }) => status === 'rejected').map(({ reason }) => reason)
+      if (failures.length === 1) throw failures[0]
+      if (failures.length > 1) throw new AggregateError(failures, `Backend shutdown failed in ${failures.length} resources`)
     }
   }
 }

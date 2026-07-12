@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 
 import { runAutoChat } from '../lib/workers/auto-chat.mjs'
 import { runReadNoReply } from '../lib/workers/read-no-reply.mjs'
+import { createWorkerReporter } from '../lib/workers/worker-reporter.mjs'
+import { resolveRerunInterval } from '../lib/workers/restart-policy.mjs'
 
 async function checkWorker(run, workerId) {
   const events = []
@@ -28,6 +30,23 @@ async function checkWorker(run, workerId) {
 
 await checkWorker(runAutoChat, 'geekAutoStartWithBossMain')
 await checkWorker(runReadNoReply, 'readNoReplyAutoReminderMain')
+
+{
+  const lines = []
+  const reporter = createWorkerReporter({ write: (line) => lines.push(line) })
+  reporter.emit('task.progress', { workerId: 'geekAutoStartWithBossMain', state: 'running' })
+  assert.deepEqual(JSON.parse(lines[0]), {
+    ggrWorkerEvent: 1,
+    event: 'task.progress',
+    data: { workerId: 'geekAutoStartWithBossMain', state: 'running' }
+  })
+  assert(lines[0].endsWith('\n'))
+  assert.throws(() => reporter.emit('task.exited', { workerId: 'geekAutoStartWithBossMain' }), { code: 'INVALID_WORKER_EVENT' })
+  assert.throws(() => reporter.emit('task.progress', []), { code: 'INVALID_WORKER_EVENT' })
+}
+
+assert.equal(resolveRerunInterval({ MAIN_BOSSGEEKGO_RERUN_INTERVAL: '0' }), 0)
+assert.equal(resolveRerunInterval({ MAIN_BOSSGEEKGO_RERUN_INTERVAL: 'not-a-number' }), 5000)
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 for (const relative of ['lib/workers/auto-chat.mjs', 'lib/workers/read-no-reply.mjs']) {

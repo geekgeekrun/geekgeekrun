@@ -6,6 +6,7 @@ import path from 'node:path'
 
 import { createApprovalService } from '../lib/services/approval-service.mjs'
 import { createTaskService } from '../lib/services/task-service.mjs'
+import { createWorkerReporter } from '../lib/workers/worker-reporter.mjs'
 
 function fakeChild(pid, { exitOnSignal = true } = {}) {
   const child = new EventEmitter()
@@ -19,6 +20,24 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     return true
   }
   return child
+}
+
+{
+  const events = []
+  const child = fakeChild(99)
+  const service = createTaskService({
+    spawnProcess: () => child,
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: (event, data) => events.push({ event, data })
+  })
+  await service.start({ workerId: 'auto' })
+  const reporter = createWorkerReporter({ write: (line) => child.stdout.emit('data', line) })
+  reporter.emit('task.progress', { workerId: 'auto', state: 'working', token: 'secret' })
+  assert.deepEqual(events[0], { event: 'task.progress', data: { workerId: 'auto', state: 'working', token: '[redacted]' } })
+  assert.deepEqual(service.list()[0].recentStdout, [])
+  child.stdout.emit('data', '{"ggrWorkerEvent":1,"event":"not.allowed","data":{"password":"nope"}}\n')
+  assert.equal(service.list()[0].recentStdout[0], '{"ggrWorkerEvent":1,"event":"not.allowed","data":{"password":"[redacted]"}}')
+  await service.stop({ workerId: 'auto' })
 }
 
 {

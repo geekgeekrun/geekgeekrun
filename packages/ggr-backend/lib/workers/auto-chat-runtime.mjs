@@ -4,6 +4,7 @@ import { getPublicDbFilePath, readConfigFile, readStorageFile } from '@geekgeekr
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import { AsyncSeriesHook, SyncHook } from 'tapable'
+import { resolveRerunInterval } from './restart-policy.mjs'
 
 const { default: SqlitePlugin } = SqlitePluginModule
 const KNOWN_FAILURES = ['LOGIN_STATUS_INVALID', 'ERR_INTERNET_DISCONNECTED', 'ACCESS_IS_DENIED']
@@ -22,7 +23,7 @@ function hooksForRuntime() {
   }
 }
 
-export async function createAutoChatRuntime({ rerunInterval = Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL) || 5000 } = {}) {
+export async function createAutoChatRuntime({ rerunInterval = resolveRerunInterval() } = {}) {
   if (!readStorageFile('boss-cookies.json')?.length) throw Object.assign(new Error('Boss cookies are required'), { code: 'COOKIE_INVALID' })
   const hooks = hooksForRuntime()
   const dingTalkToken = readConfigFile('dingtalk.json').groupRobotAccessToken

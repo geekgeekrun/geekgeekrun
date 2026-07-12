@@ -16,8 +16,9 @@ export function createBackendBrowserRuntime({ runtimePaths }) {
     return browser
   }
   return {
-    async openBoss({ taskReporter }) {
+    async openBoss({ taskReporter, onBrowserOpened }) {
       const browser = await launch({ headless: false, ignoreHTTPSErrors: true, defaultViewport: { width: 1440, height: 800 } })
+      onBrowserOpened?.(browser)
       const [page] = await browser.pages()
       const cookies = await readJson(path.join(runtimePaths.storageDir, 'boss-cookies.json'), [])
       if (!cookies.length) throw Object.assign(new Error('Boss cookies are required'), { code: 'COOKIE_INVALID' })
@@ -28,10 +29,11 @@ export function createBackendBrowserRuntime({ runtimePaths }) {
       await page.goto('https://www.zhipin.com/web/geek/chat', { timeout: 0 })
       taskReporter.emit('task.progress', { state: 'page-opened', url: page.url() })
     },
-    async openLogin({ taskReporter }) {
+    async openLogin({ taskReporter, onBrowserOpened }) {
       const { ensureEditThisCookie, editThisCookieExtensionPath } = await import('@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension/utils.mjs')
       await ensureEditThisCookie()
       const browser = await launch({ headless: false, pipe: true, enableExtensions: [editThisCookieExtensionPath] })
+      onBrowserOpened?.(browser)
       const [page] = await browser.pages()
       await page.goto('https://www.zhipin.com/web/user/', { timeout: 0 })
       taskReporter.emit('task.progress', { state: 'page-opened', url: page.url() })

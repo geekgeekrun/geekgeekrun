@@ -4,6 +4,7 @@ const RECENT_LINE_LIMIT = 80
 const DEFAULT_DIAGNOSTIC_LINE_BYTES = 4096
 const DEFAULT_DIAGNOSTIC_STREAM_BYTES = 64 * 1024
 const SENSITIVE_KEYS = 'apiKey|accessKey|token|password|secret|credential|webhook'
+const ALLOWED_WORKER_EVENTS = new Set(['task.progress', 'approval.required'])
 const QUOTED_SENSITIVE_ASSIGNMENT = new RegExp(`((?:["']?)(?:${SENSITIVE_KEYS})(?:["']?)\\s*[=:]\\s*)(["'])(.*?)\\2`, 'gi')
 const UNQUOTED_SENSITIVE_ASSIGNMENT = new RegExp(`((?:["']?)(?:${SENSITIVE_KEYS})(?:["']?)\\s*[=:]\\s*)(?!["'])([^\\s,}]+)`, 'gi')
 
@@ -41,6 +42,7 @@ function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes,
   if (!rawLine) return
   const sanitized = utf8Prefix(redactLine(rawLine), Math.min(lineBytes, streamBytes))
   const line = sanitized.text
+  if (onLine(line, wasTruncated || sanitized.truncated) === true) return
   const bytesKey = `${stream}DiagnosticBytes`
   const target = record[stream === 'stdout' ? 'recentStdout' : 'recentStderr']
   while (target.length && record[bytesKey] + sanitized.bytes > streamBytes) {
@@ -49,7 +51,16 @@ function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes,
   target.push(line)
   record[bytesKey] += sanitized.bytes
   while (target.length > RECENT_LINE_LIMIT) record[bytesKey] -= Buffer.byteLength(target.shift())
-  onLine(line, wasTruncated || sanitized.truncated)
+}
+
+function structuredWorkerEvent(line, workerId, emit) {
+  let envelope
+  try { envelope = JSON.parse(line) } catch { return false }
+  if (!envelope || envelope.ggrWorkerEvent !== 1 || !ALLOWED_WORKER_EVENTS.has(envelope.event) ||
+      !envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) return false
+  const data = JSON.parse(redactLine(JSON.stringify(envelope.data)))
+  emit(envelope.event, { ...data, workerId })
+  return true
 }
 
 function appendCarry(state, value, lineBytes) {
@@ -138,8 +149,8 @@ export function createTaskService({
     }
     workers.set(workerId, record)
 
-    const progress = (stream, line, truncated) => emit('task.progress', { workerId, stream, line, truncated })
-    child.stdout?.on?.('data', (chunk) => pushDiagnostic(record, 'stdout', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated)))
+    const progress = (stream, line, truncated) => { emit('task.progress', { workerId, stream, line, truncated }); return false }
+    child.stdout?.on?.('data', (chunk) => pushDiagnostic(record, 'stdout', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => structuredWorkerEvent(line, workerId, emit) || progress('stdout', line, truncated)))
     child.stderr?.on?.('data', (chunk) => pushDiagnostic(record, 'stderr', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stderr', line, truncated)))
 
     const finalize = (code = null, signal = null, error = null) => {
