@@ -47,13 +47,19 @@ export async function runReadNoReplyEntry({ createRuntime, taskReporter = create
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let stopping = false
-  process.once('SIGINT', () => { stopping = true })
-  process.once('SIGTERM', () => { stopping = true })
+  const requestStop = () => { stopping = true }
+  process.once('SIGINT', requestStop)
+  process.once('SIGTERM', requestStop)
   try {
-    const { createReadNoReplyRuntime } = await import('./read-no-reply/runtime.mjs')
-    await runReadNoReplyEntry({ createRuntime: createReadNoReplyRuntime, shouldStop: async () => stopping })
+    const testRuntimeModule = process.env.NODE_ENV === 'test' ? process.env.GGR_TEST_READ_NO_REPLY_RUNTIME_MODULE : ''
+    const runtimeModule = testRuntimeModule || './read-no-reply/runtime.mjs'
+    const { createReadNoReplyRuntime } = await import(runtimeModule)
+    await runReadNoReplyEntry({ createRuntime: createReadNoReplyRuntime, ...(testRuntimeModule ? {} : { shouldStop: async () => stopping }) })
   } catch (error) {
     console.error(error)
     process.exitCode = workerExitCode(error)
+  } finally {
+    process.off('SIGINT', requestStop)
+    process.off('SIGTERM', requestStop)
   }
 }

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import {
   runReadNoReply,
@@ -14,12 +15,13 @@ import {
   handleLatestHrMessage
 } from '../lib/workers/read-no-reply/flow.mjs'
 import { createReadNoReplyRuntime } from '../lib/workers/read-no-reply/runtime.mjs'
-import { requestNewMessageContent } from '../lib/workers/read-no-reply/llm.mjs'
+import { defaultPromptMap, requestNewMessageContent } from '../lib/workers/read-no-reply/llm.mjs'
 import {
   canSendSelfReminder,
   cookieListIsValid,
   handleSelfReminder,
   nextTraversalAction,
+  resolveBlockedCompanyPattern,
   responseMatchesChat,
   selectedChatMatches,
   selectChatSafely
@@ -35,6 +37,7 @@ assert.equal(workerExitCode({ code: 'READ_NO_REPLY_FAILED' }), 1)
 assert.equal(cookieListIsValid([{ name: 'a', value: 'b', domain: '.zhipin.com', path: '/', secure: true, session: false, httpOnly: true }]), true)
 assert.equal(cookieListIsValid([{ name: 'a' }]), false)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=22&encryptJobId=job-1' }) }, { friendId: 22, encryptJobId: 'job-1' }), true)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg?securityId=sec-1', request: () => ({ postData: () => JSON.stringify({ friendId: 22, encryptJobId: 'job-1' }) }) }, { friendId: 22, securityId: 'sec-1', encryptJobId: 'job-1' }), true)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=99' }) }, { friendId: 22, encryptJobId: 'job-1' }), false)
 assert.equal(selectedChatMatches({ friendId: 22, encryptJobId: 'job-1' }, { friendId: 22, encryptJobId: 'job-1' }, { encryptJobId: 'job-1' }), true)
 assert.equal(selectedChatMatches({ friendId: 99, encryptJobId: 'old' }, { friendId: 22, encryptJobId: 'job-1' }, { encryptJobId: 'old' }), false)
@@ -44,6 +47,10 @@ assert.equal(canSendSelfReminder({ conversation: { bothTalked: false }, history:
 assert.equal(canSendSelfReminder({ conversation: { bothTalked: false }, history: [{ isSelf: true }], isJobClosed: false, isExpectedJob: true }), true)
 assert.deepEqual(nextTraversalAction(false, 25), { cursor: 24, toTop: false, delayMs: 3000 })
 assert.deepEqual(nextTraversalAction(true, 25), { cursor: 0, toTop: true, delayMs: 10000 })
+assert.equal(resolveBlockedCompanyPattern({ blockCompanyNameRegExpStr: 'boss-root', fieldsForUseCommonConfig: {} }, { blockCompanyNameRegExpStr: 'common' }), 'boss-root')
+assert.equal(resolveBlockedCompanyPattern({ blockCompanyNameRegExpStr: 'boss-root', fieldsForUseCommonConfig: { blockCompanyNameRegExpStr: true } }, { blockCompanyNameRegExpStr: 'common' }), 'common')
+assert.match(defaultPromptMap.rechat.content, /简历分析层/)
+assert.match(defaultPromptMap.rechat.content, /质量控制层/)
 
 {
   const stale = await selectChatSafely({
@@ -71,19 +78,36 @@ assert.deepEqual(nextTraversalAction(true, 25), { cursor: 0, toTop: true, delayM
   await fs.mkdir(runtimePaths.configDir); await fs.mkdir(runtimePaths.storageDir)
   await fs.writeFile(path.join(runtimePaths.configDir, 'resumes.json'), JSON.stringify([{ content: { name: 'Test', geekWorkExpList: [], geekProjExpList: [] } }]))
   const usage = []
+  let capturedMessages
   const result = await requestNewMessageContent([], {
     runtimePaths, settings: { llm: [{ id: 'one', providerCompleteApiUrl: 'https://invalid.test', providerApiSecret: 'secret', model: 'test' }] },
-    complete: async () => ({ choices: [{ message: { content: '{"response":"model reply"}' } }], usage: { completion_tokens: 2, prompt_tokens: 3, total_tokens: 5 } }),
+    complete: async (_config, messages) => { capturedMessages = messages; return { choices: [{ message: { content: '{"response":"model reply"}' } }], usage: { completion_tokens: 2, prompt_tokens: 3, total_tokens: 5 } } },
     recordUsage: async (record) => usage.push(record)
   })
   assert.equal(result.responseText, 'model reply'); assert.equal(usage[0].totalTokens, 5)
+  assert.match(capturedMessages[0].content, /硬技能/)
+  const historyResult = await requestNewMessageContent([{ text: 'prior reply' }], {
+    runtimePaths, settings: { llm: [{ id: 'one', providerCompleteApiUrl: 'https://invalid.test', providerApiSecret: 'secret', model: 'test' }] },
+    complete: async (_config, messages) => { assert.match(messages[2].content, /```json/); assert.match(messages[3].content, /不能与之前/); return { choices: [{ message: { content: '{"response":"valid despite log failure"}' } }], usage: {} } },
+    recordUsage: async () => { throw new Error('database unavailable') }
+  })
+  assert.equal(historyResult.responseText, 'valid despite log failure')
   await fs.rm(root, { recursive: true, force: true })
 }
 
 {
-  const entry = new URL('../lib/workers/read-no-reply.mjs', import.meta.url).href
-  const child = spawnSync(process.execPath, ['--input-type=module', '--eval', `import {runReadNoReplyEntry} from ${JSON.stringify(entry)}; await runReadNoReplyEntry({createRuntime:async()=>{let n=0;return{runOnce:async()=>n++,shouldStop:async()=>n===1,close:async()=>{}}}}); console.log('safe-entry-ok')`], { encoding: 'utf8' })
-  assert.equal(child.status, 0); assert.match(child.stdout, /safe-entry-ok/)
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-entry-'))
+  const successRuntime = path.join(root, 'success.mjs')
+  const failureRuntime = path.join(root, 'failure.mjs')
+  await fs.writeFile(successRuntime, `export async function createReadNoReplyRuntime(){let n=0;return{runOnce:async()=>n++,shouldStop:async()=>n===1,close:async()=>{}}}`)
+  await fs.writeFile(failureRuntime, `export async function createReadNoReplyRuntime(){throw Object.assign(new Error('missing executable'),{code:'PUPPETEER_IS_NOT_EXECUTABLE'})}`)
+  const entry = fileURLToPath(new URL('../lib/workers/read-no-reply.mjs', import.meta.url))
+  const baseEnv = { ...process.env, NODE_ENV: 'test' }
+  const child = spawnSync(process.execPath, [entry], { encoding: 'utf8', env: { ...baseEnv, GGR_TEST_READ_NO_REPLY_RUNTIME_MODULE: pathToFileURL(successRuntime).href } })
+  assert.equal(child.status, 0); assert.match(child.stdout, /"state":"starting"/); assert.match(child.stdout, /"state":"completed"/)
+  const failedChild = spawnSync(process.execPath, [entry], { encoding: 'utf8', env: { ...baseEnv, GGR_TEST_READ_NO_REPLY_RUNTIME_MODULE: pathToFileURL(failureRuntime).href } })
+  assert.equal(failedChild.status, 85); assert.match(failedChild.stdout, /PUPPETEER_IS_NOT_EXECUTABLE/)
+  await fs.rm(root, { recursive: true, force: true })
 }
 
 {

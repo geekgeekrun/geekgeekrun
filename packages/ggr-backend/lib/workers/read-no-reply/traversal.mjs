@@ -10,6 +10,10 @@ export function cookieListIsValid(cookies) {
   return Boolean(Array.isArray(cookies) && cookies.length && cookies.every((cookie) => required.every((key) => Object.hasOwn(cookie, key))))
 }
 
+export function resolveBlockedCompanyPattern(bossSettings, commonSettings) {
+  return (bossSettings.fieldsForUseCommonConfig?.blockCompanyNameRegExpStr ? commonSettings?.blockCompanyNameRegExpStr : bossSettings.blockCompanyNameRegExpStr) ?? ''
+}
+
 export function responseMatchesChat(response, item) {
   if (!response?.url?.().startsWith('https://www.zhipin.com/wapi/zpchat/geek/historyMsg')) return false
   const payload = `${response.url()}\n${response.request?.().postData?.() ?? ''}`
@@ -68,7 +72,7 @@ export async function handleSelfReminder({ reminder, history, operations }) {
 export function shouldInspectChat(item, settings, now = Date.now()) {
   const reminder = settings.autoReminder ?? {}
   if (reminder.rechatLimitDay && item.updateTime && now - item.updateTime >= reminder.rechatLimitDay * 86400000) return false
-  const blocked = settings.commonJobCondition?.blockCompanyNameRegExpStr
+  const blocked = resolveBlockedCompanyPattern(settings, settings.commonJobCondition)
   if (reminder.onlyRemindBossWithoutBlockCompanyName && blocked) { try { if (new RegExp(blocked, 'im').test(item.brandName)) return false } catch {} }
   return Boolean(((((item.lastIsSelf && item.lastMsgStatus === MsgStatus.HAS_READ && !item.lastText?.includes('你撤回了')) || uncertainReadTemplates.some((text) => item.lastText?.includes(text))) && !item.unreadCount)) ||
     (!item.lastIsSelf && item.lastText === '开场问题，期待你的回答') ||
