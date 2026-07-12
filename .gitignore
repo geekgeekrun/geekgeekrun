@@ -18,3 +18,5 @@ GEMINI.md
 docs/superpowers/plans/
 docs/superpowers/specs/
 
+# Isolated implementation worktrees
+.worktrees/
