@@ -67,7 +67,15 @@ importers:
 
   packages/ggr-controller: {}
 
+  packages/ggr-client:
+    dependencies:
+      '@geekgeekrun/ggr-protocol':
+        specifier: workspace:*
+        version: link:../ggr-protocol
+
   packages/ggr-mcp: {}
+
+  packages/ggr-protocol: {}
 
   packages/laodeng:
     dependencies:

@@ -4,7 +4,7 @@ import {
   METHODS,
   PROTOCOL_VERSION,
   createRequest
-} from '../ggr-protocol/index.mjs'
+} from '@geekgeekrun/ggr-protocol'
 
 function rpcError(code, message, data) {
   const error = new Error(message)
@@ -39,7 +39,13 @@ export function createGgrClient(options) {
 
   function handleMessage(message) {
     if (message && typeof message.event === 'string') {
-      for (const listener of eventListeners) listener(message)
+      for (const listener of eventListeners) {
+        try {
+          listener(message)
+        } catch {
+          // Consumer listener failures must not affect the transport or other listeners.
+        }
+      }
       return
     }
 
@@ -70,11 +76,14 @@ export function createGgrClient(options) {
         const line = buffer.slice(0, newline)
         buffer = buffer.slice(newline + 1)
         if (!line) continue
+        let message
         try {
-          handleMessage(JSON.parse(line))
+          message = JSON.parse(line)
         } catch {
           target.destroy()
+          return
         }
+        handleMessage(message)
       }
     })
     target.on('close', () => resetConnection(target))

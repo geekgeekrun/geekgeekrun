@@ -2,8 +2,12 @@ import assert from 'node:assert/strict'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { createGgrClient } from '../index.mjs'
+
+const productionSource = await readFile(new URL('../index.mjs', import.meta.url), 'utf8')
+assert.match(productionSource, /from '@geekgeekrun\/ggr-protocol'/)
+assert.doesNotMatch(productionSource, /from ['"]\.\.\/ggr-protocol/)
 
 const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ggr-client-'))
 const socketPath = process.platform === 'win32'
@@ -69,6 +73,19 @@ function createServer({ protocolMin = 1, protocolMax = 1 } = {}) {
           })}\n`)
           continue
         }
+        if (request.method === 'test.listenerIsolation') {
+          connection.write(`${JSON.stringify({
+            event: 'task.progress',
+            data: { progress: 75 }
+          })}\n`)
+          setImmediate(() => {
+            connection.write(`${JSON.stringify({
+              id: request.id,
+              result: { ok: true }
+            })}\n`)
+          })
+          continue
+        }
         if (request.method === 'test.close') {
           connection.destroy()
         }
@@ -87,6 +104,9 @@ try {
     requestTimeoutMs: 30
   })
   const events = []
+  client.onEvent(() => {
+    throw new Error('consumer listener failed')
+  })
   client.onEvent((message) => events.push(message))
 
   await client.connect()
@@ -95,15 +115,24 @@ try {
   assert.deepEqual(await client.request('system.health'), { ok: true })
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(events[0].event, 'task.progress')
+  assert.equal(client.connected, true)
+  assert.deepEqual(await client.request('test.listenerIsolation'), { ok: true })
+  assert.equal(events[1].event, 'task.progress')
+  assert.equal(client.connected, true)
 
   await assert.rejects(client.request('test.timeout'), (error) => {
     assert.equal(rpcErrorCode(error), 'REQUEST_TIMEOUT')
     return true
   })
-  await assert.rejects(client.request('test.close'), (error) => {
-    assert.equal(rpcErrorCode(error), 'CONNECTION_CLOSED')
-    return true
-  })
+  const closedRequests = await Promise.allSettled([
+    client.request('test.close'),
+    client.request('test.close')
+  ])
+  assert.equal(closedRequests.length, 2)
+  for (const result of closedRequests) {
+    assert.equal(result.status, 'rejected')
+    assert.equal(rpcErrorCode(result.reason), 'CONNECTION_CLOSED')
+  }
   assert.equal(client.connected, false)
 
   await client.connect()
