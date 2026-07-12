@@ -35,6 +35,8 @@ async function fixture() {
 
     await migrateLegacyLayout(paths)
     assert.equal(await fs.readlink(path.join(paths.rootDir, 'config')), 'data/config')
+    await fs.symlink('/tmp', path.join(paths.configDir, 'nested-link'))
+    await assert.rejects(migrateLegacyLayout(paths), /symbolic link/)
   } finally {
     await fs.rm(home, { recursive: true, force: true })
   }
@@ -48,6 +50,119 @@ async function fixture() {
     await assert.rejects(migrateLegacyLayout(paths), /outside expected data directory/)
     await assert.rejects(fs.lstat(paths.layoutVersionFile), { code: 'ENOENT' })
     assert.equal(await fs.readlink(path.join(paths.rootDir, 'config')), '/tmp')
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+for (const location of ['config/nested', 'storage/public.db']) {
+  const { home, paths } = await fixture()
+  try {
+    const linkPath = path.join(paths.rootDir, location)
+    await fs.rm(linkPath, { recursive: true, force: true })
+    await fs.symlink('/tmp', linkPath)
+    await assert.rejects(migrateLegacyLayout(paths), /symbolic link/)
+    await assert.rejects(fs.lstat(paths.layoutVersionFile), { code: 'ENOENT' })
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+{
+  const { home, paths } = await fixture()
+  const backupStorage = `${path.join(paths.rootDir, 'storage')}.migration-backup`
+  const injectedFs = new Proxy(fs, {
+    get(target, property) {
+      if (property !== 'rm') return target[property]
+      return async (targetPath, options) => {
+        if (targetPath === backupStorage) throw new Error('injected post-commit cleanup failure')
+        return target.rm(targetPath, options)
+      }
+    }
+  })
+  try {
+    await assert.rejects(migrateLegacyLayout(paths, { fsOps: injectedFs }), /post-commit cleanup failure/)
+    assert.equal(await fs.readlink(path.join(paths.rootDir, 'config')), 'data/config')
+    assert.equal(await fs.readFile(path.join(paths.configDir, 'boss.json'), 'utf8'), '{"openingMessage":"legacy"}\n')
+    assert.equal(await fs.readFile(paths.layoutVersionFile, 'utf8'), '1\n')
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+{
+  const { home, paths } = await fixture()
+  const configPath = path.join(paths.rootDir, 'config')
+  const storagePath = path.join(paths.rootDir, 'storage')
+  const backupStorage = `${storagePath}.migration-backup`
+  const injectedFs = new Proxy(fs, {
+    get(target, property) {
+      if (property !== 'rename') return target[property]
+      return async (source, destination) => {
+        if (source === storagePath && destination === backupStorage) throw new Error('injected second rename failure')
+        return target.rename(source, destination)
+      }
+    }
+  })
+  try {
+    await assert.rejects(migrateLegacyLayout(paths, { fsOps: injectedFs }), /injected second rename failure/)
+    assert.equal(await fs.readFile(path.join(configPath, 'boss.json'), 'utf8'), '{"openingMessage":"legacy"}\n')
+    assert.equal(await fs.readFile(path.join(storagePath, 'state.json'), 'utf8'), '{"ready":true}\n')
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+{
+  const { home, paths } = await fixture()
+  const events = []
+  const injectedFs = new Proxy(fs, {
+    get(target, property) {
+      if (property === 'open') return async (targetPath, ...args) => {
+        const handle = await target.open(targetPath, ...args)
+        return new Proxy(handle, { get(fileHandle, key) {
+          if (key === 'sync') return async () => { events.push(`sync:${targetPath}`); return fileHandle.sync() }
+          const value = fileHandle[key]
+          return typeof value === 'function' ? value.bind(fileHandle) : value
+        } })
+      }
+      if (['rename', 'symlink'].includes(property)) return async (...args) => {
+        events.push(`${String(property)}:${args[1]}`)
+        return target[property](...args)
+      }
+      return target[property]
+    }
+  })
+  try {
+    await migrateLegacyLayout(paths, { fsOps: injectedFs })
+    const configLink = events.indexOf(`symlink:${path.join(paths.rootDir, 'config')}`)
+    const markerRename = events.indexOf(`rename:${paths.layoutVersionFile}`)
+    const dataSyncs = events.flatMap((event, index) => event === `sync:${paths.dataDir}` ? [index] : [])
+    assert(configLink >= 0 && markerRename > configLink)
+    assert(dataSyncs.some((index) => index > configLink && index < markerRename))
+    assert(dataSyncs.some((index) => index > markerRename))
+    const storageDbLink = events.indexOf(`symlink:${path.join(paths.storageDir, 'public.db')}`)
+    assert(events.slice(storageDbLink + 1).includes(`sync:${paths.storageDir}`))
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+
+{
+  const { home, paths } = await fixture()
+  const injectedFs = new Proxy(fs, {
+    get(target, property) {
+      if (property !== 'copyFile') return target[property]
+      return async (source, destination) => {
+        await target.copyFile(source, destination)
+        if (destination.endsWith('database.sqlite')) await target.appendFile(destination, 'corrupt')
+      }
+    }
+  })
+  try {
+    await assert.rejects(migrateLegacyLayout(paths, { fsOps: injectedFs }), /verification failed/)
+    assert.equal(await fs.readFile(path.join(paths.rootDir, 'storage', 'public.db'), 'utf8'), 'legacy database')
   } finally {
     await fs.rm(home, { recursive: true, force: true })
   }

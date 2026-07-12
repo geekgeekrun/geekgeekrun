@@ -6,6 +6,7 @@ import path from 'node:path'
 import { createGgrClient } from '@geekgeekrun/ggr-client'
 import { createBackendServer } from '../server.mjs'
 import { createRuntimePaths } from '../lib/runtime-paths.mjs'
+import { createConfigService } from '../lib/services/config-service.mjs'
 
 const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-backend-'))
 const runtimePaths = createRuntimePaths(tempHome)
@@ -61,6 +62,21 @@ try {
 } finally {
   await backend.stop().catch(() => {})
   await fs.rm(tempHome, { recursive: true, force: true })
+}
+
+{
+  const configHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-config-concurrency-'))
+  const service = createConfigService({ configDir: configHome })
+  try {
+    await Promise.all([
+      service.write({ resource: 'opening_message', patch: { openingMessage: 'one' } }),
+      service.write({ resource: 'reply_policy', patch: { replyPolicy: 'two' } })
+    ])
+    const data = JSON.parse(await fs.readFile(path.join(configHome, 'boss.json'), 'utf8'))
+    assert.deepEqual(data, { openingMessage: 'one', replyPolicy: 'two' })
+  } finally {
+    await fs.rm(configHome, { recursive: true, force: true })
+  }
 }
 
 {

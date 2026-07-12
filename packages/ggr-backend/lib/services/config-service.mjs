@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
@@ -56,7 +57,7 @@ async function readJson(filePath, fallback, clock) {
 async function writeJson(filePath, value) {
   await fs.mkdir(path.dirname(filePath), { recursive: true, mode: PRIVATE_DIR_MODE })
   await fs.chmod(path.dirname(filePath), PRIVATE_DIR_MODE)
-  const temporary = `${filePath}.${process.pid}.${Date.now()}.tmp`
+  const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`
   try {
     await fs.writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: PRIVATE_FILE_MODE })
     const handle = await fs.open(temporary, 'r')
@@ -69,6 +70,12 @@ async function writeJson(filePath, value) {
 }
 
 export function createConfigService({ configDir, clock = () => new Date() }) {
+  const writes = new Map()
+  function serialize(filePath, operation) {
+    const pending = (writes.get(filePath) ?? Promise.resolve()).catch(() => {}).then(operation)
+    writes.set(filePath, pending)
+    return pending.finally(() => { if (writes.get(filePath) === pending) writes.delete(filePath) })
+  }
   return {
     async read({ resource }) {
       const definition = definitionFor(resource)
@@ -81,9 +88,11 @@ export function createConfigService({ configDir, clock = () => new Date() }) {
       if (!definition.writable) throw invalidParams(`Config resource is read-only: ${resource}`)
       if (definition.array ? !Array.isArray(patch) : !isPlainObject(patch)) throw invalidParams(`Invalid patch for config resource: ${resource}`)
       const filePath = path.join(configDir, definition.fileName)
-      const next = definition.array ? patch : deepMerge(await readJson(filePath, {}, clock), patch)
-      await writeJson(filePath, next)
-      return this.read({ resource })
+      return serialize(filePath, async () => {
+        const next = definition.array ? patch : deepMerge(await readJson(filePath, {}, clock), patch)
+        await writeJson(filePath, next)
+        return this.read({ resource })
+      })
     },
     async close() {}
   }
