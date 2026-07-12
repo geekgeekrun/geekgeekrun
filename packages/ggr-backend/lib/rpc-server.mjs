@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import net from 'node:net'
 import path from 'node:path'
-import { createError, createResult } from '@geekgeekrun/ggr-protocol'
+import { createError, createEvent, createResult } from '@geekgeekrun/ggr-protocol'
 
 const STABLE_CODES = new Set(['INVALID_PARAMS', 'METHOD_NOT_FOUND', 'PROTOCOL_INCOMPATIBLE', 'HANDSHAKE_REQUIRED', 'PEER_REJECTED'])
 
@@ -9,6 +9,7 @@ export function createRpcServer({ socketPath, router, verifyPeer = async () => t
   let server = null
   let ownedSocket = null
   const sockets = new Set()
+  const subscribers = new Set()
 
   async function removeStaleSocket() {
     const info = await fs.lstat(socketPath).catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error))
@@ -19,7 +20,7 @@ export function createRpcServer({ socketPath, router, verifyPeer = async () => t
 
   function serve(socket) {
     sockets.add(socket)
-    socket.on('close', () => sockets.delete(socket))
+    socket.on('close', () => { sockets.delete(socket); subscribers.delete(socket) })
     let buffer = ''
     let handshaken = false
     let accepted = false
@@ -46,7 +47,7 @@ export function createRpcServer({ socketPath, router, verifyPeer = async () => t
         try {
           if (!handshaken && request.method !== 'system.handshake') throw Object.assign(new Error('system.handshake must be the first request'), { code: 'HANDSHAKE_REQUIRED' })
           const result = await router.dispatch(request, { socket, correlationId: request.id })
-          if (request.method === 'system.handshake') handshaken = true
+          if (request.method === 'system.handshake') { handshaken = true; subscribers.add(socket) }
           await logger.write('info', 'rpc.request', { correlationId: request.id, method: request.method, params: request.params, result })
           socket.write(`${JSON.stringify(createResult(request.id, result))}\n`)
         } catch (error) {
@@ -78,9 +79,16 @@ export function createRpcServer({ socketPath, router, verifyPeer = async () => t
       server = null
       for (const socket of sockets) socket.destroy()
       if (target) await new Promise((resolve) => target.close(resolve))
+      subscribers.clear()
       const info = await fs.lstat(socketPath).catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error))
       if (info && ownedSocket && info.isSocket() && info.dev === ownedSocket.dev && info.ino === ownedSocket.ino) await fs.unlink(socketPath)
       ownedSocket = null
+    },
+    publish(event, data) {
+      const line = `${JSON.stringify(createEvent(event, data))}\n`
+      for (const socket of subscribers) {
+        if (!socket.destroyed) socket.write(line)
+      }
     }
   }
 }

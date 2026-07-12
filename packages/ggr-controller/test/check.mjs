@@ -4,6 +4,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
+import { createApprovalService } from '../../ggr-backend/lib/services/approval-service.mjs'
 import {
   createLocalProcessController,
   createDaemonController,
@@ -133,6 +134,7 @@ assert.equal(pending[0].id, '1')
 const approved = await approveAutoReply({ id: '1', queueFilePath })
 assert.equal(approved.status, 'approved_auto_reply')
 assert.equal((await readApprovalQueue({ queueFilePath })).length, 0)
+assert.equal((await createApprovalService({ queueFilePath }).list({ includeAll: true }))[0].status, 'approved_auto_reply')
 const humanRequired = await requireHumanIntervention({ id: '2', queueFilePath, reason: 'not safe' })
 assert.equal(humanRequired.status, 'human_required')
 assert.equal(humanRequired.reviewReason, 'not safe')

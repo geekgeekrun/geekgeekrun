@@ -1,16 +1,32 @@
 import os from 'node:os'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { METHODS, PROTOCOL_VERSION, assertHandshake } from '@geekgeekrun/ggr-protocol'
 import { createLogger } from './lib/logger.mjs'
-import { createRouter } from './lib/router.mjs'
+import { createRouter, registerServiceHandlers } from './lib/router.mjs'
 import { createRpcServer } from './lib/rpc-server.mjs'
 import { createRuntimePaths, migrateLegacyLayout } from './lib/runtime-paths.mjs'
 import { createConfigService } from './lib/services/config-service.mjs'
+import { createApprovalService } from './lib/services/approval-service.mjs'
+import { createTaskService } from './lib/services/task-service.mjs'
 
 export async function createBackendServer({ socketPath, version, runtimePaths, services = {}, verifyPeer, clock }) {
   if (!runtimePaths) throw new TypeError('runtimePaths are required')
   const logger = services.logger ?? await createLogger({ filePath: runtimePaths.backendLog, clock })
   const config = services.config ?? createConfigService({ configDir: runtimePaths.configDir, clock })
+  let rpc
+  const emit = (event, data) => rpc?.publish(event, data)
+  const task = services.task ?? createTaskService({
+    spawnProcess: services.spawnProcess,
+    workerEntries: services.workerEntries ?? {},
+    emit,
+    stopTimeoutMs: services.stopTimeoutMs
+  })
+  const approval = services.approval ?? createApprovalService({
+    queueFilePath: path.join(runtimePaths.storageDir, 'hr-reply-approval-queue.json'),
+    emit,
+    clock
+  })
   const router = createRouter()
     .register(METHODS.SYSTEM_HANDSHAKE, (params) => {
       try { assertHandshake(params) } catch (error) { throw Object.assign(error, { code: 'INVALID_PARAMS' }) }
@@ -21,8 +37,10 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     .register(METHODS.CONFIG_READ, (params) => config.read(params))
     .register(METHODS.CONFIG_WRITE, (params) => config.write(params))
 
+  registerServiceHandlers(router, { methods: METHODS, task, approval })
+
   for (const [method, handler] of Object.entries(services.handlers ?? {})) router.register(method, handler)
-  const rpc = createRpcServer({ socketPath, router, verifyPeer, logger })
+  rpc = createRpcServer({ socketPath, router, verifyPeer, logger })
   let started = false
   let closed = false
   return {
@@ -35,6 +53,7 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     },
     async stop() {
       if (closed) return
+      await task.stopAll?.()
       await rpc.stop()
       await config.close?.()
       await logger.close?.()
