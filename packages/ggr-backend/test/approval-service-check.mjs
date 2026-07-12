@@ -34,9 +34,10 @@ try {
     const firstLease = JSON.parse(await fs.readFile(lockPath, 'utf8'))
     assert.match(firstLease.token, /^[0-9a-f-]{36}$/)
     assert.equal(firstLease.pid, process.pid)
+    const firstHeartbeat = (await fs.stat(lockPath)).mtimeMs
     await delay(60)
-    const refreshedLease = JSON.parse(await fs.readFile(lockPath, 'utf8'))
-    assert(refreshedLease.leaseAt > firstLease.leaseAt)
+    const refreshedHeartbeat = (await fs.stat(lockPath)).mtimeMs
+    assert(refreshedHeartbeat > firstHeartbeat)
 
     let competitorFinished = false
     const competitor = service.list().then(() => { competitorFinished = true })
@@ -46,8 +47,60 @@ try {
     await competitor
   }
 
+  for (const malformed of ['', '{"token":"partial"']) {
+    await fs.writeFile(lockPath, malformed)
+    const old = new Date(Date.now() - 1000)
+    await fs.utimes(lockPath, old, old)
+    const recovered = await createApprovalService({
+      queueFilePath,
+      lockStaleMs: 20,
+      lockRetryMs: 2,
+      lockTimeoutMs: 500
+    }).list()
+    assert.equal(recovered.length, 1)
+    await assert.rejects(fs.lstat(lockPath), { code: 'ENOENT' })
+  }
+
+  {
+    const stale = { token: 'stale-primary', pid: absentPid, leaseAt: 0 }
+    const orphanedCleaner = { token: 'orphaned-cleaner', pid: absentPid, leaseAt: 0 }
+    await fs.writeFile(lockPath, JSON.stringify(stale))
+    await fs.writeFile(`${lockPath}.clean`, JSON.stringify(orphanedCleaner))
+    const old = new Date(Date.now() - 1000)
+    await fs.utimes(lockPath, old, old)
+    await fs.utimes(`${lockPath}.clean`, old, old)
+    const recovered = await createApprovalService({
+      queueFilePath,
+      lockStaleMs: 20,
+      lockRetryMs: 2,
+      lockTimeoutMs: 500
+    }).list()
+    assert.equal(recovered.length, 1)
+    await assert.rejects(fs.lstat(`${lockPath}.clean`), { code: 'ENOENT' })
+  }
+
+  {
+    const service = createApprovalService({ queueFilePath, lockRetryMs: 1, lockTimeoutMs: 500 })
+    const parseFailures = []
+    for (let index = 0; index < 100; index++) {
+      const operation = service.update(async () => { await delay(1) })
+      while (true) {
+        try {
+          JSON.parse(await fs.readFile(lockPath, 'utf8'))
+        } catch (error) {
+          if (error?.code !== 'ENOENT') parseFailures.push(error)
+        }
+        if (await Promise.race([operation.then(() => true), delay(0).then(() => false)])) break
+      }
+      await operation
+    }
+    assert.deepEqual(parseFailures, [])
+  }
+
   {
     await fs.writeFile(lockPath, JSON.stringify({ token: 'stale-owner', pid: absentPid, leaseAt: 0 }))
+    const old = new Date(Date.now() - 1000)
+    await fs.utimes(lockPath, old, old)
     const options = { queueFilePath, lockStaleMs: 20, lockRetryMs: 2, lockTimeoutMs: 500 }
     const [first, second] = await Promise.all([
       createApprovalService(options).list(),
@@ -60,9 +113,11 @@ try {
 
   {
     await fs.writeFile(lockPath, JSON.stringify({ token: 'replace-me', pid: absentPid, leaseAt: 0 }))
+    const old = new Date(Date.now() - 1000)
+    await fs.utimes(lockPath, old, old)
     let replaced = false
     const replacement = { token: 'replacement-owner', pid: process.pid, leaseAt: Date.now() }
-    const service = createApprovalService({
+    const options = {
       queueFilePath,
       lockStaleMs: 10,
       lockRetryMs: 2,
@@ -75,8 +130,12 @@ try {
         }
         return pid === process.pid
       }
-    })
-    await assert.rejects(service.list(), /Timed out waiting for approval queue lock/)
+    }
+    const settled = await Promise.allSettled([
+      createApprovalService(options).list(),
+      createApprovalService(options).list()
+    ])
+    assert(settled.every(({ status, reason }) => status === 'rejected' && /Timed out waiting/.test(reason.message)))
     assert.deepEqual(JSON.parse(await fs.readFile(lockPath, 'utf8')), replacement)
     await fs.unlink(lockPath)
   }

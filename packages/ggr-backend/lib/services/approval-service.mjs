@@ -64,10 +64,20 @@ async function readLockSnapshot(lockPath) {
   try {
     handle = await fs.open(lockPath, 'r')
     const [stat, content] = await Promise.all([handle.stat(), handle.readFile('utf8')])
-    const state = JSON.parse(content)
-    return { state, dev: stat.dev, ino: stat.ino }
+    let state
+    try { state = JSON.parse(content) } catch {}
+    const valid = state && typeof state.token === 'string' && state.token &&
+      Number.isInteger(state.pid) && Number.isFinite(state.leaseAt)
+    return {
+      state: valid ? state : null,
+      malformed: !valid,
+      content,
+      dev: stat.dev,
+      ino: stat.ino,
+      leaseAt: valid ? Math.max(state.leaseAt, stat.mtimeMs) : stat.mtimeMs
+    }
   } catch (error) {
-    if (error?.code === 'ENOENT' || error instanceof SyntaxError) return null
+    if (error?.code === 'ENOENT') return null
     throw error
   } finally {
     await handle?.close().catch(() => {})
@@ -77,38 +87,51 @@ async function readLockSnapshot(lockPath) {
 function sameLock(left, right) {
   const leftToken = left?.state?.token ?? left?.token
   const rightToken = right?.state?.token ?? right?.token
-  return Boolean(left && right && left.dev === right.dev && left.ino === right.ino && leftToken === rightToken)
+  const identityMatches = leftToken || rightToken ? leftToken === rightToken : left?.content === right?.content
+  return Boolean(left && right && left.dev === right.dev && left.ino === right.ino && identityMatches)
 }
 
-async function writeHolderState(holder, leaseAt) {
-  const state = { token: holder.token, pid: holder.pid, leaseAt }
+async function writeCompleteRecord(handle, state) {
   const payload = Buffer.from(JSON.stringify(state))
   let offset = 0
   while (offset < payload.length) {
-    const { bytesWritten } = await holder.handle.write(payload, offset, payload.length - offset, offset)
+    const { bytesWritten } = await handle.write(payload, offset, payload.length - offset, offset)
     offset += bytesWritten
   }
-  await holder.handle.truncate(payload.length)
-  await holder.handle.sync()
-  holder.leaseAt = leaseAt
+  await handle.truncate(payload.length)
+  await handle.sync()
+}
+
+async function syncDirectory(directory) {
+  const handle = await fs.open(directory, 'r')
+  try { await handle.sync() } finally { await handle.close() }
 }
 
 async function tryCreateHolder(lockPath) {
+  const token = randomUUID()
+  const state = { token, pid: process.pid, leaseAt: Date.now() }
+  const temporaryPath = `${lockPath}.${token}.tmp`
   let handle
   let holder
+  let linked = false
   try {
-    handle = await fs.open(lockPath, 'wx', PRIVATE_FILE_MODE)
+    handle = await fs.open(temporaryPath, 'wx', PRIVATE_FILE_MODE)
+    await writeCompleteRecord(handle, state)
     const stat = await handle.stat()
-    holder = { handle, token: randomUUID(), pid: process.pid, dev: stat.dev, ino: stat.ino }
-    await writeHolderState(holder, Date.now())
+    holder = { handle, token, pid: process.pid, dev: stat.dev, ino: stat.ino, leaseAt: state.leaseAt }
+    await fs.link(temporaryPath, lockPath)
+    linked = true
+    await fs.unlink(temporaryPath)
+    await syncDirectory(path.dirname(lockPath))
     return holder
   } catch (error) {
-    if (error?.code === 'EEXIST') return null
-    if (holder) {
+    if (linked && holder) {
       const pathStat = await fs.lstat(lockPath).catch(() => null)
       if (pathStat?.dev === holder.dev && pathStat?.ino === holder.ino) await fs.unlink(lockPath).catch(() => {})
     }
     await handle?.close().catch(() => {})
+    await fs.unlink(temporaryPath).catch(() => {})
+    if (error?.code === 'EEXIST') return null
     throw error
   }
 }
@@ -116,7 +139,10 @@ async function tryCreateHolder(lockPath) {
 async function refreshHolder(lockPath, holder) {
   const current = await readLockSnapshot(lockPath)
   if (!sameLock(holder, current)) return false
-  await writeHolderState(holder, Date.now())
+  const now = new Date()
+  await holder.handle.utimes(now, now)
+  await holder.handle.sync()
+  holder.leaseAt = now.getTime()
   return true
 }
 
@@ -131,30 +157,74 @@ async function removeIfOwned(lockPath, holder) {
   return true
 }
 
-async function breakExpiredLockWithoutCompetition(lockPath, { staleMs, isProcessAlive }) {
+async function mayRecover(snapshot, { staleMs, isProcessAlive }) {
+  if (!snapshot || Date.now() - snapshot.leaseAt <= staleMs) return false
+  return snapshot.malformed || !await isProcessAlive(snapshot.state.pid)
+}
+
+async function breakExpiredLockWithoutCompetition(lockPath, options) {
   const observed = await readLockSnapshot(lockPath)
-  if (!observed || !Number.isFinite(observed.state?.leaseAt)) return false
-  if (Date.now() - observed.state.leaseAt <= staleMs || await isProcessAlive(observed.state.pid)) return false
+  if (!await mayRecover(observed, options)) return false
 
   const current = await readLockSnapshot(lockPath)
   if (!sameLock(observed, current)) return false
-  if (Date.now() - current.state.leaseAt <= staleMs || await isProcessAlive(current.state.pid)) return false
+  if (!await mayRecover(current, options)) return false
   const final = await readLockSnapshot(lockPath)
   if (!sameLock(current, final)) return false
-  if (Date.now() - final.state.leaseAt <= staleMs) return false
+  if (!await mayRecover(final, options)) return false
   const pathStat = await fs.lstat(lockPath).catch((error) => error?.code === 'ENOENT' ? null : Promise.reject(error))
   if (!pathStat || pathStat.dev !== final.dev || pathStat.ino !== final.ino) return false
   await fs.unlink(lockPath).catch((error) => { if (error?.code !== 'ENOENT') throw error })
   return true
 }
 
+async function recoverOrphanedCleaner(cleanerPath, options) {
+  const observed = await readLockSnapshot(cleanerPath)
+  if (!await mayRecover(observed, options)) return false
+  const electionPath = `${cleanerPath}.recover`
+  try {
+    await fs.link(cleanerPath, electionPath)
+  } catch (error) {
+    if (error?.code === 'EEXIST' || error?.code === 'ENOENT') return false
+    throw error
+  }
+  try {
+    const election = await readLockSnapshot(electionPath)
+    if (!sameLock(observed, election)) return false
+    const current = await readLockSnapshot(cleanerPath)
+    if (!sameLock(election, current) || !await mayRecover(current, options)) return false
+    const pathStat = await fs.lstat(cleanerPath).catch((error) => error?.code === 'ENOENT' ? null : Promise.reject(error))
+    if (!pathStat || pathStat.dev !== election.dev || pathStat.ino !== election.ino) return false
+    await fs.unlink(cleanerPath).catch((error) => { if (error?.code !== 'ENOENT') throw error })
+    return true
+  } finally {
+    await fs.unlink(electionPath).catch(() => {})
+  }
+}
+
+function startHeartbeat(lockPath, holder, heartbeatMs) {
+  let operations = Promise.resolve()
+  const timer = setInterval(() => {
+    operations = operations.then(() => refreshHolder(lockPath, holder)).catch(() => false)
+  }, heartbeatMs)
+  return async () => {
+    clearInterval(timer)
+    await operations
+  }
+}
+
 async function breakExpiredLock(lockPath, options) {
   const cleanerPath = `${lockPath}.clean`
   const cleaner = await tryCreateHolder(cleanerPath)
-  if (!cleaner) return false
+  if (!cleaner) {
+    await recoverOrphanedCleaner(cleanerPath, options)
+    return false
+  }
+  const stopHeartbeat = startHeartbeat(cleanerPath, cleaner, options.heartbeatMs)
   try {
     return await breakExpiredLockWithoutCompetition(lockPath, options)
   } finally {
+    await stopHeartbeat()
     await removeIfOwned(cleanerPath, cleaner)
     await cleaner.handle.close().catch(() => {})
   }
@@ -177,20 +247,16 @@ async function withQueueLock(queueFilePath, operation, {
   while (!holder) {
     holder = await tryCreateHolder(lockPath)
     if (holder) break
-    if (await breakExpiredLock(lockPath, { staleMs, isProcessAlive })) continue
+    if (await breakExpiredLock(lockPath, { staleMs, isProcessAlive, heartbeatMs })) continue
     if (Date.now() >= deadline) throw new Error(`Timed out waiting for approval queue lock: ${queueFilePath}`)
     await sleep(retryMs)
   }
 
-  let heartbeats = Promise.resolve()
-  const heartbeat = setInterval(() => {
-    heartbeats = heartbeats.then(() => refreshHolder(lockPath, holder)).catch(() => false)
-  }, heartbeatMs)
+  const stopHeartbeat = startHeartbeat(lockPath, holder, heartbeatMs)
   try {
     return await operation()
   } finally {
-    clearInterval(heartbeat)
-    await heartbeats
+    await stopHeartbeat()
     await removeIfOwned(lockPath, holder)
     await holder.handle.close().catch(() => {})
   }
