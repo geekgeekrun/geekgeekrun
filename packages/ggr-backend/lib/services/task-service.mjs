@@ -17,6 +17,7 @@ function redactLine(value) {
 
 function redactPayload(value, key = '') {
   if (SENSITIVE_KEY.test(key)) return '[redacted]'
+  if (typeof value === 'string') return redactLine(value)
   if (Array.isArray(value)) return value.map((item) => redactPayload(item))
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, redactPayload(item, name)]))
   return value

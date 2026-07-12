@@ -32,8 +32,23 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
   })
   await service.start({ workerId: 'auto' })
   const reporter = createWorkerReporter({ write: (line) => child.stdout.emit('data', line) })
-  reporter.emit('task.progress', { workerId: 'auto', state: 'working', token: 'a"b' })
-  assert.deepEqual(events[0], { event: 'task.progress', data: { workerId: 'auto', state: 'working', token: '[redacted]' } })
+  reporter.emit('task.progress', {
+    workerId: 'auto',
+    state: 'working',
+    token: 'a"b',
+    message: 'request failed token=event-secret-fragment password=event-password-fragment'
+  })
+  assert.deepEqual(events[0], {
+    event: 'task.progress',
+    data: {
+      workerId: 'auto',
+      state: 'working',
+      token: '[redacted]',
+      message: 'request failed token=[redacted]'
+    }
+  })
+  assert(!JSON.stringify(events[0]).includes('event-secret'))
+  assert(!JSON.stringify(events[0]).includes('event-password'))
   assert.deepEqual(service.list()[0].recentStdout, [])
   child.stdout.emit('data', '{"ggrWorkerEvent":1,"event":"not.allowed","data":{"password":"nope"}}\n')
   assert.equal(service.list()[0].recentStdout[0], '{"ggrWorkerEvent":1,"event":"not.allowed","data":{"password":"[redacted]"}}')
@@ -65,17 +80,19 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     }
   })}\n`)
   child.stdout.emit('data', 'prefix token="escaped-secret-fragment-\\"second-secret-fragment,backup-secret-fragment\n')
+  child.stdout.emit('data', `${JSON.stringify({ message: 'request failed token=embedded-secret-fragment', safe: 'shown' })}\n`)
+  child.stdout.emit('data', `${JSON.stringify(['credential=array-secret-fragment', 'safe'])}\n`)
 
   const running = JSON.stringify(service.list())
   for (const secret of [
     'unclosed-secret', 'unquoted-secret', 'split-secret', 'first-secret',
-    'second-secret', 'backup-secret', 'escaped-secret'
+    'second-secret', 'backup-secret', 'escaped-secret', 'embedded-secret', 'array-secret'
   ]) assert(!running.includes(secret), `recent diagnostics leaked ${secret}`)
   assert(service.list()[0].recentStdout.every((line) => Buffer.byteLength(line) <= 512))
   const emitted = JSON.stringify(events)
   for (const secret of [
     'unclosed-secret', 'unquoted-secret', 'split-secret', 'first-secret',
-    'second-secret', 'backup-secret', 'escaped-secret'
+    'second-secret', 'backup-secret', 'escaped-secret', 'embedded-secret', 'array-secret'
   ]) assert(!emitted.includes(secret), `diagnostic event leaked ${secret}`)
 
   child.stdout.emit('data', `credential="oversized-secret-prefix-${'x'.repeat(1024 * 1024)}`)
