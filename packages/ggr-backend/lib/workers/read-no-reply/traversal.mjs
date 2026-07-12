@@ -15,10 +15,41 @@ export function resolveBlockedCompanyPattern(bossSettings, commonSettings) {
 }
 
 export function responseMatchesChat(response, item) {
-  if (!response?.url?.().startsWith('https://www.zhipin.com/wapi/zpchat/geek/historyMsg')) return false
-  const payload = `${response.url()}\n${response.request?.().postData?.() ?? ''}`
-  const identities = [item.friendId, item.encryptJobId, item.encryptBossId, item.securityId].filter((value) => value !== undefined && value !== null && String(value))
-  return identities.some((identity) => payload.includes(encodeURIComponent(String(identity))) || payload.includes(String(identity)))
+  let url
+  try { url = new URL(response?.url?.()) } catch { return false }
+  if (!url.href.startsWith('https://www.zhipin.com/wapi/zpchat/geek/historyMsg')) return false
+  const knownKeys = new Set(['friendId', 'bossId', 'encryptBossId', 'encryptFriendId', 'jobId', 'encryptJobId', 'securityId'])
+  const found = new Map()
+  const add = (key, value) => {
+    if (!knownKeys.has(key) || value === undefined || value === null || typeof value === 'object') return
+    if (!found.has(key)) found.set(key, new Set())
+    found.get(key).add(String(value))
+  }
+  const collect = (value) => {
+    if (!value || typeof value !== 'object') return
+    if (Array.isArray(value)) { value.forEach(collect); return }
+    for (const [key, child] of Object.entries(value)) { add(key, child); if (child && typeof child === 'object') collect(child) }
+  }
+  for (const [key, value] of url.searchParams) add(key, value)
+  const body = response.request?.().postData?.() ?? ''
+  if (body) {
+    try { collect(JSON.parse(body)) }
+    catch { for (const [key, value] of new URLSearchParams(body)) add(key, value) }
+  }
+  const definitions = [
+    { group: 'friend', target: item.friendId, keys: ['friendId'] },
+    { group: 'friend', target: item.bossId, keys: ['bossId'] },
+    { group: 'friend', target: item.encryptBossId, keys: ['encryptBossId', 'encryptFriendId'] },
+    { group: 'job', target: item.jobId, keys: ['jobId'] },
+    { group: 'job', target: item.encryptJobId, keys: ['encryptJobId'] },
+    { group: 'security', target: item.securityId, keys: ['securityId'] }
+  ].filter(({ target }) => target !== undefined && target !== null && String(target))
+  const correlated = definitions.filter(({ keys }) => keys.some((key) => found.has(key)))
+  if (!correlated.length) return false
+  if (definitions.some(({ group }) => group === 'friend') && definitions.some(({ group }) => group === 'job')) {
+    if (!correlated.some(({ group }) => group === 'friend') || !correlated.some(({ group }) => group === 'job')) return false
+  }
+  return correlated.every(({ target, keys }) => keys.filter((key) => found.has(key)).every((key) => found.get(key).size === 1 && found.get(key).has(String(target))))
 }
 
 export function selectedChatMatches(selected, item, conversation) {

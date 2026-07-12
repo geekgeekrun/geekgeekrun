@@ -39,6 +39,12 @@ assert.equal(cookieListIsValid([{ name: 'a' }]), false)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=22&encryptJobId=job-1' }) }, { friendId: 22, encryptJobId: 'job-1' }), true)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg?securityId=sec-1', request: () => ({ postData: () => JSON.stringify({ friendId: 22, encryptJobId: 'job-1' }) }) }, { friendId: 22, securityId: 'sec-1', encryptJobId: 'job-1' }), true)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=99' }) }, { friendId: 22, encryptJobId: 'job-1' }), false)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg?friendId=122', request: () => ({ postData: () => '' }) }, { friendId: 22 }), false)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'encryptJobId=70' }) }, { encryptJobId: 7 }), false)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=22&encryptJobId=70' }) }, { friendId: 22, encryptJobId: 7 }), false)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => '{malformed' }) }, { friendId: 22 }), false)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg?friendId=22&encryptJobId=7', request: () => ({ postData: () => '' }) }, { friendId: 22, encryptJobId: 7 }), true)
+assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=22&encryptJobId=7' }) }, { friendId: 22, encryptJobId: 7 }), true)
 assert.equal(selectedChatMatches({ friendId: 22, encryptJobId: 'job-1' }, { friendId: 22, encryptJobId: 'job-1' }, { encryptJobId: 'job-1' }), true)
 assert.equal(selectedChatMatches({ friendId: 99, encryptJobId: 'old' }, { friendId: 22, encryptJobId: 'job-1' }, { encryptJobId: 'old' }), false)
 assert.equal(canSendSelfReminder({ conversation: { bothTalked: true }, history: [{ isSelf: true }], isJobClosed: false, isExpectedJob: true }), false)
@@ -86,12 +92,19 @@ assert.match(defaultPromptMap.rechat.content, /质量控制层/)
   })
   assert.equal(result.responseText, 'model reply'); assert.equal(usage[0].totalTokens, 5)
   assert.match(capturedMessages[0].content, /硬技能/)
-  const historyResult = await requestNewMessageContent([{ text: 'prior reply' }], {
-    runtimePaths, settings: { llm: [{ id: 'one', providerCompleteApiUrl: 'https://invalid.test', providerApiSecret: 'secret', model: 'test' }] },
-    complete: async (_config, messages) => { assert.match(messages[2].content, /```json/); assert.match(messages[3].content, /不能与之前/); return { choices: [{ message: { content: '{"response":"valid despite log failure"}' } }], usage: {} } },
-    recordUsage: async () => { throw new Error('database unavailable') }
-  })
+  const diagnostics = []
+  const originalConsoleError = console.error
+  console.error = (...args) => diagnostics.push(args.join(' '))
+  let historyResult
+  try {
+    historyResult = await requestNewMessageContent([{ text: 'prior reply' }], {
+      runtimePaths, settings: { llm: [{ id: 'one', providerCompleteApiUrl: 'https://invalid.test', providerApiSecret: 'secret', model: 'test' }] },
+      complete: async (_config, messages) => { assert.match(messages[2].content, /```json/); assert.match(messages[3].content, /不能与之前/); return { choices: [{ message: { content: '{"response":"valid despite log failure"}' } }], usage: {} } },
+      recordUsage: async () => { throw new Error('database unavailable') }
+    })
+  } finally { console.error = originalConsoleError }
   assert.equal(historyResult.responseText, 'valid despite log failure')
+  assert.deepEqual(diagnostics, ['CANNOT_SAVE_LLM_COMPLETION_LOG'])
   await fs.rm(root, { recursive: true, force: true })
 }
 
