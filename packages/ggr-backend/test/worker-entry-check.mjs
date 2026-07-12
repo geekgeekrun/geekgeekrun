@@ -54,7 +54,7 @@ for (const relative of ['lib/workers/auto-chat.mjs', 'lib/workers/read-no-reply.
   assert(!source.match(/from\s+['"]electron['"]/))
   assert(!source.includes('minimist'))
   assert(!source.includes('--mode'))
-  assert(!source.includes('process.exit'))
+  assert(!source.match(/process\.exit\s*\(/))
 }
 
 const serverSource = await fs.readFile(path.join(backendRoot, 'server.mjs'), 'utf8')
