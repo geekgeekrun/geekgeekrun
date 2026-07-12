@@ -92,10 +92,14 @@ export interface RpcEvent<D = unknown> {
   data: D
 }
 
-export declare function createRequest<P = Record<string, unknown>>(
+export declare function createRequest(
+  id: string,
+  method: string
+): RpcRequest<Record<string, never>>
+export declare function createRequest<P extends object>(
   id: string,
   method: string,
-  params?: P
+  params: P
 ): RpcRequest<P>
 export declare function createResult<R>(id: string, result: R): RpcResult<R>
 export declare function createError(
