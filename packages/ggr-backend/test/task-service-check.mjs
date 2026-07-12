@@ -63,8 +63,41 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     stopTimeoutMs: 5
   })
   await service.start({ workerId: 'auto' })
-  await service.stop({ workerId: 'auto' })
+  const stopping = service.stop({ workerId: 'auto' })
+  assert.equal(service.list()[0].status, 'stopping')
+  await stopping
   assert.deepEqual(child.killSignals, ['SIGTERM', 'SIGKILL'])
+}
+
+{
+  const events = []
+  const child = fakeChild(150, { exitOnSignal: false })
+  const service = createTaskService({
+    spawnProcess: () => child,
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: (event, data) => events.push({ event, data }),
+    stopTimeoutMs: 5,
+    diagnosticLineBytes: 32,
+    diagnosticStreamBytes: 64
+  })
+  await service.start({ workerId: 'auto' })
+  child.stdout.emit('data', `${'a'.repeat(20)}token=boundary-secret-that-must-not-leak`)
+  child.stdout.emit('data', 'x'.repeat(1024 * 1024))
+  child.stdout.emit('data', '\n')
+  for (let index = 0; index < 10; index++) child.stdout.emit('data', `${String(index).repeat(30)}\n`)
+
+  const [running] = service.list()
+  assert(running.recentStdout.every((line) => Buffer.byteLength(line) <= 32))
+  assert(running.recentStdout.reduce((bytes, line) => bytes + Buffer.byteLength(line), 0) <= 64)
+  assert(events.filter(({ event }) => event === 'task.progress').every(({ data }) => Buffer.byteLength(data.line) <= 32))
+  assert(!JSON.stringify(events).includes('boundary-secret'))
+
+  child.stderr.emit('data', `password=no-newline-secret${'z'.repeat(1024 * 1024)}`)
+  child.emit('exit', 0, null)
+  const stderrProgress = events.find(({ event, data }) => event === 'task.progress' && data.stream === 'stderr')
+  assert(stderrProgress)
+  assert(Buffer.byteLength(stderrProgress.data.line) <= 32)
+  assert(!JSON.stringify(events).includes('no-newline-secret'))
 }
 
 {

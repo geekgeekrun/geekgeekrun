@@ -49,48 +49,176 @@ async function writePrivateJson(filePath, value) {
   }
 }
 
-async function withQueueLock(queueFilePath, operation) {
+function processIsAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return error?.code !== 'ESRCH'
+  }
+}
+
+async function readLockSnapshot(lockPath) {
+  let handle
+  try {
+    handle = await fs.open(lockPath, 'r')
+    const [stat, content] = await Promise.all([handle.stat(), handle.readFile('utf8')])
+    const state = JSON.parse(content)
+    return { state, dev: stat.dev, ino: stat.ino }
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error instanceof SyntaxError) return null
+    throw error
+  } finally {
+    await handle?.close().catch(() => {})
+  }
+}
+
+function sameLock(left, right) {
+  const leftToken = left?.state?.token ?? left?.token
+  const rightToken = right?.state?.token ?? right?.token
+  return Boolean(left && right && left.dev === right.dev && left.ino === right.ino && leftToken === rightToken)
+}
+
+async function writeHolderState(holder, leaseAt) {
+  const state = { token: holder.token, pid: holder.pid, leaseAt }
+  const payload = Buffer.from(JSON.stringify(state))
+  let offset = 0
+  while (offset < payload.length) {
+    const { bytesWritten } = await holder.handle.write(payload, offset, payload.length - offset, offset)
+    offset += bytesWritten
+  }
+  await holder.handle.truncate(payload.length)
+  await holder.handle.sync()
+  holder.leaseAt = leaseAt
+}
+
+async function tryCreateHolder(lockPath) {
+  let handle
+  let holder
+  try {
+    handle = await fs.open(lockPath, 'wx', PRIVATE_FILE_MODE)
+    const stat = await handle.stat()
+    holder = { handle, token: randomUUID(), pid: process.pid, dev: stat.dev, ino: stat.ino }
+    await writeHolderState(holder, Date.now())
+    return holder
+  } catch (error) {
+    if (error?.code === 'EEXIST') return null
+    if (holder) {
+      const pathStat = await fs.lstat(lockPath).catch(() => null)
+      if (pathStat?.dev === holder.dev && pathStat?.ino === holder.ino) await fs.unlink(lockPath).catch(() => {})
+    }
+    await handle?.close().catch(() => {})
+    throw error
+  }
+}
+
+async function refreshHolder(lockPath, holder) {
+  const current = await readLockSnapshot(lockPath)
+  if (!sameLock(holder, current)) return false
+  await writeHolderState(holder, Date.now())
+  return true
+}
+
+async function removeIfOwned(lockPath, holder) {
+  const current = await readLockSnapshot(lockPath)
+  if (!sameLock(holder, current)) return false
+  const pathStat = await fs.lstat(lockPath).catch((error) => error?.code === 'ENOENT' ? null : Promise.reject(error))
+  if (!pathStat || pathStat.dev !== holder.dev || pathStat.ino !== holder.ino) return false
+  const final = await readLockSnapshot(lockPath)
+  if (!sameLock(holder, final)) return false
+  await fs.unlink(lockPath).catch((error) => { if (error?.code !== 'ENOENT') throw error })
+  return true
+}
+
+async function breakExpiredLockWithoutCompetition(lockPath, { staleMs, isProcessAlive }) {
+  const observed = await readLockSnapshot(lockPath)
+  if (!observed || !Number.isFinite(observed.state?.leaseAt)) return false
+  if (Date.now() - observed.state.leaseAt <= staleMs || await isProcessAlive(observed.state.pid)) return false
+
+  const current = await readLockSnapshot(lockPath)
+  if (!sameLock(observed, current)) return false
+  if (Date.now() - current.state.leaseAt <= staleMs || await isProcessAlive(current.state.pid)) return false
+  const final = await readLockSnapshot(lockPath)
+  if (!sameLock(current, final)) return false
+  if (Date.now() - final.state.leaseAt <= staleMs) return false
+  const pathStat = await fs.lstat(lockPath).catch((error) => error?.code === 'ENOENT' ? null : Promise.reject(error))
+  if (!pathStat || pathStat.dev !== final.dev || pathStat.ino !== final.ino) return false
+  await fs.unlink(lockPath).catch((error) => { if (error?.code !== 'ENOENT') throw error })
+  return true
+}
+
+async function breakExpiredLock(lockPath, options) {
+  const cleanerPath = `${lockPath}.clean`
+  const cleaner = await tryCreateHolder(cleanerPath)
+  if (!cleaner) return false
+  try {
+    return await breakExpiredLockWithoutCompetition(lockPath, options)
+  } finally {
+    await removeIfOwned(cleanerPath, cleaner)
+    await cleaner.handle.close().catch(() => {})
+  }
+}
+
+async function withQueueLock(queueFilePath, operation, {
+  timeoutMs = LOCK_TIMEOUT_MS,
+  staleMs = LOCK_STALE_MS,
+  retryMs = LOCK_RETRY_MS,
+  heartbeatMs = Math.max(1, Math.floor(staleMs / 3)),
+  isProcessAlive = processIsAlive
+} = {}) {
   const directory = path.dirname(queueFilePath)
   const lockPath = `${queueFilePath}.lock`
-  const deadline = Date.now() + LOCK_TIMEOUT_MS
-  let lockHandle
+  const deadline = Date.now() + timeoutMs
+  let holder
 
   await fs.mkdir(directory, { recursive: true, mode: PRIVATE_DIR_MODE })
   await fs.chmod(directory, PRIVATE_DIR_MODE)
-  while (!lockHandle) {
-    try {
-      lockHandle = await fs.open(lockPath, 'wx', PRIVATE_FILE_MODE)
-    } catch (error) {
-      if (error?.code !== 'EEXIST') throw error
-      const lockInfo = await fs.stat(lockPath).catch(() => null)
-      if (lockInfo && Date.now() - lockInfo.mtimeMs > LOCK_STALE_MS) {
-        await fs.unlink(lockPath).catch(() => {})
-        continue
-      }
-      if (Date.now() >= deadline) throw new Error(`Timed out waiting for approval queue lock: ${queueFilePath}`)
-      await sleep(LOCK_RETRY_MS)
-    }
+  while (!holder) {
+    holder = await tryCreateHolder(lockPath)
+    if (holder) break
+    if (await breakExpiredLock(lockPath, { staleMs, isProcessAlive })) continue
+    if (Date.now() >= deadline) throw new Error(`Timed out waiting for approval queue lock: ${queueFilePath}`)
+    await sleep(retryMs)
   }
 
+  let heartbeats = Promise.resolve()
+  const heartbeat = setInterval(() => {
+    heartbeats = heartbeats.then(() => refreshHolder(lockPath, holder)).catch(() => false)
+  }, heartbeatMs)
   try {
     return await operation()
   } finally {
-    await lockHandle.close().catch(() => {})
-    await fs.unlink(lockPath).catch(() => {})
+    clearInterval(heartbeat)
+    await heartbeats
+    await removeIfOwned(lockPath, holder)
+    await holder.handle.close().catch(() => {})
   }
 }
 
 export function createApprovalService({
   queueFilePath = defaultApprovalQueueFilePath(),
   emit = () => {},
-  clock = () => new Date()
+  clock = () => new Date(),
+  lockTimeoutMs,
+  lockStaleMs,
+  lockRetryMs,
+  lockHeartbeatMs,
+  isProcessAlive
 } = {}) {
+  const lockOptions = {
+    timeoutMs: lockTimeoutMs,
+    staleMs: lockStaleMs,
+    retryMs: lockRetryMs,
+    heartbeatMs: lockHeartbeatMs,
+    isProcessAlive
+  }
   async function list({ includeAll = false } = {}) {
     return withQueueLock(queueFilePath, async () => {
       const queue = await readQueueFile(queueFilePath)
       if (!Array.isArray(queue)) return []
       return includeAll ? queue : queue.filter((item) => item.status === 'pending')
-    })
+    }, lockOptions)
   }
 
   async function update(updater) {
@@ -101,7 +229,7 @@ export function createApprovalService({
       const result = await updater(queue)
       await writePrivateJson(queueFilePath, queue)
       return result
-    })
+    }, lockOptions)
   }
 
   async function setStatus({ id, status, reason = '', extra = {} }) {
