@@ -33,22 +33,34 @@ function resumeMarkdown(resume) {
     ...(content.geekProjExpList ?? []).map((item) => `## ${item.name ?? ''}\n${item.projectDescription ?? ''}\n${item.performance ?? ''}`)].join('\n\n')
 }
 
-export async function requestNewMessageContent(chatRecords = [], { llmConfigIdForPick, runtimePaths = createRuntimePaths(os.homedir()), settings } = {}) {
+export async function requestNewMessageContent(chatRecords = [], { llmConfigIdForPick, runtimePaths = createRuntimePaths(os.homedir()), settings, recordUsage = async () => {}, complete = completes } = {}) {
   const llmConfigs = settings?.llm ?? JSON.parse(await fs.readFile(path.join(runtimePaths.configDir, 'llm.json'), 'utf8'))
-  const configs = llmConfigs.filter((item) => item.enabled !== false && (!llmConfigIdForPick?.length || llmConfigIdForPick.includes(item.id)))
+  if (llmConfigs.length === 1) Object.assign(llmConfigs[0], { enabled: true, serveWeight: 1 })
+  const configs = llmConfigs.filter((item) => item.enabled && (!llmConfigIdForPick?.length || llmConfigIdForPick.includes(item.id)))
   const resumes = JSON.parse(await fs.readFile(path.join(runtimePaths.configDir, 'resumes.json'), 'utf8'))
   const system = (await getValidTemplate({ type: 'rechat', runtimePaths })).replace(RESUME_PLACEHOLDER, resumeMarkdown(resumes?.[0]))
   const messages = [{ role: 'system', content: system }, { role: 'user', content: await getValidTemplate({ type: 'open', runtimePaths }) }]
   for (const record of chatRecords) messages.push({ role: record.isSelf === false ? 'user' : 'assistant', content: String(record.text ?? '') })
   let lastError
-  for (const config of configs) {
+  const remaining = [...configs]
+  while (remaining.length) {
+    const pool = remaining.flatMap((config) => Array(Math.max(1, Math.min(100, Math.floor(Number(config.serveWeight) || 1)))).fill(config))
+    const config = pool[Math.floor(Math.random() * pool.length)]
+    const usageRecord = { providerCompleteApiUrl: config.providerCompleteApiUrl, model: config.model, providerApiSecret: config.providerApiSecret, requestStartTime: new Date(), hasError: false, errorMessage: '' }
     try {
-      const completion = await completes({ baseURL: config.providerCompleteApiUrl, apiKey: config.providerApiSecret, model: config.model }, messages)
+      const completion = await complete({ baseURL: config.providerCompleteApiUrl, apiKey: config.providerApiSecret, model: config.model }, messages)
       const raw = completion?.choices?.[0]?.message?.content ?? ''
       const responseText = JSON.parse(raw.replace(/^```json\s*/m, '').replace(/```$/m, '')).response?.replace(/。$/, '')
       if (!responseText) throw new Error('empty LLM response')
-      return { responseText, usedLlmConfig: config, recordInfo: { requestEndTime: new Date() } }
-    } catch (error) { lastError = error }
+      Object.assign(usageRecord, { requestEndTime: new Date(), completionTokens: completion.usage?.completion_tokens ?? null, promptTokens: completion.usage?.prompt_tokens ?? null, totalTokens: completion.usage?.total_tokens ?? null })
+      await recordUsage(usageRecord)
+      return { responseText, usedLlmConfig: config, recordInfo: usageRecord }
+    } catch (error) {
+      lastError = error
+      Object.assign(usageRecord, { requestEndTime: new Date(), hasError: true, errorMessage: error instanceof Error ? error.message : String(error) })
+      await recordUsage(usageRecord).catch(() => {})
+      remaining.splice(remaining.indexOf(config), 1)
+    }
   }
   throw Object.assign(lastError ?? new Error('CANNOT_FIND_A_USABLE_MODEL'), { code: 'LLM_UNAVAILABLE' })
 }

@@ -24,6 +24,7 @@ export async function runReadNoReply({ runtime, taskReporter, shouldStop }) {
   } catch (error) {
     const stable = stableError(error)
     taskReporter.emit('task.progress', { workerId: WORKER_ID, state: 'failed', code: stable.code, message: stable.message })
+    stable.readNoReplyFailureReported = true
     throw stable
   } finally {
     await runtime.close?.()
@@ -33,9 +34,15 @@ export async function runReadNoReply({ runtime, taskReporter, shouldStop }) {
 export async function runReadNoReplyEntry({ createRuntime, taskReporter = createWorkerReporter(), shouldStop } = {}) {
   if (typeof createRuntime !== 'function') throw new TypeError('createRuntime is required')
   taskReporter.emit('task.progress', { workerId: WORKER_ID, state: 'starting' })
-  const runtime = await createRuntime({ taskReporter })
-  await runReadNoReply({ runtime, taskReporter, shouldStop: shouldStop ?? runtime.shouldStop ?? (() => false) })
-  return 0
+  try {
+    const runtime = await createRuntime({ taskReporter })
+    await runReadNoReply({ runtime, taskReporter, shouldStop: shouldStop ?? runtime.shouldStop ?? (() => false) })
+    return 0
+  } catch (error) {
+    const stable = stableError(error)
+    if (!stable.readNoReplyFailureReported) taskReporter.emit('task.progress', { workerId: WORKER_ID, state: 'failed', code: stable.code, message: stable.message })
+    throw stable
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

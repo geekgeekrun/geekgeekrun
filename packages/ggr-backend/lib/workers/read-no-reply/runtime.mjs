@@ -7,6 +7,8 @@ import { createRuntimePaths } from '../../runtime-paths.mjs'
 import { createApprovalService } from '../../services/approval-service.mjs'
 import { processConversations } from './traversal.mjs'
 import { getGptContent } from './llm.mjs'
+import { createBrowserHistory } from '../../services/browser/dependencies/browser-history.mjs'
+import { cookieListIsValid } from './traversal.mjs'
 
 const FATAL_CODES = ['COOKIE_INVALID', 'LOGIN_STATUS_INVALID', 'ERR_INTERNET_DISCONNECTED', 'ACCESS_IS_DENIED', 'PUPPETEER_IS_NOT_EXECUTABLE', 'LLM_UNAVAILABLE']
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -31,11 +33,18 @@ async function openDatabase(paths) {
 
 async function openSession(paths) {
   const cookies = await readJson(path.join(paths.storageDir, 'boss-cookies.json'), [])
-  if (!Array.isArray(cookies) || !cookies.length) throw Object.assign(new Error('Boss cookies are required'), { code: 'COOKIE_INVALID' })
+  if (!cookieListIsValid(cookies)) throw Object.assign(new Error('Boss cookies are invalid'), { code: 'COOKIE_INVALID' })
+  const browserInfo = await createBrowserHistory({ storageDir: paths.storageDir }).read()
+  if (!browserInfo?.executablePath) throw Object.assign(new Error('PUPPETEER_IS_NOT_EXECUTABLE'), { code: 'PUPPETEER_IS_NOT_EXECUTABLE' })
   const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
   const { setDomainLocalStorage } = await import('@geekgeekrun/utils/puppeteer/local-storage.mjs')
   const { puppeteer } = await initPuppeteer()
-  const browser = await puppeteer.launch({ headless: false, ignoreHTTPSErrors: true, defaultViewport: { width: 1440, height: 800 } })
+  let browser
+  try { browser = await puppeteer.launch({ executablePath: browserInfo.executablePath, headless: false, ignoreHTTPSErrors: true, defaultViewport: { width: 1440, height: 800 } }) }
+  catch (error) {
+    if (/Could not find Chrome|no executable was found|executable/i.test(error?.message ?? '')) error.code = 'PUPPETEER_IS_NOT_EXECUTABLE'
+    throw error
+  }
   try {
     const [page] = await browser.pages()
     for (const cookie of cookies) await page.setCookie({ ...cookie, ...(Object.hasOwn(cookie, 'sameSite') ? { sameSite: 'unspecified' } : {}) })
@@ -95,6 +104,36 @@ async function saveCurrentChatRecords(page, database) {
   await saveChatMessageRecord(database, mapped)
 }
 
+async function recordLlmUsage(database, payload) {
+  const { saveGptCompletionRequestRecord } = await import('../../../../sqlite-plugin/dist/handlers.js')
+  await saveGptCompletionRequestRecord(database, [{ ...payload, requestScene: 2 }])
+}
+
+async function checkJobIsClosed({ page, database, conversation }) {
+  if (!conversation?.encryptJobId) return false
+  const { getJobHireStatusRecord, saveJobHireStatusRecord } = await import('../../../../sqlite-plugin/dist/handlers.js')
+  let record = await getJobHireStatusRecord(database, conversation.encryptJobId)
+  if (!record || (record.hireStatus === 1 && Date.now() - Number(new Date(record.lastSeenDate)) > 6 * 60 * 60 * 1000)) {
+    const detail = await page.$('#main .chat-conversation [ka="geek_chat_job_detail"] .right-content')
+    if (detail) {
+      let detailPage
+      try {
+        const targetPromise = page.browser().waitForTarget((target) => target.url().startsWith(`https://www.zhipin.com/job_detail/${conversation.encryptJobId}`), { timeout: 15000 })
+        await detail.click()
+        detailPage = await (await targetPromise).page()
+        await detailPage.waitForFunction(() => Boolean(document.querySelector('#main .job-banner')) || document.documentElement.innerText?.includes('您访问的页面不存在'), { timeout: 15000 })
+        const status = await detailPage.evaluate(() => {
+          if (document.documentElement.innerText?.includes('您访问的页面不存在')) return 3
+          return document.querySelector('#main .job-banner .job-status')?.textContent?.trim() === '职位已关闭' ? 2 : 1
+        })
+        await saveJobHireStatusRecord(database, { encryptJobId: conversation.encryptJobId, hireStatus: status, lastSeenDate: new Date() })
+      } catch {} finally { await detailPage?.close().catch(() => {}) }
+      record = await getJobHireStatusRecord(database, conversation.encryptJobId)
+    }
+  }
+  return Boolean(record && record.hireStatus !== 1)
+}
+
 export async function createReadNoReplyRuntime({ runtimePaths = createRuntimePaths(os.homedir()), dependencies = {}, rerunInterval = Number.isFinite(Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL)) ? Number(process.env.MAIN_BOSSGEEKGO_RERUN_INTERVAL) : 5000 } = {}) {
   const deps = { ...defaultDependencies(runtimePaths), ...dependencies }
   const settings = await deps.loadSettings(runtimePaths)
@@ -114,8 +153,9 @@ export async function createReadNoReplyRuntime({ runtimePaths = createRuntimePat
         await deps.processConversations({
           ...session, database, settings, taskReporter, shouldStop, approval: deps.approval,
           operations: {
-            requestReviewDraft: (messages) => getGptContent(messages, { runtimePaths, settings }),
-            saveCurrentChatRecords: (page) => saveCurrentChatRecords(page, database)
+            requestReviewDraft: (messages) => getGptContent(messages, { runtimePaths, settings, recordUsage: (record) => recordLlmUsage(database, record) }),
+            saveCurrentChatRecords: (page) => saveCurrentChatRecords(page, database),
+            checkJobIsClosed
           }
         })
       } catch (error) {
