@@ -64,19 +64,78 @@ try {
   {
     const stale = { token: 'stale-primary', pid: absentPid, leaseAt: 0 }
     const orphanedCleaner = { token: 'orphaned-cleaner', pid: absentPid, leaseAt: 0 }
+    const legacyRecovery = `${lockPath}.clean.recover`
     await fs.writeFile(lockPath, JSON.stringify(stale))
     await fs.writeFile(`${lockPath}.clean`, JSON.stringify(orphanedCleaner))
+    await fs.writeFile(legacyRecovery, '')
     const old = new Date(Date.now() - 1000)
     await fs.utimes(lockPath, old, old)
     await fs.utimes(`${lockPath}.clean`, old, old)
+    await fs.utimes(legacyRecovery, old, old)
+    const options = { queueFilePath, lockStaleMs: 20, lockRetryMs: 2, lockTimeoutMs: 1000 }
+    const recovered = await Promise.all([
+      createApprovalService(options).list(),
+      createApprovalService(options).list(),
+      createApprovalService(options).list()
+    ])
+    assert(recovered.every((items) => items.length === 1))
+    await assert.rejects(fs.lstat(`${lockPath}.clean`), { code: 'ENOENT' })
+    await assert.rejects(fs.lstat(legacyRecovery), { code: 'ENOENT' })
+    assert.equal((await fs.readdir(tempDir)).some((entry) => entry.includes('.clean.recover.')), false)
+  }
+
+  {
+    const stale = { token: 'stale-with-intent', pid: absentPid, leaseAt: 0 }
+    const orphanedCleaner = { token: 'cleaner-with-intent', pid: absentPid, leaseAt: 0 }
+    const orphanedIntentPath = `${lockPath}.clean.recover.00000000-0000-4000-8000-000000000000`
+    const orphanedIntent = { token: '00000000-0000-4000-8000-000000000000', pid: absentPid, leaseAt: 0 }
+    await fs.writeFile(lockPath, JSON.stringify(stale))
+    await fs.writeFile(`${lockPath}.clean`, JSON.stringify(orphanedCleaner))
+    await fs.writeFile(orphanedIntentPath, JSON.stringify(orphanedIntent))
+    const old = new Date(Date.now() - 1000)
+    await Promise.all([
+      fs.utimes(lockPath, old, old),
+      fs.utimes(`${lockPath}.clean`, old, old),
+      fs.utimes(orphanedIntentPath, old, old)
+    ])
     const recovered = await createApprovalService({
       queueFilePath,
       lockStaleMs: 20,
       lockRetryMs: 2,
-      lockTimeoutMs: 500
+      lockTimeoutMs: 1000
     }).list()
     assert.equal(recovered.length, 1)
-    await assert.rejects(fs.lstat(`${lockPath}.clean`), { code: 'ENOENT' })
+    await assert.rejects(fs.lstat(orphanedIntentPath), { code: 'ENOENT' })
+  }
+
+  {
+    const stalePrimary = { token: 'primary-behind-cleaner', pid: absentPid, leaseAt: 0 }
+    const staleCleaner = { token: 'replace-cleaner', pid: absentPid, leaseAt: 0 }
+    const successor = { token: 'live-cleaner-successor', pid: process.pid, leaseAt: Date.now() }
+    await fs.writeFile(lockPath, JSON.stringify(stalePrimary))
+    await fs.writeFile(`${lockPath}.clean`, JSON.stringify(staleCleaner))
+    const old = new Date(Date.now() - 1000)
+    await fs.utimes(lockPath, old, old)
+    await fs.utimes(`${lockPath}.clean`, old, old)
+    let replacedCleaner = false
+    const options = {
+      queueFilePath,
+      lockStaleMs: 20,
+      lockRetryMs: 2,
+      lockTimeoutMs: 60,
+      isProcessAlive(pid) {
+        if (pid === absentPid && !replacedCleaner) {
+          replacedCleaner = true
+          fsSync.unlinkSync(`${lockPath}.clean`)
+          fsSync.writeFileSync(`${lockPath}.clean`, JSON.stringify(successor), { mode: 0o600 })
+        }
+        return pid === process.pid
+      }
+    }
+    await assert.rejects(createApprovalService(options).list(), /Timed out waiting/)
+    assert.deepEqual(JSON.parse(await fs.readFile(`${lockPath}.clean`, 'utf8')), successor)
+    await fs.unlink(`${lockPath}.clean`)
+    await fs.unlink(lockPath)
   }
 
   {

@@ -178,30 +178,6 @@ async function breakExpiredLockWithoutCompetition(lockPath, options) {
   return true
 }
 
-async function recoverOrphanedCleaner(cleanerPath, options) {
-  const observed = await readLockSnapshot(cleanerPath)
-  if (!await mayRecover(observed, options)) return false
-  const electionPath = `${cleanerPath}.recover`
-  try {
-    await fs.link(cleanerPath, electionPath)
-  } catch (error) {
-    if (error?.code === 'EEXIST' || error?.code === 'ENOENT') return false
-    throw error
-  }
-  try {
-    const election = await readLockSnapshot(electionPath)
-    if (!sameLock(observed, election)) return false
-    const current = await readLockSnapshot(cleanerPath)
-    if (!sameLock(election, current) || !await mayRecover(current, options)) return false
-    const pathStat = await fs.lstat(cleanerPath).catch((error) => error?.code === 'ENOENT' ? null : Promise.reject(error))
-    if (!pathStat || pathStat.dev !== election.dev || pathStat.ino !== election.ino) return false
-    await fs.unlink(cleanerPath).catch((error) => { if (error?.code !== 'ENOENT') throw error })
-    return true
-  } finally {
-    await fs.unlink(electionPath).catch(() => {})
-  }
-}
-
 function startHeartbeat(lockPath, holder, heartbeatMs) {
   let operations = Promise.resolve()
   const timer = setInterval(() => {
@@ -213,15 +189,77 @@ function startHeartbeat(lockPath, holder, heartbeatMs) {
   }
 }
 
+async function recoveryState(cleanerPath, options) {
+  const directory = path.dirname(cleanerPath)
+  const basename = path.basename(cleanerPath)
+  const legacyPath = `${cleanerPath}.recover`
+  const intentPrefix = `${basename}.recover.`
+  let blocked = false
+
+  let legacy = await readLockSnapshot(legacyPath)
+  if (legacy) {
+    if (await mayRecover(legacy, options)) {
+      await breakExpiredLockWithoutCompetition(legacyPath, options)
+      legacy = await readLockSnapshot(legacyPath)
+    }
+    if (legacy) blocked = true
+  }
+
+  const intents = []
+  const entries = await fs.readdir(directory).catch((error) => error?.code === 'ENOENT' ? [] : Promise.reject(error))
+  for (const entry of entries) {
+    if (!entry.startsWith(intentPrefix) || entry.endsWith('.tmp')) continue
+    const intentPath = path.join(directory, entry)
+    let snapshot = await readLockSnapshot(intentPath)
+    if (!snapshot) continue
+    if (await mayRecover(snapshot, options)) {
+      await breakExpiredLockWithoutCompetition(intentPath, options)
+      snapshot = await readLockSnapshot(intentPath)
+      if (!snapshot) continue
+    }
+    if (snapshot.malformed) blocked = true
+    else intents.push({ path: intentPath, snapshot })
+  }
+  intents.sort((left, right) => left.snapshot.state.token.localeCompare(right.snapshot.state.token))
+  return { blocked, intents }
+}
+
+async function recoverOrphanedCleaner(cleanerPath, options) {
+  const observed = await readLockSnapshot(cleanerPath)
+  if (!await mayRecover(observed, options)) return false
+
+  const intentPath = `${cleanerPath}.recover.${randomUUID()}`
+  const intent = await tryCreateHolder(intentPath)
+  if (!intent) return false
+  const stopHeartbeat = startHeartbeat(intentPath, intent, options.heartbeatMs)
+  try {
+    await sleep(0)
+    const state = await recoveryState(cleanerPath, options)
+    if (state.blocked || state.intents[0]?.snapshot.state.token !== intent.token) return false
+    return breakExpiredLockWithoutCompetition(cleanerPath, options)
+  } finally {
+    await stopHeartbeat()
+    await removeIfOwned(intentPath, intent)
+    await intent.handle.close().catch(() => {})
+  }
+}
+
 async function breakExpiredLock(lockPath, options) {
   const cleanerPath = `${lockPath}.clean`
-  const cleaner = await tryCreateHolder(cleanerPath)
-  if (!cleaner) {
-    await recoverOrphanedCleaner(cleanerPath, options)
+  const cleanerSnapshot = await readLockSnapshot(cleanerPath)
+  if (cleanerSnapshot) {
+    if (await mayRecover(cleanerSnapshot, options)) await recoverOrphanedCleaner(cleanerPath, options)
     return false
   }
+
+  const pendingRecovery = await recoveryState(cleanerPath, options)
+  if (pendingRecovery.blocked || pendingRecovery.intents.length) return false
+  const cleaner = await tryCreateHolder(cleanerPath)
+  if (!cleaner) return false
   const stopHeartbeat = startHeartbeat(cleanerPath, cleaner, options.heartbeatMs)
   try {
+    const recoveryAfterAcquire = await recoveryState(cleanerPath, options)
+    if (recoveryAfterAcquire.blocked || recoveryAfterAcquire.intents.length) return false
     return await breakExpiredLockWithoutCompetition(lockPath, options)
   } finally {
     await stopHeartbeat()
