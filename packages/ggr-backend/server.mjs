@@ -9,6 +9,14 @@ import { createRuntimePaths, migrateLegacyLayout } from './lib/runtime-paths.mjs
 import { createConfigService } from './lib/services/config-service.mjs'
 import { createApprovalService } from './lib/services/approval-service.mjs'
 import { createTaskService } from './lib/services/task-service.mjs'
+import { createRecordsService } from './lib/services/records-service.mjs'
+import { createBrowserService } from './lib/services/browser-service.mjs'
+import { createBackendBrowserRuntime } from './lib/services/browser/runtime.mjs'
+
+const DEFAULT_WORKER_ENTRIES = Object.freeze({
+  geekAutoStartWithBossMain: fileURLToPath(new URL('./lib/workers/auto-chat.mjs', import.meta.url)),
+  readNoReplyAutoReminderMain: fileURLToPath(new URL('./lib/workers/read-no-reply.mjs', import.meta.url))
+})
 
 export async function createBackendServer({ socketPath, version, runtimePaths, services = {}, verifyPeer, clock }) {
   if (!runtimePaths) throw new TypeError('runtimePaths are required')
@@ -18,7 +26,7 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
   const emit = (event, data) => rpc?.publish(event, data)
   const task = services.task ?? createTaskService({
     spawnProcess: services.spawnProcess,
-    workerEntries: services.workerEntries ?? {},
+    workerEntries: services.workerEntries ?? DEFAULT_WORKER_ENTRIES,
     emit,
     stopTimeoutMs: services.stopTimeoutMs
   })
@@ -27,6 +35,8 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     emit,
     clock
   })
+  const records = services.records ?? createRecordsService({ databaseFile: runtimePaths.databaseFile })
+  const browser = services.browser ?? createBrowserService({ runtime: services.browserRuntime ?? createBackendBrowserRuntime({ runtimePaths }), emit })
   const router = createRouter()
     .register(METHODS.SYSTEM_HANDSHAKE, (params) => {
       try { assertHandshake(params) } catch (error) { throw Object.assign(error, { code: 'INVALID_PARAMS' }) }
@@ -36,6 +46,19 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     .register(METHODS.SYSTEM_HEALTH, () => ({ ready: true, version, protocolVersion: PROTOCOL_VERSION }))
     .register(METHODS.CONFIG_READ, (params) => config.read(params))
     .register(METHODS.CONFIG_WRITE, (params) => config.write(params))
+    .register(METHODS.RECORDS_LIST, (params) => records.list(params))
+    .register(METHODS.ACCOUNT_STATUS, (params) => {
+      if (Object.keys(params).length) throw Object.assign(new Error('account.status does not accept parameters'), { code: 'INVALID_PARAMS' })
+      return records.accountStatus()
+    })
+    .register(METHODS.BROWSER_OPEN_LOGIN, (params) => {
+      if (Object.keys(params).length) throw Object.assign(new Error('browser.openLogin does not accept parameters'), { code: 'INVALID_PARAMS' })
+      return browser.openLogin()
+    })
+    .register(METHODS.BROWSER_OPEN_BOSS, (params) => {
+      if (Object.keys(params).length) throw Object.assign(new Error('browser.openBoss does not accept parameters'), { code: 'INVALID_PARAMS' })
+      return browser.openBoss()
+    })
 
   registerServiceHandlers(router, { methods: METHODS, task, approval })
 
@@ -54,6 +77,8 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     async stop() {
       if (closed) return
       await task.stopAll?.()
+      await browser.close?.()
+      await records.close?.()
       await rpc.stop()
       await config.close?.()
       await logger.close?.()

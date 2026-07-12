@@ -7,7 +7,13 @@
     ".": "./server.mjs"
   },
   "dependencies": {
-    "@geekgeekrun/ggr-protocol": "workspace:*"
+    "@geekgeekrun/dingtalk-plugin": "workspace:*",
+    "@geekgeekrun/geek-auto-start-chat-with-boss": "workspace:*",
+    "@geekgeekrun/ggr-protocol": "workspace:*",
+    "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
+    "@geekgeekrun/sqlite-plugin": "workspace:*",
+    "@geekgeekrun/utils": "workspace:*",
+    "tapable": "^2.2.1"
   },
   "devDependencies": {
     "@geekgeekrun/ggr-client": "workspace:*"

@@ -67,9 +67,27 @@ importers:
 
   packages/ggr-backend:
     dependencies:
+      '@geekgeekrun/dingtalk-plugin':
+        specifier: workspace:*
+        version: link:../dingtalk-plugin
+      '@geekgeekrun/geek-auto-start-chat-with-boss':
+        specifier: workspace:*
+        version: link:../geek-auto-start-chat-with-boss
       '@geekgeekrun/ggr-protocol':
         specifier: workspace:*
         version: link:../ggr-protocol
+      '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
+        specifier: workspace:*
+        version: link:../launch-bosszhipin-login-page-with-preload-extension
+      '@geekgeekrun/sqlite-plugin':
+        specifier: workspace:*
+        version: link:../sqlite-plugin
+      '@geekgeekrun/utils':
+        specifier: workspace:*
+        version: link:../utils
+      tapable:
+        specifier: ^2.2.1
+        version: 2.3.3
     devDependencies:
       '@geekgeekrun/ggr-client':
         specifier: workspace:*
