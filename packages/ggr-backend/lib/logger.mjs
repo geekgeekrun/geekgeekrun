@@ -8,6 +8,14 @@ export async function createLogger({ filePath, clock = () => new Date(), maxByte
   let handle = await fs.open(filePath, 'a', 0o600)
   await fs.chmod(filePath, 0o600)
   let size = (await handle.stat()).size
+  let operations = Promise.resolve()
+  let closed = false
+
+  function serialize(operation) {
+    const pending = operations.catch(() => {}).then(operation)
+    operations = pending
+    return pending
+  }
 
   async function rotate(incomingBytes) {
     if (size === 0 || size + incomingBytes <= maxBytes) return
@@ -25,16 +33,22 @@ export async function createLogger({ filePath, clock = () => new Date(), maxByte
       const record = redactSecrets({ timestamp: clock().toISOString(), level, message, ...fields })
       const line = `${JSON.stringify(record)}\n`
       const bytes = Buffer.byteLength(line)
-      await rotate(bytes)
-      await handle.write(line)
-      size += bytes
+      return serialize(async () => {
+        if (closed) throw new Error('Logger is closed')
+        await rotate(bytes)
+        await handle.write(line)
+        size += bytes
+      })
     },
     async close() {
-      if (!handle) return
-      const target = handle
-      handle = null
-      await target.sync()
-      await target.close()
+      return serialize(async () => {
+        if (closed) return
+        closed = true
+        const target = handle
+        handle = null
+        await target.sync()
+        await target.close()
+      })
     }
   }
 }

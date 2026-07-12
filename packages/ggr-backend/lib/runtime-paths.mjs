@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
@@ -107,16 +107,21 @@ async function copyPrivateTree(ops, source, destination) {
 
 async function verifyCopy(ops, source, destination, { excludePublicDb = false } = {}) {
   const sourceEntries = (await ops.readdir(source)).filter((entry) => !excludePublicDb || entry !== 'public.db').sort()
-  const destinationEntries = (await ops.readdir(destination)).sort()
+  const destinationEntries = (await ops.readdir(destination)).filter((entry) => !excludePublicDb || entry !== 'public.db').sort()
   if (JSON.stringify(sourceEntries) !== JSON.stringify(destinationEntries)) throw new Error(`Migration verification failed: ${source}`)
   for (const entry of sourceEntries) {
     const fromPath = path.join(source, entry)
     const toPath = path.join(destination, entry)
     const [from, to] = await Promise.all([ops.lstat(fromPath), ops.lstat(toPath)])
     if (from.isSymbolicLink()) throw symlinkError(fromPath)
-    if (from.isDirectory() !== to.isDirectory() || from.isFile() !== to.isFile() || (from.isFile() && from.size !== to.size)) throw new Error(`Migration verification failed: ${fromPath}`)
+    if (from.isDirectory() !== to.isDirectory() || from.isFile() !== to.isFile()) throw new Error(`Migration verification failed: ${fromPath}`)
     if (from.isDirectory()) await verifyCopy(ops, fromPath, toPath)
+    if (from.isFile() && await fileDigest(ops, fromPath) !== await fileDigest(ops, toPath)) throw new Error(`Migration verification failed: ${fromPath}`)
   }
+}
+
+async function fileDigest(ops, target) {
+  return createHash('sha256').update(await ops.readFile(target)).digest('hex')
 }
 
 async function validateSymlink(ops, linkPath, expectedPath) {
@@ -145,13 +150,14 @@ export async function migrateLegacyLayout(paths, { fsOps = fs } = {}) {
   await privateDirectory(ops, paths.rootDir)
   const legacyConfig = path.join(paths.rootDir, 'config')
   const legacyStorage = path.join(paths.rootDir, 'storage')
-  const configInfo = await lstatOrNull(ops, legacyConfig)
-  const storageInfo = await lstatOrNull(ops, legacyStorage)
+  const backupConfig = `${legacyConfig}.migration-backup`
+  const backupStorage = `${legacyStorage}.migration-backup`
+  let configInfo = await lstatOrNull(ops, legacyConfig)
+  let storageInfo = await lstatOrNull(ops, legacyStorage)
 
   if (configInfo?.isSymbolicLink()) await validateSymlink(ops, legacyConfig, paths.configDir)
   if (storageInfo?.isSymbolicLink()) await validateSymlink(ops, legacyStorage, paths.storageDir)
-  if (configInfo?.isSymbolicLink() || storageInfo?.isSymbolicLink()) {
-    if (!configInfo?.isSymbolicLink() || !storageInfo?.isSymbolicLink()) throw new Error('Legacy layout is only partially migrated')
+  if (configInfo?.isSymbolicLink() && storageInfo?.isSymbolicLink()) {
     const publicDb = path.join(paths.storageDir, 'public.db')
     const dbInfo = await lstatOrNull(ops, publicDb)
     if (dbInfo?.isSymbolicLink()) await validateSymlink(ops, publicDb, paths.databaseFile)
@@ -160,10 +166,80 @@ export async function migrateLegacyLayout(paths, { fsOps = fs } = {}) {
     await validateMigratedTree(ops, paths.storageDir, new Map([[publicDb, paths.databaseFile]]))
     await privateDirectory(ops, paths.dataDir)
     if (!await lstatOrNull(ops, paths.layoutVersionFile)) await writeMarker(ops, paths)
+    await durableRemove(ops, backupConfig, { recursive: true, force: true })
+    await durableRemove(ops, backupStorage, { recursive: true, force: true })
+    for (const entry of await ops.readdir(paths.dataDir)) if (entry.startsWith('.migration-')) await durableRemove(ops, path.join(paths.dataDir, entry), { recursive: true, force: true })
     return
+  }
+  if ((configInfo?.isSymbolicLink() || storageInfo?.isSymbolicLink()) &&
+      !await lstatOrNull(ops, backupConfig) && !await lstatOrNull(ops, backupStorage)) {
+    throw new Error('Legacy layout is only partially migrated')
   }
 
   await privateDirectory(ops, paths.dataDir)
+  const stagingPaths = (await ops.readdir(paths.dataDir)).filter((entry) => entry.startsWith('.migration-')).map((entry) => path.join(paths.dataDir, entry))
+  const configBackupInfo = await lstatOrNull(ops, backupConfig)
+  const storageBackupInfo = await lstatOrNull(ops, backupStorage)
+  if (configBackupInfo || storageBackupInfo || stagingPaths.length) {
+    const installedConfig = await lstatOrNull(ops, paths.configDir)
+    const installedStorage = await lstatOrNull(ops, paths.storageDir)
+    const canCertify = configBackupInfo?.isDirectory() && storageBackupInfo?.isDirectory() && installedConfig?.isDirectory() && installedStorage?.isDirectory()
+    let certificationFailure
+    if (canCertify) {
+      try {
+        await validateLegacyTree(ops, backupConfig)
+        await validateLegacyTree(ops, backupStorage)
+        await verifyCopy(ops, backupConfig, paths.configDir)
+        await verifyCopy(ops, backupStorage, paths.storageDir, { excludePublicDb: true })
+        const sourceDatabase = path.join(backupStorage, 'public.db')
+        if (await lstatOrNull(ops, sourceDatabase)) {
+          if (!await lstatOrNull(ops, paths.databaseFile) || await fileDigest(ops, sourceDatabase) !== await fileDigest(ops, paths.databaseFile)) throw new Error('Migration verification failed: public.db')
+          const publicDb = path.join(paths.storageDir, 'public.db')
+          const publicDbInfo = await lstatOrNull(ops, publicDb)
+          if (publicDbInfo?.isSymbolicLink()) await validateSymlink(ops, publicDb, paths.databaseFile)
+          else if (publicDbInfo) throw new Error('Migrated public.db must be a compatibility symlink')
+          else await durableSymlink(ops, '../database.sqlite', publicDb)
+        }
+        for (const [linkPath, destination, expected] of [[legacyConfig, 'data/config', paths.configDir], [legacyStorage, 'data/storage', paths.storageDir]]) {
+          const info = await lstatOrNull(ops, linkPath)
+          if (info?.isSymbolicLink()) await validateSymlink(ops, linkPath, expected)
+          else if (info) throw new Error(`Cannot recover migration while legacy path exists: ${linkPath}`)
+          else await durableSymlink(ops, destination, linkPath)
+        }
+        await syncPath(ops, paths.storageDir)
+        await syncPath(ops, paths.dataDir)
+        await syncPath(ops, paths.rootDir)
+        await writeMarker(ops, paths)
+        await durableRemove(ops, backupConfig, { recursive: true, force: true })
+        await durableRemove(ops, backupStorage, { recursive: true, force: true })
+        for (const staged of stagingPaths) await durableRemove(ops, staged, { recursive: true, force: true })
+        return
+      } catch (error) {
+        certificationFailure = error
+      }
+    }
+
+    const restoreBackup = async (backup, original, installed) => {
+      if (!await lstatOrNull(ops, backup)) return
+      const originalInfo = await lstatOrNull(ops, original)
+      if (originalInfo?.isSymbolicLink()) await durableRemove(ops, original, { force: true })
+      else if (originalInfo) throw new Error(`Cannot roll back migration over existing path: ${original}`)
+      await durableRemove(ops, installed, { recursive: true, force: true })
+      await durableRename(ops, backup, original)
+    }
+    try {
+      await restoreBackup(backupConfig, legacyConfig, paths.configDir)
+      await restoreBackup(backupStorage, legacyStorage, paths.storageDir)
+      if (configBackupInfo || storageBackupInfo) await durableRemove(ops, paths.databaseFile, { force: true })
+      for (const staged of stagingPaths) await durableRemove(ops, staged, { recursive: true, force: true })
+    } catch (rollbackError) {
+      if (certificationFailure) throw migrationError(certificationFailure, [rollbackError])
+      throw rollbackError
+    }
+    configInfo = await lstatOrNull(ops, legacyConfig)
+    storageInfo = await lstatOrNull(ops, legacyStorage)
+  }
+
   if (!configInfo && !storageInfo) {
     await privateDirectory(ops, paths.configDir)
     await privateDirectory(ops, paths.storageDir)
@@ -179,8 +255,6 @@ export async function migrateLegacyLayout(paths, { fsOps = fs } = {}) {
   const stagedConfig = path.join(transaction, 'config')
   const stagedStorage = path.join(transaction, 'storage')
   const stagedDatabase = path.join(transaction, 'database.sqlite')
-  const backupConfig = `${legacyConfig}.migration-backup`
-  const backupStorage = `${legacyStorage}.migration-backup`
   const state = { databaseInstalled: false, committed: false }
   let failure
   try {
@@ -194,8 +268,8 @@ export async function migrateLegacyLayout(paths, { fsOps = fs } = {}) {
     await verifyCopy(ops, legacyConfig, stagedConfig)
     await verifyCopy(ops, legacyStorage, stagedStorage, { excludePublicDb: true })
     if (await lstatOrNull(ops, legacyDatabase)) {
-      const [sourceDatabase, copiedDatabase] = await Promise.all([ops.lstat(legacyDatabase), ops.lstat(stagedDatabase)])
-      if (!copiedDatabase.isFile() || sourceDatabase.size !== copiedDatabase.size) throw new Error('Migration verification failed: public.db')
+      const copiedDatabase = await ops.lstat(stagedDatabase)
+      if (!copiedDatabase.isFile() || await fileDigest(ops, legacyDatabase) !== await fileDigest(ops, stagedDatabase)) throw new Error('Migration verification failed: public.db')
     }
 
     if (await lstatOrNull(ops, backupConfig) || await lstatOrNull(ops, backupStorage)) throw new Error('Stale migration backup exists')

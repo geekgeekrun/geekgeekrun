@@ -7,6 +7,7 @@ import { createGgrClient } from '@geekgeekrun/ggr-client'
 import { createBackendServer } from '../server.mjs'
 import { createRuntimePaths } from '../lib/runtime-paths.mjs'
 import { createConfigService } from '../lib/services/config-service.mjs'
+import { createLogger } from '../lib/logger.mjs'
 
 const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-backend-'))
 const runtimePaths = createRuntimePaths(tempHome)
@@ -58,10 +59,32 @@ try {
   assert(!log.includes('hidden'))
   assert.equal((await fs.stat(runtimePaths.backendLog)).mode & 0o777, 0o600)
 
-  console.log('ggr backend server check passed')
 } finally {
   await backend.stop().catch(() => {})
   await fs.rm(tempHome, { recursive: true, force: true })
+}
+
+{
+  const logHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-logger-concurrency-'))
+  const logPath = path.join(logHome, 'backend.jsonl')
+  const logger = await createLogger({ filePath: logPath, maxBytes: 180 })
+  try {
+    await logger.write('info', 'prefill', { value: 'x'.repeat(80) })
+    const settled = await Promise.allSettled([
+      logger.write('info', 'concurrent-one', { value: 'a'.repeat(80) }),
+      logger.write('info', 'concurrent-two', { value: 'b'.repeat(80) })
+    ])
+    assert(settled.every(({ status }) => status === 'fulfilled'))
+    await logger.close()
+    for (const target of [logPath, `${logPath}.1`]) {
+      const content = await fs.readFile(target, 'utf8')
+      for (const line of content.trim().split('\n').filter(Boolean)) JSON.parse(line)
+      assert.equal((await fs.stat(target)).mode & 0o777, 0o600)
+    }
+  } finally {
+    await logger.close().catch(() => {})
+    await fs.rm(logHome, { recursive: true, force: true })
+  }
 }
 
 {
@@ -98,3 +121,5 @@ try {
     await fs.rm(delayedHome, { recursive: true, force: true })
   }
 }
+
+console.log('ggr backend server check passed')

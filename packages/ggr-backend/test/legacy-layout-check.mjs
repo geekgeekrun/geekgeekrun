@@ -44,6 +44,55 @@ async function fixture() {
 
 {
   const { home, paths } = await fixture()
+  const backupConfig = path.join(paths.rootDir, 'config.migration-backup')
+  const staged = path.join(paths.dataDir, '.migration-interrupted')
+  try {
+    await fs.mkdir(staged, { recursive: true })
+    await fs.rename(path.join(paths.rootDir, 'config'), backupConfig)
+    await migrateLegacyLayout(paths)
+    assert.equal(await fs.readlink(path.join(paths.rootDir, 'config')), 'data/config')
+    assert.equal(await fs.readlink(path.join(paths.rootDir, 'storage')), 'data/storage')
+    assert.equal(await fs.readFile(path.join(paths.configDir, 'boss.json'), 'utf8'), '{"openingMessage":"legacy"}\n')
+    await assert.rejects(fs.lstat(backupConfig), { code: 'ENOENT' })
+    await assert.rejects(fs.lstat(staged), { code: 'ENOENT' })
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+for (const interruption of ['before-links', 'one-link', 'same-size-corrupt']) {
+  const { home, paths } = await fixture()
+  const legacyConfig = path.join(paths.rootDir, 'config')
+  const legacyStorage = path.join(paths.rootDir, 'storage')
+  const backupConfig = `${legacyConfig}.migration-backup`
+  const backupStorage = `${legacyStorage}.migration-backup`
+  const staged = path.join(paths.dataDir, '.migration-installed-interrupted')
+  try {
+    await fs.mkdir(paths.configDir, { recursive: true })
+    await fs.mkdir(paths.storageDir, { recursive: true })
+    await fs.copyFile(path.join(legacyConfig, 'boss.json'), path.join(paths.configDir, 'boss.json'))
+    await fs.copyFile(path.join(legacyStorage, 'state.json'), path.join(paths.storageDir, 'state.json'))
+    await fs.copyFile(path.join(legacyStorage, 'public.db'), paths.databaseFile)
+    if (interruption === 'same-size-corrupt') await fs.writeFile(path.join(paths.configDir, 'boss.json'), '{"openingMessage":"LEGACY"}\n')
+    await fs.mkdir(staged)
+    await fs.rename(legacyConfig, backupConfig)
+    await fs.rename(legacyStorage, backupStorage)
+    if (interruption === 'one-link') await fs.symlink('data/config', legacyConfig)
+    await migrateLegacyLayout(paths)
+    assert.equal(await fs.readlink(legacyConfig), 'data/config')
+    assert.equal(await fs.readlink(legacyStorage), 'data/storage')
+    assert.equal(await fs.readlink(path.join(paths.storageDir, 'public.db')), '../database.sqlite')
+    assert.equal(await fs.readFile(paths.layoutVersionFile, 'utf8'), '1\n')
+    await assert.rejects(fs.lstat(backupConfig), { code: 'ENOENT' })
+    await assert.rejects(fs.lstat(backupStorage), { code: 'ENOENT' })
+    await assert.rejects(fs.lstat(staged), { code: 'ENOENT' })
+  } finally {
+    await fs.rm(home, { recursive: true, force: true })
+  }
+}
+
+{
+  const { home, paths } = await fixture()
   try {
     await fs.rm(path.join(paths.rootDir, 'config'), { recursive: true })
     await fs.symlink('/tmp', path.join(paths.rootDir, 'config'))
@@ -85,6 +134,8 @@ for (const location of ['config/nested', 'storage/public.db']) {
     assert.equal(await fs.readlink(path.join(paths.rootDir, 'config')), 'data/config')
     assert.equal(await fs.readFile(path.join(paths.configDir, 'boss.json'), 'utf8'), '{"openingMessage":"legacy"}\n')
     assert.equal(await fs.readFile(paths.layoutVersionFile, 'utf8'), '1\n')
+    await migrateLegacyLayout(paths)
+    await assert.rejects(fs.lstat(backupStorage), { code: 'ENOENT' })
   } finally {
     await fs.rm(home, { recursive: true, force: true })
   }
@@ -156,7 +207,11 @@ for (const location of ['config/nested', 'storage/public.db']) {
       if (property !== 'copyFile') return target[property]
       return async (source, destination) => {
         await target.copyFile(source, destination)
-        if (destination.endsWith('database.sqlite')) await target.appendFile(destination, 'corrupt')
+        if (destination.endsWith('database.sqlite')) {
+          const value = await target.readFile(destination)
+          value[0] ^= 0xff
+          await target.writeFile(destination, value)
+        }
       }
     }
   })
