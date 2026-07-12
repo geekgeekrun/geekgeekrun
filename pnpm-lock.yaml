@@ -65,13 +65,23 @@ importers:
         specifier: workspace:*
         version: link:../utils
 
-  packages/ggr-controller: {}
+  packages/ggr-backend:
+    dependencies:
+      '@geekgeekrun/ggr-protocol':
+        specifier: workspace:*
+        version: link:../ggr-protocol
+    devDependencies:
+      '@geekgeekrun/ggr-client':
+        specifier: workspace:*
+        version: link:../ggr-client
 
   packages/ggr-client:
     dependencies:
       '@geekgeekrun/ggr-protocol':
         specifier: workspace:*
         version: link:../ggr-protocol
+
+  packages/ggr-controller: {}
 
   packages/ggr-mcp: {}
 

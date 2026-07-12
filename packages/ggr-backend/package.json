@@ -1,0 +1,15 @@
+{
+  "name": "@geekgeekrun/ggr-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./server.mjs",
+  "exports": {
+    ".": "./server.mjs"
+  },
+  "dependencies": {
+    "@geekgeekrun/ggr-protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@geekgeekrun/ggr-client": "workspace:*"
+  }
+}
