@@ -10,30 +10,9 @@ const SENSITIVE_KEY = new RegExp(SENSITIVE_KEYS, 'i')
 
 function redactLine(value) {
   const input = String(value)
-  let output = ''
-  let cursor = 0
   SENSITIVE_ASSIGNMENT.lastIndex = 0
-  let match
-  while ((match = SENSITIVE_ASSIGNMENT.exec(input))) {
-    output += input.slice(cursor, match.index) + match[0]
-    let end = SENSITIVE_ASSIGNMENT.lastIndex
-    const quote = input[end] === '"' || input[end] === "'" ? input[end++] : null
-    if (quote) {
-      let closed = false
-      for (let index = end; index < input.length; index++) {
-        if (input[index] === '\\') { index++; continue }
-        if (input[index] === quote) { end = index + 1; closed = true; break }
-        end = index + 1
-      }
-      output += `${quote}[redacted]${closed ? quote : ''}`
-    } else {
-      while (end < input.length && !/[\s,}]/.test(input[end])) end++
-      output += '[redacted]'
-    }
-    cursor = end
-    SENSITIVE_ASSIGNMENT.lastIndex = end
-  }
-  return output + input.slice(cursor)
+  const match = SENSITIVE_ASSIGNMENT.exec(input)
+  return match ? `${input.slice(0, SENSITIVE_ASSIGNMENT.lastIndex)}[redacted]` : input
 }
 
 function redactPayload(value, key = '') {
@@ -41,6 +20,13 @@ function redactPayload(value, key = '') {
   if (Array.isArray(value)) return value.map((item) => redactPayload(item))
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, redactPayload(item, name)]))
   return value
+}
+
+function redactDiagnostic(rawLine, wasTruncated) {
+  if (!wasTruncated) {
+    try { return JSON.stringify(redactPayload(JSON.parse(rawLine))) } catch {}
+  }
+  return redactLine(rawLine)
 }
 
 function snapshot(record) {
@@ -70,7 +56,7 @@ function utf8Prefix(value, maxBytes) {
 function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes, onLine, onStructured = () => false) {
   if (!rawLine) return
   if (!wasTruncated && onStructured(rawLine) === true) return
-  const sanitized = utf8Prefix(redactLine(rawLine), Math.min(lineBytes, streamBytes))
+  const sanitized = utf8Prefix(redactDiagnostic(rawLine, wasTruncated), Math.min(lineBytes, streamBytes))
   const line = sanitized.text
   const bytesKey = `${stream}DiagnosticBytes`
   const target = record[stream === 'stdout' ? 'recentStdout' : 'recentStderr']

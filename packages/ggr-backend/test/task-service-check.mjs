@@ -47,23 +47,36 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     spawnProcess: () => child,
     workerEntries: { auto: '/tmp/auto.mjs' },
     emit: (event, data) => events.push({ event, data }),
-    diagnosticLineBytes: 64,
-    diagnosticStreamBytes: 256
+    diagnosticLineBytes: 512,
+    diagnosticStreamBytes: 2048
   })
   await service.start({ workerId: 'auto' })
   child.stdout.emit('data', 'token="unclosed-secret-value\n')
   child.stdout.emit('data', 'password=unquoted-secret-value\n')
   child.stdout.emit('data', 'to')
   child.stdout.emit('data', 'ken="split-secret-value"\n')
+  child.stdout.emit('data', `${JSON.stringify({
+    ggrWorkerEvent: 1,
+    event: 'not.allowed',
+    data: {
+      token: ['first-secret-fragment', 'second-secret-fragment'],
+      password: { backup: 'backup-secret-fragment' },
+      safe: 'shown'
+    }
+  })}\n`)
+  child.stdout.emit('data', 'prefix token="escaped-secret-fragment-\\"second-secret-fragment,backup-secret-fragment\n')
 
   const running = JSON.stringify(service.list())
-  assert(!running.includes('unclosed-secret'))
-  assert(!running.includes('unquoted-secret'))
-  assert(!running.includes('split-secret'))
-  assert(service.list()[0].recentStdout.every((line) => Buffer.byteLength(line) <= 64))
-  assert(!JSON.stringify(events).includes('unclosed-secret'))
-  assert(!JSON.stringify(events).includes('unquoted-secret'))
-  assert(!JSON.stringify(events).includes('split-secret'))
+  for (const secret of [
+    'unclosed-secret', 'unquoted-secret', 'split-secret', 'first-secret',
+    'second-secret', 'backup-secret', 'escaped-secret'
+  ]) assert(!running.includes(secret), `recent diagnostics leaked ${secret}`)
+  assert(service.list()[0].recentStdout.every((line) => Buffer.byteLength(line) <= 512))
+  const emitted = JSON.stringify(events)
+  for (const secret of [
+    'unclosed-secret', 'unquoted-secret', 'split-secret', 'first-secret',
+    'second-secret', 'backup-secret', 'escaped-secret'
+  ]) assert(!emitted.includes(secret), `diagnostic event leaked ${secret}`)
 
   child.stdout.emit('data', `credential="oversized-secret-prefix-${'x'.repeat(1024 * 1024)}`)
   child.emit('exit', 1, null)
