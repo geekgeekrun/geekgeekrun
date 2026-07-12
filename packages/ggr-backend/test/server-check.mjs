@@ -179,6 +179,38 @@ try {
 }
 
 {
+  const cleanupHome = await fs.mkdtemp('/tmp/ggr-aggregate-')
+  const paths = createRuntimePaths(cleanupHome)
+  const calls = []
+  const cleanupBackend = await createBackendServer({
+    socketPath: paths.backendSocket,
+    version: '0.1.0',
+    runtimePaths: paths,
+    services: {
+      task: { list: () => [], stopAll: async () => { calls.push('task') } },
+      approval: {},
+      browser: { close: async () => { calls.push('browser'); throw new Error('browser close failed') } },
+      records: { close: async () => { calls.push('records'); throw new Error('records close failed') } },
+      config: { close: async () => { calls.push('config') } },
+      logger: { write: async () => {}, close: async () => { calls.push('logger') } }
+    }
+  })
+  try {
+    await cleanupBackend.start()
+    await assert.rejects(cleanupBackend.stop(), (error) => {
+      assert(error instanceof AggregateError)
+      assert.deepEqual(error.errors.map(({ message }) => message), ['browser close failed', 'records close failed'])
+      return true
+    })
+    assert.deepEqual(calls, ['task', 'browser', 'records', 'config', 'logger'])
+    await assert.rejects(fs.lstat(paths.backendSocket), { code: 'ENOENT' })
+  } finally {
+    await cleanupBackend.stop().catch(() => {})
+    await fs.rm(cleanupHome, { recursive: true, force: true })
+  }
+}
+
+{
   const delayedHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-backend-peer-'))
   const paths = createRuntimePaths(delayedHome)
   const delayedBackend = await createBackendServer({

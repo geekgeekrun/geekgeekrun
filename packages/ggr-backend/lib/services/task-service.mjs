@@ -5,13 +5,42 @@ const DEFAULT_DIAGNOSTIC_LINE_BYTES = 4096
 const DEFAULT_DIAGNOSTIC_STREAM_BYTES = 64 * 1024
 const SENSITIVE_KEYS = 'apiKey|accessKey|token|password|secret|credential|webhook'
 const ALLOWED_WORKER_EVENTS = new Set(['task.progress', 'approval.required'])
-const QUOTED_SENSITIVE_ASSIGNMENT = new RegExp(`((?:["']?)(?:${SENSITIVE_KEYS})(?:["']?)\\s*[=:]\\s*)(["'])(.*?)\\2`, 'gi')
-const UNQUOTED_SENSITIVE_ASSIGNMENT = new RegExp(`((?:["']?)(?:${SENSITIVE_KEYS})(?:["']?)\\s*[=:]\\s*)(?!["'])([^\\s,}]+)`, 'gi')
+const SENSITIVE_ASSIGNMENT = new RegExp(`(?:["']?)(?:${SENSITIVE_KEYS})(?:["']?)\\s*[=:]\\s*`, 'gi')
+const SENSITIVE_KEY = new RegExp(SENSITIVE_KEYS, 'i')
 
 function redactLine(value) {
-  return String(value)
-    .replace(QUOTED_SENSITIVE_ASSIGNMENT, (_match, prefix, quote) => `${prefix}${quote}[redacted]${quote}`)
-    .replace(UNQUOTED_SENSITIVE_ASSIGNMENT, (_match, prefix) => `${prefix}[redacted]`)
+  const input = String(value)
+  let output = ''
+  let cursor = 0
+  SENSITIVE_ASSIGNMENT.lastIndex = 0
+  let match
+  while ((match = SENSITIVE_ASSIGNMENT.exec(input))) {
+    output += input.slice(cursor, match.index) + match[0]
+    let end = SENSITIVE_ASSIGNMENT.lastIndex
+    const quote = input[end] === '"' || input[end] === "'" ? input[end++] : null
+    if (quote) {
+      let closed = false
+      for (let index = end; index < input.length; index++) {
+        if (input[index] === '\\') { index++; continue }
+        if (input[index] === quote) { end = index + 1; closed = true; break }
+        end = index + 1
+      }
+      output += `${quote}[redacted]${closed ? quote : ''}`
+    } else {
+      while (end < input.length && !/[\s,}]/.test(input[end])) end++
+      output += '[redacted]'
+    }
+    cursor = end
+    SENSITIVE_ASSIGNMENT.lastIndex = end
+  }
+  return output + input.slice(cursor)
+}
+
+function redactPayload(value, key = '') {
+  if (SENSITIVE_KEY.test(key)) return '[redacted]'
+  if (Array.isArray(value)) return value.map((item) => redactPayload(item))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, redactPayload(item, name)]))
+  return value
 }
 
 function snapshot(record) {
@@ -38,11 +67,11 @@ function utf8Prefix(value, maxBytes) {
   return { text, bytes, truncated: false }
 }
 
-function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes, onLine) {
+function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes, onLine, onStructured = () => false) {
   if (!rawLine) return
+  if (!wasTruncated && onStructured(rawLine) === true) return
   const sanitized = utf8Prefix(redactLine(rawLine), Math.min(lineBytes, streamBytes))
   const line = sanitized.text
-  if (onLine(line, wasTruncated || sanitized.truncated) === true) return
   const bytesKey = `${stream}DiagnosticBytes`
   const target = record[stream === 'stdout' ? 'recentStdout' : 'recentStderr']
   while (target.length && record[bytesKey] + sanitized.bytes > streamBytes) {
@@ -51,6 +80,7 @@ function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes,
   target.push(line)
   record[bytesKey] += sanitized.bytes
   while (target.length > RECENT_LINE_LIMIT) record[bytesKey] -= Buffer.byteLength(target.shift())
+  onLine(line, wasTruncated || sanitized.truncated)
 }
 
 function structuredWorkerEvent(line, workerId, emit) {
@@ -58,7 +88,7 @@ function structuredWorkerEvent(line, workerId, emit) {
   try { envelope = JSON.parse(line) } catch { return false }
   if (!envelope || envelope.ggrWorkerEvent !== 1 || !ALLOWED_WORKER_EVENTS.has(envelope.event) ||
       !envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) return false
-  const data = JSON.parse(redactLine(JSON.stringify(envelope.data)))
+  const data = redactPayload(envelope.data)
   emit(envelope.event, { ...data, workerId })
   return true
 }
@@ -77,7 +107,7 @@ function resetCarry(state) {
   state.truncated = false
 }
 
-function pushDiagnostic(record, stream, chunk, lineBytes, streamBytes, onLine) {
+function pushDiagnostic(record, stream, chunk, lineBytes, streamBytes, onLine, onStructured) {
   const state = record[`${stream}Carry`]
   const content = String(chunk)
   let start = 0
@@ -88,7 +118,7 @@ function pushDiagnostic(record, stream, chunk, lineBytes, streamBytes, onLine) {
       state.text = state.text.slice(0, -1)
       state.bytes--
     }
-    pushLine(record, stream, state.text, state.truncated, lineBytes, streamBytes, onLine)
+    pushLine(record, stream, state.text, state.truncated, lineBytes, streamBytes, onLine, onStructured)
     resetCarry(state)
     start = newline + 1
   }
@@ -150,13 +180,13 @@ export function createTaskService({
     workers.set(workerId, record)
 
     const progress = (stream, line, truncated) => { emit('task.progress', { workerId, stream, line, truncated }); return false }
-    child.stdout?.on?.('data', (chunk) => pushDiagnostic(record, 'stdout', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => structuredWorkerEvent(line, workerId, emit) || progress('stdout', line, truncated)))
+    child.stdout?.on?.('data', (chunk) => pushDiagnostic(record, 'stdout', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated), (line) => structuredWorkerEvent(line, workerId, emit)))
     child.stderr?.on?.('data', (chunk) => pushDiagnostic(record, 'stderr', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stderr', line, truncated)))
 
     const finalize = (code = null, signal = null, error = null) => {
       if (terminalChildren.has(child)) return
       terminalChildren.add(child)
-      pushLine(record, 'stdout', record.stdoutCarry.text, record.stdoutCarry.truncated, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated))
+      pushLine(record, 'stdout', record.stdoutCarry.text, record.stdoutCarry.truncated, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated), (line) => structuredWorkerEvent(line, workerId, emit))
       pushLine(record, 'stderr', record.stderrCarry.text, record.stderrCarry.truncated, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stderr', line, truncated))
       resetCarry(record.stdoutCarry)
       resetCarry(record.stderrCarry)

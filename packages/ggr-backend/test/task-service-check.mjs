@@ -32,12 +32,43 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
   })
   await service.start({ workerId: 'auto' })
   const reporter = createWorkerReporter({ write: (line) => child.stdout.emit('data', line) })
-  reporter.emit('task.progress', { workerId: 'auto', state: 'working', token: 'secret' })
+  reporter.emit('task.progress', { workerId: 'auto', state: 'working', token: 'a"b' })
   assert.deepEqual(events[0], { event: 'task.progress', data: { workerId: 'auto', state: 'working', token: '[redacted]' } })
   assert.deepEqual(service.list()[0].recentStdout, [])
   child.stdout.emit('data', '{"ggrWorkerEvent":1,"event":"not.allowed","data":{"password":"nope"}}\n')
   assert.equal(service.list()[0].recentStdout[0], '{"ggrWorkerEvent":1,"event":"not.allowed","data":{"password":"[redacted]"}}')
   await service.stop({ workerId: 'auto' })
+}
+
+{
+  const events = []
+  const child = fakeChild(100, { exitOnSignal: false })
+  const service = createTaskService({
+    spawnProcess: () => child,
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: (event, data) => events.push({ event, data }),
+    diagnosticLineBytes: 64,
+    diagnosticStreamBytes: 256
+  })
+  await service.start({ workerId: 'auto' })
+  child.stdout.emit('data', 'token="unclosed-secret-value\n')
+  child.stdout.emit('data', 'password=unquoted-secret-value\n')
+  child.stdout.emit('data', 'to')
+  child.stdout.emit('data', 'ken="split-secret-value"\n')
+
+  const running = JSON.stringify(service.list())
+  assert(!running.includes('unclosed-secret'))
+  assert(!running.includes('unquoted-secret'))
+  assert(!running.includes('split-secret'))
+  assert(service.list()[0].recentStdout.every((line) => Buffer.byteLength(line) <= 64))
+  assert(!JSON.stringify(events).includes('unclosed-secret'))
+  assert(!JSON.stringify(events).includes('unquoted-secret'))
+  assert(!JSON.stringify(events).includes('split-secret'))
+
+  child.stdout.emit('data', `credential="oversized-secret-prefix-${'x'.repeat(1024 * 1024)}`)
+  child.emit('exit', 1, null)
+  assert(!JSON.stringify(events).includes('oversized-secret-prefix'))
+  await service.stopAll()
 }
 
 {
