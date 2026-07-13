@@ -1,7 +1,21 @@
 <template>
   <div class="geek-auto-start-run-with-boss__wrap">
+    <el-alert
+      v-if="presentationDataState.status === 'error'"
+      title="筛选数据加载失败"
+      type="error"
+      :closable="false"
+      show-icon
+    >
+      <template #default>
+        {{ presentationDataState.error }}
+        <el-button size="small" @click="loadConfig">重试</el-button>
+      </template>
+    </el-alert>
     <div
       class="main__wrap"
+      v-loading="isPresentationDataLoading"
+      element-loading-text="正在加载筛选数据"
       :style="{
         display: 'flex',
         flexDirection: 'column'
@@ -1668,8 +1682,10 @@
             paddingRight: 'calc(20px + 16px)'
           }"
         >
-          <el-button @click="handleSave">仅保存配置</el-button>
-          <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
+          <el-button :disabled="isPresentationDataLoading" @click="handleSave">仅保存配置</el-button>
+          <el-button type="primary" :disabled="isPresentationDataLoading" @click="handleSubmit">
+            保存配置，并开始求职！
+          </el-button>
         </div>
       </div>
     </div>
@@ -1722,6 +1738,7 @@ import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossReco
 import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBossRecommendFilter/index.vue'
 import {
   activeDescList,
+  beginPresentationDataLoad,
   calculateTotalCombinations,
   checkAnyCombineBossRecommendFilterHasCondition,
   CombineRecommendJobFilterType,
@@ -1729,9 +1746,12 @@ import {
   formatStaticCombineFilters,
   JobDetailRegExpMatchLogic,
   MarkAsNotSuitOp,
+  failPresentationDataLoad,
+  isPresentationDataLoading,
+  presentationDataState,
   SalaryCalculateWay,
   setPresentationData,
-  StrategyScopeOptionWhenMarkJobNotMatch,
+  StrategyScopeOptionWhenMarkJobNotMatch
 } from '@renderer/domain/presentation-data'
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { debounce } from 'lodash'
@@ -1858,8 +1878,11 @@ const unwatchAnyCombineRecommendJobFilter = ref<null | (() => void)>(null)
 onBeforeUnmount(() => {
   unwatchAnyCombineRecommendJobFilter.value?.()
 })
-electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
-  setPresentationData(res.config ?? {})
+// prettier-ignore -- preserve the existing config hydration body without reformatting the full page.
+function loadConfig() {
+  beginPresentationDataLoad()
+  return electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+  setPresentationData(res.config)
   console.log(res)
   formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
   formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
@@ -2001,7 +2024,13 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     expectSalaryHigh: res.config['common-job-condition-config.json']?.expectSalaryHigh ?? null,
     expectCityList: res.config['common-job-condition-config.json']?.expectCityList ?? []
   }
-})
+  }).catch((error) => {
+    failPresentationDataLoad(error)
+    ElMessage.error('筛选数据加载失败，请重试')
+  })
+}
+
+void loadConfig()
 
 const jobSourceFormItemSectionEl = ref()
 const jobDetailRegExpSectionEl = ref()

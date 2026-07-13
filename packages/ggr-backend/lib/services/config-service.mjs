@@ -10,6 +10,24 @@ const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
 const REDACTED_SECRET = '[redacted]'
 const SENSITIVE_FIELD_PATTERN = /(apiKey|accessKey|key|token|password|secret|credential|webhook)/i
+const optionDto = ({ code, name }) => ({ code, name })
+const jobFilterConditionsDto = ({ salaryList, experienceList, degreeList, scaleList }) => ({
+  salaryList: salaryList.map(optionDto),
+  experienceList: experienceList.map(optionDto),
+  degreeList: degreeList.map(optionDto),
+  scaleList: scaleList.map(optionDto)
+})
+const industryFilterExemptionsDto = (groups) => groups.map(({ code, name, subLevelModelList }) => ({
+  code,
+  name,
+  subLevelModelList: subLevelModelList.map(optionDto)
+}))
+const cityGroupsDto = ({ zpData: { hotCityList, cityGroup } }) => ({
+  zpData: {
+    hotCityList: hotCityList.map(optionDto),
+    cityGroup: cityGroup.map(({ firstChar, cityList }) => ({ firstChar, cityList: cityList.map(optionDto) }))
+  }
+})
 const RESOURCES = Object.freeze({
   job_intention: { fileName: 'common-job-condition-config.json', writable: true },
   opening_message: { fileName: 'boss.json', writable: true },
@@ -24,9 +42,9 @@ const RESOURCES = Object.freeze({
   auto_reminder_rechat_template: { fileName: defaultPromptMap.rechat.fileName, writable: true, text: true, location: 'storage', fallback: defaultPromptMap.rechat.content },
   auto_reminder_open_template_default: { writable: false, defaultOnly: true, fallback: defaultPromptMap.open.content },
   auto_reminder_rechat_template_default: { writable: false, defaultOnly: true, fallback: defaultPromptMap.rechat.content },
-  job_filter_conditions: { writable: false, defaultOnly: true, fallback: filterConditions },
-  industry_filter_exemptions: { writable: false, defaultOnly: true, fallback: industryFilterExemptions },
-  city_groups: { writable: false, defaultOnly: true, fallback: cityGroups },
+  job_filter_conditions: { writable: false, defaultOnly: true, fallback: jobFilterConditionsDto(filterConditions) },
+  industry_filter_exemptions: { writable: false, defaultOnly: true, fallback: industryFilterExemptionsDto(industryFilterExemptions) },
+  city_groups: { writable: false, defaultOnly: true, fallback: cityGroupsDto(cityGroups) },
   runtime_status: { type: 'runtime_status', writable: false }
 })
 

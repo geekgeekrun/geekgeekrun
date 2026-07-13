@@ -2,7 +2,7 @@
   <div w-full>
     <slot
       :model-value="modelValue"
-      :show-dialog="() => (isDialogVisible = true)"
+      :show-dialog="showDialog"
       :clear-value="handleClearSelectedCitiesInModelValue"
     ></slot>
     <el-dialog
@@ -166,9 +166,9 @@
 
 <script lang="ts" setup>
 import { computed, PropType, ref } from 'vue'
-import { cityGroups } from '@renderer/domain/presentation-data'
+import { cityGroups, presentationDataReady } from '@renderer/domain/presentation-data'
 import { gtagRenderer } from '@renderer/utils/gtag'
-import { ElRadioGroup } from 'element-plus'
+import { ElMessage, ElRadioGroup } from 'element-plus'
 
 const props = defineProps({
   modelValue: {
@@ -198,6 +198,14 @@ const cityGroupsByAlphabetMap = computed(() => {
   }
   return result
 })
+
+function showDialog() {
+  if (!presentationDataReady.value) {
+    ElMessage.warning('城市筛选数据仍在加载，请稍后重试')
+    return
+  }
+  isDialogVisible.value = true
+}
 
 function handleDialogOpen() {
   activeTabName.value = '热门城市'

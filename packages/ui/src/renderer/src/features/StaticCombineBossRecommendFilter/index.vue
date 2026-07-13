@@ -94,7 +94,9 @@
           <template #default="{ row }">
             <el-select
               v-model="row.salary"
-              :disabled="row.___itemType === 'empty-condition-placeholder'"
+              :disabled="
+                !presentationDataReady || row.___itemType === 'empty-condition-placeholder'
+              "
               clearable
               size="small"
             >
@@ -111,7 +113,9 @@
           <template #default="{ row }">
             <el-select
               v-model="row.experience"
-              :disabled="row.___itemType === 'empty-condition-placeholder'"
+              :disabled="
+                !presentationDataReady || row.___itemType === 'empty-condition-placeholder'
+              "
               clearable
               size="small"
             >
@@ -128,7 +132,9 @@
           <template #default="{ row }">
             <el-select
               v-model="row.degree"
-              :disabled="row.___itemType === 'empty-condition-placeholder'"
+              :disabled="
+                !presentationDataReady || row.___itemType === 'empty-condition-placeholder'
+              "
               clearable
               size="small"
             >
@@ -145,7 +151,9 @@
           <template #default="{ row }">
             <el-select
               v-model="row.industry"
-              :disabled="row.___itemType === 'empty-condition-placeholder'"
+              :disabled="
+                !presentationDataReady || row.___itemType === 'empty-condition-placeholder'
+              "
               clearable
               size="small"
             >
@@ -168,7 +176,9 @@
           <template #default="{ row }">
             <el-select
               v-model="row.scale"
-              :disabled="row.___itemType === 'empty-condition-placeholder'"
+              :disabled="
+                !presentationDataReady || row.___itemType === 'empty-condition-placeholder'
+              "
               clearable
               size="small"
             >
@@ -198,7 +208,12 @@
 </template>
 
 <script lang="ts" setup>
-import { filterConditions as conditions, getStaticCombineFilterKey, industryFilterExemptions as industryFilterExemption } from '@renderer/domain/presentation-data'
+import {
+  filterConditions as conditions,
+  getStaticCombineFilterKey,
+  industryFilterExemptions as industryFilterExemption,
+  presentationDataReady
+} from '@renderer/domain/presentation-data'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { computed, PropType } from 'vue'
 import CityChooser from '@renderer/page/MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'

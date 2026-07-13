@@ -118,6 +118,24 @@ try {
     assert.ok(response.data[property] !== undefined)
     await assert.rejects(client.request('config.write', { resource, patch: {} }), { code: 'INVALID_PARAMS' })
   }
+  const filterConditions = await client.request('config.read', { resource: 'job_filter_conditions' })
+  assert.deepEqual(Object.keys(filterConditions.data).sort(), ['degreeList', 'experienceList', 'salaryList', 'scaleList'])
+  for (const list of Object.values(filterConditions.data)) {
+    for (const option of list) assert.deepEqual(Object.keys(option).sort(), ['code', 'name'])
+  }
+  const industryExemptions = await client.request('config.read', { resource: 'industry_filter_exemptions' })
+  for (const group of industryExemptions.data) {
+    assert.deepEqual(Object.keys(group).sort(), ['code', 'name', 'subLevelModelList'])
+    for (const option of group.subLevelModelList) assert.deepEqual(Object.keys(option).sort(), ['code', 'name'])
+  }
+  const cityGroups = await client.request('config.read', { resource: 'city_groups' })
+  assert.deepEqual(Object.keys(cityGroups.data), ['zpData'])
+  assert.deepEqual(Object.keys(cityGroups.data.zpData).sort(), ['cityGroup', 'hotCityList'])
+  for (const city of cityGroups.data.zpData.hotCityList) assert.deepEqual(Object.keys(city).sort(), ['code', 'name'])
+  for (const group of cityGroups.data.zpData.cityGroup) {
+    assert.deepEqual(Object.keys(group).sort(), ['cityList', 'firstChar'])
+    for (const city of group.cityList) assert.deepEqual(Object.keys(city).sort(), ['code', 'name'])
+  }
 
   for (const resource of ['../boss.json', 'boss.json', '/tmp/boss.json']) {
     await assert.rejects(client.request('config.read', { resource }), { code: 'INVALID_PARAMS' })

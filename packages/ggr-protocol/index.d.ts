@@ -160,6 +160,12 @@ export interface CityGroupsDto {
   }
 }
 
+export interface PresentationDataResourcesDto {
+  'job-filter-conditions': JobFilterConditionsDto
+  'industry-filter-exemptions': IndustryFilterGroupDto[]
+  'city-groups': CityGroupsDto
+}
+
 export interface RpcErrorShape {
   code: string
   message: string

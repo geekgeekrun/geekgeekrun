@@ -1,8 +1,9 @@
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import type {
   CityGroupsDto,
   IndustryFilterGroupDto,
-  JobFilterConditionsDto
+  JobFilterConditionsDto,
+  PresentationDataResourcesDto
 } from '@geekgeekrun/ggr-protocol'
 
 export enum MarkAsNotSuitReason {
@@ -58,23 +59,33 @@ const emptyFilterConditions: JobFilterConditionsDto = {
 export const filterConditions = reactive<JobFilterConditionsDto>({ ...emptyFilterConditions })
 export const industryFilterExemptions = reactive<IndustryFilterGroupDto[]>([])
 export const cityGroups = reactive<CityGroupsDto>({ zpData: { hotCityList: [], cityGroup: [] } })
+export const presentationDataState = reactive({
+  status: 'idle' as 'idle' | 'loading' | 'ready' | 'error',
+  error: ''
+})
+export const presentationDataReady = computed(() => presentationDataState.status === 'ready')
+export const isPresentationDataLoading = computed(() => !presentationDataReady.value)
 
-export function setPresentationData(config: Record<string, unknown>) {
-  Object.assign(
-    filterConditions,
-    (config['job-filter-conditions'] as JobFilterConditionsDto | undefined) ?? emptyFilterConditions
-  )
+export function beginPresentationDataLoad() {
+  presentationDataState.status = 'loading'
+  presentationDataState.error = ''
+}
+
+export function setPresentationData(config: PresentationDataResourcesDto) {
+  Object.assign(filterConditions, config['job-filter-conditions'])
   industryFilterExemptions.splice(
     0,
     industryFilterExemptions.length,
-    ...((config['industry-filter-exemptions'] as IndustryFilterGroupDto[]) ?? [])
+    ...config['industry-filter-exemptions']
   )
-  Object.assign(
-    cityGroups,
-    (config['city-groups'] as CityGroupsDto | undefined) ?? {
-      zpData: { hotCityList: [], cityGroup: [] }
-    }
-  )
+  Object.assign(cityGroups, config['city-groups'])
+  presentationDataState.status = 'ready'
+  presentationDataState.error = ''
+}
+
+export function failPresentationDataLoad(error: unknown) {
+  presentationDataState.status = 'error'
+  presentationDataState.error = error instanceof Error ? error.message : '动态筛选数据加载失败'
 }
 
 export const activeDescList = [
