@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron'
-import { checkCookieListFormat } from '../../common/utils/cookie'
 import { requestBackend } from './client'
 
 type ConfigResponse<T = unknown> = { data: T }
@@ -67,7 +66,7 @@ export function registerBackendIpc(): void {
   ipcMain.handle('fetch-config-file-content', fetchLegacyConfigFiles)
   ipcMain.handle('save-config-file-from-ui', (_event, payload) => saveLegacyConfig(payload))
   ipcMain.handle('check-boss-zhipin-cookie-file', async () =>
-    checkCookieListFormat(await readBackendConfig('boss_cookies'))
+    (await readBackendConfig<{ configured: boolean }>('boss_cookies')).configured
   )
   ipcMain.handle('get-auto-start-chat-record', (_event, payload) => listLegacyRecords('autoStartChats', payload))
   ipcMain.handle('get-mark-as-not-suit-record', (_event, payload) => listLegacyRecords('markAsNotSuit', payload))

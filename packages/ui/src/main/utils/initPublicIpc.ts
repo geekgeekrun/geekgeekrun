@@ -60,9 +60,13 @@ export default function initPublicIpc() {
   })
 
   ipcMain.handle('read-storage-file', async (_ev, payload) => {
-    if (payload?.fileName !== 'boss-cookies.json') {
-      throw Object.assign(new Error(`Unsupported storage resource: ${payload?.fileName}`), { code: 'INVALID_PARAMS' })
-    }
+    throw Object.assign(
+      new Error(`Raw storage reads are not available: ${payload?.fileName}`),
+      { code: 'METHOD_NOT_FOUND' }
+    )
+  })
+
+  ipcMain.handle('get-boss-session-status', async () => {
     return await readBackendConfig('boss_cookies')
   })
 

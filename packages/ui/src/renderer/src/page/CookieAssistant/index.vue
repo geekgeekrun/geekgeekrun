@@ -223,14 +223,8 @@ onMounted(async () => {
   electron.ipcRenderer.once('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)
   electron.ipcRenderer.on('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED', handleBossZhipinLoginPageClosed)
 
-  const cookieFileContent = await electron.ipcRenderer.invoke('read-storage-file', {
-    fileName: 'boss-cookies.json'
-  })
-  if (checkCookieListFormat(cookieFileContent)) {
-    formContent.value.collectedCookies = JSON.stringify(cookieFileContent, null, 2)
-  } else {
-    cookieInvalid.value = true
-  }
+  const session = await electron.ipcRenderer.invoke('get-boss-session-status') as { configured?: boolean }
+  cookieInvalid.value = !session.configured
 })
 onUnmounted(() => {
   electron.ipcRenderer.removeListener('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)

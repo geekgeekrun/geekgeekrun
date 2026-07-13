@@ -74,7 +74,29 @@ try {
   })
   assert.equal((await client.request('config.read', { resource: 'resumes' })).data[0].name, '默认简历')
   await client.request('config.write', { resource: 'boss_cookies', patch: [{ name: 'session', value: 'secret' }] })
-  assert.equal((await client.request('config.read', { resource: 'boss_cookies' })).data[0].name, 'session')
+  assert.deepEqual((await client.request('config.read', { resource: 'boss_cookies' })).data, {
+    configured: true,
+    cookieCount: 1
+  })
+  await client.request('config.write', {
+    resource: 'llm_config',
+    patch: [{ id: 'primary', providerApiSecret: 'keep-this-secret', providerCompleteApiUrl: 'https://llm.test' }]
+  })
+  const redactedLlmConfig = await client.request('config.read', { resource: 'llm_config' })
+  assert.equal(redactedLlmConfig.data[0].providerApiSecret, '[redacted]')
+  await client.request('config.write', { resource: 'llm_config', patch: redactedLlmConfig.data })
+  assert.equal(
+    JSON.parse(await fs.readFile(path.join(runtimePaths.configDir, 'llm.json'), 'utf8'))[0].providerApiSecret,
+    'keep-this-secret'
+  )
+  await client.request('config.write', {
+    resource: 'llm_config',
+    patch: [{ ...redactedLlmConfig.data[0], providerApiSecret: 'replacement-secret' }]
+  })
+  assert.equal(
+    JSON.parse(await fs.readFile(path.join(runtimePaths.configDir, 'llm.json'), 'utf8'))[0].providerApiSecret,
+    'replacement-secret'
+  )
   const prompt = await client.request('config.read', { resource: 'auto_reminder_rechat_template' })
   assert.match(prompt.data, /__REPLACE_REAL_RESUME_HERE__/)
   const defaultPrompt = await client.request('config.read', { resource: 'auto_reminder_open_template_default' })

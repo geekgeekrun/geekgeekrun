@@ -26,4 +26,23 @@ assert.match(ipcSource, /config\.read/, 'backend IPC adapters must read config t
 assert.match(ipcSource, /config\.write/, 'backend IPC adapters must write config through the backend client')
 assert.match(ipcSource, /records\.list/, 'backend IPC adapters must list records through the backend client')
 
+const publicIpcSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/utils/initPublicIpc.ts'),
+  'utf8'
+)
+assert.match(publicIpcSource, /get-boss-session-status/, 'cookie IPC must expose a status-only channel')
+const rawStorageReadHandler = publicIpcSource.match(
+  /ipcMain\.handle\('read-storage-file',([\s\S]*?)\n  \}\)/
+)?.[1]
+assert.ok(rawStorageReadHandler, 'legacy storage read IPC must be explicitly rejected')
+assert.match(rawStorageReadHandler, /Raw storage reads are not available/, 'legacy storage read IPC must reject raw reads')
+assert.doesNotMatch(rawStorageReadHandler, /readBackendConfig/, 'legacy storage read IPC must not request backend cookie data')
+
+const cookieRendererSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/renderer/src/page/CookieAssistant/index.vue'),
+  'utf8'
+)
+assert.match(cookieRendererSource, /get-boss-session-status/, 'cookie UI must request session status instead of cookie values')
+assert.doesNotMatch(cookieRendererSource, /read-storage-file/, 'cookie UI must not request raw cookie storage')
+
 console.log('backend boundary check passed')

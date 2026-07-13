@@ -5,6 +5,7 @@ import { defaultPromptMap } from '../workers/read-no-reply/llm.mjs'
 
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
+const REDACTED_SECRET = '[redacted]'
 const SENSITIVE_FIELD_PATTERN = /(apiKey|accessKey|key|token|password|secret|credential|webhook)/i
 const RESOURCES = Object.freeze({
   job_intention: { fileName: 'common-job-condition-config.json', writable: true },
@@ -15,7 +16,7 @@ const RESOURCES = Object.freeze({
   llm_config: { fileName: 'llm.json', writable: true, array: true },
   resumes: { fileName: 'resumes.json', writable: true, array: true },
   notification_config: { fileName: 'dingtalk.json', writable: true },
-  boss_cookies: { fileName: 'boss-cookies.json', writable: true, array: true, location: 'storage' },
+  boss_cookies: { fileName: 'boss-cookies.json', writable: true, array: true, location: 'storage', statusOnly: true },
   auto_reminder_open_template: { fileName: defaultPromptMap.open.fileName, writable: true, text: true, location: 'storage', fallback: defaultPromptMap.open.content },
   auto_reminder_rechat_template: { fileName: defaultPromptMap.rechat.fileName, writable: true, text: true, location: 'storage', fallback: defaultPromptMap.rechat.content },
   auto_reminder_open_template_default: { writable: false, defaultOnly: true, fallback: defaultPromptMap.open.content },
@@ -31,8 +32,37 @@ export function redactSecrets(value) {
   if (!isPlainObject(value)) return value
   return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
     key,
-    SENSITIVE_FIELD_PATTERN.test(key) ? '[redacted]' : redactSecrets(entry)
+    SENSITIVE_FIELD_PATTERN.test(key) ? REDACTED_SECRET : redactSecrets(entry)
   ]))
+}
+
+function preserveRedactedSecrets(current, patch, key = '') {
+  if (SENSITIVE_FIELD_PATTERN.test(key) && patch === REDACTED_SECRET) return current
+  if (Array.isArray(patch)) {
+    return patch.map((item, index) => {
+      const prior = isPlainObject(item) && typeof item.id === 'string'
+        ? current?.find?.((candidate) => candidate?.id === item.id)
+        : current?.[index]
+      return preserveRedactedSecrets(prior, item)
+    })
+  }
+  if (isPlainObject(patch)) {
+    return Object.fromEntries(Object.entries(patch).map(([name, value]) => [
+      name,
+      preserveRedactedSecrets(current?.[name], value, name)
+    ]))
+  }
+  return patch
+}
+
+function publicData(definition, data) {
+  if (definition.statusOnly) {
+    return {
+      configured: Array.isArray(data) && data.length > 0,
+      cookieCount: Array.isArray(data) ? data.length : 0
+    }
+  }
+  return redactSecrets(data)
 }
 
 function definitionFor(resource) {
@@ -112,7 +142,7 @@ export function createConfigService({ configDir, storageDir = configDir, clock =
       const data = definition.text
         ? await readText(path.join(directory, definition.fileName), definition.fallback ?? '')
         : await readJson(path.join(directory, definition.fileName), definition.array ? [] : {}, clock)
-      return { resource, fileName: definition.fileName, writable: definition.writable, data: redactSecrets(data) }
+      return { resource, fileName: definition.fileName, writable: definition.writable, data: publicData(definition, data) }
     },
     async write({ resource, patch }) {
       const definition = definitionFor(resource)
@@ -121,7 +151,11 @@ export function createConfigService({ configDir, storageDir = configDir, clock =
       const directory = definition.location === 'storage' ? storageDir : configDir
       const filePath = path.join(directory, definition.fileName)
       return serialize(filePath, async () => {
-        const next = definition.text || definition.array ? patch : deepMerge(await readJson(filePath, {}, clock), patch)
+        const current = definition.text
+          ? await readText(filePath, definition.fallback ?? '')
+          : await readJson(filePath, definition.array ? [] : {}, clock)
+        const safePatch = preserveRedactedSecrets(current, patch)
+        const next = definition.text || definition.array ? safePatch : deepMerge(current, safePatch)
         if (definition.text) await writeText(filePath, next)
         else await writeJson(filePath, next)
         return this.read({ resource })
