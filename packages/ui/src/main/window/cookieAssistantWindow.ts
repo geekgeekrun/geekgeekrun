@@ -47,7 +47,8 @@ export function createCookieAssistantWindow(
   let loginBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
   const sessionBridge = createBrowserCompatibilityApi()
   const saveSessionHandler = async (_ev: Electron.IpcMainInvokeEvent, { cookies }: { cookies: unknown }) => {
-    return sessionBridge.saveSession({ cookies })
+    await sessionBridge.saveSession({ cookies })
+    return { saved: true }
   }
   ipcMain.handle('save-boss-session', saveSessionHandler)
   const launchHandler = async (_ev) => {

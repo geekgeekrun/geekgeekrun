@@ -6,6 +6,17 @@ import type { SystemHealthResult } from '@geekgeekrun/ggr-protocol'
 export type BackendClient = ReturnType<typeof createGgrClient>
 
 let client: BackendClient | undefined
+const connectedListeners = new Set<(backend: BackendClient) => void>()
+
+function notifyConnected(backend: BackendClient): void {
+  for (const listener of connectedListeners) {
+    try {
+      listener(backend)
+    } catch {
+      // A UI listener must not make a successful backend connection fail.
+    }
+  }
+}
 
 export function getBackendSocketPath(): string {
   return process.env.GGR_BACKEND_SOCKET ?? path.join(app.getPath('home'), '.geekgeekrun', 'run', 'backend.sock')
@@ -24,7 +35,13 @@ export function getBackendClient(): BackendClient {
 export async function connectBackend(): Promise<SystemHealthResult> {
   const backend = getBackendClient()
   await backend.connect()
+  notifyConnected(backend)
   return await backend.request('system.health') as SystemHealthResult
+}
+
+export function onBackendConnected(listener: (backend: BackendClient) => void): () => void {
+  connectedListeners.add(listener)
+  return () => connectedListeners.delete(listener)
 }
 
 export function setBackendClientForTesting(value: BackendClient | undefined): void {
@@ -43,7 +60,10 @@ export function toElectronError(error: unknown): Error & { code?: string; data?:
 export async function requestBackend<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
   try {
     const backend = getBackendClient()
-    if (!backend.connected) await backend.connect()
+    if (!backend.connected) {
+      await backend.connect()
+      notifyConnected(backend)
+    }
     return await backend.request(method, params) as T
   } catch (error) {
     throw toElectronError(error)

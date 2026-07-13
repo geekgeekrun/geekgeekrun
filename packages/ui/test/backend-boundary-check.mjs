@@ -45,4 +45,37 @@ const cookieRendererSource = await fs.readFile(
 assert.match(cookieRendererSource, /get-boss-session-status/, 'cookie UI must request session status instead of cookie values')
 assert.doesNotMatch(cookieRendererSource, /read-storage-file/, 'cookie UI must not request raw cookie storage')
 
+const cookieWindowSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/window/cookieAssistantWindow.ts'),
+  'utf8'
+)
+const saveSessionHandler = cookieWindowSource.match(
+  /const saveSessionHandler = async[\s\S]*?\n  \}/
+)?.[0]
+assert.ok(saveSessionHandler, 'cookie session save handler must exist')
+assert.match(saveSessionHandler, /await sessionBridge\.saveSession/, 'cookie session save must await backend persistence')
+assert.match(saveSessionHandler, /return \{ saved: true \}/, 'cookie session save must return a status DTO')
+assert.doesNotMatch(saveSessionHandler, /return sessionBridge\.saveSession/, 'cookie session save must not return raw backend session data')
+
+const clientSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/backend/client.ts'),
+  'utf8'
+)
+assert.match(clientSource, /function onBackendConnected/, 'backend client must expose successful-connection notifications')
+assert.match(clientSource, /if \(!backend\.connected\)[\s\S]*?notifyConnected\(backend\)/, 'request-triggered reconnects must notify event subscribers')
+
+const eventsSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/backend/events.ts'),
+  'utf8'
+)
+assert.match(eventsSource, /installBackendEventBridge/, 'event bridge must install a reconnect listener')
+assert.match(eventsSource, /onBackendConnected\(registerBackendEvents\)/, 'event bridge must register after deferred backend connects')
+assert.match(eventsSource, /subscribedClient === backend && unsubscribe/, 'event bridge must avoid duplicate listeners for one client')
+
+const settingsSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/index.ts'),
+  'utf8'
+)
+assert.match(settingsSource, /installBackendEventBridge\(\)[\s\S]*?await connectBackend\(\)/, 'event bridge must be installed before initial connection attempts')
+
 console.log('backend boundary check passed')

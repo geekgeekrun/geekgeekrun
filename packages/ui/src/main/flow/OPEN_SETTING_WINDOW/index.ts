@@ -9,7 +9,7 @@ import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
 import { sendToDaemon, closeDaemonClient } from './connect-to-daemon'
 import { connectBackend } from '../../backend/client'
-import { registerBackendEvents } from '../../backend/events'
+import { installBackendEventBridge } from '../../backend/events'
 import { registerBackendIpc } from '../../backend/register-ipc'
 
 export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
@@ -52,9 +52,9 @@ export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
     initPublicIpc()
     initIpc()
     registerBackendIpc()
+    installBackendEventBridge()
     try {
       await connectBackend()
-      registerBackendEvents()
     } catch (error) {
       console.error('Backend connection unavailable; backend-backed IPC will retry on demand', error)
     }
