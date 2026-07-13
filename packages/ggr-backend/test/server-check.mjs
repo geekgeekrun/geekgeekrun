@@ -191,6 +191,8 @@ try {
   assert.equal((await client.request('approval.create', {
     request: { id: 'ignored-id', latestHrMessage: 'Can you confirm?', status: 'pending' }
   })).created, false)
+  const createdApprovalEvents = events.filter(({ event, data }) => event === 'approval.required' && data.id === 'approval-three')
+  assert.equal(createdApprovalEvents.length, 1)
   assert.equal((await client.request('approval.approve', { id: 'approval-one' })).status, 'approved_auto_reply')
   assert.equal((await client.request('approval.requireHuman', { id: 'approval-two', reason: 'review' })).status, 'human_required')
   assert(events.some(({ event, data }) => event === 'approval.required' && data.id === 'approval-two'))

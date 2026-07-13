@@ -364,7 +364,7 @@ export function createApprovalService({
     if (!request || typeof request !== 'object' || Array.isArray(request)) {
       throw Object.assign(new Error('approval request must be an object'), { code: 'INVALID_PARAMS' })
     }
-    return update((queue) => {
+    const result = await update((queue) => {
       const dedupeKey = request.dedupeKey ?? approvalDedupeKey(request)
       const existing = queue.find((item) => item.dedupeKey === dedupeKey && item.status === 'pending')
       if (existing) return { created: false, request: { ...existing } }
@@ -386,6 +386,8 @@ export function createApprovalService({
       queue.push(item)
       return { created: true, request: { ...item } }
     })
+    if (result.created) emit('approval.required', result.request)
+    return result
   }
 
   const approve = (params) => setStatus({ ...params, status: 'approved_auto_reply' })
