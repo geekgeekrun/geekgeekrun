@@ -115,11 +115,76 @@ class FakeBrowser extends EventEmitter {
   async close() { this.closed = (this.closed ?? 0) + 1; this.emit('disconnected') }
 }
 
+const loginResponse = ({ status = 200, body = { code: 0 } } = {}) => ({
+  url: () => 'https://www.zhipin.com/wapi/zppassport/qrcode/dispatcher',
+  status: () => status,
+  json: async () => {
+    if (body instanceof Error) throw body
+    return body
+  }
+})
+
+async function runInjectedLogin(response, storageDir) {
+  const page = new FakePage()
+  let cookieReads = 0
+  page.cookies = async () => { cookieReads++; return [cookie] }
+  page.waitForResponse = async (predicate) => {
+    assert.equal(predicate(response), true)
+    return response
+  }
+  page.waitForNavigation = async () => {}
+  page.$ = async () => null
+  const browser = new FakeBrowser(page)
+  const events = []
+  const runtime = createBackendBrowserRuntime({
+    runtimePaths: { storageDir }, storage: createBrowserStorage({ storageDir }),
+    dependencies,
+    launchBrowser: async () => browser,
+    ensureExtension: async () => '/tmp/edit-this-cookie', blockPageNavigation: async () => ({ dispose() {} }),
+    sleep: async () => {}, setDomainLocalStorage: async () => {}, records: {}
+  })
+  return { result: runtime.openLogin({ taskId: 'login', taskReporter: { emit: (event, data) => events.push({ event, data }) } }), events, browser, cookieReads: () => cookieReads }
+}
+
+async function assertNoLoginPersistence(storageDir) {
+  for (const name of ['boss-session.json', 'boss-cookies.json', 'boss-local-storage.json']) {
+    await assert.rejects(fs.access(path.join(storageDir, name)), { code: 'ENOENT' }, `${name} must not be persisted`)
+  }
+}
+
+for (const [name, response] of [
+  ['a non-2xx response', loginResponse({ status: 401 })],
+  ['an application error response', loginResponse({ body: { code: 1001 } })],
+  ['a malformed response body', loginResponse({ body: new SyntaxError('Unexpected token') })]
+]) {
+  const rejectedStorageDir = path.join(tempHome, `rejected-login-${name.replaceAll(/\W+/g, '-')}`)
+  const attempt = await runInjectedLogin(response, rejectedStorageDir)
+  await assert.rejects(attempt.result, { code: 'LOGIN_FAILED' }, `${name} must not be accepted as login success`)
+  assert.equal(attempt.cookieReads(), 0, `${name} must not read cookies`)
+  assert.ok(!attempt.events.some(({ data }) => data.state === 'cookie-collected'), `${name} must not emit cookie-collected`)
+  await assertNoLoginPersistence(rejectedStorageDir)
+}
+
+{
+  const successfulStorageDir = path.join(tempHome, 'successful-login-response')
+  const attempt = await runInjectedLogin(loginResponse({ body: { code: 0 } }), successfulStorageDir)
+  await attempt.result
+  assert.equal(attempt.cookieReads(), 1, 'a successful login response must read cookies once')
+  assert.ok(attempt.events.some(({ event, data }) => event === 'task.progress' && data.state === 'cookie-collected'))
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(successfulStorageDir, 'boss-session.json'), 'utf8')), {
+    cookies: [cookie], localStorage: { identity: 'captured' }
+  }, 'a successful login response must persist the authoritative session')
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(successfulStorageDir, 'boss-cookies.json'), 'utf8')), [cookie],
+    'a successful login response must persist the cookie mirror')
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(successfulStorageDir, 'boss-local-storage.json'), 'utf8')), { identity: 'captured' },
+    'a successful login response must persist the local-storage mirror')
+}
+
 {
   const page = new FakePage()
   page.waitForResponse = async (predicate) => {
     assert.equal(predicate({ url: () => 'https://www.zhipin.com/wapi/zppassport/qrcode/dispatcher' }), true)
-    return {}
+    return loginResponse()
   }
   page.waitForNavigation = async () => {}
   page.$ = async () => null

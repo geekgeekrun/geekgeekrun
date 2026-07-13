@@ -13,6 +13,20 @@ const HOME_URL = 'https://www.zhipin.com/'
 const BOSS_URL = 'https://www.zhipin.com/web/geek/chat'
 const LOCAL_STORAGE_URL = 'https://www.zhipin.com/desktop/'
 
+async function assertSuccessfulLoginResponse(response) {
+  const status = response?.status?.()
+  if (!Number.isInteger(status) || status < 200 || status >= 300) {
+    throw Object.assign(new Error('Boss login response was not successful'), { code: 'LOGIN_FAILED' })
+  }
+  try {
+    if ((await response.json())?.code !== 0) {
+      throw new Error('Boss login response did not confirm success')
+    }
+  } catch {
+    throw Object.assign(new Error('Boss login response did not confirm success'), { code: 'LOGIN_FAILED' })
+  }
+}
+
 export function createBackendBrowserRuntime(options) {
   const { runtimePaths, records = {}, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = options
   const storage = options.storage ?? createBrowserStorage({ storageDir: runtimePaths.storageDir })
@@ -92,10 +106,11 @@ export function createBackendBrowserRuntime(options) {
       try {
         page.on?.('popup', (popup) => popup.once?.('domcontentloaded', () => popup.close()))
         await page.goto(LOGIN_URL, { timeout: 0 })
-        await Promise.all([
+        const [loginResponse] = await Promise.all([
           page.waitForResponse((response) => LOGIN_ENDPOINTS.some((url) => response.url().startsWith(url)), { timeout: 0 }),
           page.waitForNavigation({ timeout: 0 })
         ])
+        await assertSuccessfulLoginResponse(loginResponse)
         await sleep(2000)
         const logo = await page.$('.header-home-logo')
         await Promise.all([logo ? logo.click() : page.goto(HOME_URL), page.waitForNavigation({ timeout: 0 })])
