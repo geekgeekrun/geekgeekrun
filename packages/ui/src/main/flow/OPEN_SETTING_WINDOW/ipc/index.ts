@@ -15,7 +15,6 @@ import {
 import { RequestSceneEnum } from '../../../features/llm-request-log'
 import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
-import { daemonEE, sendToDaemon } from '../connect-to-daemon'
 import { runCommon } from '../../../features/run-common'
 import { loginWithCookieAssistant } from '../../../features/login-with-cookie-assistant'
 import { configWithBrowserAssistant } from '../../../features/config-with-browser-assistant'
@@ -27,46 +26,45 @@ import {
 import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
 import { readBackendConfig, writeBackendConfig } from '../../../backend/register-ipc'
-// @ts-expect-error Backend ESM compatibility module is intentionally consumed directly by the legacy UI.
-import { createBrowserCompatibilityApi } from '../../../../../ggr-backend/lib/services/browser/compat.mjs'
+import { requestBackend } from '../../../backend/client'
+import { backendEvents } from '../../../backend/events'
 
 const WORKER_STOP_TIMEOUT_MS = 15000
-const BOSS_CHILD_READY_TIMEOUT_MS = 15000
-const workerExitHandlerByMode = new Map<string, (message: any) => void>()
+const workerExitHandlerByMode = new Map<string, (event: any) => void>()
 
 function subscribeToWorkerExit(mode: string) {
   if (workerExitHandlerByMode.has(mode)) {
     return
   }
-  const handler = (message: any) => {
-    if (message.workerId !== mode || message.type !== 'worker-exited') {
+  const handler = (event: any) => {
+    if (event.event !== 'task.exited' || event.data?.workerId !== mode) {
       return
     }
-    mainWindow?.webContents.send('worker-exited', message)
-    if (!message.restarting) {
-      daemonEE.off('message', handler)
+    mainWindow?.webContents.send('worker-exited', event.data)
+    if (!event.data.restarting) {
+      backendEvents.off('event', handler)
       workerExitHandlerByMode.delete(mode)
     }
   }
   workerExitHandlerByMode.set(mode, handler)
-  daemonEE.on('message', handler)
+  backendEvents.on('event', handler)
 }
 
 function waitForWorkerExit(workerId: string) {
-  let handler: (message: any) => void
+  let handler: (event: any) => void
   let timeout: ReturnType<typeof setTimeout>
   const cleanup = () => {
-    daemonEE.off('message', handler)
+    backendEvents.off('event', handler)
     clearTimeout(timeout)
   }
   const promise = new Promise<void>((resolve, reject) => {
-    handler = (message: any) => {
-      if (message.workerId === workerId && message.type === 'worker-exited') {
+    handler = (event: any) => {
+      if (event.event === 'task.exited' && event.data?.workerId === workerId) {
         cleanup()
         resolve()
       }
     }
-    daemonEE.on('message', handler)
+    backendEvents.on('event', handler)
     timeout = setTimeout(() => {
       cleanup()
       reject(new Error(`Timed out waiting for worker to exit: ${workerId}`))
@@ -77,17 +75,14 @@ function waitForWorkerExit(workerId: string) {
 
 async function stopWorkerAndNotify({ workerId, stoppingEvent, stoppedEvent }) {
   mainWindow?.webContents.send(stoppingEvent)
+  const workers = await requestBackend<Array<{ workerId?: string }>>('task.list')
+  if (!workers.some((worker) => worker.workerId === workerId)) {
+    mainWindow?.webContents.send(stoppedEvent)
+    return
+  }
   const waitForExit = waitForWorkerExit(workerId)
   try {
-    await sendToDaemon(
-      {
-        type: 'stop-worker',
-        workerId
-      },
-      {
-        needCallback: true
-      }
-    )
+    await requestBackend('task.stop', { workerId })
     await waitForExit.promise
     mainWindow?.webContents.send(stoppedEvent)
   } finally {
@@ -127,78 +122,17 @@ export default function initIpc() {
   })
 
   ipcMain.handle('get-task-manager-list', async () => {
-    const result = await sendToDaemon(
-      {
-        type: 'get-status'
-      },
-      {
-        needCallback: true
-      }
-    )
-    return result
+    return await requestBackend('task.list')
   })
 
   // IPC处理：停止工具进程
   ipcMain.handle('stop-task', async (_, workerId) => {
-    await sendToDaemon(
-      {
-        type: 'stop-worker',
-        workerId
-      },
-      {
-        needCallback: true
-      }
-    )
+    await requestBackend('task.stop', { workerId })
   })
 
-  let bossBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
-  let bossBridgeReady: Promise<void> | null = null
   ipcMain.handle('open-site-with-boss-cookie', async (_ev, data) => {
-    const url = data.url
-    if (!bossBridgeReady || !bossBridge) {
-      const ready = Promise.withResolvers<void>()
-      let bossChildReady = false
-      let readyTimeout: ReturnType<typeof setTimeout>
-      const failBossStartup = async (error: Error) => {
-        if (bossChildReady) return
-        bossChildReady = true
-        clearTimeout(readyTimeout)
-        ready.reject(error)
-        const current = bossBridge
-        bossBridge = null
-        bossBridgeReady = null
-        await current?.close().catch(() => {})
-      }
-      bossBridge = createBrowserCompatibilityApi({
-        onMessage: (message) => {
-          switch (message?.type) {
-            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY':
-              bossChildReady = true
-              clearTimeout(readyTimeout)
-              ready.resolve()
-              break
-            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_FAILED':
-              void failBossStartup(new Error(message.message ?? message.code ?? 'Boss browser bridge failed'))
-              break
-            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_CAN_BE_KILLED': {
-              const current = bossBridge
-              bossBridge = null
-              bossBridgeReady = null
-              void current?.close().catch(() => {})
-              break
-            }
-          }
-        }
-      })
-      readyTimeout = setTimeout(() => {
-        void failBossStartup(new Error('Timed out waiting for Boss browser bridge readiness'))
-      }, BOSS_CHILD_READY_TIMEOUT_MS)
-      bossBridgeReady = ready.promise
-      bossBridge.startBoss()
-    }
-
-    await bossBridgeReady
-    await bossBridge?.openBossPage(url ?? 'about:blank')
+    void data?.url
+    return await requestBackend('browser.openBoss')
   })
 
   ipcMain.handle('llm-config', async () => {

@@ -1,4 +1,4 @@
-import { daemonEE } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+import { backendEvents } from '../backend/events'
 
 function getTimestamp(): string {
   return new Date().toLocaleTimeString('zh-CN', { hour12: false })
@@ -17,9 +17,9 @@ function redactTerminalText(value: unknown): string {
     .replace(/\d+万/g, '[薪资]')
 }
 
-type DaemonMessage = Record<string, unknown> & { type?: string; data?: Record<string, unknown> }
+type BackendMessage = Record<string, unknown> & { type?: string; data?: Record<string, unknown> }
 
-function printDaemonMessage(message: DaemonMessage) {
+function printBackendMessage(message: BackendMessage) {
   if (!message || !message.type) return
   const ts = getTimestamp()
   const type = String(message.type)
@@ -191,8 +191,16 @@ export function startHeadlessTerminalLogger() {
   console.log('══════════════════════════════════════════')
   console.log('')
 
-  daemonEE.on('message', printDaemonMessage)
-  daemonEE.on('connect', () => console.log(`[${getTimestamp()}] 🔗 daemon 已连接`))
-  daemonEE.on('close', () => console.log(`[${getTimestamp()}] 🔌 daemon 已断开`))
-  daemonEE.on('error', (err: Error) => console.error(`[${getTimestamp()}] 🔴 daemon 错误:`, err.message))
+  backendEvents.on('event', (event: { event?: string; data?: Record<string, unknown> }) => {
+    const data = event.data ?? {}
+    if (event.event === 'system.status') {
+      printBackendMessage({ type: 'status', workers: data.workers as unknown[] })
+    } else if (event.event === 'task.progress') {
+      printBackendMessage({ type: 'worker-to-gui-message', workerId: data.workerId, data })
+    } else if (event.event === 'approval.required') {
+      printBackendMessage({ type: 'worker-to-gui-message', data: { type: 'approval-required', ...data } })
+    } else if (event.event === 'task.exited') {
+      printBackendMessage({ type: 'worker-exited', ...data })
+    }
+  })
 }

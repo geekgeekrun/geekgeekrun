@@ -132,6 +132,10 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
 
   await service.stop({ workerId: 'auto' })
   assert.deepEqual(child.killSignals, ['SIGTERM'])
+
+  await service.start({ workerId: 'auto', options: { headless: true } })
+  assert.equal(spawnCalls[1][2].env.GGR_HEADLESS, 'true', 'headless task start must be configured by the backend')
+  await service.stop({ workerId: 'auto' })
 }
 
 {

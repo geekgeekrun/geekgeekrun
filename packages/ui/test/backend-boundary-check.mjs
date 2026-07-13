@@ -53,9 +53,9 @@ const saveSessionHandler = cookieWindowSource.match(
   /const saveSessionHandler = async[\s\S]*?\n  \}/
 )?.[0]
 assert.ok(saveSessionHandler, 'cookie session save handler must exist')
-assert.match(saveSessionHandler, /await sessionBridge\.saveSession/, 'cookie session save must await backend persistence')
+assert.match(saveSessionHandler, /await writeBackendConfig\('boss_cookies', cookies\)/, 'cookie session save must await backend persistence')
 assert.match(saveSessionHandler, /return \{ saved: true \}/, 'cookie session save must return a status DTO')
-assert.doesNotMatch(saveSessionHandler, /return sessionBridge\.saveSession/, 'cookie session save must not return raw backend session data')
+assert.doesNotMatch(saveSessionHandler, /return writeBackendConfig/, 'cookie session save must not return raw backend session data')
 
 const clientSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/backend/client.ts'),
@@ -71,11 +71,33 @@ const eventsSource = await fs.readFile(
 assert.match(eventsSource, /installBackendEventBridge/, 'event bridge must install a reconnect listener')
 assert.match(eventsSource, /onBackendConnected\(registerBackendEvents\)/, 'event bridge must register after deferred backend connects')
 assert.match(eventsSource, /subscribedClient === backend && unsubscribe/, 'event bridge must avoid duplicate listeners for one client')
+assert.match(eventsSource, /backendEvents\.emit\('event'/, 'event bridge must relay structured backend events')
+assert.doesNotMatch(eventsSource, /daemonEE|connect-to-daemon/, 'event bridge must not depend on the legacy daemon adapter')
 
 const settingsSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/index.ts'),
   'utf8'
 )
 assert.match(settingsSource, /installBackendEventBridge\(\)[\s\S]*?await connectBackend\(\)/, 'event bridge must be installed before initial connection attempts')
+
+const electronMainSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/index.ts'),
+  'utf8'
+)
+assert.doesNotMatch(electronMainSource, /switch\s*\(runMode\)/, 'Electron entry must not dispatch executable modes')
+assert.doesNotMatch(electronMainSource, /--mode=/, 'Electron entry must not pass executable modes')
+assert.doesNotMatch(electronMainSource, /launchDaemon/, 'Electron entry must not launch a local daemon')
+assert.doesNotMatch(electronMainSource, /flow\/LAUNCH_|launch-daemon/, 'Electron entry must not import backend flows')
+
+const mainSourceRoot = path.join(repoRoot, 'packages/ui/src/main')
+const sourceFiles = await fs.readdir(mainSourceRoot, { recursive: true })
+for (const sourceFile of sourceFiles) {
+  if (typeof sourceFile !== 'string' || !/\.(?:[cm]?[jt]s|vue)$/.test(sourceFile)) continue
+  const relativePath = path.join('packages/ui/src/main', sourceFile)
+  const source = await fs.readFile(path.join(mainSourceRoot, sourceFile), 'utf8')
+  assert.doesNotMatch(source, /sendToDaemon/, `${relativePath} must use the backend client protocol`)
+  assert.doesNotMatch(source, /connectToDaemon/, `${relativePath} must use the backend client protocol`)
+  assert.doesNotMatch(source, /@geekgeekrun\/pm/, `${relativePath} must not import the legacy process manager`)
+}
 
 console.log('backend boundary check passed')

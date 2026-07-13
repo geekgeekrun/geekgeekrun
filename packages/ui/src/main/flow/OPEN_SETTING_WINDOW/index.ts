@@ -7,8 +7,7 @@ import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
-import { sendToDaemon, closeDaemonClient } from './connect-to-daemon'
-import { connectBackend } from '../../backend/client'
+import { connectBackend, getBackendClient } from '../../backend/client'
 import { installBackendEventBridge } from '../../backend/events'
 import { registerBackendIpc } from '../../backend/register-ipc'
 
@@ -91,23 +90,7 @@ export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
     })
   })
 
-  whenReadyPromise.then(async () => {
-    await sendToDaemon(
-      {
-        type: 'ping'
-      },
-      {
-        needCallback: true
-      }
-    )
-    await sendToDaemon(
-      {
-        type: 'user-process-register'
-      },
-      {
-        needCallback: true
-      }
-    )
+  app.on('before-quit', () => {
+    void getBackendClient().close()
   })
-  app.on('before-quit', closeDaemonClient)
 }

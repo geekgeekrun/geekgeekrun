@@ -1,6 +1,8 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import { createBrowserCompatibilityApi } from '../../../../ggr-backend/lib/services/browser/compat.mjs'
+import { requestBackend } from '../backend/client'
+import { backendEvents } from '../backend/events'
+import { writeBackendConfig } from '../backend/register-ipc'
 
 export let cookieAssistantWindow: BrowserWindow | null = null
 export function createCookieAssistantWindow(
@@ -44,42 +46,38 @@ export function createCookieAssistantWindow(
     cookieAssistantWindow = null
   })
 
-  let loginBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
-  const sessionBridge = createBrowserCompatibilityApi()
+  let loginTaskId: string | undefined
   const saveSessionHandler = async (_ev: Electron.IpcMainInvokeEvent, { cookies }: { cookies: unknown }) => {
-    await sessionBridge.saveSession({ cookies })
+    await writeBackendConfig('boss_cookies', cookies)
     return { saved: true }
   }
   ipcMain.handle('save-boss-session', saveSessionHandler)
-  const launchHandler = async (_ev) => {
-    await loginBridge?.close().catch(() => {})
-    loginBridge = createBrowserCompatibilityApi({
-      onMessage: (data) => {
-        switch (data.type) {
-          case 'BOSS_ZHIPIN_COOKIE_COLLECTED':
-            cookieAssistantWindow?.webContents.send(data.type, data)
-            break
-          case 'BOSS_ZHIPIN_LOGIN_PAGE_FAILED':
-            cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
-            void loginBridge?.close().catch(() => {})
-            loginBridge = null
-            break
-        }
-      }
-    })
-    loginBridge.startLogin()
+  const backendEventHandler = (event: { event?: string; data?: Record<string, unknown> }) => {
+    const data = event.data
+    if (event.event !== 'task.progress' || !data || data.taskId !== loginTaskId) return
+    if (data.state === 'cookie-collected') {
+      cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_COMPLETED', data)
+      ipcMain.emit('cookie-saved')
+    }
+    if (data.state === 'failed') {
+      cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
+    }
+  }
+  backendEvents.on('event', backendEventHandler)
+  const launchHandler = async () => {
+    const task = await requestBackend<{ taskId: string }>('browser.openLogin')
+    loginTaskId = task.taskId
   }
   ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', launchHandler)
 
   const killHandler = async () => {
-    const current = loginBridge
-    loginBridge = null
-    await current?.close().catch(() => {})
+    if (loginTaskId) await requestBackend('browser.cancel', { taskId: loginTaskId })
+    loginTaskId = undefined
   }
   ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', killHandler)
   cookieAssistantWindow.on('closed', () => {
     void killHandler()
-    void sessionBridge.close().catch(() => {})
+    backendEvents.off('event', backendEventHandler)
     ipcMain.off('launch-bosszhipin-login-page-with-preload-extension', launchHandler)
     ipcMain.off('kill-bosszhipin-login-page-with-preload-extension', killHandler)
     ipcMain.removeHandler('save-boss-session')

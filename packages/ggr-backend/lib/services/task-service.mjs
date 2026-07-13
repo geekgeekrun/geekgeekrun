@@ -136,20 +136,25 @@ export function createTaskService({
   }
 
   function assertStartOptions(options) {
-    if (options === undefined) return
+    if (options === undefined) return { headless: false }
     if (!options || typeof options !== 'object' || Array.isArray(options)) {
       throw Object.assign(new Error('Task start options must be an object'), { code: 'INVALID_PARAMS' })
     }
-    const unsupported = Object.keys(options)[0]
+    const unsupported = Object.keys(options).find((key) => key !== 'headless')
     if (unsupported) {
       throw Object.assign(new Error(`Unsupported task start option: ${unsupported}`), { code: 'INVALID_PARAMS' })
     }
+    if (options.headless !== undefined && typeof options.headless !== 'boolean') {
+      throw Object.assign(new Error('Task start option headless must be a boolean'), { code: 'INVALID_PARAMS' })
+    }
+    return { headless: Boolean(options.headless) }
   }
 
-  function launch(workerId, restartCount = 0) {
+  function launch(workerId, restartCount = 0, options = { headless: false }) {
     const entry = assertWorker(workerId)
     const child = spawnProcess(process.execPath, [entry], {
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GGR_HEADLESS: String(options.headless) }
     })
     const record = {
       workerId,
@@ -189,7 +194,7 @@ export function createTaskService({
       })
       if (restarting) {
         queueMicrotask(() => {
-          if (!stoppedWorkers.has(workerId) && !workers.has(workerId)) launch(workerId, restartCount + 1)
+          if (!stoppedWorkers.has(workerId) && !workers.has(workerId)) launch(workerId, restartCount + 1, options)
         })
       }
     }
@@ -201,13 +206,13 @@ export function createTaskService({
 
   async function start({ workerId, options } = {}) {
     assertWorker(workerId)
-    assertStartOptions(options)
+    const startOptions = assertStartOptions(options)
     const stopping = stopPromises.get(workerId)
     if (stopping) await stopping
     const running = workers.get(workerId)
     if (running) return snapshot(running)
     stoppedWorkers.delete(workerId)
-    return launch(workerId)
+    return launch(workerId, 0, startOptions)
   }
 
   async function stop({ workerId } = {}) {

@@ -5,6 +5,7 @@ import {
 } from '../window/browserDownloadProgressWindow'
 
 export async function openBrowserDownloadWindow({ windowOption } = {}) {
+  // The progress window delegates downloading to the backend-owned compatibility flow.
   return new Promise((resolve, reject) => {
     createBrowserDownloadProgressWindow({ ...windowOption })
 

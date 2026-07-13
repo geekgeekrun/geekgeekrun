@@ -1,14 +1,8 @@
 import { app, dialog, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 import { runCommon } from './run-common'
-import {
-  approveAutoReply,
-  createDaemonController,
-  readApprovalQueue,
-  requireHumanIntervention,
-  TASKS
-} from '../../../../ggr-controller/index.mjs'
-import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+import { requestBackend } from '../backend/client'
+import { backendEvents } from '../backend/events'
 import { allowMainWindowQuit, hideMainWindow, showMainWindow } from '../window/mainWindow'
 
 let tray: Tray | null = null
@@ -17,11 +11,9 @@ let isBossRunning = false
 let isBossStopping = false
 let pendingApprovalCount = 0
 
-const BOSS_WORKER_ID = TASKS.AUTO_CHAT.workerId
-const controller = createDaemonController({
-  sendToDaemon,
-  runTask: runCommon
-})
+const BOSS_WORKER_ID = 'geekAutoStartWithBossMain'
+type TaskSummary = { workerId?: string; pid?: number }
+type Approval = Record<string, unknown> & { id: string }
 
 function getTrayIcon() {
   const iconPath = path.join(app.getAppPath(), 'resources/icon.png')
@@ -52,8 +44,8 @@ async function showTrayError(error: unknown) {
 }
 
 async function getBossWorker() {
-  const status = await controller.getTaskStatus(BOSS_WORKER_ID)
-  return status.worker as { workerId?: string; pid?: number } | null
+  const workers = await requestBackend<TaskSummary[]>('task.list')
+  return workers.find((worker) => worker.workerId === BOSS_WORKER_ID) ?? null
 }
 
 function syncBossWorkerState(workers: Array<{ workerId?: string }> = []) {
@@ -65,12 +57,11 @@ function syncBossWorkerState(workers: Array<{ workerId?: string }> = []) {
 }
 
 async function syncBossWorkerStateFromDaemon() {
-  const status = await controller.getTaskStatus(BOSS_WORKER_ID)
-  syncBossWorkerState(status.worker ? [status.worker] : [])
+  syncBossWorkerState(await requestBackend<TaskSummary[]>('task.list'))
 }
 
 async function syncApprovalQueueState() {
-  pendingApprovalCount = (await readApprovalQueue()).length
+  pendingApprovalCount = (await requestBackend<Approval[]>('approval.list')).length
   refreshTrayMenu()
 }
 
@@ -88,7 +79,7 @@ function formatApprovalDetail(request: Record<string, unknown>, index: number, t
 }
 
 async function reviewApprovalQueue() {
-  const approvals = await readApprovalQueue()
+  const approvals = await requestBackend<Approval[]>('approval.list')
   if (!approvals.length) {
     pendingApprovalCount = 0
     refreshTrayMenu()
@@ -110,12 +101,12 @@ async function reviewApprovalQueue() {
     })
 
     if (result.response === 0) {
-      await approveAutoReply({ id: request.id })
+      await requestBackend('approval.approve', { id: request.id })
       approvals.splice(index, 1)
       continue
     }
     if (result.response === 1) {
-      await requireHumanIntervention({ id: request.id, reason: 'AI auto reply was not approved; manual handling required' })
+      await requestBackend('approval.requireHuman', { id: request.id, reason: 'AI auto reply was not approved; manual handling required' })
       approvals.splice(index, 1)
       continue
     }
@@ -128,24 +119,25 @@ async function reviewApprovalQueue() {
   await syncApprovalQueueState()
 }
 
-function subscribeDaemonEvents() {
-  daemonEE.on('message', (message) => {
-    if (message.type === 'status') {
-      syncBossWorkerState(message.workers)
+function subscribeBackendEvents() {
+  backendEvents.on('event', (event: { event?: string; data?: Record<string, unknown> }) => {
+    const data = event.data ?? {}
+    if (event.event === 'system.status') {
+      syncBossWorkerState((data.workers as Array<{ workerId?: string }>) ?? [])
       return
     }
 
-    if (message.type === 'worker-to-gui-message' && message.data?.type === 'approval-required') {
+    if (event.event === 'approval.required') {
       void syncApprovalQueueState().catch(showTrayError)
       return
     }
 
-    if (message.workerId !== BOSS_WORKER_ID) {
+    if (data.workerId !== BOSS_WORKER_ID) {
       return
     }
 
-    if (message.type === 'worker-exited' || message.type === 'worker-disconnected') {
-      isBossRunning = Boolean(message.restarting)
+    if (event.event === 'task.exited') {
+      isBossRunning = Boolean(data.restarting)
       isBossStopping = false
       refreshTrayMenu()
     }
@@ -153,8 +145,7 @@ function subscribeDaemonEvents() {
 }
 
 async function startBossAgent() {
-  process.env.GGR_HEADLESS = String(isHeadlessEnabled)
-  const { isAlreadyRunning } = await controller.startTask(BOSS_WORKER_ID)
+  const { isAlreadyRunning } = await runCommon({ mode: BOSS_WORKER_ID, headless: isHeadlessEnabled })
   isBossRunning = true
   refreshTrayMenu()
   await dialog.showMessageBox({
@@ -173,7 +164,7 @@ async function stopBossAgent() {
 
   isBossStopping = true
   refreshTrayMenu()
-  await controller.stopTask(BOSS_WORKER_ID)
+  await requestBackend('task.stop', { workerId: BOSS_WORKER_ID })
   await dialog.showMessageBox({ type: 'info', message: '自动开聊停止请求已发送' })
 }
 
@@ -243,7 +234,7 @@ export function initTray() {
 
   tray = new Tray(getTrayIcon())
   tray.setToolTip('GeekGeekRun 牛人快跑')
-  subscribeDaemonEvents()
+  subscribeBackendEvents()
   refreshTrayMenu()
   void syncBossWorkerStateFromDaemon().catch(showTrayError)
   void syncApprovalQueueState().catch(showTrayError)
