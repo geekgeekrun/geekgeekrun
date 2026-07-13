@@ -1,39 +1,49 @@
+import os from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import {
-  approveAutoReply,
-  createLocalProcessController,
-  readAppData,
-  readApprovalQueue,
-  requireHumanIntervention,
-  updateAppData
-} from '../../ggr-controller/index.mjs'
+import { createGgrClient } from '@geekgeekrun/ggr-client'
+import { createBackendController } from '../../ggr-controller/index.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-function defaultRepoRoot() {
-  return path.resolve(__dirname, '../../..')
+function defaultSocketPath() {
+  return process.env.GGR_BACKEND_SOCKET ?? path.join(os.homedir(), '.geekgeekrun', 'run', 'backend.sock')
 }
 
-export function createAgentService({ repoRoot = defaultRepoRoot(), approvalQueueFilePath, configDir } = {}) {
-  const localController = createLocalProcessController({ repoRoot })
+function createDefaultClient() {
+  return createGgrClient({
+    socketPath: defaultSocketPath(),
+    client: 'ggr-mcp',
+    clientVersion: '0.1.0'
+  })
+}
 
-  return {
-    ...localController,
-    readAppData({ resource }) {
-      return readAppData({ resource, configDir })
-    },
-    updateAppData({ resource, patch }) {
-      return updateAppData({ resource, patch, configDir })
-    },
-    listAiReplyApprovals({ includeAll = false } = {}) {
-      return readApprovalQueue({ includeAll, queueFilePath: approvalQueueFilePath })
-    },
-    approveAutoReply({ id }) {
-      return approveAutoReply({ id, queueFilePath: approvalQueueFilePath })
-    },
-    requireHumanIntervention({ id, reason = 'manual handling required' }) {
-      return requireHumanIntervention({ id, reason, queueFilePath: approvalQueueFilePath })
+function canReconnect(error) {
+  return error?.code === 'CONNECTION_CLOSED'
+}
+
+export function createAgentService({ client = createDefaultClient() } = {}) {
+  if (!client || typeof client.request !== 'function') {
+    throw new TypeError('client.request is required')
+  }
+
+  async function connect() {
+    if (client.connected === false && typeof client.connect === 'function') {
+      await client.connect()
     }
   }
+
+  const controller = createBackendController({
+    client: {
+      async request(method, params) {
+        await connect()
+        try {
+          return await client.request(method, params)
+        } catch (error) {
+          if (!canReconnect(error) || typeof client.connect !== 'function') throw error
+          await client.connect()
+          return client.request(method, params)
+        }
+      }
+    }
+  })
+
+  return { ...controller, connect }
 }

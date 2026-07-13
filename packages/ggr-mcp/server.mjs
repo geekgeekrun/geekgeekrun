@@ -2,6 +2,7 @@ import { createMcpServer } from './lib/mcp-stdio.mjs'
 import { createAgentService } from './lib/agent-service.mjs'
 
 const agentService = createAgentService()
+void agentService.connect().catch(() => {})
 const appDataResources = [
   'job_intention',
   'opening_message',
@@ -17,13 +18,13 @@ const writableAppDataResources = appDataResources.filter((resource) => resource 
 const tools = [
   {
     name: 'boss_get_status',
-    description: 'Return the current local controller status.',
+    description: 'Return the health of the persistent local GeekGeekRun backend.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     handler: () => agentService.getStatus()
   },
   {
     name: 'boss_start_agent',
-    description: 'Start the automatic GeekGeekRun BOSS chat agent as a local child process.',
+    description: 'Start the automatic GeekGeekRun BOSS chat worker through the persistent local backend.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -37,13 +38,13 @@ const tools = [
   },
   {
     name: 'boss_stop_agent',
-    description: 'Stop the local GeekGeekRun BOSS daemon child process.',
+    description: 'Stop the automatic GeekGeekRun BOSS chat worker through the persistent local backend.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     handler: () => agentService.stop()
   },
   {
     name: 'boss_update_config',
-    description: 'Update one supported GeekGeekRun config file.',
+    description: 'Update one supported GeekGeekRun configuration resource in the persistent local backend.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -60,7 +61,7 @@ const tools = [
   },
   {
     name: 'boss_read_app_data',
-    description: 'Read one whitelisted user-level GeekGeekRun app-data resource.',
+    description: 'Read one whitelisted GeekGeekRun app-data resource from the persistent local backend.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -73,7 +74,7 @@ const tools = [
   },
   {
     name: 'boss_update_app_data',
-    description: 'Update one whitelisted user-level GeekGeekRun app-data resource.',
+    description: 'Update one whitelisted GeekGeekRun app-data resource in the persistent local backend.',
     inputSchema: {
       type: 'object',
       properties: {

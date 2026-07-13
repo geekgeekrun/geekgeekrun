@@ -102,9 +102,20 @@ importers:
         specifier: workspace:*
         version: link:../ggr-protocol
 
-  packages/ggr-controller: {}
+  packages/ggr-controller:
+    dependencies:
+      '@geekgeekrun/ggr-protocol':
+        specifier: workspace:*
+        version: link:../ggr-protocol
 
-  packages/ggr-mcp: {}
+  packages/ggr-mcp:
+    dependencies:
+      '@geekgeekrun/ggr-client':
+        specifier: workspace:*
+        version: link:../ggr-client
+      '@geekgeekrun/ggr-controller':
+        specifier: workspace:*
+        version: link:../ggr-controller
 
   packages/ggr-protocol: {}
 
