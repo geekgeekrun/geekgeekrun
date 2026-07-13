@@ -596,7 +596,7 @@
 
 <script setup lang="tsx">
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import { JobDetailRegExpMatchLogic, SalaryCalculateWay } from '@geekgeekrun/sqlite-plugin/src/enums'
+import { JobDetailRegExpMatchLogic, SalaryCalculateWay, setPresentationData } from '@renderer/domain/presentation-data'
 import CityChooser from '../MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'
 import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
 
@@ -713,6 +713,7 @@ async function handleSave() {
 }
 
 ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+  setPresentationData(res.config ?? {})
   const commonJobConditionConfig = res.config?.['common-job-condition-config.json'] ?? {}
   Object.keys(formContent.value).forEach((key) => {
     if (key in commonJobConditionConfig) {

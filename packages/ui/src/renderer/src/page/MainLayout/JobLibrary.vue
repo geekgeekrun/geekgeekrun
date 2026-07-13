@@ -121,16 +121,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer, ElMessage } from 'element-plus'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { type JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
-import { PageReq, PagedRes } from '../../../../common/types/pagination'
+import type { JobHistoryRecordDto, JobRecordDto, PageResult } from '@geekgeekrun/ggr-protocol'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import JobInfoHistoryList from '../../features/JobInfoHistoryList/index.vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
-const tableData = ref<VChatStartupLog[]>([])
+const tableData = ref<JobRecordDto[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
-const pagination = ref<Omit<PageReq & PagedRes<unknown>, 'data'>>({
+const pagination = ref({
   pageNo: 1,
   pageSize: pageSizeList.value[0],
   totalItemCount: 0
@@ -144,14 +142,14 @@ async function getJobLibrary() {
       page_size: pagination.value.pageSize,
     })
     isTableLoading.value = true
-    const { data: res } = (await electron.ipcRenderer.invoke('get-job-library', {
+    const res = (await electron.ipcRenderer.invoke('get-job-library', {
       pageNo: pagination.value.pageNo,
       pageSize: pagination.value.pageSize
-    })) as { data: PagedRes<VChatStartupLog> }
-    tableData.value = res.data
+    })) as PageResult<JobRecordDto>
+    tableData.value = res.items
     pagination.value = {
-      totalItemCount: res.totalItemCount,
-      pageNo: res.pageNo,
+      totalItemCount: res.total,
+      pageNo: res.page,
       pageSize: pagination.value.pageSize
     }
     gtagRenderer('job_library_request_success', {
@@ -188,14 +186,14 @@ onMounted(() => {
 })
 
 const drawVisibleModelValue = ref(false)
-const selectedJobInfoForViewSnapshot = ref<VChatStartupLog | null>(null)
+const selectedJobInfoForViewSnapshot = ref<JobRecordDto | null>(null)
 
-function handleViewJobSnapshotButtonClick(record: VChatStartupLog) {
+function handleViewJobSnapshotButtonClick(record: JobRecordDto) {
   gtagRenderer('view_job_snapshot_button_clicked')
   selectedJobInfoForViewSnapshot.value = record
   drawVisibleModelValue.value = true
 }
-async function handleViewJobOnlineButtonClick(encryptJobId: string) {
+async function handleViewJobOnlineButtonClick(encryptJobId: string | number) {
   gtagRenderer('view_job_online_button_clicked')
   return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
     url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
@@ -203,14 +201,14 @@ async function handleViewJobOnlineButtonClick(encryptJobId: string) {
 }
 
 const historyDialogVisibleModelValue = ref(false)
-const selectedJobInfoForViewHistory = ref<VChatStartupLog | null>(null)
-const selectedJobHistory = ref<null | JobInfoChangeLog[]>(null)
-async function handleViewJobHistoryButtonClick(record: VChatStartupLog) {
+const selectedJobInfoForViewHistory = ref<JobRecordDto | null>(null)
+const selectedJobHistory = ref<null | Array<JobHistoryRecordDto & { __ggr_updateTime: string }>>(null)
+async function handleViewJobHistoryButtonClick(record: JobRecordDto) {
   gtagRenderer('view_job_history_button_clicked')
-  let { data: historyList } = await electron.ipcRenderer.invoke(
+  let historyList = (await electron.ipcRenderer.invoke(
     'get-job-history-by-encrypt-id',
     record.encryptJobId
-  )
+  )) as JobHistoryRecordDto[]
 
   historyList = historyList.map((it) => ({
     ...it,

@@ -2,6 +2,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { defaultPromptMap } from '../workers/read-no-reply/llm.mjs'
+import filterConditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json' with { type: 'json' }
+import industryFilterExemptions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-industry-filter-exemption-20241002.json' with { type: 'json' }
+import cityGroups from '@geekgeekrun/geek-auto-start-chat-with-boss/cityGroup.mjs'
 
 const PRIVATE_DIR_MODE = 0o700
 const PRIVATE_FILE_MODE = 0o600
@@ -21,6 +24,9 @@ const RESOURCES = Object.freeze({
   auto_reminder_rechat_template: { fileName: defaultPromptMap.rechat.fileName, writable: true, text: true, location: 'storage', fallback: defaultPromptMap.rechat.content },
   auto_reminder_open_template_default: { writable: false, defaultOnly: true, fallback: defaultPromptMap.open.content },
   auto_reminder_rechat_template_default: { writable: false, defaultOnly: true, fallback: defaultPromptMap.rechat.content },
+  job_filter_conditions: { writable: false, defaultOnly: true, fallback: filterConditions },
+  industry_filter_exemptions: { writable: false, defaultOnly: true, fallback: industryFilterExemptions },
+  city_groups: { writable: false, defaultOnly: true, fallback: cityGroups },
   runtime_status: { type: 'runtime_status', writable: false }
 })
 

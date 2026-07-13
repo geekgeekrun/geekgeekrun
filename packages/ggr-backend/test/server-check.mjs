@@ -108,6 +108,16 @@ try {
   const defaultPrompt = await client.request('config.read', { resource: 'auto_reminder_open_template_default' })
   assert.equal(defaultPrompt.writable, false)
   assert.match(defaultPrompt.data, /开场白/)
+  for (const [resource, property] of [
+    ['job_filter_conditions', 'salaryList'],
+    ['industry_filter_exemptions', 'length'],
+    ['city_groups', 'zpData']
+  ]) {
+    const response = await client.request('config.read', { resource })
+    assert.equal(response.writable, false)
+    assert.ok(response.data[property] !== undefined)
+    await assert.rejects(client.request('config.write', { resource, patch: {} }), { code: 'INVALID_PARAMS' })
+  }
 
   for (const resource of ['../boss.json', 'boss.json', '/tmp/boss.json']) {
     await assert.rejects(client.request('config.read', { resource }), { code: 'INVALID_PARAMS' })

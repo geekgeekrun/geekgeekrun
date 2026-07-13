@@ -1,6 +1,5 @@
-import { SalaryCalculateWay, JobDetailRegExpMatchLogic } from '@geekgeekrun/sqlite-plugin/src/enums'
-import sampleCompanyList from '@geekgeekrun/geek-auto-start-chat-with-boss/default-config-file/sample-company-list.json'
 import { nextTick } from 'vue'
+import { JobDetailRegExpMatchLogic, SalaryCalculateWay, sampleCompanyList } from '@renderer/domain/presentation-data'
 
 export function isJobDetailRegExpEmpty({ formContent }) {
   return [

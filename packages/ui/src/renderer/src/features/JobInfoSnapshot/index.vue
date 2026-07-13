@@ -34,13 +34,12 @@
 
 <script setup lang="ts">
 import { PropType } from 'vue'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { type VMarkAsNotSuitLog } from '@geekgeekrun/sqlite-plugin/src/entity/VMarkAsNotSuitLog'
+import type { JobRecordDto, MarkAsNotSuitRecordDto } from '@geekgeekrun/ggr-protocol'
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
 
 defineProps({
   jobInfo: {
-    type: Object as PropType<VChatStartupLog | VMarkAsNotSuitLog>,
+    type: Object as PropType<JobRecordDto | MarkAsNotSuitRecordDto>,
     required: true
   },
   scene: {

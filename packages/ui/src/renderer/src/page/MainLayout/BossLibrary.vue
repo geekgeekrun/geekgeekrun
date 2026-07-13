@@ -50,13 +50,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination } from 'element-plus'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { PageReq, PagedRes } from '../../../../common/types/pagination'
+import type { BossRecordDto, PageResult } from '@geekgeekrun/ggr-protocol'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
-const tableData = ref<VChatStartupLog[]>([])
+const tableData = ref<BossRecordDto[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
-const pagination = ref<Omit<PageReq & PagedRes<unknown>, 'data'>>({
+const pagination = ref({
   pageNo: 1,
   pageSize: pageSizeList.value[0],
   totalItemCount: 0
@@ -70,14 +69,14 @@ async function getBossLibrary() {
       page_size: pagination.value.pageSize,
     })
     isTableLoading.value = true
-    const { data: res } = (await electron.ipcRenderer.invoke('get-boss-library', {
+    const res = (await electron.ipcRenderer.invoke('get-boss-library', {
       pageNo: pagination.value.pageNo,
       pageSize: pagination.value.pageSize
-    })) as { data: PagedRes<VChatStartupLog> }
-    tableData.value = res.data
+    })) as PageResult<BossRecordDto>
+    tableData.value = res.items
     pagination.value = {
-      totalItemCount: res.totalItemCount,
-      pageNo: res.pageNo,
+      totalItemCount: res.total,
+      pageNo: res.page,
       pageSize: pagination.value.pageSize
     }
     gtagRenderer('boss_library_request_success', {

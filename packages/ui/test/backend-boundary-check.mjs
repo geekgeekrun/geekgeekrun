@@ -101,6 +101,16 @@ for (const sourceFile of sourceFiles) {
   assert.doesNotMatch(source, /downloadDependenciesForInit/, `${relativePath} must not execute backend browser flows directly`)
 }
 
+const rendererSourceRoot = path.join(repoRoot, 'packages/ui/src/renderer/src')
+const rendererSourceFiles = await fs.readdir(rendererSourceRoot, { recursive: true })
+for (const sourceFile of rendererSourceFiles) {
+  if (typeof sourceFile !== 'string' || !/\.(?:[cm]?[jt]s|vue)$/.test(sourceFile)) continue
+  const relativePath = path.join('packages/ui/src/renderer/src', sourceFile)
+  const source = await fs.readFile(path.join(rendererSourceRoot, sourceFile), 'utf8')
+  assert.doesNotMatch(source, /@geekgeekrun\/(?:sqlite-plugin|geek-auto-start-chat-with-boss)/, `${relativePath} must consume only protocol DTOs, IPC responses, and UI-local presentation data`)
+  assert.doesNotMatch(source, /@geekgeekrun\/sqlite-plugin\/src\/(?:entity|utils)/, `${relativePath} must not import persistence entities or helpers`)
+}
+
 for (const relativePath of [
   'packages/ui/src/main/window/browserAssistantWindow.ts',
   'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts'

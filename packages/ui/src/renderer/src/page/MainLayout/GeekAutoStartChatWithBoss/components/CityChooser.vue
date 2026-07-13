@@ -165,8 +165,8 @@
 </template>
 
 <script lang="ts" setup>
-import { PropType, ref } from 'vue'
-import cityGroupData from '@geekgeekrun/geek-auto-start-chat-with-boss/cityGroup.mjs'
+import { computed, PropType, ref } from 'vue'
+import { cityGroups } from '@renderer/domain/presentation-data'
 import { gtagRenderer } from '@renderer/utils/gtag'
 import { ElRadioGroup } from 'element-plus'
 
@@ -184,26 +184,20 @@ const props = defineProps({
   }
 })
 const emits = defineEmits(['update:modelValue'])
-const { hotCityList, cityGroup } = cityGroupData.zpData
+const hotCityList = computed(() => cityGroups.zpData.hotCityList ?? [])
 
 const activeTabName = ref('热门城市')
 const isDialogVisible = ref(false)
 const selectedCities = ref(null)
 
-const cityGroupsByAlphabetMap = ref(
-  new Map(['ABCDE', 'FGHJ', 'KLMN', 'PQRST', 'WXYZ'].map((it) => [it, []]))
-)
-for (const group of cityGroup) {
-  const { firstChar } = group
-  const targetKey =
-    [...cityGroupsByAlphabetMap.value.keys()].find((it) => it.includes(firstChar)) ?? null
-  if (!targetKey) {
-    if (!cityGroupsByAlphabetMap.value.get(targetKey)) {
-      cityGroupsByAlphabetMap.value.set(targetKey, [])
-    }
+const cityGroupsByAlphabetMap = computed(() => {
+  const result = new Map(['ABCDE', 'FGHJ', 'KLMN', 'PQRST', 'WXYZ'].map((item) => [item, []]))
+  for (const group of cityGroups.zpData.cityGroup ?? []) {
+    const targetKey = [...result.keys()].find((item) => item.includes(group.firstChar))
+    if (targetKey) result.get(targetKey)?.push(group)
   }
-  cityGroupsByAlphabetMap.value.get(targetKey)?.push(group)
-}
+  return result
+})
 
 function handleDialogOpen() {
   activeTabName.value = '热门城市'

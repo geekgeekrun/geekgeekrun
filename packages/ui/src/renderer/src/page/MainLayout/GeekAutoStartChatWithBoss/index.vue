@@ -1720,24 +1720,23 @@ import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBossRecommendFilter/index.vue'
-import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import {
+  activeDescList,
   calculateTotalCombinations,
   checkAnyCombineBossRecommendFilterHasCondition,
-  formatStaticCombineFilters
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
-import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import {
   CombineRecommendJobFilterType,
+  filterConditions as conditions,
+  formatStaticCombineFilters,
+  JobDetailRegExpMatchLogic,
   MarkAsNotSuitOp,
-  StrategyScopeOptionWhenMarkJobNotMatch,
   SalaryCalculateWay,
-  JobDetailRegExpMatchLogic
-} from '@geekgeekrun/sqlite-plugin/src/enums'
+  setPresentationData,
+  StrategyScopeOptionWhenMarkJobNotMatch,
+} from '@renderer/domain/presentation-data'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { debounce } from 'lodash'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
-import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
 import expectJobFilterTemplateList from './expectJobFilterTemplateList'
 import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
@@ -1860,6 +1859,7 @@ onBeforeUnmount(() => {
   unwatchAnyCombineRecommendJobFilter.value?.()
 })
 electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+  setPresentationData(res.config ?? {})
   console.log(res)
   formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
   formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')

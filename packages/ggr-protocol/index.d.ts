@@ -77,6 +77,89 @@ export interface PageResult<T> {
   pageSize: number
 }
 
+export interface JobRecordDto {
+  encryptJobId: string | number
+  jobName: string
+  positionName: string
+  salaryLow: number | null
+  salaryHigh: number | null
+  salaryMonth: number | null
+  experienceName: string | number | null
+  publishDate: string | null
+  degreeName: string
+  address?: string
+  description: string
+  date?: string
+  bossName: string
+  bossTitle?: string
+  companyName: string
+}
+
+export interface MarkAsNotSuitRecordDto extends JobRecordDto {
+  markReason: number
+  extInfo: string
+}
+
+export interface JobHistoryRecordDto {
+  id: number
+  encryptJobId: string | number
+  updateTime: string
+  dataAsJson: string
+}
+
+export interface BossRecordDto {
+  encryptBossId: string | number
+  name: string
+  title: string
+  companyName: string | null
+  encryptCompanyId: string | number | null
+}
+
+export interface CompanyRecordDto {
+  encryptCompanyId: string | number
+  name: string
+  brandName?: string
+  scaleLow?: number | null
+  scaleHigh?: number | null
+  stageName?: string
+  industryName?: string
+}
+
+export interface FilterOptionDto {
+  code: number
+  name: string
+}
+
+export interface JobFilterConditionsDto {
+  salaryList: FilterOptionDto[]
+  experienceList: FilterOptionDto[]
+  degreeList: FilterOptionDto[]
+  scaleList: FilterOptionDto[]
+}
+
+export interface IndustryFilterGroupDto {
+  code: number
+  name: string
+  subLevelModelList: FilterOptionDto[]
+}
+
+export interface CityDto {
+  code: number
+  name: string
+}
+
+export interface CityGroupDto {
+  firstChar: string
+  cityList: CityDto[]
+}
+
+export interface CityGroupsDto {
+  zpData: {
+    hotCityList: CityDto[]
+    cityGroup: CityGroupDto[]
+  }
+}
+
 export interface RpcErrorShape {
   code: string
   message: string
