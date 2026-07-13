@@ -1,9 +1,33 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createBackendController, TASKS } from '../index.mjs'
 
 assert.equal(TASKS.AUTO_CHAT.workerId, 'geekAutoStartWithBossMain')
 assert.equal(TASKS.READ_NO_REPLY.workerId, 'readNoReplyAutoReminderMain')
+
+async function productionSourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true })
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(directory, entry.name)
+    if (entry.isDirectory()) return entry.name === 'test' ? [] : productionSourceFiles(entryPath)
+    return entry.isFile() && entry.name.endsWith('.mjs') ? [entryPath] : []
+  }))
+  return nested.flat()
+}
+
+const controllerSource = await readFile(new URL('../index.mjs', import.meta.url), 'utf8')
+assert.doesNotMatch(controllerSource, /ggr-backend/)
+const productionSources = await Promise.all(
+  (await Promise.all([
+    productionSourceFiles(fileURLToPath(new URL('..', import.meta.url))),
+    productionSourceFiles(fileURLToPath(new URL('../../ggr-mcp', import.meta.url)))
+  ])).flat().map((filePath) => readFile(filePath, 'utf8'))
+)
+for (const forbidden of ['child_process', 'repoRoot', 'daemon-main', 'approvalQueueFilePath', 'configDir']) {
+  for (const source of productionSources) assert.doesNotMatch(source, new RegExp(forbidden))
+}
 
 const calls = []
 const controller = createBackendController({
@@ -44,6 +68,9 @@ assert.deepEqual(calls[7], ['approval.approve', { id: 'approval-1' }])
 await controller.requireHumanIntervention({ id: 'approval-1', reason: 'needs review' })
 assert.deepEqual(calls[8], ['approval.requireHuman', { id: 'approval-1', reason: 'needs review' }])
 
+await controller.createApprovalRequest({ id: 'approval-2', latestHrMessage: 'please confirm' })
+assert.deepEqual(calls[9], ['approval.create', { request: { id: 'approval-2', latestHrMessage: 'please confirm' } }])
+
 await assert.rejects(
   () => controller.start({ mode: 'manual' }),
   /Unsupported agent mode/
@@ -52,18 +79,5 @@ await assert.rejects(
   () => controller.updateConfig({ fileName: 'unsupported.json', patch: {} }),
   /Unsupported config file/
 )
-
-const controllerSource = await readFile(new URL('../index.mjs', import.meta.url), 'utf8')
-const mcpSource = await readFile(new URL('../../ggr-mcp/lib/agent-service.mjs', import.meta.url), 'utf8')
-for (const forbidden of [
-  ['child', 'process'].join('_'),
-  ['repo', 'Root'].join(''),
-  ['daemon', '-main.mjs'].join(''),
-  ['config', 'Dir'].join(''),
-  ['approval', 'QueueFilePath'].join('')
-]) {
-  assert.doesNotMatch(controllerSource, new RegExp(forbidden))
-  assert.doesNotMatch(mcpSource, new RegExp(forbidden))
-}
 
 console.log('ggr-controller check passed')

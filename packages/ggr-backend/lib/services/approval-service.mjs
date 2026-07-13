@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -10,6 +10,15 @@ const LOCK_STALE_MS = 30000
 const LOCK_RETRY_MS = 25
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function approvalDedupeKey(request) {
+  return createHash('sha256').update([
+    request.hrName ?? '',
+    request.company ?? '',
+    request.jobTitle ?? '',
+    request.latestHrMessage ?? ''
+  ].join('\n')).digest('hex')
+}
 
 export function defaultApprovalQueueFilePath() {
   return path.join(os.homedir(), '.geekgeekrun', 'storage', 'hr-reply-approval-queue.json')
@@ -351,6 +360,34 @@ export function createApprovalService({
     })
   }
 
+  async function create(request) {
+    if (!request || typeof request !== 'object' || Array.isArray(request)) {
+      throw Object.assign(new Error('approval request must be an object'), { code: 'INVALID_PARAMS' })
+    }
+    return update((queue) => {
+      const dedupeKey = request.dedupeKey ?? approvalDedupeKey(request)
+      const existing = queue.find((item) => item.dedupeKey === dedupeKey && item.status === 'pending')
+      if (existing) return { created: false, request: { ...existing } }
+      const item = {
+        id: request.id ?? randomUUID(),
+        dedupeKey,
+        createdAt: request.createdAt ?? clock().toISOString(),
+        hrName: request.hrName ?? '',
+        company: request.company ?? '',
+        jobTitle: request.jobTitle ?? '',
+        latestHrMessage: request.latestHrMessage ?? '',
+        detectedIntent: request.detectedIntent ?? 'UNKNOWN',
+        draftReply: request.draftReply ?? '',
+        draftSource: request.draftSource ?? (request.draftReply ? 'model_review_draft' : 'none'),
+        draftSafety: request.draftSafety ?? 'needs_human_review',
+        reason: request.reason ?? '',
+        status: 'pending'
+      }
+      queue.push(item)
+      return { created: true, request: { ...item } }
+    })
+  }
+
   const approve = (params) => setStatus({ ...params, status: 'approved_auto_reply' })
   const requireHuman = async (params) => {
     const item = await setStatus({ ...params, status: 'human_required' })
@@ -358,7 +395,7 @@ export function createApprovalService({
     return item
   }
 
-  return { list, update, setStatus, approve, requireHuman }
+  return { list, update, create, setStatus, approve, requireHuman }
 }
 
 export function readApprovalQueue({ queueFilePath = defaultApprovalQueueFilePath(), includeAll = false } = {}) {

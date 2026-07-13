@@ -1,15 +1,5 @@
 import { METHODS } from '@geekgeekrun/ggr-protocol'
 
-export {
-  approveAutoReply,
-  markAutoReplyExpired,
-  markAutoReplyFailed,
-  markAutoReplySent,
-  readApprovalQueue,
-  requireHumanIntervention,
-  updateApprovalQueue
-} from '../ggr-backend/lib/services/approval-service.mjs'
-
 export const TASKS = Object.freeze({
   AUTO_CHAT: Object.freeze({
     workerId: 'geekAutoStartWithBossMain',
@@ -92,6 +82,9 @@ export function createBackendController({ client } = {}) {
     },
     listAiReplyApprovals({ includeAll = false } = {}) {
       return backend.request(METHODS.APPROVAL_LIST, { includeAll })
+    },
+    createApprovalRequest(request = {}) {
+      return backend.request(METHODS.APPROVAL_CREATE, { request })
     },
     approveAutoReply({ id, reason } = {}) {
       return backend.request(METHODS.APPROVAL_APPROVE, {

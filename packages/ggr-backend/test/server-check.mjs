@@ -183,6 +183,14 @@ try {
   assert(events.some(({ event }) => event === 'task.exited'))
 
   assert.equal((await client.request('approval.list')).length, 2)
+  const createdApproval = await client.request('approval.create', {
+    request: { id: 'approval-three', latestHrMessage: 'Can you confirm?', status: 'pending' }
+  })
+  assert.equal(createdApproval.created, true)
+  assert.equal(createdApproval.request.id, 'approval-three')
+  assert.equal((await client.request('approval.create', {
+    request: { id: 'ignored-id', latestHrMessage: 'Can you confirm?', status: 'pending' }
+  })).created, false)
   assert.equal((await client.request('approval.approve', { id: 'approval-one' })).status, 'approved_auto_reply')
   assert.equal((await client.request('approval.requireHuman', { id: 'approval-two', reason: 'review' })).status, 'human_required')
   assert(events.some(({ event, data }) => event === 'approval.required' && data.id === 'approval-two'))

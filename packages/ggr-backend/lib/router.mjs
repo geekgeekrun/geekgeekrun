@@ -44,6 +44,10 @@ export function registerServiceHandlers(router, { methods, task, approval }) {
       if (params.includeAll !== undefined && typeof params.includeAll !== 'boolean') throw invalidParams('includeAll must be a boolean')
       return approval.list({ includeAll: params.includeAll })
     })
+    .register(methods.APPROVAL_CREATE, (params) => {
+      onlyKeys(params, new Set(['request']))
+      return approval.create(params.request)
+    })
     .register(methods.APPROVAL_APPROVE, (params) => {
       onlyKeys(params, new Set(['id', 'reason']))
       return approval.approve(params)

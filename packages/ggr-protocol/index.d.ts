@@ -17,6 +17,7 @@ export declare const METHODS: Readonly<{
   BROWSER_SET_EXECUTABLE: 'browser.setExecutable'
   BROWSER_CANCEL: 'browser.cancel'
   APPROVAL_LIST: 'approval.list'
+  APPROVAL_CREATE: 'approval.create'
   APPROVAL_APPROVE: 'approval.approve'
   APPROVAL_REQUIRE_HUMAN: 'approval.requireHuman'
 }>

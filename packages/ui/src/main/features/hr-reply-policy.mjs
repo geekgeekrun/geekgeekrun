@@ -1,6 +1,3 @@
-import { createHash, randomUUID } from 'node:crypto'
-import { readApprovalQueue, updateApprovalQueue } from '../../../../ggr-controller/index.mjs'
-
 export const HR_REPLY_DECISION = Object.freeze({
   AUTO_REPLY: 'AUTO_REPLY',
   NEEDS_APPROVAL: 'NEEDS_APPROVAL',
@@ -182,50 +179,23 @@ export function validateAutoReply(text) {
   return { ok: true, reason: '' }
 }
 
-function requestDedupeKey(request) {
-  return createHash('sha256')
-    .update([
-      request.hrName ?? '',
-      request.company ?? '',
-      request.jobTitle ?? '',
-      request.latestHrMessage ?? ''
-    ].join('\n'))
-    .digest('hex')
+function backendApprovalController() {
+  return {
+    async createApprovalRequest(request) {
+      const { requestBackend } = await import('../backend/client')
+      return requestBackend('approval.create', { request })
+    },
+    async listAiReplyApprovals() {
+      const { requestBackend } = await import('../backend/client')
+      return requestBackend('approval.list')
+    }
+  }
 }
 
 export async function appendApprovalRequest(request, options = {}) {
-  return updateApprovalQueue({
-    queueFilePath: options.queueFilePath,
-    updater(queue) {
-      const dedupeKey = request.dedupeKey ?? requestDedupeKey(request)
-      const existing = queue.find((item) => item.dedupeKey === dedupeKey && item.status === 'pending')
-
-      if (existing) {
-        return { created: false, request: existing }
-      }
-
-      const nextRequest = {
-        id: request.id ?? randomUUID(),
-        dedupeKey,
-        createdAt: request.createdAt ?? new Date().toISOString(),
-        hrName: request.hrName ?? '',
-        company: request.company ?? '',
-        jobTitle: request.jobTitle ?? '',
-        latestHrMessage: request.latestHrMessage ?? '',
-        detectedIntent: request.detectedIntent ?? HR_REPLY_INTENT.UNKNOWN,
-        draftReply: request.draftReply ?? '',
-        draftSource: request.draftSource ?? (request.draftReply ? 'model_review_draft' : 'none'),
-        draftSafety: request.draftSafety ?? 'needs_human_review',
-        reason: request.reason ?? '',
-        status: request.status ?? 'pending'
-      }
-
-      queue.push(nextRequest)
-      return { created: true, request: nextRequest }
-    }
-  })
+  return (options.approvalController ?? backendApprovalController()).createApprovalRequest(request)
 }
 
 export async function getPendingApprovalRequests(options = {}) {
-  return readApprovalQueue({ queueFilePath: options.queueFilePath })
+  return (options.approvalController ?? backendApprovalController()).listAiReplyApprovals()
 }
