@@ -42,6 +42,12 @@ const settingIpcSource = await read('packages/ui/src/main/flow/OPEN_SETTING_WIND
 assert.match(settingIpcSource, /workerExitHandlerByMode/, 'worker exit forwarding must keep only one listener per worker')
 assert.match(settingIpcSource, /WORKER_STOP_TIMEOUT_MS/, 'stopping a worker must have a bounded wait')
 assert.match(settingIpcSource, /BOSS_CHILD_READY_TIMEOUT_MS/, 'Boss bridge startup must have a bounded wait')
+assert.match(settingIpcSource, /createBrowserCompatibilityApi/, 'Boss UI must call the backend compatibility API')
+assert.doesNotMatch(settingIpcSource, /PUPPETEER_EXECUTABLE_PATH|--mode=launchBossSite|childProcess\.spawn/, 'Boss UI must not inject an executable or self-spawn a browser child')
+
+const cookieAssistantSource = await read('packages/ui/src/main/window/cookieAssistantWindow.ts')
+assert.match(cookieAssistantSource, /createBrowserCompatibilityApi/, 'cookie UI must call the backend compatibility API')
+assert.doesNotMatch(cookieAssistantSource, /PUPPETEER_EXECUTABLE_PATH|--mode=launchBossZhipinLoginPageWithPreloadExtension|childProcess\.spawn/, 'cookie UI must not inject an executable or self-spawn a browser child')
 
 const daemonSource = await read('packages/pm/daemon.js')
 assert.match(

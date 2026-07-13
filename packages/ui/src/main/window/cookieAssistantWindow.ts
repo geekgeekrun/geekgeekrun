@@ -1,10 +1,7 @@
-import { ChildProcess } from 'child_process'
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import * as childProcess from 'node:child_process'
-import * as JSONStream from 'JSONStream'
-import { getLastUsedAndAvailableBrowser } from '../flow/DOWNLOAD_DEPENDENCIES/utils/browser-history'
-import { configWithBrowserAssistant } from '../features/config-with-browser-assistant'
+// @ts-expect-error Backend ESM compatibility module is intentionally consumed directly by the legacy UI.
+import { createBrowserCompatibilityApi } from '../../../../ggr-backend/lib/services/browser/compat.mjs'
 
 export let cookieAssistantWindow: BrowserWindow | null = null
 export function createCookieAssistantWindow(
@@ -48,91 +45,35 @@ export function createCookieAssistantWindow(
     cookieAssistantWindow = null
   })
 
-  let subProcessOfBossZhipinLoginPageWithPreloadExtension: ChildProcess | null = null
-  const launchHandler = async (ev) => {
-    try {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
-    } catch {
-      //
-    }
-    let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
-    if (!puppeteerExecutable) {
-      try {
-        const parent = BrowserWindow.fromWebContents(ev.sender) || undefined
-        await configWithBrowserAssistant({
-          autoFind: true,
-          windowOption: {
-            parent,
-            modal: !!parent,
-            show: true
-          }
-        })
-      } catch (error) {
-        //
-      }
-      puppeteerExecutable = await getLastUsedAndAvailableBrowser()
-    }
-    if (!puppeteerExecutable) {
-      await dialog.showMessageBox({
-        type: `error`,
-        message: `未找到可用的浏览器`,
-        detail: `请重新运行本程序，按照提示安装、配置浏览器`
-      })
-      return
-    }
-    const subProcessEnv = {
-      ...process.env,
-      PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable.executablePath
-    }
-    subProcessOfBossZhipinLoginPageWithPreloadExtension = childProcess.spawn(
-      process.argv[0],
-      process.env.NODE_ENV === 'development'
-        ? [process.argv[1], `--mode=launchBossZhipinLoginPageWithPreloadExtension`]
-        : [`--mode=launchBossZhipinLoginPageWithPreloadExtension`],
-      {
-        env: subProcessEnv,
-        stdio: [null, null, null, 'pipe', 'ipc']
-      }
-    )
-    subProcessOfBossZhipinLoginPageWithPreloadExtension!.stdio[3]!.pipe(JSONStream.parse()).on(
-      'data',
-      (raw) => {
-        const data = raw
+  let loginBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
+  const launchHandler = async (_ev) => {
+    await loginBridge?.close().catch(() => {})
+    loginBridge = createBrowserCompatibilityApi({
+      onMessage: (data) => {
         switch (data.type) {
-          case 'BOSS_ZHIPIN_COOKIE_COLLECTED': {
+          case 'BOSS_ZHIPIN_COOKIE_COLLECTED':
             cookieAssistantWindow?.webContents.send(data.type, data)
             break
-          }
-          case 'BOSS_ZHIPIN_LOGIN_PAGE_FAILED': {
+          case 'BOSS_ZHIPIN_LOGIN_PAGE_FAILED':
             cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
+            void loginBridge?.close().catch(() => {})
+            loginBridge = null
             break
-          }
-          default: {
-            return
-          }
         }
       }
-    )
-
-    subProcessOfBossZhipinLoginPageWithPreloadExtension!.once('exit', () => {
-      cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
-      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
     })
+    loginBridge.startLogin()
   }
   ipcMain.on('launch-bosszhipin-login-page-with-preload-extension', launchHandler)
 
   const killHandler = async () => {
-    try {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
-    } catch {
-      //
-    } finally {
-      subProcessOfBossZhipinLoginPageWithPreloadExtension = null
-    }
+    const current = loginBridge
+    loginBridge = null
+    await current?.close().catch(() => {})
   }
   ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', killHandler)
   cookieAssistantWindow.on('closed', () => {
-    subProcessOfBossZhipinLoginPageWithPreloadExtension?.kill()
+    void killHandler()
     ipcMain.off('launch-bosszhipin-login-page-with-preload-extension', launchHandler)
     ipcMain.off('kill-bosszhipin-login-page-with-preload-extension', killHandler)
   })

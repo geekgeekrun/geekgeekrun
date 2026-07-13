@@ -1,6 +1,6 @@
 import os from 'node:os'
 import fs from 'node:fs'
-import readline from 'node:readline'
+import { StringDecoder } from 'node:string_decoder'
 import { createRuntimePaths } from '../../runtime-paths.mjs'
 import { createRecordsService } from '../records-service.mjs'
 import { createBrowserService } from '../browser-service.mjs'
@@ -22,6 +22,44 @@ function write(output, data) {
   output?.write(`${JSON.stringify(data)}\n`)
 }
 
+function readFd3Messages(input, onMessage) {
+  const decoder = new StringDecoder('utf8')
+  let buffer = ''
+  const dispatch = (raw) => {
+    try { onMessage(JSON.parse(raw)) } catch {}
+  }
+  const consume = () => {
+    while (buffer) {
+      const newline = buffer.indexOf('\n')
+      if (newline !== -1) {
+        const line = buffer.slice(0, newline).trim()
+        buffer = buffer.slice(newline + 1)
+        if (line) dispatch(line)
+        continue
+      }
+      const raw = buffer.trim()
+      if (!raw) { buffer = ''; return }
+      try {
+        const message = JSON.parse(raw)
+        buffer = ''
+        onMessage(message)
+      } catch {
+        // A legacy caller writes one bare JSON value without a delimiter. Keep
+        // incomplete chunks until JSON.parse can prove the complete value.
+        return
+      }
+    }
+  }
+  const onData = (chunk) => { buffer += decoder.write(chunk); consume() }
+  const onEnd = () => { buffer += decoder.end(); consume() }
+  input.on('data', onData)
+  input.on('end', onEnd)
+  return () => {
+    input.off?.('data', onData)
+    input.off?.('end', onEnd)
+  }
+}
+
 /**
  * Node-only adapter for the old Electron child-process protocol. It contains
  * no browser logic: browser task ownership, persistence, and lifecycle remain
@@ -34,7 +72,7 @@ export function createBrowserCompatibilityBridge({ runtime, input, output }) {
     emit(event, data) { bridge?.handleEvent(event, data) }
   })
   let bossTaskId = null
-  let lineReader = null
+  let stopReading = null
   bridge = {
     handleEvent(event, data) {
       if (event !== 'task.progress') return
@@ -53,14 +91,11 @@ export function createBrowserCompatibilityBridge({ runtime, input, output }) {
       }
     },
     startLogin() { return browser.openLogin() },
+    openBossPage(url) { return browser.openBossPage(url) },
     startBoss() {
-      if (input && !lineReader) {
-        lineReader = readline.createInterface({ input, crlfDelay: Infinity })
-        lineReader.on('line', (line) => {
-          try {
-            const message = JSON.parse(line)
-            if (message?.type === 'NEW_WINDOW') void browser.openBossPage(message.url).catch(() => {})
-          } catch {}
+      if (input && !stopReading) {
+        stopReading = readFd3Messages(input, (message) => {
+          if (message?.type === 'NEW_WINDOW') void browser.openBossPage(message.url).catch(() => {})
         })
       }
       const task = browser.openBoss()
@@ -68,20 +103,40 @@ export function createBrowserCompatibilityBridge({ runtime, input, output }) {
       return task
     },
     async close() {
-      lineReader?.close()
+      stopReading?.()
+      stopReading = null
       await browser.close()
     }
   }
   return bridge
 }
 
-function createProcessBridge() {
+function createProcessBridge(streams = {}) {
   const runtimePaths = createRuntimePaths(os.homedir())
   const recordsService = createRecordsService({ databaseFile: runtimePaths.databaseFile })
   const records = createBrowserRecords({ getDataSource: recordsService.getDataSource })
   const runtime = createBackendBrowserRuntime({ runtimePaths, records, onIdle: () => recordsService.close() })
-  const bridge = createBrowserCompatibilityBridge({ runtime, ...fd3Streams() })
+  const bridge = createBrowserCompatibilityBridge({ runtime, ...(Object.keys(streams).length ? streams : fd3Streams()) })
   return { bridge, close: async () => Promise.allSettled([bridge.close(), recordsService.close()]) }
+}
+
+/** UI-facing compatibility API. The UI only observes legacy events; backend owns browser state. */
+export function createBrowserCompatibilityApi({ onMessage = () => {} } = {}) {
+  const output = {
+    write(raw) {
+      for (const line of String(raw).split('\n')) {
+        if (!line) continue
+        try { onMessage(JSON.parse(line)) } catch {}
+      }
+    }
+  }
+  const { bridge, close } = createProcessBridge({ output })
+  return {
+    startLogin: () => bridge.startLogin(),
+    startBoss: () => bridge.startBoss(),
+    openBossPage: (url) => bridge.openBossPage(url),
+    close
+  }
 }
 
 export const launchBossZhipinLoginPageWithPreloadExtension = () => {

@@ -14,7 +14,7 @@ import {
   consumeApprovedAutoReply,
   handleLatestHrMessage
 } from '../lib/workers/read-no-reply/flow.mjs'
-import { createReadNoReplyRuntime } from '../lib/workers/read-no-reply/runtime.mjs'
+import { createReadNoReplyRuntime, readAuthoritativeSession } from '../lib/workers/read-no-reply/runtime.mjs'
 import { defaultPromptMap, requestNewMessageContent } from '../lib/workers/read-no-reply/llm.mjs'
 import {
   canSendSelfReminder,
@@ -36,6 +36,27 @@ assert.equal(workerExitCode({ code: 'LOGIN_STATUS_INVALID' }), 82)
 assert.equal(workerExitCode({ code: 'READ_NO_REPLY_FAILED' }), 1)
 assert.equal(cookieListIsValid([{ name: 'a', value: 'b', domain: '.zhipin.com', path: '/', secure: true, session: false, httpOnly: true }]), true)
 assert.equal(cookieListIsValid([{ name: 'a' }]), false)
+
+{
+  let generation = 0
+  const storage = {
+    async readSession() {
+      const current = generation++
+      return {
+        cookies: [{ name: 'wt2', value: `cookie-${current}`, domain: '.zhipin.com', path: '/', secure: true, session: true, httpOnly: true }],
+        localStorage: { generation: current }
+      }
+    },
+    async readCookies() { throw new Error('worker must not read legacy cookie mirrors') },
+    async readLocalStorage() { throw new Error('worker must not read legacy local-storage mirrors') }
+  }
+  const session = await readAuthoritativeSession(storage)
+  assert.deepEqual(session, {
+    cookies: [{ name: 'wt2', value: 'cookie-0', domain: '.zhipin.com', path: '/', secure: true, session: true, httpOnly: true }],
+    localStorage: { generation: 0 }
+  }, 'a concurrent generation cannot mix cookies from one snapshot with local storage from another')
+  assert.equal(generation, 1, 'the worker must read exactly one authoritative paired session')
+}
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=22&encryptJobId=job-1' }) }, { friendId: 22, encryptJobId: 'job-1' }), true)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg?securityId=sec-1', request: () => ({ postData: () => JSON.stringify({ friendId: 22, encryptJobId: 'job-1' }) }) }, { friendId: 22, securityId: 'sec-1', encryptJobId: 'job-1' }), true)
 assert.equal(responseMatchesChat({ url: () => 'https://www.zhipin.com/wapi/zpchat/geek/historyMsg', request: () => ({ postData: () => 'friendId=99' }) }, { friendId: 22, encryptJobId: 'job-1' }), false)

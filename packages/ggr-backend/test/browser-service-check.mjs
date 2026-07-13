@@ -4,6 +4,8 @@ import { PassThrough } from 'node:stream'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { spawn } from 'node:child_process'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { createBrowserService } from '../lib/services/browser-service.mjs'
 import { createBossPageListener } from '../lib/services/browser/boss-page-listener.mjs'
@@ -16,9 +18,9 @@ import { METHODS } from '@geekgeekrun/ggr-protocol'
 
 const tick = () => new Promise((resolve) => setImmediate(resolve))
 const until = async (predicate, message) => {
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 200; attempt++) {
     if (predicate()) return
-    await tick()
+    await new Promise((resolve) => setTimeout(resolve, 5))
   }
   throw new Error(message)
 }
@@ -263,11 +265,139 @@ assert.equal(METHODS.BROWSER_CANCEL, 'browser.cancel', 'browser cancellation mus
   bridge.startLogin()
   bridge.startBoss()
   await until(() => messages.some(({ type }) => type === 'BOSS_ZHIPIN_COOKIE_COLLECTED') && messages.some(({ type }) => type === 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY'), 'bridge did not retain legacy fd3 notifications')
-  input.write(`${JSON.stringify({ type: 'NEW_WINDOW', url: 'https://www.zhipin.com/job_detail/job-bridge.html' })}\n`)
+  const payload = JSON.stringify({ type: 'NEW_WINDOW', url: 'https://www.zhipin.com/job_detail/job-bridge.html' })
+  input.write(payload.slice(0, 17))
+  input.write(payload.slice(17))
   await until(() => openedUrl, 'bridge did not route NEW_WINDOW to backend browser service')
   assert.equal(openedUrl, 'https://www.zhipin.com/job_detail/job-bridge.html')
   await bridge.close()
   assert.equal(runtimeClosed, 1, 'bridge cleanup must close the backend runtime')
+}
+
+{
+  const harness = path.join(tempHome, 'compat-bridge-harness.mjs')
+  await fs.writeFile(harness, `
+    import fs from 'node:fs'
+    import { createBrowserCompatibilityBridge } from ${JSON.stringify(pathToFileURL(fileURLToPath(new URL('../lib/services/browser/compat.mjs', import.meta.url))).href)}
+    const input = fs.createReadStream(null, { fd: 3, autoClose: false })
+    const output = fs.createWriteStream(null, { fd: 3, autoClose: false })
+    const mode = process.env.GGR_COMPAT_HARNESS_MODE
+    let bridge
+    const shutdown = async (reason) => {
+      await bridge.close()
+      output.write(JSON.stringify({ type: 'HARNESS_CLOSED', reason }) + '\\n')
+    }
+    bridge = createBrowserCompatibilityBridge({
+      input, output,
+      runtime: {
+        async openBoss({ taskReporter }) {
+          if (mode === 'ready') taskReporter.emit('task.progress', { state: 'page-opened' })
+          if (mode === 'early') return shutdown('early-exit')
+          if (mode === 'timeout') return new Promise(() => {})
+        },
+        async openBossPage(url) { output.write(JSON.stringify({ type: 'NEW_WINDOW_OPENED', url }) + '\\n'); await shutdown('new-window') },
+        async close() {}
+      }
+    })
+    bridge.startBoss()
+    if (mode === 'timeout') setTimeout(() => { void shutdown('ready-timeout') }, 25)
+  `)
+  const children = []
+  const startHarness = (mode) => {
+    const child = spawn(process.execPath, [harness], { env: { ...process.env, GGR_COMPAT_HARNESS_MODE: mode }, stdio: ['ignore', 'pipe', 'pipe', 'pipe'] })
+    const messages = []
+    let stderr = ''
+    const waiters = new Set()
+    let buffer = ''
+    child.stdio[3].setEncoding('utf8')
+    child.stdio[3].on('data', (chunk) => {
+      buffer += chunk
+      let newline
+      while ((newline = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, newline)
+        buffer = buffer.slice(newline + 1)
+        if (line) {
+          const message = JSON.parse(line)
+          messages.push(message)
+          for (const waiter of waiters) waiter(message)
+        }
+      }
+    })
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk) => { stderr += chunk })
+    const exited = new Promise((resolve, reject) => {
+      child.once('error', reject)
+      child.once('exit', (code, signal) => resolve({ code, signal, messages }))
+    })
+    const waitFor = (predicate, label) => new Promise((resolve, reject) => {
+      if (messages.some(predicate)) return resolve()
+      const timer = setTimeout(() => {
+        waiters.delete(waiter)
+        child.kill()
+        reject(new Error(`${label}; stderr: ${stderr}`))
+      }, 2000)
+      const waiter = (message) => {
+        if (!predicate(message)) return
+        clearTimeout(timer)
+        waiters.delete(waiter)
+        resolve()
+      }
+      waiters.add(waiter)
+    })
+    const bridgeChild = { child, messages, exited, waitFor }
+    children.push(bridgeChild)
+    return bridgeChild
+  }
+  const terminate = async ({ child, exited }) => {
+    child.stdio[3]?.end()
+    if (child.exitCode !== null || child.signalCode) return exited
+    child.kill('SIGTERM')
+    const finished = await Promise.race([
+      exited.then(() => true),
+      new Promise((resolve) => setTimeout(() => resolve(false), 250))
+    ])
+    if (!finished && child.exitCode === null && !child.signalCode) child.kill('SIGKILL')
+    const result = await exited
+    assert.ok(child.exitCode !== null || child.signalCode, 'the fd3 bridge child must not remain alive after cleanup')
+    return result
+  }
+  const awaitExit = (bridgeChild, label) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} did not exit within 2 seconds`)), 2000)
+    bridgeChild.exited.then(
+      (value) => { clearTimeout(timer); resolve(value) },
+      (error) => { clearTimeout(timer); reject(error) }
+    )
+  })
+  try {
+    const ready = startHarness('ready')
+    await ready.waitFor(({ type }) => type === 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY', 'fd3 child did not announce Boss readiness')
+    // The old Electron caller writes one bare JSON value to fd3, with no trailing newline.
+    // Split it to prove the bridge buffers an incomplete value safely.
+    const message = JSON.stringify({ type: 'NEW_WINDOW', url: 'https://www.zhipin.com/job_detail/fd3-bridge.html' })
+    ready.child.stdio[3].write(message.slice(0, 11))
+    ready.child.stdio[3].write(message.slice(11))
+    ready.child.stdio[3].end()
+    await ready.waitFor(({ type }) => type === 'HARNESS_CLOSED', 'fd3 bridge did not report cleanup')
+    const readyExit = await terminate(ready)
+    assert.equal(readyExit.signal, 'SIGTERM', 'fd3 bridge must terminate after parent cleanup')
+    assert.deepEqual(readyExit.messages, [
+      { type: 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY' },
+      { type: 'NEW_WINDOW_OPENED', url: 'https://www.zhipin.com/job_detail/fd3-bridge.html' },
+      { type: 'HARNESS_CLOSED', reason: 'new-window' }
+    ])
+    const earlyChild = startHarness('early')
+    await earlyChild.waitFor(({ type, reason }) => type === 'HARNESS_CLOSED' && reason === 'early-exit', 'early bridge did not clean up')
+    const early = await terminate(earlyChild)
+    assert.equal(early.signal, 'SIGTERM', 'an early bridge exit must not leak its child')
+    assert.deepEqual(early.messages, [{ type: 'HARNESS_CLOSED', reason: 'early-exit' }])
+    const timeoutChild = startHarness('timeout')
+    await timeoutChild.waitFor(({ type, reason }) => type === 'HARNESS_CLOSED' && reason === 'ready-timeout', 'timed bridge did not clean up')
+    const timeout = await terminate(timeoutChild)
+    assert.equal(timeout.signal, 'SIGTERM', 'a readiness timeout must not leak its bridge child')
+    assert.deepEqual(timeout.messages, [{ type: 'HARNESS_CLOSED', reason: 'ready-timeout' }])
+  } finally {
+    await Promise.all(children.map(terminate))
+  }
 }
 
 {

@@ -8,6 +8,7 @@ import { createApprovalService } from '../../services/approval-service.mjs'
 import { processConversations } from './traversal.mjs'
 import { getGptContent } from './llm.mjs'
 import { createBrowserHistory } from '../../services/browser/dependencies/browser-history.mjs'
+import { createBrowserStorage } from '../../services/browser/storage.mjs'
 import { cookieListIsValid } from './traversal.mjs'
 
 const FATAL_CODES = ['COOKIE_INVALID', 'LOGIN_STATUS_INVALID', 'ERR_INTERNET_DISCONNECTED', 'ACCESS_IS_DENIED', 'PUPPETEER_IS_NOT_EXECUTABLE', 'LLM_UNAVAILABLE']
@@ -31,9 +32,15 @@ async function openDatabase(paths) {
   return initDb(paths.databaseFile)
 }
 
-async function openSession(paths) {
-  const cookies = await readJson(path.join(paths.storageDir, 'boss-cookies.json'), [])
+export async function readAuthoritativeSession(storage) {
+  const session = await storage.readSession()
+  const cookies = session?.cookies
   if (!cookieListIsValid(cookies)) throw Object.assign(new Error('Boss cookies are invalid'), { code: 'COOKIE_INVALID' })
+  return { cookies, localStorage: session.localStorage }
+}
+
+async function openSession(paths) {
+  const { cookies, localStorage } = await readAuthoritativeSession(createBrowserStorage({ storageDir: paths.storageDir }))
   const browserInfo = await createBrowserHistory({ storageDir: paths.storageDir }).read()
   if (!browserInfo?.executablePath) throw Object.assign(new Error('PUPPETEER_IS_NOT_EXECUTABLE'), { code: 'PUPPETEER_IS_NOT_EXECUTABLE' })
   const { initPuppeteer } = await import('@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs')
@@ -48,7 +55,7 @@ async function openSession(paths) {
   try {
     const [page] = await browser.pages()
     for (const cookie of cookies) await page.setCookie({ ...cookie, ...(Object.hasOwn(cookie, 'sameSite') ? { sameSite: 'unspecified' } : {}) })
-    await setDomainLocalStorage(browser, 'https://www.zhipin.com/desktop/', await readJson(path.join(paths.storageDir, 'boss-local-storage.json'), {}))
+    await setDomainLocalStorage(browser, 'https://www.zhipin.com/desktop/', localStorage)
     try { await page.goto('https://www.zhipin.com/web/geek/chat', { timeout: 0 }) }
     catch (error) { if (error?.message?.includes('ERR_INTERNET_DISCONNECTED')) error.code = 'ERR_INTERNET_DISCONNECTED'; throw error }
     const url = page.url()

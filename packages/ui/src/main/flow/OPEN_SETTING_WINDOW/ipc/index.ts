@@ -1,14 +1,11 @@
-import { ipcMain, shell, app, dialog, BrowserWindow } from 'electron'
+import { ipcMain, shell, app } from 'electron'
 import path from 'path'
-import * as childProcess from 'node:child_process'
 import {
   readConfigFile,
   writeConfigFile,
   readStorageFile,
   storageFilePath
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { ChildProcess } from 'child_process'
-import * as JSONStream from 'JSONStream'
 import { checkCookieListFormat } from '../../../../common/utils/cookie'
 import { getAnyAvailablePuppeteerExecutable } from '../../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { mainWindow } from '../../../window/mainWindow'
@@ -21,8 +18,6 @@ import {
   getMarkAsNotSuitRecord
 } from '../utils/db/index'
 import { PageReq } from '../../../../common/types/pagination'
-import { pipeWriteRegardlessError } from '../../utils/pipe'
-import { WriteStream } from 'node:fs'
 // eslint-disable-next-line vue/prefer-import-from-vue
 import { hasOwn } from '@vue/shared'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
@@ -58,6 +53,8 @@ import {
 import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
 import { ensureConfigFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+// @ts-expect-error Backend ESM compatibility module is intentionally consumed directly by the legacy UI.
+import { createBrowserCompatibilityApi } from '../../../../../ggr-backend/lib/services/browser/compat.mjs'
 
 const WORKER_STOP_TIMEOUT_MS = 15000
 const BOSS_CHILD_READY_TIMEOUT_MS = 15000
@@ -333,116 +330,54 @@ export default function initIpc() {
     return a
   })
 
-  let subProcessOfOpenBossSiteDefer: null | PromiseWithResolvers<ChildProcess> = null
-  let subProcessOfOpenBossSite: null | ChildProcess = null
-  ipcMain.handle('open-site-with-boss-cookie', async (ev, data) => {
+  let bossBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
+  let bossBridgeReady: Promise<void> | null = null
+  ipcMain.handle('open-site-with-boss-cookie', async (_ev, data) => {
     const url = data.url
-    if (
-      !subProcessOfOpenBossSiteDefer ||
-      !subProcessOfOpenBossSite ||
-      subProcessOfOpenBossSite.killed
-    ) {
-      subProcessOfOpenBossSiteDefer = Promise.withResolvers()
-      let puppeteerExecutable = await getLastUsedAndAvailableBrowser()
-      if (!puppeteerExecutable) {
-        try {
-          const parent = BrowserWindow.fromWebContents(ev.sender) || undefined
-          await configWithBrowserAssistant({
-            autoFind: true,
-            windowOption: {
-              parent,
-              modal: !!parent,
-              show: true
-            }
-          })
-          puppeteerExecutable = await getLastUsedAndAvailableBrowser()
-        } catch (error) {
-          //
-        }
-      }
-      if (!puppeteerExecutable) {
-        await dialog.showMessageBox({
-          type: `error`,
-          message: `未找到可用的浏览器`,
-          detail: `请重新运行本程序，按照提示安装、配置浏览器`
-        })
-        return
-      }
-      const subProcessEnv = {
-        ...process.env,
-        PUPPETEER_EXECUTABLE_PATH: puppeteerExecutable!.executablePath
-      }
-      subProcessOfOpenBossSite = childProcess.spawn(
-        process.argv[0],
-        process.env.NODE_ENV === 'development'
-          ? [process.argv[1], `--mode=launchBossSite`]
-          : [`--mode=launchBossSite`],
-        {
-          env: subProcessEnv,
-          stdio: ['inherit', 'inherit', 'inherit', 'pipe']
-        }
-      )
+    if (!bossBridgeReady || !bossBridge) {
+      const ready = Promise.withResolvers<void>()
       let bossChildReady = false
-      const failBossChildStartup = (error: Error) => {
+      let readyTimeout: ReturnType<typeof setTimeout>
+      const failBossStartup = async (error: Error) => {
         if (bossChildReady) return
         bossChildReady = true
         clearTimeout(readyTimeout)
-        subProcessOfOpenBossSiteDefer?.reject(error)
-        try { subProcessOfOpenBossSite?.kill() } catch {}
-        subProcessOfOpenBossSiteDefer = null
-        subProcessOfOpenBossSite = null
+        ready.reject(error)
+        const current = bossBridge
+        bossBridge = null
+        bossBridgeReady = null
+        await current?.close().catch(() => {})
       }
-      const readyTimeout = setTimeout(() => {
-        failBossChildStartup(new Error('Timed out waiting for Boss browser bridge readiness'))
-      }, BOSS_CHILD_READY_TIMEOUT_MS)
-      subProcessOfOpenBossSite.once('exit', (code) => {
-        if (!bossChildReady) failBossChildStartup(new Error(`Boss browser bridge exited before ready (${code ?? 'unknown'})`))
-        clearTimeout(readyTimeout)
-        subProcessOfOpenBossSiteDefer = null
-        subProcessOfOpenBossSite = null
-      })
-      subProcessOfOpenBossSite.stdio[3]!.pipe(JSONStream.parse()).on(
-        'data',
-        async function handler(data) {
-          switch (data?.type) {
-            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY': {
+      bossBridge = createBrowserCompatibilityApi({
+        onMessage: (message) => {
+          switch (message?.type) {
+            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY':
               bossChildReady = true
               clearTimeout(readyTimeout)
-              subProcessOfOpenBossSiteDefer!.resolve(subProcessOfOpenBossSite as ChildProcess)
+              ready.resolve()
               break
-            }
-            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_FAILED': {
-              failBossChildStartup(new Error(data.message ?? data.code ?? 'Boss browser bridge failed'))
+            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_FAILED':
+              void failBossStartup(new Error(message.message ?? message.code ?? 'Boss browser bridge failed'))
               break
-            }
             case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_CAN_BE_KILLED': {
-              try {
-                subProcessOfOpenBossSite &&
-                  !subProcessOfOpenBossSite.killed &&
-                  subProcessOfOpenBossSite.pid &&
-                  process.kill(subProcessOfOpenBossSite.pid)
-              } catch {
-                //
-              } finally {
-                subProcessOfOpenBossSiteDefer = null
-                subProcessOfOpenBossSite = null
-              }
+              const current = bossBridge
+              bossBridge = null
+              bossBridgeReady = null
+              void current?.close().catch(() => {})
               break
             }
           }
         }
-      )
+      })
+      readyTimeout = setTimeout(() => {
+        void failBossStartup(new Error('Timed out waiting for Boss browser bridge readiness'))
+      }, BOSS_CHILD_READY_TIMEOUT_MS)
+      bossBridgeReady = ready.promise
+      bossBridge.startBoss()
     }
 
-    await subProcessOfOpenBossSiteDefer.promise
-
-    pipeWriteRegardlessError(
-      subProcessOfOpenBossSite!.stdio[3]! as WriteStream,
-      JSON.stringify({
-        type: 'NEW_WINDOW',
-        url: url ?? 'about:blank'
-      })
-    )
+    await bossBridgeReady
+    await bossBridge?.openBossPage(url ?? 'about:blank')
   })
 
   ipcMain.handle('get-job-history-by-encrypt-id', async (_, encryptJobId) => {
