@@ -1,0 +1,9 @@
+{
+  "name": "@geekgeekrun/ggrd",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node ./test/manifest-check.mjs && node ./test/installer-check.mjs"
+  }
+}
