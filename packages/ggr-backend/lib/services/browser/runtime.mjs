@@ -64,6 +64,7 @@ export function createBackendBrowserRuntime(options) {
     if (!browserInfo?.executablePath) {
       taskReporter?.emit('task.progress', { state: 'dependency-download-started' })
       browserInfo = await browserDependencies.ensure({
+        signal,
         downloadProgressCallback(downloadedBytes, totalBytes) {
           taskReporter?.emit('task.progress', {
             state: 'dependency-download-progress', downloadedBytes, totalBytes

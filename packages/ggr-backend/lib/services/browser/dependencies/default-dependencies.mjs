@@ -36,10 +36,11 @@ export async function createDefaultBrowserDependencies({ runtimePaths }) {
     if (!result) await history.remove()
     return result
   }
-  async function ensure({ downloadProgressCallback, confirmContinuePromise } = {}) {
+  async function ensure({ downloadProgressCallback, confirmContinuePromise, signal } = {}) {
     const result = await dependency.ensure({
       onProgress: downloadProgressCallback,
-      confirm: async () => { if (confirmContinuePromise) await confirmContinuePromise }
+      confirm: async () => { if (confirmContinuePromise) await confirmContinuePromise },
+      signal
     })
     const value = await normalized(result)
     await history.write(value)

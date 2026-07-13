@@ -95,6 +95,40 @@ assert.equal((await fs.stat(path.join(storageDir, 'boss-cookies.json'))).mode & 
   assert.equal(installCalls, 0, 'an already downloaded browser must not be reinstalled')
 }
 
+{
+  let installOptions
+  const uninstallCalls = []
+  const controller = new AbortController()
+  const puppeteerDependencies = createPuppeteerDependencies({
+    browser: 'chrome', cacheDir: tempHome, buildId: 'abortable',
+    browserManager: {
+      computeExecutablePath: () => '/cached/chrome',
+      getInstalledBrowsers: async () => [],
+      install: async (options) => {
+        installOptions = options
+        return await new Promise((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { code: 'TASK_CANCELLED' })), { once: true })
+        })
+      },
+      async uninstall(options) { uninstallCalls.push(options) }
+    }
+  })
+  const runtime = createBackendBrowserRuntime({
+    runtimePaths: { storageDir }, storage,
+    dependencies: {
+      async discover() { return null },
+      ensure: (options) => puppeteerDependencies.ensure(options)
+    },
+    records: {}
+  })
+  const preparing = runtime.prepareDependencies({ signal: controller.signal })
+  await tick()
+  assert.equal(installOptions.signal, controller.signal, 'runtime must pass browser task cancellation to the production dependency installer')
+  controller.abort()
+  await assert.rejects(preparing, { code: 'TASK_CANCELLED' })
+  assert.deepEqual(uninstallCalls, [{ browser: 'chrome', cacheDir: tempHome, buildId: 'abortable' }], 'cancelling must clean up the partial browser installation')
+}
+
 class FakePage extends EventEmitter {
   constructor(url = 'about:blank') { super(); this.currentUrl = url; this.gotos = []; this.cookiesSet = [] }
   url() { return this.currentUrl }
