@@ -39,7 +39,7 @@ assert.match(openSettingWindowSource, /initTray\(/, 'setting window flow must in
 const settingIpcSource = await read('packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts')
 assert.match(settingIpcSource, /workerExitHandlerByMode/, 'worker exit forwarding must keep only one listener per worker')
 assert.match(settingIpcSource, /WORKER_STOP_TIMEOUT_MS/, 'stopping a worker must have a bounded wait')
-assert.match(settingIpcSource, /requestBackend\('browser\.openBoss'\)/, 'Boss UI must call the backend browser protocol')
+assert.match(settingIpcSource, /requestBackend(?:<[^>]+>)?\('browser\.openBoss'/, 'Boss UI must call the backend browser protocol')
 assert.doesNotMatch(settingIpcSource, /PUPPETEER_EXECUTABLE_PATH|--mode=launchBossSite|childProcess\.spawn|createBrowserCompatibilityApi/, 'Boss UI must not inject an executable or self-spawn a browser child')
 
 const cookieAssistantSource = await read('packages/ui/src/main/window/cookieAssistantWindow.ts')

@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import { downloadDependenciesForInit } from '../../../../ggr-backend/lib/services/browser/compat-dependencies.mjs'
+import { requestBackend } from '../backend/client'
+import { backendEvents } from '../backend/events'
 
 export let browserDownloadProgressWindow: BrowserWindow | null = null
 
@@ -50,20 +51,37 @@ export function createBrowserDownloadProgressWindow(
   }
 
   let downloadPromise: Promise<string> | null = null
+  let activeDownload: { taskId: string; reject: (error: Error) => void; removeListener: () => void } | null = null
   registerHandleWithWindow(browserDownloadProgressWindow, 'setup-dependencies', async () => {
-    downloadPromise ??= downloadDependenciesForInit({
-      output: {
-        write(raw: string) {
-          for (const line of raw.split('\n')) {
-            if (!line) continue
-            try {
-              const event = JSON.parse(line)
-              browserDownloadProgressWindow?.webContents.send(event.type, event)
-            } catch {
-              // Ignore malformed progress data from the backend compatibility flow.
-            }
+    downloadPromise ??= new Promise<string>(async (resolve, reject) => {
+      try {
+        const task = await requestBackend<{ taskId: string }>('browser.openLogin')
+        const eventHandler = (event: { event?: string; data?: Record<string, unknown> }) => {
+          const data = event.data
+          if (event.event !== 'task.progress' || data?.taskId !== task.taskId) return
+          if (data.state === 'dependency-download-progress') {
+            browserDownloadProgressWindow?.webContents.send('PUPPETEER_DOWNLOAD_PROGRESS', data)
+            return
+          }
+          if (data.state === 'dependency-ready' && typeof data.executablePath === 'string') {
+            cleanup()
+            void requestBackend('browser.cancel', { taskId: task.taskId }).catch(() => {})
+            resolve(data.executablePath)
+            return
+          }
+          if (data.state === 'failed' || data.state === 'cancelled') {
+            cleanup()
+            reject(new Error(String(data.message ?? 'Browser dependency setup failed')))
           }
         }
+        const cleanup = () => {
+          backendEvents.off('event', eventHandler)
+          if (activeDownload?.taskId === task.taskId) activeDownload = null
+        }
+        activeDownload = { taskId: task.taskId, reject, removeListener: cleanup }
+        backendEvents.on('event', eventHandler)
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error(String(error)))
       }
     }).finally(() => {
       downloadPromise = null
@@ -71,6 +89,13 @@ export function createBrowserDownloadProgressWindow(
     return await downloadPromise
   })
   browserDownloadProgressWindow.once('closed', () => {
+    const current = activeDownload
+    activeDownload = null
+    current?.removeListener()
+    if (current) {
+      current.reject(new Error('USER_CANCELLED_CONFIG_BROWSER'))
+      void requestBackend('browser.cancel', { taskId: current.taskId }).catch(() => {})
+    }
     browserDownloadProgressWindow = null
   })
 

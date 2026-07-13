@@ -98,6 +98,43 @@ for (const sourceFile of sourceFiles) {
   assert.doesNotMatch(source, /sendToDaemon/, `${relativePath} must use the backend client protocol`)
   assert.doesNotMatch(source, /connectToDaemon/, `${relativePath} must use the backend client protocol`)
   assert.doesNotMatch(source, /@geekgeekrun\/pm/, `${relativePath} must not import the legacy process manager`)
+  assert.doesNotMatch(source, /downloadDependenciesForInit/, `${relativePath} must not execute backend browser flows directly`)
 }
+
+const taskIpcSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts'),
+  'utf8'
+)
+assert.match(taskIpcSource, /return \{ workers: await requestBackend\('task\.list'\) \}/, 'task manager IPC must retain its workers envelope')
+assert.match(taskIpcSource, /requestBackend<\{ taskId: string \}>\('browser\.openBoss', \{ url \}\)/, 'Boss IPC must pass the requested URL to the backend browser')
+assert.match(taskIpcSource, /await waitForBrowserReady\(task\.taskId\)/, 'Boss IPC must wait for backend browser readiness')
+
+const downloadSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/window/browserDownloadProgressWindow.ts'),
+  'utf8'
+)
+assert.match(downloadSource, /requestBackend<\{ taskId: string \}>\('browser\.openLogin'\)/, 'download UI must request a backend browser task')
+assert.match(downloadSource, /requestBackend\('browser\.cancel'/, 'closing download UI must cancel its backend task')
+assert.match(downloadSource, /backendEvents\.on\('event'/, 'download UI must consume structured backend progress')
+
+assert.match(cookieWindowSource, /send\('BOSS_ZHIPIN_COOKIE_COLLECTED', session\)/, 'cookie UI must preserve its collected-session notification')
+assert.match(cookieWindowSource, /readBackendConfig(?:<[^>]+>)?\('boss_cookies'\)/, 'cookie UI must confirm saved session through the status-only backend read')
+assert.doesNotMatch(cookieWindowSource, /ipcMain\.emit\('cookie-saved'/, 'cookie UI must not close before the renderer processes session status')
+assert.doesNotMatch(cookieWindowSource, /data\.cookies/, 'cookie UI must not expose raw cookies from backend events')
+assert.match(cookieRendererSource, /payload\?\.configured/, 'cookie renderer must complete the status-only login flow without raw cookies')
+
+const runCommonSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/features/run-common.ts'),
+  'utf8'
+)
+assert.match(runCommonSource, /reserveRunRecordId/, 'task starts must reserve a numeric overlay correlation id')
+assert.match(runCommonSource, /backendEvents\.emit\('event'/, 'task starts must publish correlated overlay progress')
+assert.doesNotMatch(runCommonSource, /runRecordId: null/, 'task starts must not return a null overlay correlation id')
+
+const cookieInvalidSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/features/cookie-invalid-handle-plugin.ts'),
+  'utf8'
+)
+assert.match(cookieInvalidSource, /await promptForLogin\(\)[\s\S]*?return/, 'successful login must resume the legacy cookie hook')
 
 console.log('backend boundary check passed')

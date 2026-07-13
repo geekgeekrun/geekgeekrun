@@ -250,7 +250,10 @@ for (const [name, response] of [
     setDomainLocalStorage: async (_browser, url, value) => assert.deepEqual([url, value], ['https://www.zhipin.com/desktop/', { identity: 'captured' }]),
     attachPageListener: async (target) => attached.push(target), records: {}, onIdle: async () => { idleCloses++ }
   })
-  await runtime.openBoss({ taskId: 'boss', taskReporter: { emit() {} } })
+  await runtime.openBoss({
+    taskId: 'boss', taskReporter: { emit() {} }, url: 'https://www.zhipin.com/job_detail/job-requested.html'
+  })
+  assert.equal(browser.created[0].gotos[0], 'https://www.zhipin.com/job_detail/job-requested.html', 'backend runtime must navigate Boss to the requested job URL')
   const target = { page: async () => new FakePage() }
   browser.emit('targetcreated', target)
   await tick()
@@ -323,11 +326,22 @@ for (const [name, response] of [
 
 {
   let launches = 0
+  let ensured = 0
+  const events = []
   const runtime = createBackendBrowserRuntime({
-    runtimePaths: { storageDir }, dependencies: { async discover() { return null } }, storage,
+    runtimePaths: { storageDir }, dependencies: {
+      async discover() { return null },
+      async ensure({ downloadProgressCallback }) {
+        ensured++
+        downloadProgressCallback(10, 20)
+        return null
+      }
+    }, storage,
     launchBrowser: async () => { launches++ }, ensureExtension: async () => '/tmp/extension', records: {}
   })
-  await assert.rejects(runtime.openLogin({ taskReporter: { emit() {} } }), { code: 'BROWSER_EXECUTABLE_UNAVAILABLE' })
+  await assert.rejects(runtime.openLogin({ taskReporter: { emit: (event, data) => events.push({ event, data }) } }), { code: 'BROWSER_EXECUTABLE_UNAVAILABLE' })
+  assert.equal(ensured, 1, 'backend browser runtime must own dependency installation')
+  assert.deepEqual(events[1], { event: 'task.progress', data: { state: 'dependency-download-progress', downloadedBytes: 10, totalBytes: 20 } })
   assert.equal(launches, 0, 'runtime must reject a missing executable before launching Puppeteer')
 }
 
@@ -355,6 +369,23 @@ for (const [name, response] of [
   assert.equal(closes, 1, 'cancel must close the operation browser')
   assert.equal(service.getTask('task-one').state, 'cancelled')
   assert.ok(events.every(({ event }) => event === 'task.progress'), 'browser operations emit only validated structured task events')
+}
+
+{
+  const events = []
+  let openedUrl
+  const service = createBrowserService({
+    createTaskId: () => 'task-url', emit: (event, data) => events.push({ event, data }),
+    runtime: {
+      async openBoss({ url, taskReporter }) {
+        openedUrl = url
+        taskReporter.emit('task.progress', { state: 'page-opened', url })
+      }
+    }
+  })
+  assert.deepEqual(service.openBoss({ url: 'https://www.zhipin.com/job_detail/job-1.html' }), { taskId: 'task-url', state: 'starting' })
+  await until(() => events.some(({ data }) => data.state === 'page-opened'), 'Boss URL task did not become ready')
+  assert.equal(openedUrl, 'https://www.zhipin.com/job_detail/job-1.html', 'browser service must pass the requested job URL to the backend runtime')
 }
 
 assert.equal(METHODS.BROWSER_CANCEL, 'browser.cancel', 'browser cancellation must be exposed through the protocol')
@@ -535,14 +566,19 @@ assert.equal(METHODS.BROWSER_CANCEL, 'browser.cancel', 'browser cancellation mus
 }
 
 for (const file of [
-  'packages/ui/src/main/flow/LAUNCH_BOSS_ZHIPIN_LOGIN_PAGE_WITH_PRELOAD_EXTENSION.ts',
-  'packages/ui/src/main/flow/LAUNCH_BOSS_SITE/index.ts',
   'packages/ui/src/main/flow/DOWNLOAD_DEPENDENCIES/utils/browser-history.ts',
   'packages/ui/src/main/flow/DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index.ts'
 ]) {
   const source = await fs.readFile(new URL(`../../../${file}`, import.meta.url), 'utf8')
   assert.match(source, /ggr-backend/, `${file} must delegate to backend-owned code`)
   assert.doesNotMatch(source, /electron|initDb|puppeteer\.launch|saveJobInfoFromRecommendPage|process\.exit/, `${file} must be a thin compatibility wrapper`)
+}
+
+for (const file of [
+  'packages/ui/src/main/flow/LAUNCH_BOSS_ZHIPIN_LOGIN_PAGE_WITH_PRELOAD_EXTENSION.ts',
+  'packages/ui/src/main/flow/LAUNCH_BOSS_SITE/index.ts'
+]) {
+  await assert.rejects(fs.access(new URL(`../../../${file}`, import.meta.url)), { code: 'ENOENT' }, `${file} must be removed from Electron`)
 }
 
 for (const file of [

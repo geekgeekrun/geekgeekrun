@@ -2,7 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import { requestBackend } from '../backend/client'
 import { backendEvents } from '../backend/events'
-import { writeBackendConfig } from '../backend/register-ipc'
+import { readBackendConfig, writeBackendConfig } from '../backend/register-ipc'
 
 export let cookieAssistantWindow: BrowserWindow | null = null
 export function createCookieAssistantWindow(
@@ -52,12 +52,18 @@ export function createCookieAssistantWindow(
     return { saved: true }
   }
   ipcMain.handle('save-boss-session', saveSessionHandler)
+  const publishCollectedSession = async () => {
+    const session = await readBackendConfig<{ configured?: boolean; cookieCount?: number }>('boss_cookies')
+    if (session.configured) cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_COOKIE_COLLECTED', session)
+    else cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
+  }
   const backendEventHandler = (event: { event?: string; data?: Record<string, unknown> }) => {
     const data = event.data
     if (event.event !== 'task.progress' || !data || data.taskId !== loginTaskId) return
     if (data.state === 'cookie-collected') {
-      cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_COMPLETED', data)
-      ipcMain.emit('cookie-saved')
+      void publishCollectedSession().catch(() => {
+        cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
+      })
     }
     if (data.state === 'failed') {
       cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')

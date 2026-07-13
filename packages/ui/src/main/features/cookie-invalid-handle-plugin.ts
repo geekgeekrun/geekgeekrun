@@ -27,14 +27,14 @@ export class CookieInvalidHandlePlugin {
       if (checkCookieListFormat(cookies)) return
       await browser?.close().catch(() => {})
       await promptForLogin()
-      throw new Error('LOGIN_STATUS_INVALID')
+      return
     })
     hooks.userInfoResponse.tapPromise('CookieInvalidHandlePlugin', async ({ userInfoResponse, browser }: any = {}) => {
       if (userInfoResponse.code === 0) return
       await browser?.close().catch(() => {})
       await requestBackend('config.write', { resource: 'boss_cookies', patch: [] })
       await promptForLogin()
-      throw new Error('LOGIN_STATUS_INVALID')
+      return
     })
   }
 }

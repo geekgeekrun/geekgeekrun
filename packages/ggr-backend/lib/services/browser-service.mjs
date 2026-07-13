@@ -5,7 +5,7 @@ import { openLogin as runOpenLogin } from './browser/open-login.mjs'
 export function createBrowserService({ runtime, emit = () => {}, createTaskId = randomUUID } = {}) {
   const tasks = new Map()
   const resources = new Map()
-  const start = (kind, operation) => {
+  const start = (kind, operation, params = {}) => {
     const taskId = createTaskId()
     const task = { taskId, state: 'starting', kind }
     const resource = { browser: null, controller: new AbortController() }
@@ -16,7 +16,7 @@ export function createBrowserService({ runtime, emit = () => {}, createTaskId = 
       try {
         task.state = 'running'
         emit('task.progress', { taskId, kind, state: 'running' })
-        await operation({ runtime, taskReporter, taskId, signal: resource.controller.signal, onBrowserOpened: (browser) => { resource.browser = browser } })
+        await operation({ runtime, taskReporter, taskId, signal: resource.controller.signal, onBrowserOpened: (browser) => { resource.browser = browser }, ...params })
         if (task.state === 'cancelled') return
         task.state = 'completed'
         emit('task.progress', { taskId, kind, state: 'completed' })
@@ -30,7 +30,7 @@ export function createBrowserService({ runtime, emit = () => {}, createTaskId = 
   }
   return {
     openLogin: () => start('openLogin', runOpenLogin),
-    openBoss: () => start('openBoss', runOpenBoss),
+    openBoss: ({ url } = {}) => start('openBoss', runOpenBoss, { url }),
     async openBossPage(url) {
       if (typeof url !== 'string' || !url) throw Object.assign(new Error('A page URL is required'), { code: 'INVALID_PARAMS' })
       return runtime.openBossPage(url)

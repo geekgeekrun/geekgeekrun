@@ -60,8 +60,10 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
       return browser.openLogin()
     })
     .register(METHODS.BROWSER_OPEN_BOSS, (params) => {
-      if (Object.keys(params).length) throw Object.assign(new Error('browser.openBoss does not accept parameters'), { code: 'INVALID_PARAMS' })
-      return browser.openBoss()
+      if (Object.keys(params).some((key) => key !== 'url') || (params.url !== undefined && (typeof params.url !== 'string' || !params.url))) {
+        throw Object.assign(new Error('browser.openBoss accepts an optional URL'), { code: 'INVALID_PARAMS' })
+      }
+      return browser.openBoss({ url: params.url })
     })
     .register(METHODS.BROWSER_CANCEL, (params) => {
       if (!params || typeof params.taskId !== 'string' || !params.taskId || Object.keys(params).length !== 1) {

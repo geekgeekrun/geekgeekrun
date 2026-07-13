@@ -19,6 +19,7 @@ await fs.writeFile(path.join(runtimePaths.storageDir, 'hr-reply-approval-queue.j
 ]))
 const taskChildren = []
 const cancelledBrowserTasks = []
+const openedBossUrls = []
 const backend = await createBackendServer({
   socketPath: runtimePaths.backendSocket,
   version: '0.1.0',
@@ -36,6 +37,7 @@ const backend = await createBackendServer({
     },
     stopTimeoutMs: 10,
     browser: {
+      async openBoss({ url }) { openedBossUrls.push(url); return { taskId: 'boss-task', state: 'starting' } },
       async cancel(taskId) { cancelledBrowserTasks.push(taskId); return { taskId, state: 'cancelled' } },
       async close() {}
     }
@@ -112,6 +114,9 @@ try {
   )
 
   assert.deepEqual(await client.request('task.list'), [])
+  assert.deepEqual(await client.request('browser.openBoss', { url: 'https://www.zhipin.com/job_detail/job-1.html' }), { taskId: 'boss-task', state: 'starting' })
+  assert.deepEqual(openedBossUrls, ['https://www.zhipin.com/job_detail/job-1.html'])
+  await assert.rejects(client.request('browser.openBoss', { url: '' }), { code: 'INVALID_PARAMS' })
   assert.deepEqual(await client.request('browser.cancel', { taskId: 'browser-task' }), { taskId: 'browser-task', state: 'cancelled' })
   assert.deepEqual(cancelledBrowserTasks, ['browser-task'])
   await assert.rejects(client.request('browser.cancel', {}), { code: 'INVALID_PARAMS' })

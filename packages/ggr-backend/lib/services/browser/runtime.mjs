@@ -57,11 +57,26 @@ export function createBackendBrowserRuntime(options) {
     if (page) return createBossPageListener({ page, storage, records, reporter })
   })
 
-  async function browserLaunchOptions(extensionPath) {
-    const browserInfo = await (await dependencies).discover()
+  async function browserLaunchOptions(extensionPath, { taskReporter, signal } = {}) {
+    const browserDependencies = await dependencies
+    let browserInfo = await browserDependencies.discover()
+    if (!browserInfo?.executablePath) {
+      taskReporter?.emit('task.progress', { state: 'dependency-download-started' })
+      browserInfo = await browserDependencies.ensure({
+        downloadProgressCallback(downloadedBytes, totalBytes) {
+          taskReporter?.emit('task.progress', {
+            state: 'dependency-download-progress', downloadedBytes, totalBytes
+          })
+        }
+      })
+    }
     if (!browserInfo?.executablePath) {
       throw Object.assign(new Error('No validated browser executable is available'), { code: 'BROWSER_EXECUTABLE_UNAVAILABLE' })
     }
+    aborted(signal)
+    taskReporter?.emit('task.progress', {
+      state: 'dependency-ready', executablePath: browserInfo.executablePath, browser: browserInfo.browser
+    })
     return { headless: false, pipe: true, executablePath: browserInfo.executablePath, enableExtensions: [extensionPath] }
   }
 
@@ -97,7 +112,7 @@ export function createBackendBrowserRuntime(options) {
     aborted(signal)
     const extensionPath = await ensureExtension()
     aborted(signal)
-    const browser = track(await launchBrowser(await browserLaunchOptions(extensionPath)))
+    const browser = track(await launchBrowser(await browserLaunchOptions(extensionPath, { taskReporter, signal })))
     onBrowserOpened?.(browser)
     const removeAbortClose = closeOnAbort(browser, signal)
     try {
@@ -133,13 +148,13 @@ export function createBackendBrowserRuntime(options) {
     }
   }
 
-  async function openBoss({ taskReporter, onBrowserOpened, signal }) {
+  async function openBoss({ taskReporter, onBrowserOpened, signal, url = BOSS_URL }) {
     aborted(signal)
     const extensionPath = await ensureExtension()
     const session = await storage.readSession()
     if (!session || !isValidCookieList(session.cookies)) throw Object.assign(new Error('Boss cookies are required'), { code: 'COOKIE_INVALID' })
     const { cookies, localStorage } = session
-    const browser = track(await launchBrowser(await browserLaunchOptions(extensionPath)))
+    const browser = track(await launchBrowser(await browserLaunchOptions(extensionPath, { taskReporter, signal })))
     bossBrowser = browser
     onBrowserOpened?.(browser)
     const removeAbortClose = closeOnAbort(browser, signal)
@@ -168,7 +183,7 @@ export function createBackendBrowserRuntime(options) {
       aborted(signal)
       const mainPage = await browser.newPage()
       await page.close()
-      await mainPage.goto(BOSS_URL, { timeout: 0 })
+      await mainPage.goto(url, { timeout: 0 })
       aborted(signal)
       taskReporter.emit('task.progress', { state: 'page-opened', url: mainPage.url() })
     } catch (error) {

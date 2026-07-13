@@ -163,6 +163,12 @@ const formRules = {
 const hasUserMutateInput = ref(false)
 const collectedCookie = ref()
 const handleCookieCollected = (_, payload) => {
+  if (!Array.isArray(payload?.cookies) && payload?.configured) {
+    cookieInvalid.value = false
+    ElMessage.success('BOSS直聘登录状态已保存')
+    window.electron.ipcRenderer.send('cookie-saved')
+    return
+  }
   loginCookieWaitingStatus.value = LOGIN_COOKIE_WAITING_STATUS.COOKIE_COLLECTED
   collectedCookie.value = payload.cookies
   if (!hasUserMutateInput.value) {

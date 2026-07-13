@@ -30,6 +30,7 @@ import { requestBackend } from '../../../backend/client'
 import { backendEvents } from '../../../backend/events'
 
 const WORKER_STOP_TIMEOUT_MS = 15000
+const BOSS_BROWSER_READY_TIMEOUT_MS = 15000
 const workerExitHandlerByMode = new Map<string, (event: any) => void>()
 
 function subscribeToWorkerExit(mode: string) {
@@ -71,6 +72,33 @@ function waitForWorkerExit(workerId: string) {
     }, WORKER_STOP_TIMEOUT_MS)
   })
   return { promise, cleanup }
+}
+
+function waitForBrowserReady(taskId: string) {
+  let timeout: ReturnType<typeof setTimeout>
+  let handler: (event: any) => void
+  return new Promise<Record<string, unknown>>((resolve, reject) => {
+    const cleanup = () => {
+      backendEvents.off('event', handler)
+      clearTimeout(timeout)
+    }
+    handler = (event: any) => {
+      const data = event.data as Record<string, unknown> | undefined
+      if (event.event !== 'task.progress' || data?.taskId !== taskId) return
+      if (data.state === 'page-opened') {
+        cleanup()
+        resolve(data)
+      } else if (data.state === 'failed' || data.state === 'cancelled') {
+        cleanup()
+        reject(new Error(String(data.message ?? 'Boss browser failed to start')))
+      }
+    }
+    backendEvents.on('event', handler)
+    timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error('Timed out waiting for Boss browser readiness'))
+    }, BOSS_BROWSER_READY_TIMEOUT_MS)
+  })
 }
 
 async function stopWorkerAndNotify({ workerId, stoppingEvent, stoppedEvent }) {
@@ -122,7 +150,7 @@ export default function initIpc() {
   })
 
   ipcMain.handle('get-task-manager-list', async () => {
-    return await requestBackend('task.list')
+    return { workers: await requestBackend('task.list') }
   })
 
   // IPC处理：停止工具进程
@@ -131,8 +159,10 @@ export default function initIpc() {
   })
 
   ipcMain.handle('open-site-with-boss-cookie', async (_ev, data) => {
-    void data?.url
-    return await requestBackend('browser.openBoss')
+    const url = typeof data?.url === 'string' ? data.url : undefined
+    const task = await requestBackend<{ taskId: string }>('browser.openBoss', { url })
+    const ready = await waitForBrowserReady(task.taskId)
+    return { taskId: task.taskId, state: 'ready', url: ready.url ?? url }
   })
 
   ipcMain.handle('llm-config', async () => {
