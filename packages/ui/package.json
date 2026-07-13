@@ -28,6 +28,8 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
+    "@geekgeekrun/ggr-client": "workspace:*",
+    "@geekgeekrun/ggr-protocol": "workspace:*",
     "@geekgeekrun/pm": "workspace:*",
     "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",
     "@geekgeekrun/sqlite-plugin": "workspace:*",

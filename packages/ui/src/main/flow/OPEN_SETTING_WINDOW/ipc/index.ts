@@ -1,35 +1,9 @@
-import { ipcMain, shell, app } from 'electron'
-import path from 'path'
-import {
-  readConfigFile,
-  writeConfigFile,
-  readStorageFile,
-  storageFilePath
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
-import { checkCookieListFormat } from '../../../../common/utils/cookie'
+import { ipcMain, app } from 'electron'
 import { getAnyAvailablePuppeteerExecutable } from '../../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { mainWindow } from '../../../window/mainWindow'
-import {
-  getAutoStartChatRecord,
-  getBossLibrary,
-  getCompanyLibrary,
-  getJobLibrary,
-  getJobHistoryByEncryptId,
-  getMarkAsNotSuitRecord
-} from '../utils/db/index'
-import { PageReq } from '../../../../common/types/pagination'
-// eslint-disable-next-line vue/prefer-import-from-vue
-import { hasOwn } from '@vue/shared'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
-import {
-  getValidTemplate,
-  requestNewMessageContent
-} from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
-import {
-  defaultPromptMap,
-  writeDefaultAutoRemindPrompt
-} from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
+import { requestNewMessageContent } from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
   checkIsResumeContentValid,
   resumeContentEnoughDetect
@@ -52,7 +26,7 @@ import {
 } from '../../../features/first-launch-notice-window'
 import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
-import { ensureConfigFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { readBackendConfig, writeBackendConfig } from '../../../backend/register-ipc'
 // @ts-expect-error Backend ESM compatibility module is intentionally consumed directly by the legacy UI.
 import { createBrowserCompatibilityApi } from '../../../../../ggr-backend/lib/services/browser/compat.mjs'
 
@@ -122,134 +96,7 @@ async function stopWorkerAndNotify({ workerId, stoppingEvent, stoppedEvent }) {
 }
 
 export default function initIpc() {
-  ipcMain.handle('save-config-file-from-ui', async (ev, payload) => {
-    payload = JSON.parse(payload)
-    ensureConfigFileExist()
-
-    const promiseArr: Array<Promise<unknown>> = []
-
-    const dingtalkConfig = readConfigFile('dingtalk.json')
-    if (hasOwn(payload, 'dingtalkRobotAccessToken')) {
-      dingtalkConfig.groupRobotAccessToken = payload.dingtalkRobotAccessToken
-    }
-    promiseArr.push(writeConfigFile('dingtalk.json', dingtalkConfig))
-
-    const bossConfig = readConfigFile('boss.json')
-    if (hasOwn(payload, 'anyCombineRecommendJobFilter')) {
-      bossConfig.anyCombineRecommendJobFilter = payload.anyCombineRecommendJobFilter
-    }
-    delete bossConfig.expectJobRegExpStr
-    if (hasOwn(payload, 'expectJobNameRegExpStr')) {
-      bossConfig.expectJobNameRegExpStr = payload.expectJobNameRegExpStr
-    }
-    if (hasOwn(payload, 'expectJobTypeRegExpStr')) {
-      bossConfig.expectJobTypeRegExpStr = payload.expectJobTypeRegExpStr
-    }
-    if (hasOwn(payload, 'expectJobDescRegExpStr')) {
-      bossConfig.expectJobDescRegExpStr = payload.expectJobDescRegExpStr
-    }
-    if (hasOwn(payload, 'jobNotMatchStrategy')) {
-      bossConfig.jobNotMatchStrategy = payload.jobNotMatchStrategy
-    }
-    if (hasOwn(payload, 'markAsNotActiveSelectedTimeRange')) {
-      bossConfig.markAsNotActiveSelectedTimeRange = payload.markAsNotActiveSelectedTimeRange
-    }
-    if (hasOwn(payload, 'jobNotActiveStrategy')) {
-      bossConfig.jobNotActiveStrategy = payload.jobNotActiveStrategy
-    }
-    if (hasOwn(payload, 'autoReminder')) {
-      bossConfig.autoReminder = payload.autoReminder
-    }
-
-    // city
-    if (hasOwn(payload, 'expectCityList')) {
-      bossConfig.expectCityList = payload.expectCityList
-    }
-    if (hasOwn(payload, 'expectCityNotMatchStrategy')) {
-      bossConfig.expectCityNotMatchStrategy = payload.expectCityNotMatchStrategy
-    }
-    if (hasOwn(payload, 'strategyScopeOptionWhenMarkJobCityNotMatch')) {
-      bossConfig.strategyScopeOptionWhenMarkJobCityNotMatch =
-        payload.strategyScopeOptionWhenMarkJobCityNotMatch
-    }
-
-    // salary
-    if (hasOwn(payload, 'expectSalaryCalculateWay')) {
-      bossConfig.expectSalaryCalculateWay = payload.expectSalaryCalculateWay
-    }
-    if (hasOwn(payload, 'expectSalaryNotMatchStrategy')) {
-      bossConfig.expectSalaryNotMatchStrategy = payload.expectSalaryNotMatchStrategy
-    }
-    if (hasOwn(payload, 'strategyScopeOptionWhenMarkSalaryNotMatch')) {
-      bossConfig.strategyScopeOptionWhenMarkSalaryNotMatch =
-        payload.strategyScopeOptionWhenMarkSalaryNotMatch
-    }
-    if (hasOwn(payload, 'expectSalaryLow')) {
-      bossConfig.expectSalaryLow = payload.expectSalaryLow
-    }
-    if (hasOwn(payload, 'expectSalaryHigh')) {
-      bossConfig.expectSalaryHigh = payload.expectSalaryHigh
-    }
-
-    // work exp
-    if (hasOwn(payload, 'expectWorkExpList')) {
-      bossConfig.expectWorkExpList = payload.expectWorkExpList
-    }
-    if (hasOwn(payload, 'expectWorkExpNotMatchStrategy')) {
-      bossConfig.expectWorkExpNotMatchStrategy = payload.expectWorkExpNotMatchStrategy
-    }
-    if (hasOwn(payload, 'strategyScopeOptionWhenMarkJobWorkExpNotMatch')) {
-      bossConfig.strategyScopeOptionWhenMarkJobWorkExpNotMatch =
-        payload.strategyScopeOptionWhenMarkJobWorkExpNotMatch
-    }
-    if (hasOwn(payload, 'jobDetailRegExpMatchLogic')) {
-      bossConfig.jobDetailRegExpMatchLogic = payload.jobDetailRegExpMatchLogic
-    }
-    if (hasOwn(payload, 'isSkipEmptyConditionForCombineRecommendJobFilter')) {
-      bossConfig.isSkipEmptyConditionForCombineRecommendJobFilter =
-        payload.isSkipEmptyConditionForCombineRecommendJobFilter
-    }
-    if (hasOwn(payload, 'jobSourceList')) {
-      bossConfig.jobSourceList = payload.jobSourceList
-    }
-    if (hasOwn(payload, 'combineRecommendJobFilterType')) {
-      bossConfig.combineRecommendJobFilterType = payload.combineRecommendJobFilterType
-    }
-    if (hasOwn(payload, 'staticCombineRecommendJobFilterConditions')) {
-      bossConfig.staticCombineRecommendJobFilterConditions =
-        payload.staticCombineRecommendJobFilterConditions
-    }
-    if (hasOwn(payload, 'isSageTimeEnabled')) {
-      bossConfig.isSageTimeEnabled = payload.isSageTimeEnabled
-    }
-    if (hasOwn(payload, 'sageTimeOpTimes')) {
-      bossConfig.sageTimeOpTimes = payload.sageTimeOpTimes
-    }
-    if (hasOwn(payload, 'sageTimePauseMinute')) {
-      bossConfig.sageTimePauseMinute = payload.sageTimePauseMinute
-    }
-    if (hasOwn(payload, 'blockCompanyNameRegExpStr')) {
-      bossConfig.blockCompanyNameRegExpStr = payload.blockCompanyNameRegExpStr
-    }
-    if (hasOwn(payload, 'blockCompanyNameRegMatchStrategy')) {
-      bossConfig.blockCompanyNameRegMatchStrategy = payload.blockCompanyNameRegMatchStrategy
-    }
-    if (hasOwn(payload, 'fieldsForUseCommonConfig')) {
-      bossConfig.fieldsForUseCommonConfig = payload.fieldsForUseCommonConfig
-    }
-
-    promiseArr.push(writeConfigFile('boss.json', bossConfig))
-
-    if (hasOwn(payload, 'expectCompanies')) {
-      promiseArr.push(
-        writeConfigFile('target-company-list.json', payload.expectCompanies?.split(',') ?? [])
-      )
-    }
-
-    return await Promise.all(promiseArr)
-  })
-
-  ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
+  ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
     const mode = 'geekAutoStartWithBossMain'
     const { runRecordId } = await runCommon({ mode })
     subscribeToWorkerExit(mode)
@@ -304,32 +151,6 @@ export default function initIpc() {
     )
   })
 
-  ipcMain.handle('check-boss-zhipin-cookie-file', () => {
-    const cookies = readStorageFile('boss-cookies.json')
-    return checkCookieListFormat(cookies)
-  })
-
-  ipcMain.handle('get-auto-start-chat-record', async (ev, payload: PageReq) => {
-    const a = await getAutoStartChatRecord(payload)
-    return a
-  })
-  ipcMain.handle('get-mark-as-not-suit-record', async (ev, payload: PageReq) => {
-    const a = await getMarkAsNotSuitRecord(payload)
-    return a
-  })
-  ipcMain.handle('get-job-library', async (ev, payload: PageReq) => {
-    const a = await getJobLibrary(payload)
-    return a
-  })
-  ipcMain.handle('get-boss-library', async (ev, payload: PageReq) => {
-    const a = await getBossLibrary(payload)
-    return a
-  })
-  ipcMain.handle('get-company-library', async (ev, payload: PageReq) => {
-    const a = await getCompanyLibrary(payload)
-    return a
-  })
-
   let bossBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
   let bossBridgeReady: Promise<void> | null = null
   ipcMain.handle('open-site-with-boss-cookie', async (_ev, data) => {
@@ -380,19 +201,15 @@ export default function initIpc() {
     await bossBridge?.openBossPage(url ?? 'about:blank')
   })
 
-  ipcMain.handle('get-job-history-by-encrypt-id', async (_, encryptJobId) => {
-    return await getJobHistoryByEncryptId(encryptJobId)
-  })
-
   ipcMain.handle('llm-config', async () => {
     createLlmConfigWindow({
       parent: mainWindow!,
       modal: true,
       show: true
     })
-    const defer = Promise.withResolvers()
+    const defer = Promise.withResolvers<void>()
     async function saveLlmConfigHandler(_, configToSave) {
-      await writeConfigFile('llm.json', configToSave)
+      await writeBackendConfig('llm_config', configToSave)
       defer.resolve()
       ipcMain.removeHandler('save-llm-config')
       llmConfigWindow?.close()
@@ -412,9 +229,9 @@ export default function initIpc() {
       modal: true,
       show: true
     })
-    const defer = Promise.withResolvers()
+    const defer = Promise.withResolvers<void>()
     async function saveResumeHandler(_, resumeContent) {
-      await writeConfigFile('resumes.json', [
+      await writeBackendConfig('resumes', [
         {
           name: '默认简历',
           updateTime: Number(new Date()),
@@ -433,36 +250,42 @@ export default function initIpc() {
     return defer.promise
   })
   ipcMain.handle('fetch-resume-content', async () => {
-    const res = (await readConfigFile('resumes.json'))?.[0]
+    const res = (await readBackendConfig<Array<{ content?: unknown }>>('resumes'))?.[0]
     return res?.content ?? null
   })
   ipcMain.on('no-reply-reminder-prompt-edit', async (_, { type }) => {
-    const template = await readStorageFile(defaultPromptMap[type].fileName, {
-      isJson: false
+    const resource = type === 'open' ? 'auto_reminder_open_template' : 'auto_reminder_rechat_template'
+    mainWindow?.webContents.send('auto-reminder-prompt-content', {
+      type,
+      content: await readBackendConfig(resource)
     })
-    if (!template) {
-      await writeDefaultAutoRemindPrompt({ type })
-    }
-    const filePath = path.join(storageFilePath, defaultPromptMap[type].fileName)
-    shell.openPath(filePath)
   })
   ipcMain.on('close-resume-editor', () => resumeEditorWindow?.close())
   ipcMain.handle('check-if-auto-remind-prompt-valid', async (_, { type }) => {
-    await getValidTemplate({ type })
+    const resource = type === 'open' ? 'auto_reminder_open_template' : 'auto_reminder_rechat_template'
+    const content = await readBackendConfig<string>(resource)
+    if (type === 'rechat' && !content.includes('__REPLACE_REAL_RESUME_HERE__')) {
+      throw Object.assign(new Error('简历内容占位符字符串不存在。'), { name: 'RESUME_PLACEHOLDER_NOT_EXIST' })
+    }
   })
   ipcMain.handle('check-is-resume-content-valid', async () => {
-    const res = (await readConfigFile('resumes.json'))?.[0]
+    const res = (await readBackendConfig('resumes') as any[])?.[0]
     return checkIsResumeContentValid(res)
   })
   ipcMain.handle('resume-content-enough-detect', async () => {
-    const res = (await readConfigFile('resumes.json'))?.[0]
+    const res = (await readBackendConfig('resumes') as any[])?.[0]
     return resumeContentEnoughDetect(res)
   })
   ipcMain.handle('overwrite-auto-remind-prompt-with-default', async (_, { type }) => {
-    await writeDefaultAutoRemindPrompt({ type })
+    const resource = type === 'open' ? 'auto_reminder_open_template' : 'auto_reminder_rechat_template'
+    const defaultResource = type === 'open'
+      ? 'auto_reminder_open_template_default'
+      : 'auto_reminder_rechat_template_default'
+    const content = await readBackendConfig<string>(defaultResource)
+    await writeBackendConfig(resource, content)
   })
   ipcMain.handle('check-if-llm-config-list-valid', async () => {
-    const llmConfigList = await readConfigFile('llm.json')
+    const llmConfigList = await readBackendConfig<any[]>('llm_config')
     if (!Array.isArray(llmConfigList) || !llmConfigList?.length) {
       throw new Error('CANNOT_FIND_VALID_CONFIG')
     }
@@ -498,7 +321,7 @@ export default function initIpc() {
       ipcMain.removeHandler('request-llm-for-test')
     })
     async function getLlmConfigList() {
-      return await readConfigFile('llm.json')
+      return await readBackendConfig('llm_config')
     }
     ipcMain.handle('get-llm-config-for-test', getLlmConfigList)
     readNoReplyReminderLlmMockWindow?.once('closed', () => {
@@ -570,7 +393,7 @@ export default function initIpc() {
   ipcMain.handle('common-job-condition-config', async () => {
     await waitForCommonJobConditionDone()
     mainWindow?.webContents.send('common-job-condition-config-updated', {
-      config: await readConfigFile('common-job-condition-config.json')
+      config: await readBackendConfig('job_intention')
     })
   })
 

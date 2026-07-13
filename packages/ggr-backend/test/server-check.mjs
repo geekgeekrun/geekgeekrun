@@ -68,6 +68,19 @@ try {
   assert.equal(config.data.nested.safe, 'shown')
   assert.equal((await fs.stat(path.join(runtimePaths.configDir, 'boss.json'))).mode & 0o777, 0o600)
 
+  await client.request('config.write', {
+    resource: 'resumes',
+    patch: [{ name: '默认简历', content: { name: 'Test User' } }]
+  })
+  assert.equal((await client.request('config.read', { resource: 'resumes' })).data[0].name, '默认简历')
+  await client.request('config.write', { resource: 'boss_cookies', patch: [{ name: 'session', value: 'secret' }] })
+  assert.equal((await client.request('config.read', { resource: 'boss_cookies' })).data[0].name, 'session')
+  const prompt = await client.request('config.read', { resource: 'auto_reminder_rechat_template' })
+  assert.match(prompt.data, /__REPLACE_REAL_RESUME_HERE__/)
+  const defaultPrompt = await client.request('config.read', { resource: 'auto_reminder_open_template_default' })
+  assert.equal(defaultPrompt.writable, false)
+  assert.match(defaultPrompt.data, /开场白/)
+
   for (const resource of ['../boss.json', 'boss.json', '/tmp/boss.json']) {
     await assert.rejects(client.request('config.read', { resource }), { code: 'INVALID_PARAMS' })
   }

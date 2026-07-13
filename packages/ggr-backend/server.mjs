@@ -22,7 +22,7 @@ const DEFAULT_WORKER_ENTRIES = Object.freeze({
 export async function createBackendServer({ socketPath, version, runtimePaths, services = {}, verifyPeer, clock }) {
   if (!runtimePaths) throw new TypeError('runtimePaths are required')
   const logger = services.logger ?? await createLogger({ filePath: runtimePaths.backendLog, clock })
-  const config = services.config ?? createConfigService({ configDir: runtimePaths.configDir, clock })
+  const config = services.config ?? createConfigService({ configDir: runtimePaths.configDir, storageDir: runtimePaths.storageDir, clock })
   let rpc
   const emit = (event, data) => rpc?.publish(event, data)
   const task = services.task ?? createTaskService({

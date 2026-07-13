@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "main": "./index.mjs",
+  "types": "./index.d.ts",
   "exports": {
-    ".": "./index.mjs"
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs"
+    }
   },
   "scripts": {
     "test": "node ./test/check.mjs"
