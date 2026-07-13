@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises'
 import { createBrowserStorage, isValidCookieList } from './storage.mjs'
 import { createBossPageListener } from './boss-page-listener.mjs'
 import { ensureEditThisCookieExtension } from './extension.mjs'
@@ -57,7 +58,7 @@ export function createBackendBrowserRuntime(options) {
     if (page) return createBossPageListener({ page, storage, records, reporter })
   })
 
-  async function browserLaunchOptions(extensionPath, { taskReporter, signal } = {}) {
+  async function resolveBrowser({ taskReporter, signal } = {}) {
     const browserDependencies = await dependencies
     let browserInfo = await browserDependencies.discover()
     if (!browserInfo?.executablePath) {
@@ -77,6 +78,11 @@ export function createBackendBrowserRuntime(options) {
     taskReporter?.emit('task.progress', {
       state: 'dependency-ready', executablePath: browserInfo.executablePath, browser: browserInfo.browser
     })
+    return browserInfo
+  }
+
+  async function browserLaunchOptions(extensionPath, options = {}) {
+    const browserInfo = await resolveBrowser(options)
     return { headless: false, pipe: true, executablePath: browserInfo.executablePath, enableExtensions: [extensionPath] }
   }
 
@@ -202,6 +208,25 @@ export function createBackendBrowserRuntime(options) {
     return page
   }
 
+  async function prepareDependencies({ taskReporter, signal } = {}) {
+    return await resolveBrowser({ taskReporter, signal })
+  }
+
+  async function getAvailableBrowser(options = {}) {
+    return await (await dependencies).discover(options)
+  }
+
+  async function setBrowserExecutable({ executablePath, browser } = {}) {
+    if (typeof executablePath !== 'string' || !executablePath) {
+      throw Object.assign(new Error('A browser executable path is required'), { code: 'INVALID_PARAMS' })
+    }
+    const metadata = await fs.stat(executablePath).catch(() => null)
+    if (!metadata?.isFile()) throw Object.assign(new Error('Browser executable path is not a file'), { code: 'INVALID_PARAMS' })
+    const browserDependencies = await dependencies
+    await browserDependencies.history.write({ executablePath, browser: typeof browser === 'string' && browser ? browser : 'Custom browser' })
+    return await browserDependencies.discover()
+  }
+
   async function close() {
     await Promise.allSettled([...browsers].map((browser) => browser.close()))
     browsers.clear()
@@ -220,5 +245,8 @@ export function createBackendBrowserRuntime(options) {
     await storage.invalidateSession()
   }
 
-  return { openLogin, openBoss, openBossPage, readSession: () => storage.readSession(), saveSession, invalidateSession, close }
+  return {
+    openLogin, openBoss, openBossPage, prepareDependencies, getAvailableBrowser, setBrowserExecutable,
+    readSession: () => storage.readSession(), saveSession, invalidateSession, close
+  }
 }

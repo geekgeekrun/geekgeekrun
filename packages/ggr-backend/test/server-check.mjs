@@ -20,6 +20,7 @@ await fs.writeFile(path.join(runtimePaths.storageDir, 'hr-reply-approval-queue.j
 const taskChildren = []
 const cancelledBrowserTasks = []
 const openedBossUrls = []
+const savedExecutables = []
 const backend = await createBackendServer({
   socketPath: runtimePaths.backendSocket,
   version: '0.1.0',
@@ -38,6 +39,9 @@ const backend = await createBackendServer({
     stopTimeoutMs: 10,
     browser: {
       async openBoss({ url }) { openedBossUrls.push(url); return { taskId: 'boss-task', state: 'starting' } },
+      async prepare() { return { taskId: 'prepare-task', state: 'starting' } },
+      async getAvailable(options) { return { browser: 'test', executablePath: '/tmp/test-browser', options } },
+      async setExecutable(value) { savedExecutables.push(value); return { browser: value.browser, executablePath: value.executablePath } },
       async cancel(taskId) { cancelledBrowserTasks.push(taskId); return { taskId, state: 'cancelled' } },
       async close() {}
     }
@@ -117,6 +121,16 @@ try {
   assert.deepEqual(await client.request('browser.openBoss', { url: 'https://www.zhipin.com/job_detail/job-1.html' }), { taskId: 'boss-task', state: 'starting' })
   assert.deepEqual(openedBossUrls, ['https://www.zhipin.com/job_detail/job-1.html'])
   await assert.rejects(client.request('browser.openBoss', { url: '' }), { code: 'INVALID_PARAMS' })
+  assert.deepEqual(await client.request('browser.prepare'), { taskId: 'prepare-task', state: 'starting' })
+  await assert.rejects(client.request('browser.prepare', { unexpected: true }), { code: 'INVALID_PARAMS' })
+  assert.deepEqual(await client.request('browser.getAvailable', { ignoreCached: true }), {
+    browser: 'test', executablePath: '/tmp/test-browser', options: { ignoreCached: true }
+  })
+  assert.deepEqual(await client.request('browser.setExecutable', { executablePath: '/tmp/custom-browser', browser: 'Custom' }), {
+    browser: 'Custom', executablePath: '/tmp/custom-browser'
+  })
+  assert.deepEqual(savedExecutables, [{ executablePath: '/tmp/custom-browser', browser: 'Custom' }])
+  await assert.rejects(client.request('browser.setExecutable', { browser: 'Custom' }), { code: 'INVALID_PARAMS' })
   assert.deepEqual(await client.request('browser.cancel', { taskId: 'browser-task' }), { taskId: 'browser-task', state: 'cancelled' })
   assert.deepEqual(cancelledBrowserTasks, ['browser-task'])
   await assert.rejects(client.request('browser.cancel', {}), { code: 'INVALID_PARAMS' })

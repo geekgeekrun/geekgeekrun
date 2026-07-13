@@ -27,14 +27,14 @@ export class CookieInvalidHandlePlugin {
       if (checkCookieListFormat(cookies)) return
       await browser?.close().catch(() => {})
       await promptForLogin()
-      return
+      throw new Error('THROW_FOR_RETRY')
     })
     hooks.userInfoResponse.tapPromise('CookieInvalidHandlePlugin', async ({ userInfoResponse, browser }: any = {}) => {
       if (userInfoResponse.code === 0) return
       await browser?.close().catch(() => {})
       await requestBackend('config.write', { resource: 'boss_cookies', patch: [] })
       await promptForLogin()
-      return
+      throw new Error('THROW_FOR_RETRY')
     })
   }
 }

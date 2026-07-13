@@ -55,7 +55,8 @@ export function createBrowserDownloadProgressWindow(
   registerHandleWithWindow(browserDownloadProgressWindow, 'setup-dependencies', async () => {
     downloadPromise ??= new Promise<string>(async (resolve, reject) => {
       try {
-        const task = await requestBackend<{ taskId: string }>('browser.openLogin')
+        const task = await requestBackend<{ taskId: string }>('browser.prepare')
+        let executablePath: string | undefined
         const eventHandler = (event: { event?: string; data?: Record<string, unknown> }) => {
           const data = event.data
           if (event.event !== 'task.progress' || data?.taskId !== task.taskId) return
@@ -64,9 +65,12 @@ export function createBrowserDownloadProgressWindow(
             return
           }
           if (data.state === 'dependency-ready' && typeof data.executablePath === 'string') {
+            executablePath = data.executablePath
+            return
+          }
+          if (data.state === 'completed' && executablePath) {
             cleanup()
-            void requestBackend('browser.cancel', { taskId: task.taskId }).catch(() => {})
-            resolve(data.executablePath)
+            resolve(executablePath)
             return
           }
           if (data.state === 'failed' || data.state === 'cancelled') {

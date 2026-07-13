@@ -37,6 +37,11 @@ function snapshot(record) {
     pid: record.child.pid,
     startedAt: record.startedAt,
     restartCount: record.restartCount,
+    runRecordId: record.runRecordId,
+    runtimeStorage: {
+      runRecordId: record.runRecordId,
+      stepStatusMapByStepId: structuredClone(record.runtimeStorage.stepStatusMapByStepId)
+    },
     recentStdout: [...record.recentStdout],
     recentStderr: [...record.recentStderr]
   }
@@ -70,13 +75,13 @@ function pushLine(record, stream, rawLine, wasTruncated, lineBytes, streamBytes,
   onLine(line, wasTruncated || sanitized.truncated)
 }
 
-function structuredWorkerEvent(line, workerId, emit) {
+function structuredWorkerEvent(line, report) {
   let envelope
   try { envelope = JSON.parse(line) } catch { return false }
   if (!envelope || envelope.ggrWorkerEvent !== 1 || !ALLOWED_WORKER_EVENTS.has(envelope.event) ||
       !envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) return false
   const data = redactPayload(envelope.data)
-  emit(envelope.event, { ...data, workerId })
+  report(envelope.event, data)
   return true
 }
 
@@ -127,6 +132,7 @@ export function createTaskService({
   const stoppedWorkers = new Set()
   const terminalChildren = new WeakSet()
   const stopPromises = new Map()
+  let nextRunRecordId = Date.now()
 
   function assertWorker(workerId) {
     if (typeof workerId !== 'string' || !Object.hasOwn(workerEntries, workerId)) {
@@ -150,7 +156,7 @@ export function createTaskService({
     return { headless: Boolean(options.headless) }
   }
 
-  function launch(workerId, restartCount = 0, options = { headless: false }) {
+  function launch(workerId, restartCount = 0, options = { headless: false }, runRecordId = nextRunRecordId++) {
     const entry = assertWorker(workerId)
     const child = spawnProcess(process.execPath, [entry], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -162,6 +168,12 @@ export function createTaskService({
       status: 'running',
       startedAt: new Date().toISOString(),
       restartCount,
+      runRecordId,
+      runtimeStorage: {
+        stepStatusMapByStepId: {
+          'worker-launch': { runRecordId, step: { id: 'worker-launch', status: 'fulfilled' } }
+        }
+      },
       recentStdout: [],
       recentStderr: [],
       stdoutCarry: { text: '', bytes: 0, truncated: false },
@@ -171,14 +183,20 @@ export function createTaskService({
     }
     workers.set(workerId, record)
 
-    const progress = (stream, line, truncated) => { emit('task.progress', { workerId, stream, line, truncated }); return false }
-    child.stdout?.on?.('data', (chunk) => pushDiagnostic(record, 'stdout', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated), (line) => structuredWorkerEvent(line, workerId, emit)))
+    const progress = (stream, line, truncated) => { emit('task.progress', { workerId, runRecordId, stream, line, truncated }); return false }
+    const report = (event, data) => {
+      if (event === 'task.progress' && data.type === 'prerequisite-step-by-step-check' && data.step?.id) {
+        record.runtimeStorage.stepStatusMapByStepId[data.step.id] = { runRecordId, step: data.step }
+      }
+      emit(event, { ...data, workerId, runRecordId })
+    }
+    child.stdout?.on?.('data', (chunk) => pushDiagnostic(record, 'stdout', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated), (line) => structuredWorkerEvent(line, report)))
     child.stderr?.on?.('data', (chunk) => pushDiagnostic(record, 'stderr', chunk, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stderr', line, truncated)))
 
     const finalize = (code = null, signal = null, error = null) => {
       if (terminalChildren.has(child)) return
       terminalChildren.add(child)
-      pushLine(record, 'stdout', record.stdoutCarry.text, record.stdoutCarry.truncated, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated), (line) => structuredWorkerEvent(line, workerId, emit))
+      pushLine(record, 'stdout', record.stdoutCarry.text, record.stdoutCarry.truncated, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stdout', line, truncated), (line) => structuredWorkerEvent(line, report))
       pushLine(record, 'stderr', record.stderrCarry.text, record.stderrCarry.truncated, diagnosticLineBytes, diagnosticStreamBytes, (line, truncated) => progress('stderr', line, truncated))
       resetCarry(record.stdoutCarry)
       resetCarry(record.stderrCarry)
@@ -186,6 +204,7 @@ export function createTaskService({
       const restarting = !stoppedWorkers.has(workerId) && code !== 0
       emit('task.exited', {
         workerId,
+        runRecordId,
         code,
         signal,
         restarting,
@@ -194,7 +213,7 @@ export function createTaskService({
       })
       if (restarting) {
         queueMicrotask(() => {
-          if (!stoppedWorkers.has(workerId) && !workers.has(workerId)) launch(workerId, restartCount + 1, options)
+          if (!stoppedWorkers.has(workerId) && !workers.has(workerId)) launch(workerId, restartCount + 1, options, runRecordId)
         })
       }
     }

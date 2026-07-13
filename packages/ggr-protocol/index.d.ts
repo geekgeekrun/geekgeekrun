@@ -12,6 +12,9 @@ export declare const METHODS: Readonly<{
   RECORDS_LIST: 'records.list'
   BROWSER_OPEN_LOGIN: 'browser.openLogin'
   BROWSER_OPEN_BOSS: 'browser.openBoss'
+  BROWSER_PREPARE: 'browser.prepare'
+  BROWSER_GET_AVAILABLE: 'browser.getAvailable'
+  BROWSER_SET_EXECUTABLE: 'browser.setExecutable'
   BROWSER_CANCEL: 'browser.cancel'
   APPROVAL_LIST: 'approval.list'
   APPROVAL_APPROVE: 'approval.approve'
@@ -51,6 +54,14 @@ export interface TaskSummary {
   pid: number | null
   startedAt: string | null
   lastError: string | null
+  runRecordId: number
+  runtimeStorage: {
+    runRecordId: number
+    stepStatusMapByStepId: Record<string, {
+      runRecordId: number
+      step: { id: string, status: string }
+    }>
+  }
 }
 
 export interface PageRequest {

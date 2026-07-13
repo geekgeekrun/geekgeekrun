@@ -388,7 +388,55 @@ for (const [name, response] of [
   assert.equal(openedUrl, 'https://www.zhipin.com/job_detail/job-1.html', 'browser service must pass the requested job URL to the backend runtime')
 }
 
+{
+  let finishPreparation
+  let operationSignal
+  let loginLaunches = 0
+  const events = []
+  const service = createBrowserService({
+    createTaskId: () => 'prepare-task', emit: (event, data) => events.push({ event, data }),
+    runtime: {
+      async prepareDependencies({ signal, taskReporter }) {
+        operationSignal = signal
+        taskReporter.emit('task.progress', { state: 'dependency-download-started' })
+        await new Promise((resolve) => { finishPreparation = resolve })
+        if (signal.aborted) throw Object.assign(new Error('cancelled'), { code: 'TASK_CANCELLED' })
+        taskReporter.emit('task.progress', { state: 'dependency-ready', executablePath: '/tmp/chrome' })
+      },
+      async openLogin() { loginLaunches++ }
+    }
+  })
+  assert.deepEqual(service.prepare(), { taskId: 'prepare-task', state: 'starting' })
+  await tick()
+  await service.cancel('prepare-task')
+  finishPreparation()
+  await tick()
+  assert.equal(operationSignal.aborted, true, 'cancelling dependency preparation must abort the backend operation')
+  assert.equal(service.getTask('prepare-task').state, 'cancelled')
+  assert.equal(loginLaunches, 0, 'dependency preparation must never launch a login browser')
+  assert(events.some(({ data }) => data.state === 'dependency-download-started'))
+}
+
+{
+  const executablePath = path.join(tempHome, 'custom-browser')
+  await fs.writeFile(executablePath, '')
+  const writes = []
+  const runtime = createBackendBrowserRuntime({
+    runtimePaths: { storageDir }, storage,
+    dependencies: {
+      async discover() { return { browser: 'custom', executablePath } },
+      history: { async write(value) { writes.push(value) } }
+    },
+    records: {}
+  })
+  assert.deepEqual(await runtime.getAvailableBrowser(), { browser: 'custom', executablePath })
+  await runtime.setBrowserExecutable({ executablePath, browser: 'Custom' })
+  assert.deepEqual(writes, [{ executablePath, browser: 'Custom' }], 'backend owns executable history writes')
+  await assert.rejects(runtime.setBrowserExecutable({ executablePath: path.join(tempHome, 'missing') }), { code: 'INVALID_PARAMS' })
+}
+
 assert.equal(METHODS.BROWSER_CANCEL, 'browser.cancel', 'browser cancellation must be exposed through the protocol')
+assert.equal(METHODS.BROWSER_PREPARE, 'browser.prepare', 'dependency preparation must be exposed through the protocol')
 
 {
   const output = new PassThrough()
@@ -569,9 +617,7 @@ for (const file of [
   'packages/ui/src/main/flow/DOWNLOAD_DEPENDENCIES/utils/browser-history.ts',
   'packages/ui/src/main/flow/DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index.ts'
 ]) {
-  const source = await fs.readFile(new URL(`../../../${file}`, import.meta.url), 'utf8')
-  assert.match(source, /ggr-backend/, `${file} must delegate to backend-owned code`)
-  assert.doesNotMatch(source, /electron|initDb|puppeteer\.launch|saveJobInfoFromRecommendPage|process\.exit/, `${file} must be a thin compatibility wrapper`)
+  await assert.rejects(fs.access(new URL(`../../../${file}`, import.meta.url)), { code: 'ENOENT' }, `${file} must be removed from Electron`)
 }
 
 for (const file of [

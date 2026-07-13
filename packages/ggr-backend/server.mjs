@@ -65,6 +65,24 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
       }
       return browser.openBoss({ url: params.url })
     })
+    .register(METHODS.BROWSER_PREPARE, (params) => {
+      if (Object.keys(params).length) throw Object.assign(new Error('browser.prepare does not accept parameters'), { code: 'INVALID_PARAMS' })
+      return browser.prepare()
+    })
+    .register(METHODS.BROWSER_GET_AVAILABLE, (params) => {
+      if (Object.keys(params).some((key) => key !== 'ignoreCached' && key !== 'noSave') ||
+          (params.ignoreCached !== undefined && typeof params.ignoreCached !== 'boolean') ||
+          (params.noSave !== undefined && typeof params.noSave !== 'boolean')) {
+        throw Object.assign(new Error('Invalid browser availability options'), { code: 'INVALID_PARAMS' })
+      }
+      return browser.getAvailable(params)
+    })
+    .register(METHODS.BROWSER_SET_EXECUTABLE, (params) => {
+      if (Object.keys(params).some((key) => key !== 'executablePath' && key !== 'browser') || typeof params.executablePath !== 'string') {
+        throw Object.assign(new Error('browser.setExecutable requires an executable path'), { code: 'INVALID_PARAMS' })
+      }
+      return browser.setExecutable(params)
+    })
     .register(METHODS.BROWSER_CANCEL, (params) => {
       if (!params || typeof params.taskId !== 'string' || !params.taskId || Object.keys(params).length !== 1) {
         throw Object.assign(new Error('browser.cancel requires a taskId'), { code: 'INVALID_PARAMS' })

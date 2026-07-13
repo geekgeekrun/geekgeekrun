@@ -101,6 +101,14 @@ for (const sourceFile of sourceFiles) {
   assert.doesNotMatch(source, /downloadDependenciesForInit/, `${relativePath} must not execute backend browser flows directly`)
 }
 
+for (const relativePath of [
+  'packages/ui/src/main/window/browserAssistantWindow.ts',
+  'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts'
+]) {
+  const source = await fs.readFile(path.join(repoRoot, relativePath), 'utf8')
+  assert.doesNotMatch(source, /from ['"][^'"]*(?:DOWNLOAD_DEPENDENCIES|browser-history|puppeteer-executable|ggr-backend\/lib)/, `${relativePath} must not import backend browser dependencies directly`)
+}
+
 const taskIpcSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts'),
   'utf8'
@@ -113,9 +121,14 @@ const downloadSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/window/browserDownloadProgressWindow.ts'),
   'utf8'
 )
-assert.match(downloadSource, /requestBackend<\{ taskId: string \}>\('browser\.openLogin'\)/, 'download UI must request a backend browser task')
+assert.match(downloadSource, /requestBackend<\{ taskId: string \}>\('browser\.prepare'\)/, 'download UI must request a dependency-only backend browser task')
 assert.match(downloadSource, /requestBackend\('browser\.cancel'/, 'closing download UI must cancel its backend task')
 assert.match(downloadSource, /backendEvents\.on\('event'/, 'download UI must consume structured backend progress')
+assert.match(downloadSource, /data\.state === 'completed'/, 'download UI must wait for definitive backend completion')
+
+const bossWaitSource = taskIpcSource.match(/function waitForBrowserReady[\s\S]*?\n\}/)?.[0]
+assert.ok(bossWaitSource, 'Boss readiness wait must exist')
+assert.match(bossWaitSource, /requestBackend\('browser\.cancel'/, 'Boss readiness timeout must cancel the backend task')
 
 assert.match(cookieWindowSource, /send\('BOSS_ZHIPIN_COOKIE_COLLECTED', session\)/, 'cookie UI must preserve its collected-session notification')
 assert.match(cookieWindowSource, /readBackendConfig(?:<[^>]+>)?\('boss_cookies'\)/, 'cookie UI must confirm saved session through the status-only backend read')
@@ -127,14 +140,14 @@ const runCommonSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/features/run-common.ts'),
   'utf8'
 )
-assert.match(runCommonSource, /reserveRunRecordId/, 'task starts must reserve a numeric overlay correlation id')
-assert.match(runCommonSource, /backendEvents\.emit\('event'/, 'task starts must publish correlated overlay progress')
+assert.match(runCommonSource, /runRecordId: runningTask\.runRecordId/, 'existing tasks must reuse backend run correlation metadata')
+assert.match(runCommonSource, /runRecordId: startedTask\.runRecordId/, 'new tasks must return backend run correlation metadata')
 assert.doesNotMatch(runCommonSource, /runRecordId: null/, 'task starts must not return a null overlay correlation id')
 
 const cookieInvalidSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/features/cookie-invalid-handle-plugin.ts'),
   'utf8'
 )
-assert.match(cookieInvalidSource, /await promptForLogin\(\)[\s\S]*?return/, 'successful login must resume the legacy cookie hook')
+assert.match(cookieInvalidSource, /await promptForLogin\(\)[\s\S]*?THROW_FOR_RETRY/, 'successful login must retry with the refreshed backend session')
 
 console.log('backend boundary check passed')

@@ -1,5 +1,4 @@
 import { ipcMain, app } from 'electron'
-import { getAnyAvailablePuppeteerExecutable } from '../../DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable/index'
 import { mainWindow } from '../../../window/mainWindow'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
@@ -23,7 +22,6 @@ import {
   isFirstLaunchNoticeApproveFlagExist,
   waitForUserApproveAgreement
 } from '../../../features/first-launch-notice-window'
-import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
 import { readBackendConfig, writeBackendConfig } from '../../../backend/register-ipc'
 import { requestBackend } from '../../../backend/client'
@@ -96,6 +94,7 @@ function waitForBrowserReady(taskId: string) {
     backendEvents.on('event', handler)
     timeout = setTimeout(() => {
       cleanup()
+      void requestBackend('browser.cancel', { taskId }).catch(() => {})
       reject(new Error('Timed out waiting for Boss browser readiness'))
     }, BOSS_BROWSER_READY_TIMEOUT_MS)
   })
@@ -335,22 +334,19 @@ export default function initIpc() {
         return
       }
     }
-    const puppeteerExecutable = await getAnyAvailablePuppeteerExecutable()
+    const puppeteerExecutable = await requestBackend('browser.getAvailable')
     if (!puppeteerExecutable) {
-      const lastBrowser = await getLastUsedAndAvailableBrowser()
-      if (!lastBrowser) {
-        try {
-          await configWithBrowserAssistant({
-            windowOption: {
-              parent: mainWindow!,
-              modal: true,
-              show: true
-            },
-            autoFind: true
-          })
-        } catch (err) {
-          void err
-        }
+      try {
+        await configWithBrowserAssistant({
+          windowOption: {
+            parent: mainWindow!,
+            modal: true,
+            show: true
+          },
+          autoFind: true
+        })
+      } catch (err) {
+        void err
       }
     }
   })

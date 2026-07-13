@@ -30,7 +30,9 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     workerEntries: { auto: '/tmp/auto.mjs' },
     emit: (event, data) => events.push({ event, data })
   })
-  await service.start({ workerId: 'auto' })
+  const started = await service.start({ workerId: 'auto' })
+  assert.equal(typeof started.runRecordId, 'number', 'backend task starts must expose a durable run correlation id')
+  assert.equal(started.runtimeStorage.stepStatusMapByStepId['worker-launch'].runRecordId, started.runRecordId)
   const reporter = createWorkerReporter({ write: (line) => child.stdout.emit('data', line) })
   reporter.emit('task.progress', {
     workerId: 'auto',
@@ -42,11 +44,15 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     event: 'task.progress',
     data: {
       workerId: 'auto',
+      runRecordId: started.runRecordId,
       state: 'working',
       token: '[redacted]',
       message: 'request failed token=[redacted]'
     }
   })
+  const [reconstructed] = service.list()
+  assert.equal(reconstructed.runRecordId, started.runRecordId, 'task.list must reconstruct correlation after an Electron restart')
+  assert.equal(reconstructed.runtimeStorage.runRecordId, started.runRecordId)
   assert(!JSON.stringify(events[0]).includes('event-secret'))
   assert(!JSON.stringify(events[0]).includes('event-password'))
   assert.deepEqual(service.list()[0].recentStdout, [])
