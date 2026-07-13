@@ -12,6 +12,7 @@ import { createTaskService } from './lib/services/task-service.mjs'
 import { createRecordsService } from './lib/services/records-service.mjs'
 import { createBrowserService } from './lib/services/browser-service.mjs'
 import { createBackendBrowserRuntime } from './lib/services/browser/runtime.mjs'
+import { createBrowserRecords } from './lib/services/browser/records.mjs'
 
 const DEFAULT_WORKER_ENTRIES = Object.freeze({
   geekAutoStartWithBossMain: fileURLToPath(new URL('./lib/workers/auto-chat.mjs', import.meta.url)),
@@ -36,7 +37,10 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     clock
   })
   const records = services.records ?? createRecordsService({ databaseFile: runtimePaths.databaseFile })
-  const browser = services.browser ?? createBrowserService({ runtime: services.browserRuntime ?? createBackendBrowserRuntime({ runtimePaths }), emit })
+  const browser = services.browser ?? (() => {
+    const browserRecords = services.browserRecords ?? createBrowserRecords({ getDataSource: records.getDataSource })
+    return createBrowserService({ runtime: services.browserRuntime ?? createBackendBrowserRuntime({ runtimePaths, records: browserRecords }), emit })
+  })()
   const router = createRouter()
     .register(METHODS.SYSTEM_HANDSHAKE, (params) => {
       try { assertHandshake(params) } catch (error) { throw Object.assign(error, { code: 'INVALID_PARAMS' }) }

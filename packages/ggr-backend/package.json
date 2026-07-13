@@ -13,6 +13,7 @@
     "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
     "@geekgeekrun/sqlite-plugin": "workspace:*",
     "@geekgeekrun/utils": "workspace:*",
+    "extract-zip": "^2.0.1",
     "tapable": "^2.2.1"
   },
   "devDependencies": {

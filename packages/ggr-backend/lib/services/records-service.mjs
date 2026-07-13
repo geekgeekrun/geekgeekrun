@@ -61,7 +61,11 @@ export function createRecordsService({ dataSource, databaseFile, initDatabase = 
   async function close() {
     const active = connection ?? await connectionPromise
     if (active?.isInitialized) await active.destroy()
+    if (!dataSource) {
+      connection = undefined
+      connectionPromise = undefined
+    }
   }
 
-  return { list, accountStatus, close }
+  return { list, accountStatus, close, getDataSource: getConnection }
 }
