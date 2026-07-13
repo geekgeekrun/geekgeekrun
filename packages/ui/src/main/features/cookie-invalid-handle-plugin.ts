@@ -4,11 +4,21 @@ import { loginWithCookieAssistant } from './login-with-cookie-assistant'
 import { checkCookieListFormat } from '../../common/utils/cookie'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
 import {
-  readStorageFile,
-  writeStorageFile
+  readStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { createBrowserCompatibilityApi } from '../../../../ggr-backend/lib/services/browser/compat.mjs'
 
 const runRecordId = minimist(process.argv.slice(2))['run-record-id'] ?? null
+
+async function invalidateBossSession() {
+  const sessionBridge = createBrowserCompatibilityApi()
+  try {
+    await sessionBridge.invalidateSession()
+  } finally {
+    await sessionBridge.close().catch(() => {})
+  }
+}
+
 export class CookieInvalidHandlePlugin {
   apply(hooks) {
     hooks.cookieWillSet.tapPromise('CookieInvalidHandlePlugin', async ({ cookies, browser } = {}) => {
@@ -95,7 +105,7 @@ export class CookieInvalidHandlePlugin {
       } catch (err) {
         console.log(`close browser failed`, err)
       }
-      await writeStorageFile('boss-cookies.json', [])
+      await invalidateBossSession()
       try {
         // popup login dialog, then update login status
         let app

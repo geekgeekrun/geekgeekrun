@@ -201,9 +201,8 @@ const handleCancel = () => {
 const handleSubmit = async () => {
   gtagRenderer('save_clicked')
   await formRef.value!.validate()
-  await electron.ipcRenderer.invoke('write-storage-file', {
-    fileName: 'boss-cookies.json',
-    data: formContent.value.collectedCookies
+  await electron.ipcRenderer.invoke('save-boss-session', {
+    cookies: JSON.parse(formContent.value.collectedCookies)
   })
   ElMessage.success('BOSS直聘 Cookie 保存成功')
   gtagRenderer('save_cookie_done')

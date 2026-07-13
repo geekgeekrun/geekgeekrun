@@ -179,5 +179,16 @@ export function createBackendBrowserRuntime(options) {
     await notifyIdle()
   }
 
-  return { openLogin, openBoss, openBossPage, readSession: () => storage.readSession(), close }
+  async function saveSession({ cookies, localStorage } = {}) {
+    const existing = await storage.readSession()
+    const pairedLocalStorage = localStorage === undefined ? existing?.localStorage ?? {} : localStorage
+    await storage.writeSession({ cookies, localStorage: pairedLocalStorage })
+    return storage.readSession()
+  }
+
+  async function invalidateSession() {
+    await storage.invalidateSession()
+  }
+
+  return { openLogin, openBoss, openBossPage, readSession: () => storage.readSession(), saveSession, invalidateSession, close }
 }

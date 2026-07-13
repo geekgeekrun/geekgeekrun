@@ -14,6 +14,7 @@ import { createBackendBrowserRuntime } from '../lib/services/browser/runtime.mjs
 import { createBrowserHistory } from '../lib/services/browser/dependencies/browser-history.mjs'
 import { createPuppeteerDependencies } from '../lib/services/browser/dependencies/puppeteer-executable.mjs'
 import { createBrowserCompatibilityBridge } from '../lib/services/browser/compat.mjs'
+import { readAuthoritativeSession } from '../lib/workers/read-no-reply/runtime.mjs'
 import { METHODS } from '@geekgeekrun/ggr-protocol'
 
 const tick = () => new Promise((resolve) => setImmediate(resolve))
@@ -31,6 +32,29 @@ const dependencies = { async discover() { return browserInfo } }
 const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-browser-'))
 const storageDir = path.join(tempHome, 'storage')
 const storage = createBrowserStorage({ storageDir })
+
+{
+  const legacyStorageDir = path.join(tempHome, 'legacy-storage')
+  await fs.mkdir(legacyStorageDir, { recursive: true })
+  await fs.writeFile(path.join(legacyStorageDir, 'boss-cookies.json'), JSON.stringify([cookie]))
+  await fs.writeFile(path.join(legacyStorageDir, 'boss-local-storage.json'), JSON.stringify({ identity: 'legacy' }))
+  const legacyStorage = createBrowserStorage({ storageDir: legacyStorageDir })
+  assert.deepEqual(await legacyStorage.readSession(), { cookies: [cookie], localStorage: { identity: 'legacy' } },
+    'valid legacy mirrors must migrate into one authoritative session snapshot')
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(legacyStorageDir, 'boss-session.json'), 'utf8')),
+    { cookies: [cookie], localStorage: { identity: 'legacy' } },
+    'legacy migration must atomically persist the paired authoritative session')
+}
+
+{
+  const invalidLegacyStorageDir = path.join(tempHome, 'invalid-legacy-storage')
+  await fs.mkdir(invalidLegacyStorageDir, { recursive: true })
+  await fs.writeFile(path.join(invalidLegacyStorageDir, 'boss-cookies.json'), JSON.stringify([{ name: 'broken' }]))
+  const invalidLegacyStorage = createBrowserStorage({ storageDir: invalidLegacyStorageDir })
+  assert.equal(await invalidLegacyStorage.readSession(), null, 'invalid legacy cookies must not become an authoritative session')
+  await assert.rejects(fs.access(path.join(invalidLegacyStorageDir, 'boss-session.json')), { code: 'ENOENT' })
+}
+
 await storage.writeSession({ cookies: [cookie], localStorage: { identity: 'geek' } })
 assert.deepEqual(await storage.readCookies(), [cookie], 'Cookie persistence must round-trip')
 assert.deepEqual(await storage.readLocalStorage(), { identity: 'geek' }, 'local storage persistence must round-trip')
@@ -205,6 +229,31 @@ class FakeBrowser extends EventEmitter {
   await runtime.openBoss({ taskId: 'atomic-session', taskReporter: { emit() {} } })
   assert.deepEqual(browser.pageList[0].cookiesSet, [{ ...cookie }], 'Boss restore must use one authoritative session snapshot')
   await runtime.close()
+}
+
+{
+  const manualStorageDir = path.join(tempHome, 'manual-session-storage')
+  const manualStorage = createBrowserStorage({ storageDir: manualStorageDir })
+  await manualStorage.writeSession({ cookies: [{ ...cookie, value: 'old-token' }], localStorage: { identity: 'preserved' } })
+  const browser = new FakeBrowser(new FakePage())
+  const runtime = createBackendBrowserRuntime({
+    runtimePaths: { storageDir: manualStorageDir }, storage: manualStorage, dependencies,
+    launchBrowser: async () => browser, ensureExtension: async () => '/tmp/extension',
+    setDomainLocalStorage: async (_browser, _url, localStorage) => assert.deepEqual(localStorage, { identity: 'preserved' }),
+    attachPageListener: async () => {}, records: {}
+  })
+  const bridge = createBrowserCompatibilityBridge({ runtime })
+  await bridge.saveSession({ cookies: [{ ...cookie, value: 'manual-token' }] })
+  await runtime.openBoss({ taskId: 'manual-session', taskReporter: { emit() {} } })
+  assert.deepEqual(browser.pageList[0].cookiesSet, [{ ...cookie, value: 'manual-token' }],
+    'a manual Cookie Assistant save must create a session that Boss can restore')
+  await runtime.close()
+  await bridge.invalidateSession()
+  await assert.rejects(runtime.openBoss({ taskId: 'invalidated-session', taskReporter: { emit() {} } }), { code: 'COOKIE_INVALID' })
+  await assert.rejects(readAuthoritativeSession(manualStorage), { code: 'COOKIE_INVALID' })
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(manualStorageDir, 'boss-cookies.json'), 'utf8')), [],
+    'session invalidation must clear the compatibility cookie mirror too')
+  await bridge.close()
 }
 
 {

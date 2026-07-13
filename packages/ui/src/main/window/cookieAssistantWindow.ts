@@ -1,6 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-// @ts-expect-error Backend ESM compatibility module is intentionally consumed directly by the legacy UI.
 import { createBrowserCompatibilityApi } from '../../../../ggr-backend/lib/services/browser/compat.mjs'
 
 export let cookieAssistantWindow: BrowserWindow | null = null
@@ -46,6 +45,11 @@ export function createCookieAssistantWindow(
   })
 
   let loginBridge: ReturnType<typeof createBrowserCompatibilityApi> | null = null
+  const sessionBridge = createBrowserCompatibilityApi()
+  const saveSessionHandler = async (_ev: Electron.IpcMainInvokeEvent, { cookies }: { cookies: unknown }) => {
+    return sessionBridge.saveSession({ cookies })
+  }
+  ipcMain.handle('save-boss-session', saveSessionHandler)
   const launchHandler = async (_ev) => {
     await loginBridge?.close().catch(() => {})
     loginBridge = createBrowserCompatibilityApi({
@@ -74,8 +78,10 @@ export function createCookieAssistantWindow(
   ipcMain.on('kill-bosszhipin-login-page-with-preload-extension', killHandler)
   cookieAssistantWindow.on('closed', () => {
     void killHandler()
+    void sessionBridge.close().catch(() => {})
     ipcMain.off('launch-bosszhipin-login-page-with-preload-extension', launchHandler)
     ipcMain.off('kill-bosszhipin-login-page-with-preload-extension', killHandler)
+    ipcMain.removeHandler('save-boss-session')
   })
 
   return cookieAssistantWindow!

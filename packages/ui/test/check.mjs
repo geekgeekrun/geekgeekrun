@@ -47,7 +47,18 @@ assert.doesNotMatch(settingIpcSource, /PUPPETEER_EXECUTABLE_PATH|--mode=launchBo
 
 const cookieAssistantSource = await read('packages/ui/src/main/window/cookieAssistantWindow.ts')
 assert.match(cookieAssistantSource, /createBrowserCompatibilityApi/, 'cookie UI must call the backend compatibility API')
+assert.match(cookieAssistantSource, /save-boss-session/, 'cookie UI main process must expose a backend-owned session save IPC')
+assert.match(cookieAssistantSource, /saveSession/, 'cookie UI main process must persist manual cookies through the backend session API')
 assert.doesNotMatch(cookieAssistantSource, /PUPPETEER_EXECUTABLE_PATH|--mode=launchBossZhipinLoginPageWithPreloadExtension|childProcess\.spawn/, 'cookie UI must not inject an executable or self-spawn a browser child')
+
+const cookieAssistantRendererSource = await read('packages/ui/src/renderer/src/page/CookieAssistant/index.vue')
+assert.match(cookieAssistantRendererSource, /invoke\('save-boss-session'/, 'manual Cookie Assistant saves must use the main-process session IPC')
+assert.doesNotMatch(cookieAssistantRendererSource, /write-storage-file[\s\S]{0,150}boss-cookies\.json/, 'manual Cookie Assistant saves must not write only the legacy cookie mirror')
+
+const cookieInvalidationSource = await read('packages/ui/src/main/features/cookie-invalid-handle-plugin.ts')
+assert.match(cookieInvalidationSource, /createBrowserCompatibilityApi/, 'cookie invalidation must use the backend compatibility API')
+assert.match(cookieInvalidationSource, /invalidateSession/, 'cookie invalidation must clear the authoritative session')
+assert.doesNotMatch(cookieInvalidationSource, /writeStorageFile\('boss-cookies\.json', \[\]\)/, 'cookie invalidation must not clear only the legacy mirror')
 
 const daemonSource = await read('packages/pm/daemon.js')
 assert.match(

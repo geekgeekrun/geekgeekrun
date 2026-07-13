@@ -92,6 +92,8 @@ export function createBrowserCompatibilityBridge({ runtime, input, output }) {
     },
     startLogin() { return browser.openLogin() },
     openBossPage(url) { return browser.openBossPage(url) },
+    saveSession(session) { return runtime.saveSession(session) },
+    invalidateSession() { return runtime.invalidateSession() },
     startBoss() {
       if (input && !stopReading) {
         stopReading = readFd3Messages(input, (message) => {
@@ -135,6 +137,8 @@ export function createBrowserCompatibilityApi({ onMessage = () => {} } = {}) {
     startLogin: () => bridge.startLogin(),
     startBoss: () => bridge.startBoss(),
     openBossPage: (url) => bridge.openBossPage(url),
+    saveSession: (session) => bridge.saveSession(session),
+    invalidateSession: () => bridge.invalidateSession(),
     close
   }
 }
