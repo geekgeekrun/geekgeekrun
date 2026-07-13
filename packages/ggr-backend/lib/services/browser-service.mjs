@@ -31,6 +31,10 @@ export function createBrowserService({ runtime, emit = () => {}, createTaskId = 
   return {
     openLogin: () => start('openLogin', runOpenLogin),
     openBoss: () => start('openBoss', runOpenBoss),
+    async openBossPage(url) {
+      if (typeof url !== 'string' || !url) throw Object.assign(new Error('A page URL is required'), { code: 'INVALID_PARAMS' })
+      return runtime.openBossPage(url)
+    },
     getTask: (taskId) => tasks.get(taskId) ?? null,
     async cancel(taskId) {
       const task = tasks.get(taskId)

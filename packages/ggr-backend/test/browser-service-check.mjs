@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { PassThrough } from 'node:stream'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -10,6 +11,8 @@ import { createBrowserStorage } from '../lib/services/browser/storage.mjs'
 import { createBackendBrowserRuntime } from '../lib/services/browser/runtime.mjs'
 import { createBrowserHistory } from '../lib/services/browser/dependencies/browser-history.mjs'
 import { createPuppeteerDependencies } from '../lib/services/browser/dependencies/puppeteer-executable.mjs'
+import { createBrowserCompatibilityBridge } from '../lib/services/browser/compat.mjs'
+import { METHODS } from '@geekgeekrun/ggr-protocol'
 
 const tick = () => new Promise((resolve) => setImmediate(resolve))
 const until = async (predicate, message) => {
@@ -20,6 +23,8 @@ const until = async (predicate, message) => {
   throw new Error(message)
 }
 const cookie = { name: 'wt2', value: 'token', domain: '.zhipin.com', path: '/', secure: true, session: true, httpOnly: true }
+const browserInfo = { browser: 'test chrome', executablePath: '/tmp/test-chrome' }
+const dependencies = { async discover() { return browserInfo } }
 
 const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-browser-'))
 const storageDir = path.join(tempHome, 'storage')
@@ -96,7 +101,8 @@ class FakeBrowser extends EventEmitter {
   const events = []
   const runtime = createBackendBrowserRuntime({
     runtimePaths: { storageDir }, storage,
-    launchBrowser: async (options) => { assert.deepEqual(options.enableExtensions, ['/tmp/edit-this-cookie']); return browser },
+    dependencies,
+    launchBrowser: async (options) => { assert.deepEqual(options, { headless: false, pipe: true, executablePath: browserInfo.executablePath, enableExtensions: ['/tmp/edit-this-cookie'] }); return browser },
     ensureExtension: async () => '/tmp/edit-this-cookie', blockPageNavigation: async () => ({ dispose() {} }),
     sleep: async () => {}, setDomainLocalStorage: async () => {}, records: {}
   })
@@ -148,6 +154,7 @@ class FakeBrowser extends EventEmitter {
   let idleCloses = 0
   const runtime = createBackendBrowserRuntime({
     runtimePaths: { storageDir }, storage,
+    dependencies,
     launchBrowser: async () => browser, ensureExtension: async () => '/tmp/extension',
     setDomainLocalStorage: async (_browser, url, value) => assert.deepEqual([url, value], ['https://www.zhipin.com/desktop/', { identity: 'captured' }]),
     attachPageListener: async (target) => attached.push(target), records: {}, onIdle: async () => { idleCloses++ }
@@ -171,11 +178,41 @@ class FakeBrowser extends EventEmitter {
   browser.newPage = async () => page
   const runtime = createBackendBrowserRuntime({
     runtimePaths: { storageDir }, storage,
+    dependencies,
     launchBrowser: async () => browser, ensureExtension: async () => '/tmp/extension',
     setDomainLocalStorage: async () => {}, attachPageListener: async () => {}, records: {}
   })
   await assert.rejects(runtime.openBoss({ taskId: 'failing-boss', taskReporter: { emit() {} } }), { code: 'NAVIGATION_FAILED' })
   assert.equal(browser.closed, 1, 'a failed Boss navigation must close its browser')
+}
+
+{
+  const browser = new FakeBrowser(new FakePage())
+  const session = { cookies: [cookie], localStorage: { identity: 'atomic' } }
+  const runtime = createBackendBrowserRuntime({
+    runtimePaths: { storageDir }, dependencies,
+    storage: {
+      async readSession() { return session },
+      async readCookies() { throw new Error('must not mix session generations') },
+      async readLocalStorage() { throw new Error('must not mix session generations') }
+    },
+    launchBrowser: async () => browser, ensureExtension: async () => '/tmp/extension',
+    setDomainLocalStorage: async (_browser, _url, value) => assert.equal(value, session.localStorage),
+    attachPageListener: async () => {}, records: {}
+  })
+  await runtime.openBoss({ taskId: 'atomic-session', taskReporter: { emit() {} } })
+  assert.deepEqual(browser.pageList[0].cookiesSet, [{ ...cookie }], 'Boss restore must use one authoritative session snapshot')
+  await runtime.close()
+}
+
+{
+  let launches = 0
+  const runtime = createBackendBrowserRuntime({
+    runtimePaths: { storageDir }, dependencies: { async discover() { return null } }, storage,
+    launchBrowser: async () => { launches++ }, ensureExtension: async () => '/tmp/extension', records: {}
+  })
+  await assert.rejects(runtime.openLogin({ taskReporter: { emit() {} } }), { code: 'BROWSER_EXECUTABLE_UNAVAILABLE' })
+  assert.equal(launches, 0, 'runtime must reject a missing executable before launching Puppeteer')
 }
 
 {
@@ -202,6 +239,35 @@ class FakeBrowser extends EventEmitter {
   assert.equal(closes, 1, 'cancel must close the operation browser')
   assert.equal(service.getTask('task-one').state, 'cancelled')
   assert.ok(events.every(({ event }) => event === 'task.progress'), 'browser operations emit only validated structured task events')
+}
+
+assert.equal(METHODS.BROWSER_CANCEL, 'browser.cancel', 'browser cancellation must be exposed through the protocol')
+
+{
+  const output = new PassThrough()
+  const input = new PassThrough()
+  const messages = []
+  output.on('data', (chunk) => messages.push(...chunk.toString().trim().split('\n').filter(Boolean).map(JSON.parse)))
+  let openedUrl
+  let runtimeClosed = 0
+  const bridge = createBrowserCompatibilityBridge({
+    input, output,
+    runtime: {
+      async readSession() { return { cookies: [cookie], localStorage: {} } },
+      async openLogin({ taskReporter }) { taskReporter.emit('task.progress', { state: 'cookie-collected' }) },
+      async openBoss({ taskReporter }) { taskReporter.emit('task.progress', { state: 'page-opened' }) },
+      async openBossPage(url) { openedUrl = url },
+      async close() { runtimeClosed++ }
+    }
+  })
+  bridge.startLogin()
+  bridge.startBoss()
+  await until(() => messages.some(({ type }) => type === 'BOSS_ZHIPIN_COOKIE_COLLECTED') && messages.some(({ type }) => type === 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY'), 'bridge did not retain legacy fd3 notifications')
+  input.write(`${JSON.stringify({ type: 'NEW_WINDOW', url: 'https://www.zhipin.com/job_detail/job-bridge.html' })}\n`)
+  await until(() => openedUrl, 'bridge did not route NEW_WINDOW to backend browser service')
+  assert.equal(openedUrl, 'https://www.zhipin.com/job_detail/job-bridge.html')
+  await bridge.close()
+  assert.equal(runtimeClosed, 1, 'bridge cleanup must close the backend runtime')
 }
 
 {

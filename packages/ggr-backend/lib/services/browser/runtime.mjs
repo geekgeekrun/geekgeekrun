@@ -1,6 +1,7 @@
 import { createBrowserStorage, isValidCookieList } from './storage.mjs'
 import { createBossPageListener } from './boss-page-listener.mjs'
 import { ensureEditThisCookieExtension } from './extension.mjs'
+import { createDefaultBrowserDependencies } from './dependencies/default-dependencies.mjs'
 
 const LOGIN_ENDPOINTS = [
   'https://www.zhipin.com/wapi/zppassport/qrcode/loginConfirm',
@@ -16,6 +17,9 @@ export function createBackendBrowserRuntime(options) {
   const { runtimePaths, records = {}, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = options
   const storage = options.storage ?? createBrowserStorage({ storageDir: runtimePaths.storageDir })
   const browsers = new Set()
+  const dependencies = options.dependencies
+    ? Promise.resolve(options.dependencies)
+    : createDefaultBrowserDependencies({ runtimePaths })
   let bossBrowser
   let idleNotified = false
   let idleClose
@@ -38,6 +42,14 @@ export function createBackendBrowserRuntime(options) {
     const page = await target.page()
     if (page) return createBossPageListener({ page, storage, records, reporter })
   })
+
+  async function browserLaunchOptions(extensionPath) {
+    const browserInfo = await (await dependencies).discover()
+    if (!browserInfo?.executablePath) {
+      throw Object.assign(new Error('No validated browser executable is available'), { code: 'BROWSER_EXECUTABLE_UNAVAILABLE' })
+    }
+    return { headless: false, pipe: true, executablePath: browserInfo.executablePath, enableExtensions: [extensionPath] }
+  }
 
   const track = (browser) => {
     browsers.add(browser)
@@ -71,7 +83,7 @@ export function createBackendBrowserRuntime(options) {
     aborted(signal)
     const extensionPath = await ensureExtension()
     aborted(signal)
-    const browser = track(await launchBrowser({ headless: false, pipe: true, enableExtensions: [extensionPath] }))
+    const browser = track(await launchBrowser(await browserLaunchOptions(extensionPath)))
     onBrowserOpened?.(browser)
     const removeAbortClose = closeOnAbort(browser, signal)
     try {
@@ -109,10 +121,10 @@ export function createBackendBrowserRuntime(options) {
   async function openBoss({ taskReporter, onBrowserOpened, signal }) {
     aborted(signal)
     const extensionPath = await ensureExtension()
-    const cookies = await storage.readCookies()
-    if (!isValidCookieList(cookies)) throw Object.assign(new Error('Boss cookies are required'), { code: 'COOKIE_INVALID' })
-    const localStorage = await storage.readLocalStorage()
-    const browser = track(await launchBrowser({ headless: false, pipe: true, enableExtensions: [extensionPath] }))
+    const session = await storage.readSession()
+    if (!session || !isValidCookieList(session.cookies)) throw Object.assign(new Error('Boss cookies are required'), { code: 'COOKIE_INVALID' })
+    const { cookies, localStorage } = session
+    const browser = track(await launchBrowser(await browserLaunchOptions(extensionPath)))
     bossBrowser = browser
     onBrowserOpened?.(browser)
     const removeAbortClose = closeOnAbort(browser, signal)
@@ -132,6 +144,7 @@ export function createBackendBrowserRuntime(options) {
       browser.once?.('disconnected', () => {
         for (const dispose of listenerDisposers) dispose()
         listenerDisposers.clear()
+        taskReporter.emit('task.progress', { state: 'browser-closed' })
       })
       for (const existingPage of await browser.pages()) await attach({ page: async () => existingPage })
       browser.on?.('targetdestroyed', async () => {
@@ -166,5 +179,5 @@ export function createBackendBrowserRuntime(options) {
     await notifyIdle()
   }
 
-  return { openLogin, openBoss, openBossPage, close }
+  return { openLogin, openBoss, openBossPage, readSession: () => storage.readSession(), close }
 }

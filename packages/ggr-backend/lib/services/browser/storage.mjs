@@ -54,6 +54,7 @@ export function createBrowserStorage({ storageDir, fsOps = fs, createId = random
   }
 
   return {
+    readSession,
     readCookies: async () => (await readSession())?.cookies ?? read('boss-cookies.json', []),
     readLocalStorage: async () => (await readSession())?.localStorage ?? read('boss-local-storage.json', {}),
     readReasonCache: () => read('job-not-suit-reason-code-to-text-cache.json', {}),

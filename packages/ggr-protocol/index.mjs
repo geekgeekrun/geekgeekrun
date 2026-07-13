@@ -5,7 +5,7 @@ export const METHODS = Object.freeze({
   TASK_LIST: 'task.list', TASK_START: 'task.start', TASK_STOP: 'task.stop',
   CONFIG_READ: 'config.read', CONFIG_WRITE: 'config.write',
   ACCOUNT_STATUS: 'account.status', RECORDS_LIST: 'records.list',
-  BROWSER_OPEN_LOGIN: 'browser.openLogin', BROWSER_OPEN_BOSS: 'browser.openBoss',
+  BROWSER_OPEN_LOGIN: 'browser.openLogin', BROWSER_OPEN_BOSS: 'browser.openBoss', BROWSER_CANCEL: 'browser.cancel',
   APPROVAL_LIST: 'approval.list', APPROVAL_APPROVE: 'approval.approve',
   APPROVAL_REQUIRE_HUMAN: 'approval.requireHuman'
 })

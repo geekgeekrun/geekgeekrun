@@ -12,6 +12,7 @@ export declare const METHODS: Readonly<{
   RECORDS_LIST: 'records.list'
   BROWSER_OPEN_LOGIN: 'browser.openLogin'
   BROWSER_OPEN_BOSS: 'browser.openBoss'
+  BROWSER_CANCEL: 'browser.cancel'
   APPROVAL_LIST: 'approval.list'
   APPROVAL_APPROVE: 'approval.approve'
   APPROVAL_REQUIRE_HUMAN: 'approval.requireHuman'

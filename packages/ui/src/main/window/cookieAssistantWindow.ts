@@ -103,6 +103,10 @@ export function createCookieAssistantWindow(
             cookieAssistantWindow?.webContents.send(data.type, data)
             break
           }
+          case 'BOSS_ZHIPIN_LOGIN_PAGE_FAILED': {
+            cookieAssistantWindow?.webContents.send('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED')
+            break
+          }
           default: {
             return
           }

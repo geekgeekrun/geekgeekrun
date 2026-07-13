@@ -18,6 +18,7 @@ await fs.writeFile(path.join(runtimePaths.storageDir, 'hr-reply-approval-queue.j
   { id: 'approval-two', status: 'pending' }
 ]))
 const taskChildren = []
+const cancelledBrowserTasks = []
 const backend = await createBackendServer({
   socketPath: runtimePaths.backendSocket,
   version: '0.1.0',
@@ -33,7 +34,11 @@ const backend = await createBackendServer({
       taskChildren.push(child)
       return child
     },
-    stopTimeoutMs: 10
+    stopTimeoutMs: 10,
+    browser: {
+      async cancel(taskId) { cancelledBrowserTasks.push(taskId); return { taskId, state: 'cancelled' } },
+      async close() {}
+    }
   }
 })
 
@@ -72,6 +77,10 @@ try {
   )
 
   assert.deepEqual(await client.request('task.list'), [])
+  assert.deepEqual(await client.request('browser.cancel', { taskId: 'browser-task' }), { taskId: 'browser-task', state: 'cancelled' })
+  assert.deepEqual(cancelledBrowserTasks, ['browser-task'])
+  await assert.rejects(client.request('browser.cancel', {}), { code: 'INVALID_PARAMS' })
+  await assert.rejects(client.request('browser.cancel', { taskId: 'browser-task', extra: true }), { code: 'INVALID_PARAMS' })
   for (const forbidden of ['command', 'args', 'cwd', 'env']) {
     await assert.rejects(
       client.request('task.start', { workerId: 'auto', [forbidden]: 'forbidden' }),

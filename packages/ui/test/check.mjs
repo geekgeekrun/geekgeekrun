@@ -41,6 +41,7 @@ assert.match(openSettingWindowSource, /initTray\(/, 'setting window flow must in
 const settingIpcSource = await read('packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts')
 assert.match(settingIpcSource, /workerExitHandlerByMode/, 'worker exit forwarding must keep only one listener per worker')
 assert.match(settingIpcSource, /WORKER_STOP_TIMEOUT_MS/, 'stopping a worker must have a bounded wait')
+assert.match(settingIpcSource, /BOSS_CHILD_READY_TIMEOUT_MS/, 'Boss bridge startup must have a bounded wait')
 
 const daemonSource = await read('packages/pm/daemon.js')
 assert.match(

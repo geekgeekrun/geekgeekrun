@@ -60,6 +60,7 @@ import { waitForCommonJobConditionDone } from '../../../features/common-job-cond
 import { ensureConfigFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 
 const WORKER_STOP_TIMEOUT_MS = 15000
+const BOSS_CHILD_READY_TIMEOUT_MS = 15000
 const workerExitHandlerByMode = new Map<string, (message: any) => void>()
 
 function subscribeToWorkerExit(mode: string) {
@@ -381,15 +382,37 @@ export default function initIpc() {
           stdio: ['inherit', 'inherit', 'inherit', 'pipe']
         }
       )
-      subProcessOfOpenBossSite.once('exit', () => {
+      let bossChildReady = false
+      const failBossChildStartup = (error: Error) => {
+        if (bossChildReady) return
+        bossChildReady = true
+        clearTimeout(readyTimeout)
+        subProcessOfOpenBossSiteDefer?.reject(error)
+        try { subProcessOfOpenBossSite?.kill() } catch {}
         subProcessOfOpenBossSiteDefer = null
+        subProcessOfOpenBossSite = null
+      }
+      const readyTimeout = setTimeout(() => {
+        failBossChildStartup(new Error('Timed out waiting for Boss browser bridge readiness'))
+      }, BOSS_CHILD_READY_TIMEOUT_MS)
+      subProcessOfOpenBossSite.once('exit', (code) => {
+        if (!bossChildReady) failBossChildStartup(new Error(`Boss browser bridge exited before ready (${code ?? 'unknown'})`))
+        clearTimeout(readyTimeout)
+        subProcessOfOpenBossSiteDefer = null
+        subProcessOfOpenBossSite = null
       })
       subProcessOfOpenBossSite.stdio[3]!.pipe(JSONStream.parse()).on(
         'data',
         async function handler(data) {
           switch (data?.type) {
             case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_READY': {
+              bossChildReady = true
+              clearTimeout(readyTimeout)
               subProcessOfOpenBossSiteDefer!.resolve(subProcessOfOpenBossSite as ChildProcess)
+              break
+            }
+            case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_FAILED': {
+              failBossChildStartup(new Error(data.message ?? data.code ?? 'Boss browser bridge failed'))
               break
             }
             case 'SUB_PROCESS_OF_OPEN_BOSS_SITE_CAN_BE_KILLED': {

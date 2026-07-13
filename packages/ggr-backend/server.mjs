@@ -63,6 +63,12 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
       if (Object.keys(params).length) throw Object.assign(new Error('browser.openBoss does not accept parameters'), { code: 'INVALID_PARAMS' })
       return browser.openBoss()
     })
+    .register(METHODS.BROWSER_CANCEL, (params) => {
+      if (!params || typeof params.taskId !== 'string' || !params.taskId || Object.keys(params).length !== 1) {
+        throw Object.assign(new Error('browser.cancel requires a taskId'), { code: 'INVALID_PARAMS' })
+      }
+      return browser.cancel(params.taskId)
+    })
 
   registerServiceHandlers(router, { methods: METHODS, task, approval })
 
