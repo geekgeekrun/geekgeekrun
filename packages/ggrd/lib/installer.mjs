@@ -129,18 +129,75 @@ async function fetchDownload({ url, resume }) {
   fail('DOWNLOAD_FAILED', 'Artifact download exceeded redirect limit')
 }
 
-function extractionPath(destination, entry) {
-  if (typeof entry !== 'string') fail('EXTRACTION_PATH_INVALID', 'Archive entry path is invalid')
-  if (entry === '') return destination
-  const normalized = entry.replaceAll('\\', '/')
-  if (normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) fail('EXTRACTION_PATH_INVALID', `Archive entry escapes destination: ${entry}`)
+function extractionParts(entryPath) {
+  if (typeof entryPath !== 'string' || !entryPath) fail('EXTRACTION_PATH_INVALID', 'Archive entry path is invalid')
+  const normalized = entryPath.replaceAll('\\', '/')
+  if (normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) fail('EXTRACTION_PATH_INVALID', `Archive entry escapes destination: ${entryPath}`)
   const parts = normalized.split('/')
-  if (parts.some((part) => !part || part === '.' || part === '..')) fail('EXTRACTION_PATH_INVALID', `Archive entry escapes destination: ${entry}`)
-  const output = path.resolve(destination, ...parts)
-  if (path.relative(destination, output).startsWith('..') || path.isAbsolute(path.relative(destination, output))) {
-    fail('EXTRACTION_PATH_INVALID', `Archive entry escapes destination: ${entry}`)
+  if (parts.some((part) => !part || part === '.' || part === '..')) fail('EXTRACTION_PATH_INVALID', `Archive entry escapes destination: ${entryPath}`)
+  return parts
+}
+
+async function ensureSafeDirectory(root, parts) {
+  const rootInfo = await fs.lstat(root)
+  if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) fail('EXTRACTION_UNSAFE', 'Staging destination is not a real directory')
+  let current = root
+  for (const part of parts) {
+    current = path.join(current, part)
+    await fs.mkdir(current, { mode: 0o700 }).catch((error) => {
+      if (error.code !== 'EEXIST') throw error
+    })
+    const info = await fs.lstat(current)
+    if (!info.isDirectory() || info.isSymbolicLink()) fail('EXTRACTION_UNSAFE', `Archive path traverses a non-directory: ${current}`)
   }
-  return output
+  return current
+}
+
+function entryStream(data) {
+  if (Buffer.isBuffer(data) || data instanceof Uint8Array) return Readable.from([data])
+  if (data && typeof data[Symbol.asyncIterator] === 'function') return data
+  if (data && typeof data.getReader === 'function') return Readable.fromWeb(data)
+  fail('EXTRACTOR_INVALID', 'File archive entries must provide byte data')
+}
+
+async function writeArchiveFile(root, parts, data, limits) {
+  const parent = await ensureSafeDirectory(root, parts.slice(0, -1))
+  const target = path.join(parent, parts.at(-1))
+  if (await fs.lstat(target).catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error))) {
+    fail('EXTRACTION_UNSAFE', `Archive contains a duplicate or colliding entry: ${parts.join('/')}`)
+  }
+  const noFollow = fsNative.constants.O_NOFOLLOW ?? 0
+  const flags = fsNative.constants.O_WRONLY | fsNative.constants.O_CREAT | fsNative.constants.O_EXCL | noFollow
+  const handle = await fs.open(target, flags, 0o600)
+  try {
+    for await (const value of entryStream(data)) {
+      const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value)
+      limits.total += bytes.length
+      if (limits.total > limits.maximum) fail('EXTRACTION_TOO_LARGE', 'Extracted artifact exceeds its declared maximum size')
+      await writeAll(handle, bytes)
+    }
+    await handle.sync()
+  } finally { await handle.close() }
+}
+
+async function extractSafely({ archive, extract, destination, maximumBytes }) {
+  // Extractor adapters are parsers only: they receive no destination path and
+  // return entries for this module to validate and write itself.
+  const entries = await extract(Object.freeze({ archive, maxBytes: maximumBytes }))
+  if (!entries || (typeof entries[Symbol.iterator] !== 'function' && typeof entries[Symbol.asyncIterator] !== 'function')) {
+    fail('EXTRACTOR_INVALID', 'Extractor must return an iterable of archive entries')
+  }
+  const limits = { total: 0, maximum: maximumBytes }
+  for await (const entry of entries) {
+    if (!entry || typeof entry !== 'object') fail('EXTRACTOR_INVALID', 'Extractor returned an invalid archive entry')
+    const parts = extractionParts(entry.path)
+    if (entry.type === 'directory') {
+      await ensureSafeDirectory(destination, parts)
+      continue
+    }
+    if (entry.type !== 'file') fail('EXTRACTION_UNSAFE', `Archive entry type is not allowed: ${entry.type ?? 'unknown'}`)
+    await writeArchiveFile(destination, parts, entry.data, limits)
+  }
 }
 
 async function validateExtractedTree(target, maximumBytes) {
@@ -234,8 +291,7 @@ export async function installArtifact({ manifest, download, extract, versionStor
   const metadataPath = path.join(versionStore.stagingDir, `${downloadKey}.json`)
   const destination = await versionStore.stage(manifest.version, async (stagingDirectory) => {
     await downloadToFile({ url: artifact.url, download, destination: archive, artifact, metadataPath })
-    const resolvePath = (baseOrEntry, maybeEntry) => extractionPath(stagingDirectory, maybeEntry === undefined ? baseOrEntry : maybeEntry)
-    await extract({ archive, destination: stagingDirectory, resolvePath, maxBytes: extractedSize })
+    await extractSafely({ archive, extract, destination: stagingDirectory, maximumBytes: extractedSize })
     await validateExtractedTree(stagingDirectory, extractedSize)
     if (!await regularFile(path.join(stagingDirectory, 'bin', 'node')) || !await regularFile(path.join(stagingDirectory, 'app', 'server.mjs'))) {
       fail('ARTIFACT_LAYOUT_INVALID', 'Extracted artifact must contain bin/node and app/server.mjs')

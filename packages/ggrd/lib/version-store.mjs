@@ -3,7 +3,6 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 
 const DIRECTORY_MODE = 0o700
-const FILE_MODE = 0o600
 
 function assertVersion(version) {
   if (typeof version !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(version) || version === '.' || version === '..') {
@@ -11,153 +10,237 @@ function assertVersion(version) {
   }
 }
 
-async function lstatOrNull(target) { return fs.lstat(target).catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error)) }
+async function lstatOrNull(ops, target) { return ops.lstat(target).catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error)) }
 
-async function syncPath(target) {
+async function syncPath(ops, target) {
   let handle
-  try { handle = await fs.open(target, 'r'); await handle.sync() } finally { await handle?.close() }
+  try { handle = await ops.open(target, 'r'); await handle.sync() } finally { await handle?.close() }
 }
 
-async function ensureDirectory(target) {
-  await fs.mkdir(target, { recursive: true, mode: DIRECTORY_MODE })
-  const info = await fs.lstat(target)
+async function ensureDirectory(ops, target) {
+  await ops.mkdir(target, { recursive: true, mode: DIRECTORY_MODE })
+  const info = await ops.lstat(target)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`Expected a real directory: ${target}`)
-  await fs.chmod(target, DIRECTORY_MODE)
-  await syncPath(target)
+  await ops.chmod(target, DIRECTORY_MODE)
+  await syncPath(ops, target)
 }
 
-async function syncTree(target) {
-  const info = await fs.lstat(target)
+async function syncTree(ops, target) {
+  const info = await ops.lstat(target)
   if (info.isSymbolicLink()) throw new Error(`Symbolic links are not permitted in staged artifacts: ${target}`)
-  if (info.isFile()) { await syncPath(target); return }
+  if (info.isFile()) { await syncPath(ops, target); return }
   if (!info.isDirectory()) throw new Error(`Unsupported staged file type: ${target}`)
-  for (const name of await fs.readdir(target)) await syncTree(path.join(target, name))
-  await syncPath(target)
+  for (const name of await ops.readdir(target)) await syncTree(ops, path.join(target, name))
+  await syncPath(ops, target)
 }
 
-async function validateRuntimeTree(target) {
+async function validateRuntimeTree(ops, target) {
   for (const relative of ['bin/node', 'app/server.mjs']) {
-    const info = await lstatOrNull(path.join(target, relative))
+    const info = await lstatOrNull(ops, path.join(target, relative))
     if (!info?.isFile() || info.isSymbolicLink()) throw new Error(`Staged artifact is missing regular ${relative}`)
   }
 }
 
-export function createVersionStore(runtimeDir) {
+export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
   if (!path.isAbsolute(runtimeDir)) throw new TypeError('runtimeDir must be absolute')
+  const ops = fsOps
   const versionsDir = path.join(runtimeDir, 'versions')
   const stagingDir = path.join(runtimeDir, '.staging')
   const currentLink = path.join(runtimeDir, 'current')
   const previousLink = path.join(runtimeDir, 'previous')
+  const currentNext = `${currentLink}.next`
+  const previousNext = `${previousLink}.next`
+  const journalPath = path.join(runtimeDir, '.version-pointer-transaction.json')
 
   async function prepareLayout() {
-    await ensureDirectory(runtimeDir)
-    await ensureDirectory(versionsDir)
-    await ensureDirectory(stagingDir)
+    await ensureDirectory(ops, runtimeDir)
+    await ensureDirectory(ops, versionsDir)
+    await ensureDirectory(ops, stagingDir)
   }
 
   async function linkedVersion(link) {
-    const info = await lstatOrNull(link)
+    const info = await lstatOrNull(ops, link)
     if (!info) return null
     if (!info.isSymbolicLink()) throw new Error(`Version pointer is not a symbolic link: ${link}`)
-    const destination = await fs.readlink(link)
+    const destination = await ops.readlink(link)
     const resolved = path.resolve(path.dirname(link), destination)
     const relative = path.relative(versionsDir, resolved)
     if (!relative || relative.startsWith('..') || path.isAbsolute(relative) || relative.includes(path.sep)) {
       throw new Error(`Version pointer escapes versions directory: ${link}`)
     }
     assertVersion(relative)
-    const versionInfo = await fs.lstat(resolved)
+    const versionInfo = await ops.lstat(resolved)
     if (!versionInfo.isDirectory() || versionInfo.isSymbolicLink()) throw new Error(`Version pointer does not target a real version: ${link}`)
     return relative
   }
 
-  async function replaceLink(link, version) {
-    const temporary = `${link}.next-${randomUUID()}`
-    await fs.symlink(path.join('versions', version), temporary)
-    await syncPath(runtimeDir)
-    await fs.rename(temporary, link)
-    await syncPath(runtimeDir)
+  async function assertAbsent(target) {
+    if (await lstatOrNull(ops, target)) throw new Error(`Version pointer transaction collision: ${target}`)
   }
 
-  async function removeLink(link) {
-    const info = await lstatOrNull(link)
-    if (!info) return
-    if (!info.isSymbolicLink()) throw new Error(`Refusing to remove non-link version pointer: ${link}`)
-    await fs.unlink(link)
-    await syncPath(runtimeDir)
+  async function createPointer(link, version) {
+    assertVersion(version)
+    await ops.symlink(path.join('versions', version), link)
+    await syncPath(ops, runtimeDir)
   }
+
+  async function removeExpectedPointer(link, expectedVersion) {
+    const found = await lstatOrNull(ops, link)
+    if (!found) return
+    if (!found.isSymbolicLink() || await linkedVersion(link) !== expectedVersion) throw new Error(`Unexpected pointer transaction entry: ${link}`)
+    await ops.unlink(link)
+    await syncPath(ops, runtimeDir)
+  }
+
+  async function writeJournal(transaction) {
+    const temporary = `${journalPath}.${randomUUID()}.next`
+    const handle = await ops.open(temporary, 'wx', 0o600)
+    try {
+      await handle.writeFile(JSON.stringify(transaction))
+      await handle.sync()
+    } finally { await handle.close() }
+    await ops.rename(temporary, journalPath)
+    await syncPath(ops, runtimeDir)
+  }
+
+  async function removeJournal() {
+    await ops.rm(journalPath, { force: true })
+    await syncPath(ops, runtimeDir)
+  }
+
+  async function readJournal() {
+    const raw = await ops.readFile(journalPath, 'utf8').catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error))
+    if (!raw) return null
+    let transaction
+    try { transaction = JSON.parse(raw) } catch { throw new Error('Version pointer transaction journal is invalid') }
+    if (!transaction || typeof transaction !== 'object') throw new Error('Version pointer transaction journal is invalid')
+    for (const field of ['oldCurrent', 'oldPrevious', 'newCurrent', 'newPrevious']) {
+      if (transaction[field] !== null) assertVersion(transaction[field])
+    }
+    if (typeof transaction.newCurrent !== 'string') throw new Error('Version pointer transaction journal is invalid')
+    return transaction
+  }
+
+  async function recoverPointers() {
+    const transaction = await readJournal()
+    if (!transaction) {
+      if (await lstatOrNull(ops, currentNext) || await lstatOrNull(ops, previousNext)) {
+        throw new Error('Unjournaled version pointer transaction collision')
+      }
+      return
+    }
+    const current = await linkedVersion(currentLink)
+    const previous = await linkedVersion(previousLink)
+    if (current === transaction.oldCurrent) {
+      if (previous !== transaction.oldPrevious) throw new Error('Version pointer transaction cannot be safely rolled back')
+      await removeExpectedPointer(currentNext, transaction.newCurrent)
+      if (transaction.newPrevious) await removeExpectedPointer(previousNext, transaction.newPrevious)
+      await removeJournal()
+      return
+    }
+    if (current !== transaction.newCurrent) throw new Error('Version pointer transaction has an unexpected current target')
+    if (previous === transaction.newPrevious) {
+      await removeExpectedPointer(currentNext, transaction.newCurrent)
+      await removeExpectedPointer(previousNext, transaction.newPrevious)
+      await removeJournal()
+      return
+    }
+    if (previous !== transaction.oldPrevious || !transaction.newPrevious) throw new Error('Version pointer transaction cannot be safely completed')
+    if (await linkedVersion(previousNext) !== transaction.newPrevious) throw new Error('Version pointer transaction lost its recoverable previous target')
+    await ops.rename(previousNext, previousLink)
+    await syncPath(ops, runtimeDir)
+    await removeExpectedPointer(currentNext, transaction.newCurrent)
+    await removeJournal()
+  }
+
+  async function ready() { await prepareLayout(); await recoverPointers() }
 
   async function stage(version, prepare) {
     assertVersion(version)
     if (typeof prepare !== 'function') throw new TypeError('stage requires a preparation function')
-    await prepareLayout()
+    await ready()
     const destination = path.join(versionsDir, version)
-    if (await lstatOrNull(destination)) throw new Error(`Version already exists: ${version}`)
+    if (await lstatOrNull(ops, destination)) throw new Error(`Version already exists: ${version}`)
     const temporary = path.join(stagingDir, `${version}-${randomUUID()}`)
-    await fs.mkdir(temporary, { mode: DIRECTORY_MODE })
+    await ops.mkdir(temporary, { mode: DIRECTORY_MODE })
     try {
       await prepare(temporary)
-      await validateRuntimeTree(temporary)
-      await syncTree(temporary)
-      await fs.rename(temporary, destination)
-      await syncPath(versionsDir)
+      await validateRuntimeTree(ops, temporary)
+      await syncTree(ops, temporary)
+      await ops.rename(temporary, destination)
+      await syncPath(ops, versionsDir)
       return destination
     } catch (error) {
-      await fs.rm(temporary, { recursive: true, force: true }).catch(() => {})
+      await ops.rm(temporary, { recursive: true, force: true }).catch(() => {})
+      throw error
+    }
+  }
+
+  async function swapPointers(newCurrent, newPrevious) {
+    const oldCurrent = await linkedVersion(currentLink)
+    const oldPrevious = await linkedVersion(previousLink)
+    await assertAbsent(currentNext)
+    await assertAbsent(previousNext)
+    const transaction = { oldCurrent, oldPrevious, newCurrent, newPrevious }
+    await writeJournal(transaction)
+    try {
+      await createPointer(currentNext, newCurrent)
+      if (newPrevious) await createPointer(previousNext, newPrevious)
+      // The current pointer is the commit point. The old previous pointer stays
+      // untouched until this atomic rename succeeds.
+      await ops.rename(currentNext, currentLink)
+      await syncPath(ops, runtimeDir)
+      if (newPrevious) {
+        await ops.rename(previousNext, previousLink)
+        await syncPath(ops, runtimeDir)
+      } else if (oldPrevious) {
+        await ops.unlink(previousLink)
+        await syncPath(ops, runtimeDir)
+      }
+      await removeJournal()
+    } catch (error) {
+      // The journal and untouched old pointer(s) make this operation
+      // recoverable. Do not clobber a pointer while trying to handle failure.
       throw error
     }
   }
 
   async function activate(version) {
     assertVersion(version)
-    await prepareLayout()
+    await ready()
     const target = path.join(versionsDir, version)
-    const info = await lstatOrNull(target)
+    const info = await lstatOrNull(ops, target)
     if (!info?.isDirectory() || info.isSymbolicLink()) throw new Error(`Cannot activate unavailable version: ${version}`)
     const old = await linkedVersion(currentLink)
     if (old === version) return version
-    // Persist previous first; only then atomically replace current with current.next.
-    if (old) await replaceLink(previousLink, old)
-    else await removeLink(previousLink)
-    const next = `${currentLink}.next`
-    await fs.rm(next, { force: true }).catch(() => {})
-    await fs.symlink(path.join('versions', version), next)
-    await syncPath(runtimeDir)
-    await fs.rename(next, currentLink)
-    await syncPath(runtimeDir)
+    await swapPointers(version, old)
     return version
   }
 
   async function rollback() {
-    await prepareLayout()
+    await ready()
     const current = await linkedVersion(currentLink)
     const prior = await linkedVersion(previousLink)
     if (!current || !prior) throw new Error('No previous version is available for rollback')
-    await replaceLink(previousLink, current)
-    const next = `${currentLink}.next`
-    await fs.rm(next, { force: true }).catch(() => {})
-    await fs.symlink(path.join('versions', prior), next)
-    await syncPath(runtimeDir)
-    await fs.rename(next, currentLink)
-    await syncPath(runtimeDir)
+    await swapPointers(prior, current)
     return prior
   }
 
-  async function current() { await prepareLayout(); return linkedVersion(currentLink) }
-  async function previous() { await prepareLayout(); return linkedVersion(previousLink) }
+  async function current() { await ready(); return linkedVersion(currentLink) }
+  async function previous() { await ready(); return linkedVersion(previousLink) }
 
   async function prune() {
-    await prepareLayout()
+    await ready()
     const keep = new Set([await linkedVersion(currentLink), await linkedVersion(previousLink)].filter(Boolean))
-    for (const entry of await fs.readdir(versionsDir)) {
+    for (const entry of await ops.readdir(versionsDir)) {
       assertVersion(entry)
       if (keep.has(entry)) continue
       const target = path.join(versionsDir, entry)
-      const info = await fs.lstat(target)
+      const info = await ops.lstat(target)
       if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`Refusing to prune unsupported version entry: ${target}`)
-      await fs.rm(target, { recursive: true, force: false })
+      await ops.rm(target, { recursive: true, force: false })
     }
-    await syncPath(versionsDir)
+    await syncPath(ops, versionsDir)
   }
 
   return Object.freeze({ runtimeDir, versionsDir, stagingDir, stage, activate, rollback, current, previous, prune })

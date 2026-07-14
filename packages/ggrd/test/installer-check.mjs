@@ -38,6 +38,17 @@ try {
   await store.prune()
   assert.deepEqual((await fs.readdir(path.join(runtimeDir, 'versions'))).sort(), ['1.0.0', '2.0.0'])
 
+  await store.stage('3.1.0', executableTree)
+  const failingOps = Object.create(fs)
+  failingOps.rename = async (source, destination) => {
+    if (source.endsWith(`${path.sep}current.next`) && destination.endsWith(`${path.sep}current`)) throw new Error('simulated current swap failure')
+    return fs.rename(source, destination)
+  }
+  const failureStore = createVersionStore(runtimeDir, { fsOps: failingOps })
+  await assert.rejects(failureStore.activate('3.1.0'), /simulated current swap failure/)
+  assert.equal(await store.current(), '1.0.0')
+  assert.equal(await store.previous(), '2.0.0', 'failed activation must preserve the prior rollback pointer')
+
   const archive = Buffer.from('signed artifact payload')
   const artifact = {
     url: 'https://updates.example.test/ggrd-3.0.0.tar.gz',
@@ -69,9 +80,10 @@ try {
       resumedFrom = resume
       return { stream: Readable.from([archive.subarray(resume?.bytes ?? 0)]), resumeValidated: true, etag: 'artifact-etag' }
     },
-    extract: async ({ destination, resolvePath }) => {
-      await executableTree(resolvePath(destination, ''))
-    }
+    extract: async () => [
+      { path: 'bin/node', type: 'file', data: Buffer.from('#!/bin/sh\n') },
+      { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}\n') }
+    ]
   })
   assert.equal(installed.version, '3.0.0')
   assert.deepEqual(resumedFrom, { bytes: 4, validator: 'artifact-etag' })
@@ -99,6 +111,79 @@ try {
     extract: async () => { throw new Error('must not extract a symbolic-link partial') }
   }), { code: 'PARTIAL_UNSAFE' })
   assert.equal(await fs.readFile(outside, 'utf8'), 'outside')
+
+  const traversalArchive = Buffer.from('traversal artifact')
+  const traversalArtifact = {
+    url: 'https://updates.example.test/ggrd-5.0.0.tar.gz',
+    sha256: createHash('sha256').update(traversalArchive).digest('hex'),
+    size: traversalArchive.length,
+    extractionSize: 1024
+  }
+  const escaped = path.join(runtimeDir, 'escaped-by-archive')
+  await assert.rejects(installArtifact({
+    manifest: { version: '5.0.0', artifact: traversalArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    versionStore: store,
+    download: async () => Readable.from([traversalArchive]),
+    extract: async () => [
+      { path: '../escaped-by-archive', type: 'file', data: Buffer.from('malicious') },
+      { path: 'bin/node', type: 'file', data: Buffer.from('#!/bin/sh\n') },
+      { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}\n') }
+    ]
+  }), { code: 'EXTRACTION_PATH_INVALID' })
+  await assert.rejects(fs.lstat(escaped), { code: 'ENOENT' })
+
+  const safetyArchive = Buffer.from('safety artifact')
+  const safetyArtifact = {
+    url: 'https://updates.example.test/ggrd-6.0.0.tar.gz',
+    sha256: createHash('sha256').update(safetyArchive).digest('hex'),
+    size: safetyArchive.length,
+    extractionSize: 1024
+  }
+  await assert.rejects(installArtifact({
+    manifest: { version: '6.0.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    versionStore: store,
+    download: async () => Readable.from([safetyArchive]),
+    extract: async () => [{ path: 'bin/node', type: 'symlink', data: Buffer.from('ignored') }]
+  }), { code: 'EXTRACTION_UNSAFE' })
+
+  await assert.rejects(installArtifact({
+    manifest: { version: '6.1.0', artifact: { ...safetyArtifact, sha256: 'b'.repeat(64) }, database: { schemaVersion: 2, rollbackCompatible: true } },
+    versionStore: store,
+    download: async () => Readable.from([safetyArchive]),
+    extract: async () => []
+  }), { code: 'DIGEST_MISMATCH' })
+
+  await assert.rejects(installArtifact({
+    manifest: { version: '6.2.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    versionStore: store,
+    freeSpace: async () => 0,
+    download: async () => { throw new Error('download must not start without disk space') },
+    extract: async () => []
+  }), { code: 'DISK_SPACE_INSUFFICIENT' })
+
+  const savedFetch = globalThis.fetch
+  globalThis.fetch = async () => new Response(null, { status: 302, headers: { location: 'http://redirect.example.test/artifact' } })
+  try {
+    await assert.rejects(installArtifact({
+      manifest: { version: '6.3.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+      versionStore: store,
+      freeSpace: async () => Number.MAX_SAFE_INTEGER,
+      extract: async () => []
+    }), { code: 'URL_INSECURE' })
+  } finally {
+    globalThis.fetch = savedFetch
+  }
+
+  await store.stage('7.0.0', executableTree)
+  const postCommitFailureOps = Object.create(fs)
+  postCommitFailureOps.rename = async (source, destination) => {
+    if (source.endsWith(`${path.sep}previous.next`) && destination.endsWith(`${path.sep}previous`)) throw new Error('simulated previous pointer failure')
+    return fs.rename(source, destination)
+  }
+  const postCommitFailureStore = createVersionStore(runtimeDir, { fsOps: postCommitFailureOps })
+  await assert.rejects(postCommitFailureStore.activate('7.0.0'), /simulated previous pointer failure/)
+  assert.equal(await store.current(), '7.0.0', 'recovery must retain the committed current target')
+  assert.equal(await store.previous(), '1.0.0', 'recovery must restore the immediately prior current target')
 } finally {
   await fs.rm(runtimeDir, { recursive: true, force: true })
 }
