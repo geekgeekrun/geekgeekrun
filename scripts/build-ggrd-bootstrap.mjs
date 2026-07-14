@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { createHash } from 'node:crypto'
 
 const execFile = promisify(execFileCallback)
 const repository = fileURLToPath(new URL('..', import.meta.url))
@@ -12,11 +13,12 @@ const ggrd = path.join(repository, 'packages', 'ggrd')
 const protocol = path.join(repository, 'packages', 'ggr-protocol')
 const platform = process.platform === 'darwin' ? 'darwin' : process.platform === 'linux' ? 'linux' : null
 const arch = process.arch === 'arm64' || process.arch === 'x64' ? process.arch : null
+const NODE_VERSION = 'v20.16.0'
 
 function runtimeDetails() {
   if (!platform || !arch) throw new Error(`ggrd bootstrap does not support ${process.platform}-${process.arch}`)
-  const directory = `node-${process.version}-${platform}-${arch}`
-  return { directory, archive: `${directory}.tar.gz`, url: `https://nodejs.org/dist/${process.version}/${directory}.tar.gz` }
+  const directory = `node-${NODE_VERSION}-${platform}-${arch}`
+  return { directory, archive: `${directory}.tar.gz`, url: `https://nodejs.org/dist/${NODE_VERSION}/${directory}.tar.gz`, sumsUrl: `https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt` }
 }
 
 async function regularFile(file) {
@@ -32,7 +34,12 @@ async function nodeDistribution() {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-node-runtime-'))
   try {
     const archive = path.join(temporary, details.archive)
+    const sums = path.join(temporary, 'SHASUMS256.txt')
+    await execFile('curl', ['--fail', '--location', '--proto', '=https', '--tlsv1.2', '--output', sums, details.sumsUrl])
     await execFile('curl', ['--fail', '--location', '--proto', '=https', '--tlsv1.2', '--output', archive, details.url])
+    const expected = (await fs.readFile(sums, 'utf8')).split('\n').find((line) => line.endsWith(`  ${details.archive}`))?.split(/\s+/)[0]
+    const actual = createHash('sha256').update(await fs.readFile(archive)).digest('hex')
+    if (!expected || !/^[a-f0-9]{64}$/i.test(expected) || actual !== expected.toLowerCase()) throw new Error(`Node ${NODE_VERSION} archive checksum verification failed`)
     await execFile('tar', ['-xzf', archive, '-C', temporary])
     const extracted = path.join(temporary, details.directory)
     if (!await regularFile(path.join(extracted, 'bin', 'node'))) throw new Error('downloaded Node distribution has no regular bin/node')
@@ -63,8 +70,8 @@ async function copySupervisorSource() {
   const node = path.join(output, 'runtime', 'bin', 'node')
   if (!await regularFile(node)) throw new Error('bootstrap runtime copy is incomplete')
   await fs.chmod(node, (await fs.stat(node)).mode & 0o777)
-  await fs.writeFile(path.join(output, 'runtime.json'), `${JSON.stringify({ node: process.version, platform: process.platform, arch: process.arch, layout: 'node-distribution', source: runtimeDetails().url })}\n`, { mode: 0o600 })
+  await fs.writeFile(path.join(output, 'runtime.json'), `${JSON.stringify({ node: NODE_VERSION, platform: process.platform, arch: process.arch, layout: 'node-distribution', source: runtimeDetails().url })}\n`, { mode: 0o600 })
 }
 
 await copySupervisorSource()
-console.log(`built ggrd bootstrap with pinned runtime ${process.version}`)
+console.log(`built ggrd bootstrap with pinned runtime ${NODE_VERSION}`)

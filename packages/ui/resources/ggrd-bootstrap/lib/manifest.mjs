@@ -108,6 +108,7 @@ function validateDatabase(manifest) {
   if (database.rollbackCompatible !== true) {
     fail('DATABASE_ROLLBACK_INCOMPATIBLE', 'Artifact database changes are not rollback compatible')
   }
+  if (database.rehearsalEntrypoint !== 'app/migration.mjs') fail('MANIFEST_INVALID', 'Artifact database migration rehearsal entrypoint is required')
 }
 
 /**

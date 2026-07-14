@@ -4,6 +4,7 @@
   "entries": [
     "bin/node",
     "app/server.mjs",
+    "app/migration.mjs",
     "app/package.json",
     "app/node_modules/better-sqlite3/",
     "app/node_modules/puppeteer/",

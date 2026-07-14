@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { installLaunchdSupervisor } from '@geekgeekrun/ggrd/lib/launchd.mjs'
+import { app } from 'electron'
 import { connectBackend } from './client'
 import { getSupervisorClient, getSupervisorSocketPath, installBackendUpdate } from './supervisor-client'
 
@@ -29,7 +30,8 @@ export async function ensureSupervisorInstalled(): Promise<void> {
   await installLaunchdSupervisor({
     bootstrapSource,
     bootstrapVersion: BOOTSTRAP_VERSION,
-    httpsProxy: configuredHttpsProxy()
+    httpsProxy: configuredHttpsProxy(),
+    electronVersion: app.getVersion()
   })
 }
 

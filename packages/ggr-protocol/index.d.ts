@@ -3,6 +3,7 @@ export declare const PROTOCOL_VERSION: 1
 export declare const METHODS: Readonly<{
   SYSTEM_HANDSHAKE: 'system.handshake'
   SYSTEM_HEALTH: 'system.health'
+  SYSTEM_UPDATE_DRAIN: 'system.updateDrain'
   TASK_LIST: 'task.list'
   TASK_START: 'task.start'
   TASK_STOP: 'task.stop'
@@ -48,6 +49,9 @@ export interface SystemHealthResult {
   version: string
   protocolVersion: number
 }
+
+export interface SystemUpdateDrainParams { enabled: boolean }
+export interface SystemUpdateDrainResult { enabled: boolean, activeTasks: TaskSummary[] }
 
 export interface TaskSummary {
   workerId: string

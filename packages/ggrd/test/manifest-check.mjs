@@ -15,7 +15,7 @@ function manifest(overrides = {}) {
     }],
     protocol: { min: 1, max: 2 },
     minClientVersion: '1.0.0',
-    database: { schemaVersion: 2, rollbackCompatible: true },
+    database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' },
     ...overrides
   }
 }
@@ -51,7 +51,7 @@ for (const [name, value, expected] of [
   ['wrong architecture', manifest(), 'ARCH_UNSUPPORTED'],
   ['unsupported protocol', manifest({ protocol: { min: 2, max: 3 } }), 'PROTOCOL_INCOMPATIBLE'],
   ['old client', manifest({ minClientVersion: '2.0.0' }), 'CLIENT_VERSION_UNSUPPORTED'],
-  ['unsafe database rollback metadata', manifest({ database: { schemaVersion: 2, rollbackCompatible: false } }), 'DATABASE_ROLLBACK_INCOMPATIBLE']
+  ['unsafe database rollback metadata', manifest({ database: { schemaVersion: 2, rollbackCompatible: false, rehearsalEntrypoint: 'app/migration.mjs' } }), 'DATABASE_ROLLBACK_INCOMPATIBLE']
 ]) {
   const { rawManifest, signature } = signed(value)
   const options = {

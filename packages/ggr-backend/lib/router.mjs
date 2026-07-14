@@ -27,6 +27,10 @@ export function createRouter(entries = []) {
 
 export function registerServiceHandlers(router, { methods, task, approval }) {
   return router
+    .register(methods.SYSTEM_UPDATE_DRAIN, (params) => {
+      onlyKeys(params, new Set(['enabled']))
+      return task.setUpdateDrain(params)
+    })
     .register(methods.TASK_LIST, (params) => {
       onlyKeys(params, new Set())
       return task.list()

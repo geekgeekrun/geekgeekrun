@@ -8,16 +8,21 @@ import { createBackendProcessManager } from './lib/backend-process.mjs'
 import { createSupervisorApi, createSupervisorDiagnostics } from './lib/supervisor-api.mjs'
 import { createSupervisorRpcServer } from './lib/rpc-server.mjs'
 import { createReleaseService } from './lib/release-service.mjs'
+import { createMigrationService } from './lib/migration-service.mjs'
 
 function backendClient(socketPath) {
   return {
-    async request(method, params) {
+    async request(method, params, { deadlineMs = 30_000 } = {}) {
       return new Promise((resolve, reject) => {
         const socket = net.createConnection(socketPath)
         let buffer = ''
         const handshakeId = `supervisor-handshake-${process.pid}`
         const requestId = `supervisor-request-${process.pid}-${Date.now()}`
-        const fail = (error) => { socket.destroy(); reject(error) }
+        let settled = false
+        const fail = (error) => { if (settled) return; settled = true; clearTimeout(timer); socket.destroy(); reject(error) }
+        const succeed = (result) => { if (settled) return; settled = true; clearTimeout(timer); socket.end(); resolve(result) }
+        const timeout = Number.isInteger(deadlineMs) && deadlineMs > 0 ? deadlineMs : 30_000
+        const timer = setTimeout(() => fail(Object.assign(new Error('Backend RPC deadline elapsed'), { code: 'BACKEND_RPC_TIMEOUT' })), timeout)
         socket.setEncoding('utf8')
         socket.once('error', fail)
         socket.on('data', (chunk) => {
@@ -31,9 +36,8 @@ function backendClient(socketPath) {
               if (reply.error) return fail(Object.assign(new Error(reply.error.message), { code: reply.error.code }))
               socket.write(`${JSON.stringify(createRequest(requestId, method, params))}\n`)
             } else if (reply.id === requestId) {
-              socket.end()
-              if (reply.error) reject(Object.assign(new Error(reply.error.message), { code: reply.error.code, data: reply.error.data }))
-              else resolve(reply.result)
+              if (reply.error) fail(Object.assign(new Error(reply.error.message), { code: reply.error.code, data: reply.error.data }))
+              else succeed(reply.result)
             }
           }
         })
@@ -50,12 +54,13 @@ export async function createSupervisorServer({
   releaseService,
   extract,
   fetchImpl,
+  clientVersion = process.env.GGR_ELECTRON_VERSION,
   versionStore = createVersionStore(runtimeDir),
   backendSocketPath = path.join(runtimeDir, 'run', 'backend.sock'),
   supervisorSocketPath = path.join(runtimeDir, 'run', 'supervisor.sock'),
   diagnosticsPath = path.join(runtimeDir, 'logs', 'supervisor.jsonl')
 } = {}) {
-  const releases = releaseService ?? createReleaseService({ versionStore, extract, fetchImpl })
+  const releases = releaseService ?? createReleaseService({ versionStore, extract, fetchImpl, clientVersion, migrationService: createMigrationService({ runtimeDir }) })
   const diagnostics = await createSupervisorDiagnostics({ filePath: diagnosticsPath })
   const client = backendClient(backendSocketPath)
   const processManager = createBackendProcessManager({

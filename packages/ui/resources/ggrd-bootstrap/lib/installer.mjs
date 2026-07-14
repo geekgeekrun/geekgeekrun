@@ -41,6 +41,7 @@ function installArtifactMetadata(manifest) {
   const database = manifest.database ?? manifest.databaseCompatibility
   if (!database || !Number.isInteger(database.schemaVersion) || database.schemaVersion < 0) fail('MANIFEST_INVALID', 'Database compatibility metadata is required')
   if (database.rollbackCompatible !== true) fail('DATABASE_ROLLBACK_INCOMPATIBLE', 'Database changes are not rollback compatible')
+  if (database.rehearsalEntrypoint !== 'app/migration.mjs') fail('MANIFEST_INVALID', 'Database migration rehearsal metadata is required')
   return { artifact, extractedSize }
 }
 

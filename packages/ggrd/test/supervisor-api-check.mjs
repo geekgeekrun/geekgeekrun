@@ -64,9 +64,9 @@ assert.equal(managerStatus.state, 'quarantined')
       async stop() {}, async start() {}, status() { return { state: 'stopped' } }
     },
     backendClient: { async request() { throw new Error('first install must not query or drain a nonexistent backend') } },
-    installer: async ({ manifest }) => ({ version: manifest.version })
+    installer: async () => ({ version: '1.0.0' })
   })
-  const installed = await firstInstallApi.dispatch({ id: 'first-install', method: 'update.install', params: { manifest: { version: '1.0.0' }, deadlineMs: 100 } })
+  const installed = await firstInstallApi.dispatch({ id: 'first-install', method: 'update.install', params: { deadlineMs: 100 } })
   assert.equal(installed.health.ready, true)
   assert.equal(current, '1.0.0', 'first install activates and health-checks the staged backend')
 }
@@ -82,10 +82,10 @@ assert.equal(managerStatus.state, 'quarantined')
       async stop() {}, status() { return { state: 'stopped' } }
     },
     backendClient: { async request() { throw new Error('first install has no backend tasks') } },
-    installer: async ({ manifest, deadlineMs }) => { installerDeadline = deadlineMs; elapsed += 80; return { version: manifest.version } },
+    installer: async ({ deadlineMs }) => { installerDeadline = deadlineMs; elapsed += 80; return { version: '1.0.1' } },
     now: () => elapsed
   })
-  await deadlineApi.dispatch({ id: 'deadline', method: 'update.install', params: { manifest: { version: '1.0.1' }, deadlineMs: 100 } })
+  await deadlineApi.dispatch({ id: 'deadline', method: 'update.install', params: { deadlineMs: 100 } })
   assert.equal(installerDeadline, 100, 'release download begins with the full request deadline')
   assert.equal(activationDeadline, 20, 'activation receives only the remaining request deadline')
 }
@@ -104,13 +104,13 @@ let maxConcurrentInstalls = 0
 let clock = 0
 const api = createSupervisorApi({
   versionStore, processManager, backendClient,
-  installer: async ({ manifest }) => { installs++; concurrentInstalls++; maxConcurrentInstalls = Math.max(maxConcurrentInstalls, concurrentInstalls); await delay(); concurrentInstalls--; return { version: manifest.version } },
+  installer: async () => { installs++; concurrentInstalls++; maxConcurrentInstalls = Math.max(maxConcurrentInstalls, concurrentInstalls); await delay(); concurrentInstalls--; return { version: installs === 1 ? '2.0.0' : '3.0.0' } },
   now: () => clock,
   sleep: async () => { clock += 50; await delay() }
 })
 
-const first = api.dispatch({ id: 'install-1', method: 'update.install', params: { manifest: { version: '2.0.0' }, deadlineMs: 100 } })
-const second = api.dispatch({ id: 'install-2', method: 'update.install', params: { manifest: { version: '3.0.0' }, deadlineMs: 100, cancelRunningTasks: true } })
+const first = api.dispatch({ id: 'install-1', method: 'update.install', params: { deadlineMs: 100 } })
+const second = api.dispatch({ id: 'install-2', method: 'update.install', params: { deadlineMs: 100, cancelRunningTasks: true } })
 await assert.rejects(first, { code: 'TASKS_ACTIVE' })
 await second
 assert.equal(installs, 2)

@@ -132,6 +132,7 @@ export function createTaskService({
   const stoppedWorkers = new Set()
   const terminalChildren = new WeakSet()
   const stopPromises = new Map()
+  let updateDrain = false
   let nextRunRecordId = Date.now()
 
   function assertWorker(workerId) {
@@ -225,6 +226,7 @@ export function createTaskService({
 
   async function start({ workerId, options } = {}) {
     assertWorker(workerId)
+    if (updateDrain) throw Object.assign(new Error('Backend is draining active tasks for an update'), { code: 'UPDATE_DRAINING' })
     const startOptions = assertStartOptions(options)
     const stopping = stopPromises.get(workerId)
     if (stopping) await stopping
@@ -275,10 +277,17 @@ export function createTaskService({
     await Promise.all(Object.keys(workerEntries).map((workerId) => stop({ workerId })))
   }
 
+  function setUpdateDrain({ enabled } = {}) {
+    if (typeof enabled !== 'boolean') throw Object.assign(new Error('enabled must be a boolean'), { code: 'INVALID_PARAMS' })
+    updateDrain = enabled
+    return { enabled: updateDrain, activeTasks: [...workers.values()].map(snapshot) }
+  }
+
   return {
     list: () => [...workers.values()].map(snapshot),
     start,
     stop,
-    stopAll
+    stopAll,
+    setUpdateDrain
   }
 }

@@ -20,7 +20,7 @@ const archive = Buffer.from('first backend artifact')
 const unsignedManifest = {
   version: '1.0.0',
   artifacts: [{ platform: process.platform, arch: process.arch, url: 'https://updates.example.test/backend.tar.gz', size: archive.length, sha256: createHash('sha256').update(archive).digest('hex'), extractionSize: 64 }],
-  protocolMin: 1, protocolMax: 1, minClientVersion: '1.0.0', database: { schemaVersion: 0, rollbackCompatible: true }
+  protocolMin: 1, protocolMax: 1, minClientVersion: '1.0.0', database: { schemaVersion: 0, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' }
 }
 const rawManifest = Buffer.from(JSON.stringify(unsignedManifest))
 const signature = sign(null, rawManifest, privateKey).toString('base64')
@@ -41,6 +41,18 @@ const service = createReleaseService({
 try {
   const manifest = await service.checkForUpdates()
   assert.equal(manifest.version, '1.0.0', 'signed channel manifest is selected for first install')
+  const invalidRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-invalid-signature-'))
+  const invalidStore = createVersionStore(invalidRuntime)
+  const invalidService = createReleaseService({
+    versionStore: invalidStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from('invalid detached signature') : rawManifest }),
+    extract: service.extract, freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  await assert.rejects(invalidService.install({ deadlineMs: 100 }), { code: 'SIGNATURE_INVALID' })
+  await assert.rejects(fs.readdir(path.join(invalidRuntime, 'versions')), { code: 'ENOENT' }, 'an invalid detached signature must never stage an artifact')
+  await fs.rm(invalidRuntime, { recursive: true, force: true })
   const supervisor = await createSupervisorServer({ runtimeDir: runtime, versionStore: store, releaseService: service })
   assert.equal((await supervisor.api.dispatch({ id: 'check', method: 'update.check', params: {} })).version, '1.0.0', 'the production supervisor exposes its release service')
   await supervisor.stop()
@@ -90,7 +102,7 @@ try {
   await fs.rm(delayedRuntime, { recursive: true, force: true })
 
   const renameRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-delayed-rename-'))
-  const renameDestination = path.join(renameRuntime, 'versions', '2.0.0')
+  const renameDestination = path.join(renameRuntime, 'versions', '1.0.0')
   const delayedRenameFs = Object.create(fs)
   let renameCommitted = false
   delayedRenameFs.rename = async (source, destination) => {
@@ -114,8 +126,7 @@ try {
     freeSpace: async () => Number.MAX_SAFE_INTEGER,
     platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
   })
-  const delayedRenameManifest = { ...manifest, version: '2.0.0' }
-  await assert.rejects(renameService.install({ manifest: delayedRenameManifest, deadlineMs: 250 }), { code: 'INSTALL_DEADLINE_EXCEEDED' })
+  await assert.rejects(renameService.install({ deadlineMs: 250 }), { code: 'INSTALL_DEADLINE_EXCEEDED' })
   assert.equal(renameCommitted, true, 'the deadline response waits for a started staging rename to settle')
   await assert.rejects(fs.lstat(renameDestination), { code: 'ENOENT' }, 'a delayed rename cannot leave a version after the deadline response')
   await fs.rm(renameRuntime, { recursive: true, force: true })

@@ -94,9 +94,7 @@ export async function checkBackendUpdate(): Promise<{ availableVersion: string |
 }
 
 export async function installBackendUpdate({ cancelRunningTasks = false }: { cancelRunningTasks?: boolean } = {}): Promise<BackendUpdateStatus> {
-  const release = await requestSupervisor<RecordValue | null>('update.check')
-  if (!release || typeof release !== 'object' || typeof release.version !== 'string') throw new Error('No compatible backend release is available')
-  await requestSupervisor('update.install', { manifest: release, deadlineMs: 120_000, cancelRunningTasks })
+  await requestSupervisor('update.install', { deadlineMs: 120_000, cancelRunningTasks })
   return getBackendUpdateStatus()
 }
 

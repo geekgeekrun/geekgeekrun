@@ -1,7 +1,7 @@
 export const PROTOCOL_VERSION = 1
 
 export const METHODS = Object.freeze({
-  SYSTEM_HANDSHAKE: 'system.handshake', SYSTEM_HEALTH: 'system.health',
+  SYSTEM_HANDSHAKE: 'system.handshake', SYSTEM_HEALTH: 'system.health', SYSTEM_UPDATE_DRAIN: 'system.updateDrain',
   TASK_LIST: 'task.list', TASK_START: 'task.start', TASK_STOP: 'task.stop',
   CONFIG_READ: 'config.read', CONFIG_WRITE: 'config.write',
   ACCOUNT_STATUS: 'account.status', RECORDS_LIST: 'records.list',

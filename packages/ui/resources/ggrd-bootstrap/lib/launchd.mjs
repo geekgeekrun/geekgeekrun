@@ -69,7 +69,7 @@ export function createLaunchAgentPlist({
   bootstrapDirectory,
   runtimeDirectory = path.join(homeDirectory, '.geekgeekrun'),
   label = SUPERVISOR_LABEL,
-  httpsProxy
+  httpsProxy, electronVersion
 } = {}) {
   if (!path.isAbsolute(homeDirectory) || !path.isAbsolute(bootstrapDirectory) || !path.isAbsolute(runtimeDirectory)) {
     throw new TypeError('launchd paths must be absolute')
@@ -81,6 +81,7 @@ export function createLaunchAgentPlist({
     const url = new URL(httpsProxy)
     if (url.protocol !== 'https:') throw new TypeError('HTTPS proxy must use https')
   }
+  if (electronVersion !== undefined && (typeof electronVersion !== 'string' || !electronVersion)) throw new TypeError('Electron version must be a non-empty string')
   const stdout = path.join(runtimeDirectory, 'logs', 'ggrd.stdout.log')
   const stderr = path.join(runtimeDirectory, 'logs', 'ggrd.stderr.log')
   const lines = [
@@ -101,8 +102,11 @@ export function createLaunchAgentPlist({
     '  <key>RunAtLoad</key>',
     '  <true/>'
   ]
-  if (httpsProxy) {
-    lines.push('  <key>EnvironmentVariables</key>', '  <dict>', plistKey('HTTPS_PROXY', httpsProxy), '  </dict>')
+  if (httpsProxy || electronVersion) {
+    const environment = []
+    if (httpsProxy) environment.push(plistKey('HTTPS_PROXY', httpsProxy))
+    if (electronVersion) environment.push(plistKey('GGR_ELECTRON_VERSION', electronVersion))
+    lines.push('  <key>EnvironmentVariables</key>', '  <dict>', ...environment, '  </dict>')
   }
   lines.push('</dict>', '</plist>', '')
   return lines.join('\n')
@@ -136,6 +140,7 @@ export async function installLaunchdSupervisor({
   bootstrapVersion,
   uid = process.getuid?.(),
   httpsProxy,
+  electronVersion,
   runLaunchctl: invokeLaunchctl = runLaunchctl
 } = {}) {
   if (process.platform !== 'darwin') throw new Error('launchd supervisor installation is supported only on macOS')
@@ -152,7 +157,7 @@ export async function installLaunchdSupervisor({
   await privateDirectory(homeDirectory, supervisorDirectory)
   await privateDirectory(homeDirectory, launchAgentsDirectory)
   await copyBootstrapAtomically({ source: bootstrapSource, destination: bootstrapDirectory })
-  await atomicWrite(plistPath, createLaunchAgentPlist({ homeDirectory, bootstrapDirectory, runtimeDirectory, httpsProxy }))
+  await atomicWrite(plistPath, createLaunchAgentPlist({ homeDirectory, bootstrapDirectory, runtimeDirectory, httpsProxy, electronVersion }))
   try {
     await invokeLaunchctl('bootstrap', [`gui/${uid}`, plistPath])
   } catch (error) {

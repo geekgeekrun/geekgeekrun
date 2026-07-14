@@ -76,7 +76,7 @@ try {
     size: archive.length,
     extractionSize: 1024
   }
-  const manifest = { version: '3.0.0', artifact, database: { schemaVersion: 2, rollbackCompatible: true } }
+  const manifest = { version: '3.0.0', artifact, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } }
 
   await assert.rejects(
     installArtifact({
@@ -125,7 +125,7 @@ try {
     url: hostileArtifact.url, bytes: 7, etag: 'hostile-etag'
   }))
   await assert.rejects(installArtifact({
-    manifest: { version: '4.0.0', artifact: hostileArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    manifest: { version: '4.0.0', artifact: hostileArtifact, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } },
     versionStore: store,
     download: async () => { throw new Error('must not open a symbolic-link partial') },
     extract: async () => { throw new Error('must not extract a symbolic-link partial') }
@@ -141,7 +141,7 @@ try {
   }
   const escaped = path.join(runtimeDir, 'escaped-by-archive')
   await assert.rejects(installArtifact({
-    manifest: { version: '5.0.0', artifact: traversalArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    manifest: { version: '5.0.0', artifact: traversalArtifact, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } },
     versionStore: store,
     download: async () => Readable.from([traversalArchive]),
     extract: async () => [
@@ -160,21 +160,21 @@ try {
     extractionSize: 1024
   }
   await assert.rejects(installArtifact({
-    manifest: { version: '6.0.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    manifest: { version: '6.0.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } },
     versionStore: store,
     download: async () => Readable.from([safetyArchive]),
     extract: async () => [{ path: 'bin/node', type: 'symlink', data: Buffer.from('ignored') }]
   }), { code: 'EXTRACTION_UNSAFE' })
 
   await assert.rejects(installArtifact({
-    manifest: { version: '6.1.0', artifact: { ...safetyArtifact, sha256: 'b'.repeat(64) }, database: { schemaVersion: 2, rollbackCompatible: true } },
+    manifest: { version: '6.1.0', artifact: { ...safetyArtifact, sha256: 'b'.repeat(64) }, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } },
     versionStore: store,
     download: async () => Readable.from([safetyArchive]),
     extract: async () => []
   }), { code: 'DIGEST_MISMATCH' })
 
   await assert.rejects(installArtifact({
-    manifest: { version: '6.2.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+    manifest: { version: '6.2.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } },
     versionStore: store,
     freeSpace: async () => 0,
     download: async () => { throw new Error('download must not start without disk space') },
@@ -185,7 +185,7 @@ try {
   globalThis.fetch = async () => new Response(null, { status: 302, headers: { location: 'http://redirect.example.test/artifact' } })
   try {
     await assert.rejects(installArtifact({
-      manifest: { version: '6.3.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true } },
+      manifest: { version: '6.3.0', artifact: safetyArtifact, database: { schemaVersion: 2, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' } },
       versionStore: store,
       freeSpace: async () => Number.MAX_SAFE_INTEGER,
       extract: async () => []

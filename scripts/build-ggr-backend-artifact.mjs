@@ -229,7 +229,7 @@ async function build(options) {
       protocolMin: PROTOCOL_VERSION,
       protocolMax: PROTOCOL_VERSION,
       minClientVersion: '1.0.0',
-      database: { schemaVersion: 0, rollbackCompatible: true },
+      database: { schemaVersion: 0, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' },
       artifacts: [artifact]
     }
     await fs.writeFile(path.join(outputDirectory, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)

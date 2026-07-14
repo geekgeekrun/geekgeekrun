@@ -125,13 +125,15 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
     }
   }
   async function install(params, correlationId) {
-    onlyKeys(params, new Set(['manifest', 'deadlineMs', 'cancelRunningTasks']))
-    if (!plainObject(params.manifest) || typeof params.manifest.version !== 'string' || !params.manifest.version) throw failure('INVALID_PARAMS', 'A verified manifest with a version is required')
+    // A renderer must never be able to supply either parsed manifest fields or
+    // bytes: only the release service can fetch and verify the detached
+    // signature over the original bytes before staging.
+    onlyKeys(params, new Set(['deadlineMs', 'cancelRunningTasks']))
     if (!Number.isInteger(params.deadlineMs) || params.deadlineMs <= 0 || params.deadlineMs > 10 * 60_000) throw failure('INVALID_PARAMS', 'deadlineMs must be between 1 and 600000')
     if (params.cancelRunningTasks !== undefined && typeof params.cancelRunningTasks !== 'boolean') throw failure('INVALID_PARAMS', 'cancelRunningTasks must be a boolean')
     if (typeof installer !== 'function') throw failure('INSTALLER_UNAVAILABLE', 'No installer is configured')
     return serializeInstall(async () => {
-      state = 'installing'; candidate = params.manifest.version; progress = 'staging'; lastFailure = null
+      state = 'installing'; candidate = null; progress = 'verifying'; lastFailure = null
       const deadlineAt = now() + params.deadlineMs
       const remainingDeadline = () => {
         const remaining = deadlineAt - now()
@@ -139,8 +141,9 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
         return remaining
       }
       try {
-        const installed = await installer({ manifest: params.manifest, correlationId, deadlineMs: remainingDeadline() })
-        if (!installed || installed.version !== candidate) throw failure('INSTALL_FAILED', 'Installer did not return the requested candidate version')
+        const installed = await installer({ correlationId, deadlineMs: remainingDeadline() })
+        if (!installed || typeof installed.version !== 'string' || !installed.version) throw failure('INSTALL_FAILED', 'Verified installer did not return a candidate version')
+        candidate = installed.version
         const current = await versionStore.current()
         if (current) {
           progress = 'draining'
