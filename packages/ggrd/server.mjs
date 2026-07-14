@@ -7,6 +7,7 @@ import { createVersionStore } from './lib/version-store.mjs'
 import { createBackendProcessManager } from './lib/backend-process.mjs'
 import { createSupervisorApi, createSupervisorDiagnostics } from './lib/supervisor-api.mjs'
 import { createSupervisorRpcServer } from './lib/rpc-server.mjs'
+import { createReleaseService } from './lib/release-service.mjs'
 
 function backendClient(socketPath) {
   return {
@@ -46,11 +47,15 @@ export async function createSupervisorServer({
   runtimeDir = path.join(os.homedir(), '.geekgeekrun'),
   installer,
   checkForUpdates,
+  releaseService,
+  extract,
+  fetchImpl,
   versionStore = createVersionStore(runtimeDir),
   backendSocketPath = path.join(runtimeDir, 'run', 'backend.sock'),
   supervisorSocketPath = path.join(runtimeDir, 'run', 'supervisor.sock'),
   diagnosticsPath = path.join(runtimeDir, 'logs', 'supervisor.jsonl')
 } = {}) {
+  const releases = releaseService ?? createReleaseService({ versionStore, extract, fetchImpl })
   const diagnostics = await createSupervisorDiagnostics({ filePath: diagnosticsPath })
   const client = backendClient(backendSocketPath)
   const processManager = createBackendProcessManager({
@@ -58,7 +63,14 @@ export async function createSupervisorServer({
     healthCheck: async () => client.request('system.health', {}) ,
     diagnostic: (record) => diagnostics.write('error', record.event, record)
   })
-  const api = createSupervisorApi({ versionStore, processManager, backendClient: client, installer, checkForUpdates, diagnostics })
+  const api = createSupervisorApi({
+    versionStore,
+    processManager,
+    backendClient: client,
+    installer: installer ?? releases.install,
+    checkForUpdates: checkForUpdates ?? releases.checkForUpdates,
+    diagnostics
+  })
   const rpc = createSupervisorRpcServer({ socketPath: supervisorSocketPath, api, logger: diagnostics })
   return Object.freeze({
     async start() { await rpc.start(); const current = await versionStore.current(); if (current) await processManager.start(current) },

@@ -110,6 +110,8 @@ assert.match(bootstrapSource, /export async function ensureBackendReady/, 'start
 assert.match(bootstrapSource, /pnpm dev:backend/, 'development backend failure must tell the user how to start it')
 assert.doesNotMatch(bootstrapSource, /proxy.*(?:password|token|secret)|(?:password|token|secret).*proxy/i, 'proxy credentials must never be renderer-facing bootstrap data')
 assert.match(electronMainSource, /ensureSupervisorInstalled\(\)[\s\S]*?ensureBackendReady\(\)[\s\S]*?openSettingWindow/, 'Electron must install the supervisor and ready the backend before opening a window')
+assert.match(electronMainSource, /buttons: \['Retry', 'Quit'\]/, 'production bootstrap failures must be recoverable with an explicit retry')
+assert.doesNotMatch(electronMainSource, /catch[\s\S]{0,250}openSettingWindow/, 'production bootstrap errors must not fall through to opening the main window')
 
 const builderSource = await fs.readFile(path.join(repoRoot, 'packages/ui/electron-builder.yml'), 'utf8')
 assert.match(builderSource, /ggrd-bootstrap/, 'Electron artifacts must ship the supervisor bootstrap')
@@ -121,12 +123,19 @@ for (const channel of ['backend-update-status', 'backend-update-check', 'backend
   assert.match(updatePanelSource, new RegExp(channel), `renderer must use the restricted ${channel} channel`)
 }
 assert.doesNotMatch(updatePanelSource, /https?:\/\/|signature|artifact|\.geekgeekrun|\/Users\//i, 'renderer update UI must not receive release URLs, signatures, or paths')
+assert.match(updatePanelSource, /startPolling\(\)[\s\S]*?stopPolling\(\)/, 'update UI must poll safe progress while an operation runs and stop afterwards')
+assert.match(updatePanelSource, /onUnmounted\(stopPolling\)/, 'update UI must clean up progress polling')
+assert.match(updatePanelSource, /rollback\.reason/, 'update UI must display the last rollback reason')
 const updateIpcSource = await fs.readFile(
   path.join(repoRoot, 'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts'),
   'utf8'
 )
 assert.match(updateIpcSource, /redactedUpdateFailure/, 'update IPC must return a redacted failure DTO instead of forwarding supervisor errors')
 assert.doesNotMatch(updateIpcSource, /backend-update-install'[\s\S]{0,260}throw error/, 'update install IPC must not forward raw supervisor errors to the renderer')
+
+assert.match(supervisorClientSource, /\|file\):\\\/\\\//, 'renderer-facing diagnostics must redact file URLs')
+assert.match(supervisorClientSource, /private\|var/, 'renderer-facing diagnostics must redact private filesystem paths')
+assert.match(supervisorClientSource, /function publicLabel/, 'renderer-facing diagnostic metadata must be allowlisted')
 
 const mainSourceRoot = path.join(repoRoot, 'packages/ui/src/main')
 const sourceFiles = await fs.readdir(mainSourceRoot, { recursive: true })

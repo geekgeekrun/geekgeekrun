@@ -19,9 +19,21 @@ function assertInsideHome(homeDirectory, target) {
   if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('launchd paths must be user-scoped')
 }
 
-async function privateDirectory(target) {
-  await fs.mkdir(target, { recursive: true, mode: 0o700 })
-  await fs.chmod(target, 0o700)
+async function privateDirectory(homeDirectory, target) {
+  assertInsideHome(homeDirectory, target)
+  const home = await fs.lstat(homeDirectory)
+  if (!home.isDirectory() || home.isSymbolicLink()) throw new Error('home directory is unsafe')
+  let current = homeDirectory
+  for (const component of path.relative(homeDirectory, target).split(path.sep).filter(Boolean)) {
+    current = path.join(current, component)
+    let info = await fs.lstat(current).catch((error) => error.code === 'ENOENT' ? null : Promise.reject(error))
+    if (!info) {
+      await fs.mkdir(current, { mode: 0o700 })
+      info = await fs.lstat(current)
+    }
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`unsafe supervisor directory: ${current}`)
+    await fs.chmod(current, 0o700)
+  }
 }
 
 async function atomicWrite(target, contents) {
@@ -96,14 +108,25 @@ export function createLaunchAgentPlist({
 }
 
 export async function runLaunchctl(command, args) {
-  if (!['bootstrap', 'kickstart'].includes(command) || !Array.isArray(args) || args.some((argument) => typeof argument !== 'string')) {
+  if (!['bootstrap', 'bootout', 'kickstart'].includes(command) || !Array.isArray(args) || args.some((argument) => typeof argument !== 'string')) {
     throw new TypeError('launchctl must receive an allowlisted command and argument array')
   }
   await new Promise((resolve, reject) => {
-    const child = spawnChild('/bin/launchctl', [command, ...args], { stdio: 'ignore', shell: false })
+    const child = spawnChild('/bin/launchctl', [command, ...args], { stdio: ['ignore', 'ignore', 'pipe'], shell: false })
+    let stderr = ''
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk) => { stderr += chunk })
     child.once('error', reject)
-    child.once('exit', (code) => code === 0 ? resolve() : reject(new Error(`launchctl ${command} failed with exit code ${code}`)))
+    child.once('exit', (code) => {
+      if (code === 0) return resolve()
+      const error = Object.assign(new Error(`launchctl ${command} failed with exit code ${code}`), { code: /service already loaded|already bootstrapped/i.test(stderr) ? 'LAUNCHCTL_ALREADY_LOADED' : 'LAUNCHCTL_FAILED', stderr })
+      reject(error)
+    })
   })
+}
+
+function alreadyLoaded(error) {
+  return error?.code === 'LAUNCHCTL_ALREADY_LOADED'
 }
 
 export async function installLaunchdSupervisor({
@@ -123,16 +146,20 @@ export async function installLaunchdSupervisor({
   const bootstrapDirectory = path.join(supervisorDirectory, bootstrapVersion)
   const launchAgentsDirectory = path.join(homeDirectory, 'Library', 'LaunchAgents')
   const plistPath = path.join(launchAgentsDirectory, `${SUPERVISOR_LABEL}.plist`)
-  await privateDirectory(runtimeDirectory)
-  await privateDirectory(path.join(runtimeDirectory, 'logs'))
-  await privateDirectory(supervisorDirectory)
-  await privateDirectory(launchAgentsDirectory)
+  await privateDirectory(homeDirectory, runtimeDirectory)
+  await privateDirectory(homeDirectory, path.join(runtimeDirectory, 'logs'))
+  await privateDirectory(homeDirectory, supervisorDirectory)
+  await privateDirectory(homeDirectory, launchAgentsDirectory)
   await copyBootstrapAtomically({ source: bootstrapSource, destination: bootstrapDirectory })
   await atomicWrite(plistPath, createLaunchAgentPlist({ homeDirectory, bootstrapDirectory, runtimeDirectory, httpsProxy }))
   try {
     await invokeLaunchctl('bootstrap', [`gui/${uid}`, plistPath])
   } catch (error) {
-    await invokeLaunchctl('kickstart', ['-k', `gui/${uid}/${SUPERVISOR_LABEL}`])
+    if (!alreadyLoaded(error)) throw error
+    const service = `gui/${uid}/${SUPERVISOR_LABEL}`
+    await invokeLaunchctl('bootout', [service])
+    await invokeLaunchctl('bootstrap', [`gui/${uid}`, plistPath])
+    await invokeLaunchctl('kickstart', ['-k', service])
   }
   return Object.freeze({ label: SUPERVISOR_LABEL, bootstrapDirectory })
 }

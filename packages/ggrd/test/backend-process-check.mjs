@@ -151,7 +151,7 @@ function store() {
   await waitFor(() => versionStore.rollbacks === 1)
   assert.equal(versionStore.rollbacks, 1, 'a crash loop rolls back exactly once')
   assert.equal(diagnostics.filter(({ event }) => event === 'backend.crash_loop_rollback').length, 1)
-  assert.deepEqual(manager.status().rollback, { automatic: true, failedVersion: '1.0.0', restoredVersion: '0.9.0' })
+  assert.deepEqual(manager.status().rollback, { automatic: true, failedVersion: '1.0.0', restoredVersion: '0.9.0', reason: 'BACKEND_CRASHED' })
   assert.equal(await versionStore.current(), '0.9.0')
   spawned.at(-1).emit('exit', 1, null)
   await new Promise((resolve) => setImmediate(resolve))

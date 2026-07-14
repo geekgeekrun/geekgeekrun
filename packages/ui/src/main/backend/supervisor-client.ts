@@ -11,7 +11,7 @@ export type BackendUpdateStatus = {
   candidate: string | null
   progress: string | null
   state: string | null
-  rollback: { automatic: boolean; version: string | null } | null
+  rollback: { automatic: boolean; version: string | null; reason: string | null } | null
   lastFailure: { code: string; message: string; candidate: string | null } | null
   diagnostics: Array<{ event: string; level: string; message: string }>
 }
@@ -46,7 +46,11 @@ function stringOrNull(value: unknown): string | null {
 
 function cleanMessage(value: unknown): string {
   const raw = typeof value === 'string' ? value : 'Backend operation failed'
-  return raw.replace(/https?:\/\/\S+|\/Users\/\S+|\/home\/\S+|(?:token|password|secret|credential)\s*[:=]\s*\S+/gi, '[redacted]')
+  return raw.replace(/(?:https?|file):\/\/\S+|\/(?:Users|home|private|var)\/\S+|(?:token|password|secret|credential)\s*[:=]\s*\S+/gi, '[redacted]')
+}
+
+function publicLabel(value: unknown, fallback: string): string {
+  return typeof value === 'string' && /^[a-z0-9._-]{1,80}$/i.test(value) ? value : fallback
 }
 
 function publicDiagnostics(value: unknown): BackendUpdateStatus['diagnostics'] {
@@ -55,8 +59,8 @@ function publicDiagnostics(value: unknown): BackendUpdateStatus['diagnostics'] {
     if (!record || typeof record !== 'object') return []
     const item = record as RecordValue
     return [{
-      event: stringOrNull(item.event) ?? 'diagnostic',
-      level: stringOrNull(item.level) ?? 'info',
+      event: publicLabel(item.event, 'diagnostic'),
+      level: ['debug', 'info', 'warn', 'error'].includes(String(item.level)) ? String(item.level) : 'info',
       message: cleanMessage(item.message)
     }]
   })
@@ -69,7 +73,7 @@ function publicStatus(value: unknown, diagnostics: unknown = []): BackendUpdateS
   return {
     current: stringOrNull(status.current), previous: stringOrNull(status.previous), candidate: stringOrNull(status.candidate),
     progress: stringOrNull(status.progress), state: stringOrNull(status.state),
-    rollback: rollback ? { automatic: rollback.automatic === true, version: stringOrNull(rollback.version) } : null,
+    rollback: rollback ? { automatic: rollback.automatic === true, version: stringOrNull(rollback.version), reason: cleanMessage(rollback.reason) } : null,
     lastFailure: failure ? { code: stringOrNull(failure.code) ?? 'BACKEND_FAILED', message: cleanMessage(failure.message), candidate: stringOrNull(failure.candidate) } : null,
     diagnostics: publicDiagnostics(diagnostics)
   }

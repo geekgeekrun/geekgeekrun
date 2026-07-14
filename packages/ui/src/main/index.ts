@@ -1,4 +1,5 @@
 import overrideConsole from './utils/overrideConsole'
+import { app, dialog } from 'electron'
 import { openSettingWindow } from './flow/OPEN_SETTING_WINDOW/index'
 import { ensureBackendReady, ensureSupervisorInstalled } from './backend/bootstrap'
 
@@ -19,11 +20,26 @@ process.on('uncaughtException', (err: Error & { code?: string }) => {
 
 globalThis.GEEKGEEKRUN_PROCESS_ROLE = 'ui'
 void (async () => {
-  try {
-    await ensureSupervisorInstalled()
-    await ensureBackendReady()
-  } catch (error) {
-    console.error('Backend bootstrap failed; update controls will expose redacted diagnostics', error)
+  while (true) {
+    try {
+      await ensureSupervisorInstalled()
+      await ensureBackendReady()
+      openSettingWindow({ headless: process.env.GGR_HEADLESS === 'true' })
+      return
+    } catch (error) {
+      console.error('Backend bootstrap failed before opening the main window', error)
+      const { response } = await dialog.showMessageBox({
+        type: 'error',
+        buttons: ['Retry', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+        message: 'The backend could not be started.',
+        detail: 'Retry after checking your network connection or backend release settings.'
+      })
+      if (response !== 0) {
+        app.quit()
+        return
+      }
+    }
   }
-  openSettingWindow({ headless: process.env.GGR_HEADLESS === 'true' })
 })()

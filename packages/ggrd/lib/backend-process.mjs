@@ -116,7 +116,7 @@ export function createBackendProcessManager({
           return
         }
         const restored = await versionStore.rollback()
-        lastRollback = { automatic: true, failedVersion: record.version, restoredVersion: restored }
+        lastRollback = { automatic: true, failedVersion: record.version, restoredVersion: restored, reason: 'BACKEND_CRASHED' }
         report('backend.crash_loop_rollback', { failedVersion: record.version, restoredVersion: restored })
         await start(restored)
       } catch (error) {

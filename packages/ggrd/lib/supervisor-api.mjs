@@ -176,7 +176,7 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
           onlyKeys(params, new Set())
           state = 'rolling_back'; progress = 'rolling_back'
           await processManager.stop()
-          rollback = { automatic: false, version: await versionStore.rollback() }
+          rollback = { automatic: false, version: await versionStore.rollback(), reason: 'MANUAL_REQUEST' }
           await processManager.start?.(rollback.version)
           state = 'running'; progress = 'ready'
           await write('warn', 'update.rollback', { correlationId, rollback })
