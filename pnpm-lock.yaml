@@ -119,6 +119,12 @@ importers:
 
   packages/ggr-protocol: {}
 
+  packages/ggrd:
+    dependencies:
+      '@geekgeekrun/ggr-protocol':
+        specifier: workspace:*
+        version: link:../ggr-protocol
+
   packages/laodeng:
     dependencies:
       playwright-extra:
