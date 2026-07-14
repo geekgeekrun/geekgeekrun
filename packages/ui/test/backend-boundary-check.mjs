@@ -133,9 +133,9 @@ const updateIpcSource = await fs.readFile(
 assert.match(updateIpcSource, /redactedUpdateFailure/, 'update IPC must return a redacted failure DTO instead of forwarding supervisor errors')
 assert.doesNotMatch(updateIpcSource, /backend-update-install'[\s\S]{0,260}throw error/, 'update install IPC must not forward raw supervisor errors to the renderer')
 
-assert.match(supervisorClientSource, /\|file\):\\\/\\\//, 'renderer-facing diagnostics must redact file URLs')
-assert.match(supervisorClientSource, /private\|var/, 'renderer-facing diagnostics must redact private filesystem paths')
+assert.match(supervisorClientSource, /redactDiagnosticText/, 'renderer-facing diagnostics must use shared path redaction')
 assert.match(supervisorClientSource, /function publicLabel/, 'renderer-facing diagnostic metadata must be allowlisted')
+assert.match(supervisorClientSource, /requestTimeoutMs: 125_000/, 'supervisor RPC deadline must cover the 120-second install operation')
 
 const mainSourceRoot = path.join(repoRoot, 'packages/ui/src/main')
 const sourceFiles = await fs.readdir(mainSourceRoot, { recursive: true })

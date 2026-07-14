@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import path from 'node:path'
 import { createGgrClient } from '@geekgeekrun/ggr-client'
+import { redactDiagnosticText } from './redaction.mjs'
 
 type SupervisorClient = ReturnType<typeof createGgrClient>
 type RecordValue = Record<string, unknown>
@@ -29,7 +30,7 @@ export function getSupervisorClient(): SupervisorClient {
     clientVersion: app.getVersion(),
     protocolVersion: 1,
     connectTimeoutMs: 3_000,
-    requestTimeoutMs: 30_000
+    requestTimeoutMs: 125_000
   })
   return supervisor
 }
@@ -45,8 +46,7 @@ function stringOrNull(value: unknown): string | null {
 }
 
 function cleanMessage(value: unknown): string {
-  const raw = typeof value === 'string' ? value : 'Backend operation failed'
-  return raw.replace(/(?:https?|file):\/\/\S+|\/(?:Users|home|private|var)\/\S+|(?:token|password|secret|credential)\s*[:=]\s*\S+/gi, '[redacted]')
+  return redactDiagnosticText(value)
 }
 
 function publicLabel(value: unknown, fallback: string): string {

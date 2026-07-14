@@ -135,8 +135,11 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
       try {
         const installed = await installer({ manifest: params.manifest, correlationId })
         if (!installed || installed.version !== candidate) throw failure('INSTALL_FAILED', 'Installer did not return the requested candidate version')
-        progress = 'draining'
-        await drainTasks({ deadlineMs: params.deadlineMs, cancelRunningTasks: Boolean(params.cancelRunningTasks), correlationId })
+        const current = await versionStore.current()
+        if (current) {
+          progress = 'draining'
+          await drainTasks({ deadlineMs: params.deadlineMs, cancelRunningTasks: Boolean(params.cancelRunningTasks), correlationId })
+        }
         progress = 'activating'
         const result = await processManager.activateCandidate(candidate, { deadlineMs: params.deadlineMs, correlationId })
         // A successful activation is a fresh backend process, which starts with

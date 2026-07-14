@@ -12,7 +12,7 @@
     "build": "node scripts/run-build-sqlite-plugin.mjs && node ../../scripts/build-ggrd-bootstrap.mjs && electron-vite build",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
-    "test": "node test/check.mjs && node test/hr-reply-policy-check.mjs",
+    "test": "node test/check.mjs && node test/hr-reply-policy-check.mjs && node test/supervisor-redaction-check.mjs",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",

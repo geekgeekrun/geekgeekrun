@@ -50,6 +50,26 @@ const managerStatus = await managerStatusApi.dispatch({ id: 'manager-status', me
 assert.deepEqual(managerStatus.lastFailure, managerFailure, 'manager failure is visible before any API-local failure')
 assert.deepEqual(managerStatus.rollback, managerRollback)
 assert.equal(managerStatus.state, 'quarantined')
+
+{
+  let current = null
+  const firstInstallApi = createSupervisorApi({
+    versionStore: {
+      async current() { return current },
+      async previous() { return null },
+      async rollback() { throw new Error('no rollback') }
+    },
+    processManager: {
+      async activateCandidate(version) { current = version; return { version, health: { ready: true } } },
+      async stop() {}, async start() {}, status() { return { state: 'stopped' } }
+    },
+    backendClient: { async request() { throw new Error('first install must not query or drain a nonexistent backend') } },
+    installer: async ({ manifest }) => ({ version: manifest.version })
+  })
+  const installed = await firstInstallApi.dispatch({ id: 'first-install', method: 'update.install', params: { manifest: { version: '1.0.0' }, deadlineMs: 100 } })
+  assert.equal(installed.health.ready, true)
+  assert.equal(current, '1.0.0', 'first install activates and health-checks the staged backend')
+}
 let cancelled = false
 const backendClient = {
   async request(method, params) {
