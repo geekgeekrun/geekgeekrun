@@ -9,5 +9,9 @@
     "app/node_modules/puppeteer/",
     "metadata/build.json"
   ],
-  "nodeVersion": "20.16.0"
+  "nodeVersion": "20.16.0",
+  "reproducibility": {
+    "preSigningArchive": "byte-identical when inputs are unchanged",
+    "signedRelease": "timestamped codesigning is not byte-reproducible; verify the final archive by signed manifest SHA-256"
+  }
 }

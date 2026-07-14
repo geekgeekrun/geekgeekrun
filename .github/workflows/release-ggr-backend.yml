@@ -14,12 +14,11 @@ on:
         type: choice
         options: [stable, beta]
 
-permissions:
-  contents: write
-
 jobs:
   verify:
     runs-on: macos-15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
@@ -46,6 +45,8 @@ jobs:
           - runner: macos-15-intel
             arch: x64
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
@@ -58,7 +59,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @geekgeekrun/sqlite-plugin run build
-      - name: Build and codesign standalone artifact
+      # Timestamped codesigning makes final release bytes non-reproducible.
+      # The signed manifest SHA-256 is the immutable release integrity check.
+      - name: Build timestamped signed release artifact
         env:
           GGR_SIGNING_IDENTITY: ${{ secrets.GGR_SIGNING_IDENTITY }}
           GGR_RELEASE_BUILD: '1'
@@ -106,6 +109,21 @@ jobs:
           }
           if (!health || health.ready !== true || health.version !== process.env.VERSION || health.protocolVersion !== 1) throw new Error('production artifact failed system.health')
           NODE
+      - name: Verify timestamped release artifact digest
+        env:
+          VERSION: ${{ inputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import fs from 'node:fs/promises'
+          const root = `dist/ggr-backend/${process.env.VERSION}`
+          const manifest = JSON.parse(await fs.readFile(`${root}/manifest.json`, 'utf8'))
+          const artifact = manifest.artifacts.find((candidate) => candidate.arch === process.env.ARCH)
+          if (!artifact) throw new Error('artifact manifest does not describe this build architecture')
+          const digest = createHash('sha256').update(await fs.readFile(`${root}/${artifact.filename}`)).digest('hex')
+          if (digest !== artifact.sha256) throw new Error('timestamped release artifact digest does not match its manifest')
+          NODE
       - name: Notarize signed artifact
         env:
           GGR_NOTARY_API_KEY: ${{ secrets.GGR_NOTARY_API_KEY }}
@@ -130,6 +148,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4

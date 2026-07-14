@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { generateKeyPairSync, verify } from 'node:crypto'
+import { createHash, generateKeyPairSync, verify } from 'node:crypto'
 import fs from 'node:fs/promises'
 import net from 'node:net'
 import os from 'node:os'
@@ -92,7 +92,7 @@ try {
   assert.deepEqual(
     await fs.readFile(archive),
     await fs.readFile(path.join(repeatOutputDirectory, `ggr-backend-${version}-darwin-${process.arch}.tar.gz`)),
-    'two equivalent builds must produce byte-identical archives'
+    'the deterministic pre-signing archives must be byte-identical'
   )
   const listed = (await run('tar', ['-tzf', archive])).stdout.split('\n')
   for (const expected of [
@@ -111,7 +111,8 @@ try {
     version,
     platform: 'darwin',
     arch: process.arch,
-    nodeVersion: 'v20.16.0'
+    nodeVersion: 'v20.16.0',
+    archiveReproducibility: 'pre-signing-byte-identical'
   })
   const browserDependencyCheck = await run(path.join(extractedDirectory, 'bin', 'node'), [
     '--input-type=module', '--eval',
@@ -142,6 +143,11 @@ try {
   const manifest = await fs.readFile(manifestPath)
   const signature = Buffer.from((await fs.readFile(signaturePath, 'utf8')).trim(), 'base64')
   assert(verify(null, manifest, publicKey, signature), 'manifest signature must verify the final raw manifest bytes')
+  assert.equal(
+    JSON.parse(manifest).artifacts[0].sha256,
+    createHash('sha256').update(await fs.readFile(archive)).digest('hex'),
+    'a published release artifact is verified by the signed manifest digest, not reproducible byte identity after timestamped codesigning'
+  )
   const altered = Buffer.from(manifest)
   altered[0] ^= 1
   assert(!verify(null, altered, publicKey, signature), 'manifest signature must reject a single-byte mutation')

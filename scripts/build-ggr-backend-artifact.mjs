@@ -197,7 +197,15 @@ async function build(options) {
     await fs.copyFile(nodeBinary, path.join(stagingDirectory, 'bin', 'node'))
     await fs.chmod(path.join(stagingDirectory, 'bin', 'node'), (await fs.stat(nodeBinary)).mode & 0o777)
     if (options.codesignIdentity) await codesignNativeExecutables(stagingDirectory, options.codesignIdentity)
-    const metadata = { version: options.version, platform: 'darwin', arch, nodeVersion: NODE_VERSION }
+    // Timestamped macOS code signatures intentionally make release archives
+    // non-reproducible. Only the archive before codesigning is byte-identical.
+    const metadata = {
+      version: options.version,
+      platform: 'darwin',
+      arch,
+      nodeVersion: NODE_VERSION,
+      archiveReproducibility: options.codesignIdentity ? 'signed-release-integrity-only' : 'pre-signing-byte-identical'
+    }
     await fs.mkdir(path.join(stagingDirectory, 'metadata'), { recursive: true })
     await fs.writeFile(path.join(stagingDirectory, 'metadata', 'build.json'), `${JSON.stringify(metadata, null, 2)}\n`)
     await assertArtifactLayout(stagingDirectory)
