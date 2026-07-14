@@ -119,7 +119,7 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
       previous: await versionStore.previous(),
       candidate,
       progress,
-      lastFailure,
+      lastFailure: lastFailure ?? manager.lastFailure ?? null,
       rollback: manager.rollback ?? rollback,
       state: manager.state ?? state
     }

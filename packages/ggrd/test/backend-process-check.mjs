@@ -4,12 +4,54 @@ import path from 'node:path'
 
 import { createBackendProcessManager } from '../lib/backend-process.mjs'
 
-function child(pid) {
+function child(pid, { onKill } = {}) {
   const process = new EventEmitter()
   process.pid = pid
   process.killed = false
-  process.kill = () => { process.killed = true }
+  process.kills = []
+  process.kill = (signal) => {
+    process.killed = true
+    process.kills.push(signal)
+    if (onKill) onKill(process, signal)
+    else queueMicrotask(() => process.emit('exit', null, signal))
+  }
   return process
+}
+
+{
+  const versionStore = store()
+  const spawned = []
+  const oldChild = child(99, { onKill: () => {} })
+  const manager = createBackendProcessManager({
+    versionStore,
+    spawnProcess() { const result = spawned.length ? child(100 + spawned.length) : oldChild; spawned.push(result); return result },
+    healthCheck: async () => true
+  })
+  await manager.start('1.0.0')
+  const activation = manager.activateCandidate('2.0.0')
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(spawned.length, 1, 'the candidate must not start while the old child can still serve its socket')
+  assert.deepEqual(oldChild.kills, ['SIGTERM'])
+  oldChild.emit('exit', 0, 'SIGTERM')
+  await activation
+  assert.equal(spawned.length, 2)
+}
+
+{
+  const versionStore = store()
+  const stubbornChild = child(98, { onKill: (process, signal) => {
+    if (signal === 'SIGKILL') queueMicrotask(() => process.emit('exit', null, signal))
+  } })
+  const manager = createBackendProcessManager({
+    versionStore,
+    spawnProcess: () => stubbornChild,
+    healthCheck: async () => true,
+    stopTimeoutMs: 1,
+    killTimeoutMs: 50
+  })
+  await manager.start('1.0.0')
+  await manager.stop()
+  assert.deepEqual(stubbornChild.kills, ['SIGTERM', 'SIGKILL'], 'a non-exiting child is safely escalated after the bounded grace period')
 }
 
 async function waitFor(predicate) {
@@ -120,6 +162,36 @@ function store() {
   spawned.at(-1).emit('exit', 1, null)
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(diagnostics.length, recordsBefore, 'a user-requested stop is not a crash')
+}
+
+{
+  const versionStore = store()
+  const spawned = []
+  let clock = 0
+  const manager = createBackendProcessManager({
+    versionStore,
+    spawnProcess: () => { const result = child(spawned.length + 300); spawned.push(result); return result },
+    healthCheck: async () => true,
+    now: () => clock,
+    crashPolicy: { maxCrashes: 3, windowMs: 60_000 }
+  })
+  await manager.start('1.0.0')
+  for (let index = 0; index < 3; index++) {
+    clock += 10_000
+    spawned.at(-1).emit('exit', 1, null)
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  await waitFor(() => versionStore.rollbacks === 1)
+  assert.equal(await versionStore.current(), '0.9.0')
+  for (let index = 0; index < 3; index++) {
+    clock += 10_000
+    spawned.at(-1).emit('exit', 1, null)
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(versionStore.rollbacks, 1, 'a rollback must never point back at a previously failed version')
+  assert.equal(await versionStore.current(), '0.9.0', 'the second crash loop leaves the safe version selected')
+  assert.equal(manager.status().state, 'quarantined')
 }
 
 console.log('ggrd backend process check passed')

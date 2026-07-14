@@ -40,6 +40,16 @@ const processManager = {
   async stop() { calls.push('stop') },
   status() { return { state: 'running' } }
 }
+const managerFailure = { code: 'BACKEND_CRASHED', version: '0.9.0' }
+const managerRollback = { automatic: true, failedVersion: '1.0.0', restoredVersion: '0.9.0' }
+const managerStatusApi = createSupervisorApi({
+  versionStore,
+  processManager: { ...processManager, status: () => ({ state: 'quarantined', lastFailure: managerFailure, rollback: managerRollback }) }
+})
+const managerStatus = await managerStatusApi.dispatch({ id: 'manager-status', method: 'supervisor.status', params: {} })
+assert.deepEqual(managerStatus.lastFailure, managerFailure, 'manager failure is visible before any API-local failure')
+assert.deepEqual(managerStatus.rollback, managerRollback)
+assert.equal(managerStatus.state, 'quarantined')
 let cancelled = false
 const backendClient = {
   async request(method, params) {

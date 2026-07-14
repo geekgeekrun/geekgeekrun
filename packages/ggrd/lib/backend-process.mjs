@@ -21,6 +21,8 @@ export function createBackendProcessManager({
   diagnostic = () => {},
   now = () => Date.now(),
   crashPolicy = {},
+  stopTimeoutMs = 5_000,
+  killTimeoutMs = 5_000,
   runtimeDir = versionStore?.runtimeDir,
   backendSocketPath = path.join(runtimeDir ?? '', 'run', 'backend.sock'),
   supervisorPath = path.join(runtimeDir ?? '', 'run', 'supervisor.sock'),
@@ -33,6 +35,8 @@ export function createBackendProcessManager({
 
   const maxCrashes = positiveInteger(crashPolicy.maxCrashes, 3)
   const windowMs = positiveInteger(crashPolicy.windowMs, 60_000)
+  const gracefulStopTimeoutMs = positiveInteger(stopTimeoutMs, 5_000)
+  const forcedStopTimeoutMs = positiveInteger(killTimeoutMs, 5_000)
   const crashTimes = new Map()
   const failedVersions = new Set()
   let active = null
@@ -40,6 +44,7 @@ export function createBackendProcessManager({
   let state = 'stopped'
   let lastFailure = null
   let lastRollback = null
+  let stopPending = null
 
   const selectedEnv = (version) => Object.freeze({
     GGR_RUNTIME_DIR: runtimeDir,
@@ -70,13 +75,19 @@ export function createBackendProcessManager({
       throw failure('SPAWN_FAILED', error.message)
     }
     if (!child || typeof child.once !== 'function') throw failure('SPAWN_FAILED', 'Process launcher returned an invalid child')
-    const record = { child, version, intentional: false, terminal: false }
+    let resolveExit
+    const record = {
+      child, version, intentional: false, terminal: false,
+      exited: new Promise((resolve) => { resolveExit = resolve }),
+      resolveExit
+    }
     active = record
     state = 'running'
     const exited = (code = null, signal = null, error = null) => {
       if (record.terminal) return
       record.terminal = true
       if (active === record) active = null
+      record.resolveExit()
       if (record.intentional) return
       void onCrash(record, { code, signal, error })
     }
@@ -98,9 +109,10 @@ export function createBackendProcessManager({
       try {
         if (await versionStore.current() !== record.version) return
         const previous = await versionStore.previous()
-        if (!previous) {
-          lastFailure = { code: 'CRASH_LOOP_NO_ROLLBACK', version: record.version }
-          report('backend.crash_loop_no_rollback', { version: record.version })
+        if (!previous || failedVersions.has(previous)) {
+          state = 'quarantined'
+          lastFailure = { code: 'CRASH_LOOP_QUARANTINED', version: record.version, previous: previous ?? null }
+          report('backend.crash_loop_quarantined', lastFailure)
           return
         }
         const restored = await versionStore.rollback()
@@ -136,13 +148,34 @@ export function createBackendProcessManager({
   }
 
   async function stop() {
+    if (stopPending) return stopPending
     const record = active
     if (!record || record.terminal) { state = 'stopped'; return }
-    record.intentional = true
-    state = 'stopping'
-    try { record.child.kill?.('SIGTERM') } catch {}
-    if (active === record) active = null
-    state = 'stopped'
+    stopPending = (async () => {
+      record.intentional = true
+      state = 'stopping'
+      const waitForExit = async (timeoutMs) => {
+        let timer
+        return Promise.race([
+          record.exited.then(() => true),
+          new Promise((resolve) => { timer = setTimeout(() => resolve(false), timeoutMs) })
+        ]).finally(() => clearTimeout(timer))
+      }
+      try { record.child.kill?.('SIGTERM') } catch {}
+      if (!await waitForExit(gracefulStopTimeoutMs)) {
+        try { record.child.kill?.('SIGKILL') } catch {}
+        if (!await waitForExit(forcedStopTimeoutMs)) {
+          state = 'quarantined'
+          throw failure('STOP_TIMEOUT', 'Backend process did not exit after SIGTERM and SIGKILL')
+        }
+      }
+      state = 'stopped'
+    })()
+    try {
+      return await stopPending
+    } finally {
+      if (stopPending) stopPending = null
+    }
   }
 
   async function activateCandidate(version, { deadlineMs, correlationId } = {}) {
