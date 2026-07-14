@@ -18,9 +18,11 @@ function backendClient(socketPath) {
         let buffer = ''
         const handshakeId = `supervisor-handshake-${process.pid}`
         const requestId = `supervisor-request-${process.pid}-${Date.now()}`
-        let settled = false; const timer = setTimeout(() => fail(Object.assign(new Error('Backend RPC deadline elapsed'), { code: 'BACKEND_RPC_TIMEOUT' })), Number.isInteger(deadlineMs) && deadlineMs > 0 ? deadlineMs : 30_000)
+        let settled = false
         const fail = (error) => { if (settled) return; settled = true; clearTimeout(timer); socket.destroy(); reject(error) }
         const succeed = (result) => { if (settled) return; settled = true; clearTimeout(timer); socket.end(); resolve(result) }
+        const timeout = Number.isInteger(deadlineMs) && deadlineMs > 0 ? deadlineMs : 30_000
+        const timer = setTimeout(() => fail(Object.assign(new Error('Backend RPC deadline elapsed'), { code: 'BACKEND_RPC_TIMEOUT' })), timeout)
         socket.setEncoding('utf8')
         socket.once('error', fail)
         socket.on('data', (chunk) => {

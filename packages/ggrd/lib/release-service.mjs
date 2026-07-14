@@ -56,7 +56,7 @@ export function createReleaseService({
   clientVersion,
   migrationService
 } = {}) {
-  if (!versionStore?.stage || !versionStore?.stagingDir) throw new TypeError('a version store is required')
+  if (!versionStore?.stage || !versionStore?.discard || !versionStore?.stagingDir) throw new TypeError('a version store is required')
   if (typeof fetchImpl !== 'function' || typeof extract !== 'function') throw new TypeError('fetch and a safe extractor are required')
   const endpoint = trustRoot?.manifestEndpoints?.[channel]
   if (typeof endpoint !== 'string') throw new TypeError('the requested release channel is unavailable')
@@ -94,7 +94,19 @@ export function createReleaseService({
         // crossed an untrusted IPC boundary and is intentionally not accepted.
         const manifest = await checkForUpdates()
         const installation = await installArtifact({ manifest, download, extract, versionStore, freeSpace, signal: controller.signal })
-        if (migrationService) await migrationService.rehearse({ version: installation.version, database: manifest.database ?? manifest.databaseCompatibility, versionsDir: versionStore.versionsDir })
+        if (migrationService) {
+          try {
+            await migrationService.rehearse({ version: installation.version, database: manifest.database ?? manifest.databaseCompatibility, versionsDir: versionStore.versionsDir })
+          } catch (error) {
+            // A rehearsal failure is before activation, so the staged
+            // candidate is disposable.  Remove it before surfacing failure
+            // so the same version can be retried after remediation.
+            try { await versionStore.discard(installation.version) } catch (cleanupError) {
+              throw failure('STAGED_CANDIDATE_CLEANUP_FAILED', `Failed to remove the unrehearsed candidate: ${cleanupError.message}`)
+            }
+            throw error
+          }
+        }
         if (deadlineError) throw deadlineError
         return installation
       } catch (error) {

@@ -89,6 +89,44 @@ assert.equal(managerStatus.state, 'quarantined')
   assert.equal(installerDeadline, 100, 'release download begins with the full request deadline')
   assert.equal(activationDeadline, 20, 'activation receives only the remaining request deadline')
 }
+
+{
+  let admissionOpen = true
+  let taskStopped = false
+  const observed = []
+  const raceApi = createSupervisorApi({
+    versionStore,
+    processManager,
+    installer: async () => ({ version: 'race-safe' }),
+    backendClient: {
+      async request(method, params) {
+        observed.push([method, params])
+        if (method === 'system.updateDrain') { admissionOpen = !params.enabled; return { enabled: params.enabled } }
+        if (method === 'task.list') {
+          // This is the exact former race: an admission attempt happens when
+          // the supervisor takes its first task snapshot.
+          if (!admissionOpen) {
+            const error = Object.assign(new Error('Backend is draining active tasks for an update'), { code: 'UPDATE_DRAINING' })
+            throw error
+          }
+          return taskStopped ? [] : [{ workerId: 'preexisting' }]
+        }
+        if (method === 'task.stop') { taskStopped = true; return null }
+        throw new Error(`unexpected backend method ${method}`)
+      }
+    }
+  })
+  // The simulated post-drain start must fail before the first list is made;
+  // then exercise cancellation of the already-running task independently.
+  await assert.rejects(
+    raceApi.dispatch({ id: 'race', method: 'update.install', params: { deadlineMs: 100, cancelRunningTasks: true } }),
+    { code: 'UPDATE_DRAINING' }
+  )
+  assert.deepEqual(observed.slice(0, 2), [
+    ['system.updateDrain', { enabled: true }],
+    ['task.list', {}]
+  ], 'draining closes task admission before the first active-task snapshot')
+}
 let cancelled = false
 const backendClient = {
   async request(method, params) {
@@ -116,8 +154,8 @@ await second
 assert.equal(installs, 2)
 assert.equal(maxConcurrentInstalls, 1, 'concurrent install requests are serialized')
 assert.deepEqual(calls.slice(0, 2), [
-  ['task.list', {}],
-  ['system.updateDrain', { enabled: true }]
+  ['system.updateDrain', { enabled: true }],
+  ['task.list', {}]
 ])
 assert.deepEqual(calls.find(([method]) => method === 'task.stop'), ['task.stop', { workerId: 'w1' }])
 assert.deepEqual(calls.at(-1), ['activate', '3.0.0'])

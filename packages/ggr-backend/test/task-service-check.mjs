@@ -160,6 +160,23 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
 }
 
 {
+  const child = fakeChild(103)
+  const service = createTaskService({
+    spawnProcess: () => child,
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: () => {}
+  })
+  // The supervisor atomically enables this before it observes active tasks.
+  // Any task admission racing that observation is rejected by the backend.
+  service.setUpdateDrain({ enabled: true })
+  await assert.rejects(service.start({ workerId: 'auto' }), { code: 'UPDATE_DRAINING' })
+  assert.equal(service.list().length, 0)
+  service.setUpdateDrain({ enabled: false })
+  await service.start({ workerId: 'auto' })
+  await service.stop({ workerId: 'auto' })
+}
+
+{
   const events = []
   const child = fakeChild(150, { exitOnSignal: false })
   const service = createTaskService({

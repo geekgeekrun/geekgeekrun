@@ -69,7 +69,8 @@ export function createLaunchAgentPlist({
   bootstrapDirectory,
   runtimeDirectory = path.join(homeDirectory, '.geekgeekrun'),
   label = SUPERVISOR_LABEL,
-  httpsProxy, electronVersion
+  httpsProxy,
+  electronVersion
 } = {}) {
   if (!path.isAbsolute(homeDirectory) || !path.isAbsolute(bootstrapDirectory) || !path.isAbsolute(runtimeDirectory)) {
     throw new TypeError('launchd paths must be absolute')

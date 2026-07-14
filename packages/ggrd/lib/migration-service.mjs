@@ -34,7 +34,8 @@ export function createMigrationService({ runtimeDir, spawnProcess = nodeSpawn, t
     if (!source.isFile() || source.isSymbolicLink()) throw failure('MIGRATION_REHEARSAL_FAILED', 'Live database is not a regular file')
     const candidateRoot = path.join(versionsDir, version)
     const node = path.join(candidateRoot, 'bin', 'node')
-    const entry = path.join(candidateRoot, 'app', 'migration.mjs')
+    const entry = path.resolve(candidateRoot, database.rehearsalEntrypoint)
+    if (!entry.startsWith(`${candidateRoot}${path.sep}`)) throw failure('MIGRATION_INCOMPATIBLE', 'Signed migration entrypoint escapes the candidate artifact')
     for (const target of [node, entry]) {
       const info = await fs.lstat(target).catch(() => null)
       if (!info?.isFile() || info.isSymbolicLink()) throw failure('MIGRATION_REHEARSAL_FAILED', 'Candidate has no safe migration entrypoint')
@@ -45,10 +46,12 @@ export function createMigrationService({ runtimeDir, spawnProcess = nodeSpawn, t
     const rehearsal = path.join(directory, 'database.sqlite')
     const backup = path.join(backupRoot, `${version}-${Date.now()}-${randomUUID()}.sqlite`)
     try {
-      // The candidate process uses SQLite's online backup API. Its only write
-      // targets are the rehearsal copy and durable rollback backup.
+      // The candidate creates an online SQLite snapshot from a readonly live
+      // handle. Its migration mode only receives the copied rehearsal file,
+      // never the live database path.
       await run(node, [entry, '--backup', liveDatabase, backup], { spawnProcess, timeoutMs })
-      await run(node, [entry, '--backup', liveDatabase, rehearsal, '--rehearse', String(database.schemaVersion)], { spawnProcess, timeoutMs })
+      await fs.copyFile(backup, rehearsal)
+      await run(node, [entry, '--rehearse', rehearsal, String(database.schemaVersion)], { spawnProcess, timeoutMs })
       return { state: 'validated', schemaVersion: database.schemaVersion, backup }
     } finally {
       await fs.rm(directory, { recursive: true, force: true })

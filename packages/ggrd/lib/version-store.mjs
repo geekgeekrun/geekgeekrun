@@ -253,6 +253,24 @@ export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
     return prior
   }
 
+  // Rehearsal happens after staging but before activation.  A failed
+  // rehearsal must not poison the version name and prevent a corrected
+  // artifact from being staged on the next attempt.
+  async function discard(version) {
+    assertVersion(version)
+    await ready()
+    if (version === await linkedVersion(currentLink) || version === await linkedVersion(previousLink)) {
+      throw new Error(`Refusing to discard an active version: ${version}`)
+    }
+    const target = path.join(versionsDir, version)
+    const info = await lstatOrNull(ops, target)
+    if (!info) return false
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`Refusing to discard unsafe version entry: ${target}`)
+    await ops.rm(target, { recursive: true, force: false })
+    await syncPath(ops, versionsDir)
+    return true
+  }
+
   async function current() { await ready(); return linkedVersion(currentLink) }
   async function previous() { await ready(); return linkedVersion(previousLink) }
 
@@ -270,5 +288,5 @@ export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
     await syncPath(ops, versionsDir)
   }
 
-  return Object.freeze({ runtimeDir, versionsDir, stagingDir, stage, activate, rollback, current, previous, prune })
+  return Object.freeze({ runtimeDir, versionsDir, stagingDir, stage, activate, rollback, discard, current, previous, prune })
 }

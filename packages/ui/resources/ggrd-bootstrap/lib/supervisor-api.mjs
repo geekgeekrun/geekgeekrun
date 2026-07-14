@@ -96,10 +96,12 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
   async function drainTasks({ deadlineMs, cancelRunningTasks, correlationId }) {
     if (!backendClient?.request) throw failure('BACKEND_UNAVAILABLE', 'A backend RPC client is required for a safe update')
     const deadline = now() + deadlineMs
-    let tasks = await activeTasks()
-    if (!tasks.length) return []
+    // Close task admission before taking the first snapshot.  Listing first
+    // leaves a window where a task can start after the list call but before
+    // the drain request, and would then be activated over.
     await backendClient.request('system.updateDrain', { enabled: true })
     drainActive = true
+    let tasks = await activeTasks()
     await write('info', 'update.drain_requested', { correlationId, activeTasks: tasks })
     if (cancelRunningTasks) {
       await Promise.all(tasks.map(({ workerId }) => typeof workerId === 'string' ? backendClient.request('task.stop', { workerId }) : Promise.resolve()))
@@ -125,6 +127,9 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
     }
   }
   async function install(params, correlationId) {
+    // A renderer must never be able to supply either parsed manifest fields or
+    // bytes: only the release service can fetch and verify the detached
+    // signature over the original bytes before staging.
     onlyKeys(params, new Set(['deadlineMs', 'cancelRunningTasks']))
     if (!Number.isInteger(params.deadlineMs) || params.deadlineMs <= 0 || params.deadlineMs > 10 * 60_000) throw failure('INVALID_PARAMS', 'deadlineMs must be between 1 and 600000')
     if (params.cancelRunningTasks !== undefined && typeof params.cancelRunningTasks !== 'boolean') throw failure('INVALID_PARAMS', 'cancelRunningTasks must be a boolean')

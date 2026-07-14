@@ -60,6 +60,30 @@ try {
   assert.equal((await fs.stat(path.join(runtime, 'versions', '1.0.0', 'app', 'server.mjs'))).isFile(), true)
   assert.equal(await store.current(), null, 'release installation stages before supervisor activation')
 
+  const rehearsalRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-rehearsal-retry-'))
+  const rehearsalStore = createVersionStore(rehearsalRuntime)
+  const rehearsalOptions = {
+    versionStore: rehearsalStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : url.endsWith('.tar.gz') ? archive : rawManifest }),
+    extract: async () => [
+      { path: 'bin/node', type: 'file', data: Buffer.from('#!/bin/sh\n') },
+      { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}') }
+    ],
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  }
+  const failingRehearsal = createReleaseService({
+    ...rehearsalOptions,
+    migrationService: { async rehearse() { throw Object.assign(new Error('fixture rehearsal failed'), { code: 'MIGRATION_REHEARSAL_FAILED' }) } }
+  })
+  await assert.rejects(failingRehearsal.install({ deadlineMs: 100 }), { code: 'MIGRATION_REHEARSAL_FAILED' })
+  assert.equal((await fs.readdir(path.join(rehearsalRuntime, 'versions'))).includes('1.0.0'), false, 'a failed rehearsal removes the staged candidate')
+  const retryRehearsal = createReleaseService({ ...rehearsalOptions, migrationService: { async rehearse() { return { state: 'validated' } } } })
+  await retryRehearsal.install({ deadlineMs: 100 })
+  assert.equal((await fs.readdir(path.join(rehearsalRuntime, 'versions'))).includes('1.0.0'), true, 'the same candidate version can be staged again after rehearsal failure')
+  await fs.rm(rehearsalRuntime, { recursive: true, force: true })
+
   const timedRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-deadline-'))
   const timedStore = createVersionStore(timedRuntime)
   const timedService = createReleaseService({
