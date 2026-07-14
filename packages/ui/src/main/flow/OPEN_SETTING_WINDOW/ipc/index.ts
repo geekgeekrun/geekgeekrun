@@ -58,8 +58,30 @@ import {
 import { getLastUsedAndAvailableBrowser } from '../../DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { waitForCommonJobConditionDone } from '../../../features/common-job-condition'
 import { ensureConfigFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { importResumeImage } from '../../../features/resume-image-import'
 
 export default function initIpc() {
+  ipcMain.handle('import-resume-image', async (ev) => {
+    const win = BrowserWindow.fromWebContents(ev.sender)
+    const result = await dialog.showOpenDialog(win ?? undefined, {
+      title: '导入简历',
+      properties: ['openFile'],
+      filters: [
+        { name: '简历文件', extensions: ['doc', 'docx', 'pdf', 'jpg', 'jpeg', 'png'] }
+      ]
+    })
+    if (result.canceled || !result.filePaths?.[0]) {
+      return { canceled: true }
+    }
+
+    const imported = await importResumeImage(result.filePaths[0])
+    ensureConfigFileExist()
+    const bossConfig = readConfigFile('boss.json')
+    bossConfig.resumeImagePath = imported.resumeImagePath
+    await writeConfigFile('boss.json', bossConfig)
+    return { canceled: false, ...imported }
+  })
+
   ipcMain.handle('save-config-file-from-ui', async (ev, payload) => {
     payload = JSON.parse(payload)
     ensureConfigFileExist()
@@ -174,6 +196,12 @@ export default function initIpc() {
     }
     if (hasOwn(payload, 'fieldsForUseCommonConfig')) {
       bossConfig.fieldsForUseCommonConfig = payload.fieldsForUseCommonConfig
+    }
+    if (hasOwn(payload, 'resumeImagePath')) {
+      bossConfig.resumeImagePath = payload.resumeImagePath
+    }
+    if (hasOwn(payload, 'sendResumeImageAfterGreeting')) {
+      bossConfig.sendResumeImageAfterGreeting = payload.sendResumeImageAfterGreeting === true
     }
 
     promiseArr.push(writeConfigFile('boss.json', bossConfig))

@@ -31,6 +31,7 @@
     "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",
     "@geekgeekrun/sqlite-plugin": "workspace:*",
     "@geekgeekrun/utils": "workspace:*",
+    "@napi-rs/canvas": "^0.1.77",
     "JSONStream": "^1.3.5",
     "diff": "^7.0.0",
     "electron-updater": "^6.1.7",
@@ -40,6 +41,7 @@
     "node-machine-id": "^1.1.12",
     "pinia": "^3.0.2",
     "puppeteer": "24.19.0",
+    "pdfjs-dist": "^4.10.38",
     "puppeteer-extra-plugin-stealth": "2.11.2",
     "uuid": "^11.1.0",
     "vuedraggable": "^4.1.0"
