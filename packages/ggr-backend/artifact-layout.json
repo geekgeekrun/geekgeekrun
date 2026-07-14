@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "platform": "darwin",
+  "entries": [
+    "bin/node",
+    "app/server.mjs",
+    "app/package.json",
+    "app/node_modules/better-sqlite3/",
+    "app/node_modules/puppeteer/",
+    "metadata/build.json"
+  ],
+  "nodeVersion": "20.16.0"
+}

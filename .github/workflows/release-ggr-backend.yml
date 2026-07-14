@@ -1,0 +1,128 @@
+name: Release GGR Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Backend semantic version (without a v prefix)
+        required: true
+        type: string
+      channel:
+        description: Release channel
+        required: true
+        default: stable
+        type: choice
+        options: [stable, beta]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geekgeekrun/sqlite-plugin run build
+      - run: pnpm --filter @geekgeekrun/ggr-protocol test
+      - run: pnpm --filter @geekgeekrun/ggr-backend test
+      - run: pnpm --filter @geekgeekrun/ggrd test
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.16.0
+          architecture: ${{ matrix.arch }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @geekgeekrun/sqlite-plugin run build
+      - name: Build and codesign standalone artifact
+        env:
+          GGR_SIGNING_IDENTITY: ${{ secrets.GGR_SIGNING_IDENTITY }}
+          GGR_RELEASE_BUILD: '1'
+        run: >-
+          pnpm build:ggr-backend-artifact -- --version "${{ inputs.version }}"
+          --channel "${{ inputs.channel }}" --codesign-identity "$GGR_SIGNING_IDENTITY"
+      - name: Notarize signed artifact
+        env:
+          GGR_NOTARY_API_KEY: ${{ secrets.GGR_NOTARY_API_KEY }}
+          GGR_NOTARY_KEY_ID: ${{ secrets.GGR_NOTARY_KEY_ID }}
+          GGR_NOTARY_ISSUER: ${{ secrets.GGR_NOTARY_ISSUER }}
+        run: |
+          artifact="dist/ggr-backend/${{ inputs.version }}/ggr-backend-${{ inputs.version }}-darwin-${{ matrix.arch }}.tar.gz"
+          ditto -c -k --keepParent "$artifact" "$artifact.zip"
+          key="$RUNNER_TEMP/AuthKey_${GGR_NOTARY_KEY_ID}.p8"
+          printf '%s' "$GGR_NOTARY_API_KEY" > "$key"
+          xcrun notarytool submit "$artifact.zip" --key "$key" --key-id "$GGR_NOTARY_KEY_ID" --issuer "$GGR_NOTARY_ISSUER" --wait
+          rm -f "$key"
+          rm "$artifact.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ggr-backend-${{ matrix.arch }}
+          path: dist/ggr-backend/${{ inputs.version }}/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloaded
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.16.0
+      - name: Create the final combined manifest once
+        run: |
+          mkdir release
+          find downloaded -name '*.tar.gz' -exec cp {} release/ \;
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises'
+          import path from 'node:path'
+          const version = process.env.VERSION
+          const channel = process.env.CHANNEL
+          const roots = await fs.readdir('downloaded', { recursive: true })
+          const manifests = await Promise.all(roots.filter((file) => file.endsWith('manifest.json')).map(async (file) => JSON.parse(await fs.readFile(path.join('downloaded', file), 'utf8'))))
+          if (manifests.length !== 2) throw new Error('expected one unsigned manifest from each macOS architecture')
+          const base = manifests[0]
+          const artifacts = manifests.flatMap((manifest) => manifest.artifacts).sort((left, right) => left.arch.localeCompare(right.arch))
+          await fs.writeFile('release/manifest.json', `${JSON.stringify({ ...base, version, channel, artifacts }, null, 2)}\n`)
+          NODE
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+      - name: Sign final manifest bytes
+        env:
+          GGR_UPDATE_PRIVATE_KEY: ${{ secrets.GGR_UPDATE_PRIVATE_KEY }}
+        run: node scripts/sign-ggr-backend-manifest.mjs --manifest release/manifest.json --signature release/manifest.sig
+      - name: Publish versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "ggr-backend-v${{ inputs.version }}"
+          release/ggr-backend-*.tar.gz release/manifest.json release/manifest.sig
+          --target "${{ github.sha }}" --title "GGR Backend ${{ inputs.version }}"
+          --generate-notes

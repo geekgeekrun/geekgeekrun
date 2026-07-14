@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "main": "./server.mjs",
+  "scripts": {
+    "test": "node ./test/approval-service-check.mjs && node ./test/browser-service-check.mjs && node ./test/legacy-layout-check.mjs && node ./test/migration-check.mjs && node ./test/read-no-reply-worker-check.mjs && node ./test/records-service-check.mjs && node ./test/server-check.mjs && node ./test/task-service-check.mjs && node ./test/worker-entry-check.mjs"
+  },
   "exports": {
     ".": "./server.mjs"
   },
@@ -14,6 +17,10 @@
     "@geekgeekrun/sqlite-plugin": "workspace:*",
     "@geekgeekrun/utils": "workspace:*",
     "extract-zip": "^2.0.1",
+    "puppeteer": "24.19.0",
+    "puppeteer-extra": "3.3.6",
+    "puppeteer-extra-plugin-anonymize-ua": "2.4.6",
+    "puppeteer-extra-plugin-stealth": "2.11.2",
     "tapable": "^2.2.1"
   },
   "devDependencies": {

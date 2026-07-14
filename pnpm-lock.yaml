@@ -88,6 +88,18 @@ importers:
       extract-zip:
         specifier: ^2.0.1
         version: 2.0.1
+      puppeteer:
+        specifier: 24.19.0
+        version: 24.19.0(typescript@5.9.3)
+      puppeteer-extra:
+        specifier: 3.3.6
+        version: 3.3.6(puppeteer-core@24.19.0)(puppeteer@24.19.0(typescript@5.9.3))
+      puppeteer-extra-plugin-anonymize-ua:
+        specifier: 2.4.6
+        version: 2.4.6(patch_hash=cdca73afa2dff574cd3df5dbf84650e003e41e47d906baa15023a67aa58c9cd2)(playwright-extra@4.3.6)(puppeteer-extra@3.3.6(puppeteer-core@24.19.0)(puppeteer@24.19.0(typescript@5.9.3)))
+      puppeteer-extra-plugin-stealth:
+        specifier: 2.11.2
+        version: 2.11.2(playwright-extra@4.3.6)(puppeteer-extra@3.3.6(puppeteer-core@24.19.0)(puppeteer@24.19.0(typescript@5.9.3)))
       tapable:
         specifier: ^2.2.1
         version: 2.3.3

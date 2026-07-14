@@ -1,5 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { METHODS, PROTOCOL_VERSION, assertHandshake } from '@geekgeekrun/ggr-protocol'
 import { createLogger } from './lib/logger.mjs'
@@ -18,6 +19,7 @@ const DEFAULT_WORKER_ENTRIES = Object.freeze({
   geekAutoStartWithBossMain: fileURLToPath(new URL('./lib/workers/auto-chat.mjs', import.meta.url)),
   readNoReplyAutoReminderMain: fileURLToPath(new URL('./lib/workers/read-no-reply.mjs', import.meta.url))
 })
+const PACKAGE_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
 
 export async function createBackendServer({ socketPath, version, runtimePaths, services = {}, verifyPeer, clock }) {
   if (!runtimePaths) throw new TypeError('runtimePaths are required')
@@ -126,7 +128,7 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const runtimePaths = createRuntimePaths(os.homedir())
-  const backend = await createBackendServer({ socketPath: runtimePaths.backendSocket, version: '1.0.0', runtimePaths })
+  const backend = await createBackendServer({ socketPath: runtimePaths.backendSocket, version: process.env.GGR_BACKEND_VERSION ?? PACKAGE_VERSION, runtimePaths })
   await backend.start()
   const shutdown = async () => { await backend.stop(); process.exit(0) }
   process.once('SIGINT', shutdown)
