@@ -167,6 +167,16 @@ export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
     if (await lstatOrNull(ops, destination)) throw new Error(`Version already exists: ${version}`)
     const temporary = path.join(stagingDir, `${version}-${randomUUID()}`)
     await ops.mkdir(temporary, { mode: DIRECTORY_MODE })
+    let committed = false
+    let discardedCommittedDestination = false
+    const discardCommittedDestination = async () => {
+      const info = await lstatOrNull(ops, destination)
+      if (!info) return
+      if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`Refusing to remove unsafe aborted staging destination: ${destination}`)
+      await ops.rm(destination, { recursive: true, force: false })
+      await syncPath(ops, versionsDir)
+      discardedCommittedDestination = true
+    }
     try {
       await prepare(temporary)
       throwIfAborted()
@@ -175,9 +185,19 @@ export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
       await syncTree(ops, temporary)
       throwIfAborted()
       await ops.rename(temporary, destination)
+      committed = true
+      if (signal?.aborted) {
+        await discardCommittedDestination()
+        throwIfAborted()
+      }
       await syncPath(ops, versionsDir)
+      if (signal?.aborted) {
+        await discardCommittedDestination()
+        throwIfAborted()
+      }
       return destination
     } catch (error) {
+      if (committed && signal?.aborted && !discardedCommittedDestination) await discardCommittedDestination().catch(() => {})
       await ops.rm(temporary, { recursive: true, force: true }).catch(() => {})
       throw error
     }

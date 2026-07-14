@@ -88,6 +88,37 @@ try {
   await delayedService.install({ manifest, deadlineMs: 100 })
   assert.equal((await fs.readdir(path.join(delayedRuntime, 'versions'))).includes('1.0.0'), true, 'cancellation cleanup must not block a same-version retry')
   await fs.rm(delayedRuntime, { recursive: true, force: true })
+
+  const renameRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-delayed-rename-'))
+  const renameDestination = path.join(renameRuntime, 'versions', '2.0.0')
+  const delayedRenameFs = Object.create(fs)
+  let renameCommitted = false
+  delayedRenameFs.rename = async (source, destination) => {
+    if (destination === renameDestination) {
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      const result = await fs.rename(source, destination)
+      renameCommitted = true
+      return result
+    }
+    return fs.rename(source, destination)
+  }
+  const renameStore = createVersionStore(renameRuntime, { fsOps: delayedRenameFs })
+  const renameService = createReleaseService({
+    versionStore: renameStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : url.endsWith('.tar.gz') ? archive : rawManifest }),
+    extract: async () => [
+      { path: 'bin/node', type: 'file', data: Buffer.from('node') },
+      { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}') }
+    ],
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  const delayedRenameManifest = { ...manifest, version: '2.0.0' }
+  await assert.rejects(renameService.install({ manifest: delayedRenameManifest, deadlineMs: 250 }), { code: 'INSTALL_DEADLINE_EXCEEDED' })
+  assert.equal(renameCommitted, true, 'the deadline response waits for a started staging rename to settle')
+  await assert.rejects(fs.lstat(renameDestination), { code: 'ENOENT' }, 'a delayed rename cannot leave a version after the deadline response')
+  await fs.rm(renameRuntime, { recursive: true, force: true })
 } finally {
   await fs.rm(runtime, { recursive: true, force: true })
 }

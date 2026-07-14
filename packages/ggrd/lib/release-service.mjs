@@ -55,17 +55,20 @@ export function createReleaseService({
     install: async ({ manifest, deadlineMs }) => {
       const controller = new AbortController()
       let timer
-      const deadline = new Promise((_, reject) => {
-        if (!Number.isInteger(deadlineMs) || deadlineMs <= 0) return
+      let deadlineError
+      if (Number.isInteger(deadlineMs) && deadlineMs > 0) {
         timer = setTimeout(() => {
-          const error = failure('INSTALL_DEADLINE_EXCEEDED', 'Backend installation exceeded its deadline')
-          controller.abort(error)
-          reject(error)
+          deadlineError = failure('INSTALL_DEADLINE_EXCEEDED', 'Backend installation exceeded its deadline')
+          controller.abort(deadlineError)
         }, deadlineMs)
-      })
-      const installation = installArtifact({ manifest, download, extract, versionStore, freeSpace, signal: controller.signal })
+      }
       try {
-        return await (timer ? Promise.race([installation, deadline]) : installation)
+        const installation = await installArtifact({ manifest, download, extract, versionStore, freeSpace, signal: controller.signal })
+        if (deadlineError) throw deadlineError
+        return installation
+      } catch (error) {
+        if (deadlineError) throw deadlineError
+        throw error
       } finally {
         if (timer) clearTimeout(timer)
       }
