@@ -47,6 +47,22 @@ try {
   await service.install({ manifest })
   assert.equal((await fs.stat(path.join(runtime, 'versions', '1.0.0', 'app', 'server.mjs'))).isFile(), true)
   assert.equal(await store.current(), null, 'release installation stages before supervisor activation')
+
+  const timedRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-deadline-'))
+  const timedStore = createVersionStore(timedRuntime)
+  const timedService = createReleaseService({
+    versionStore: timedStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url, { signal } = {}) => {
+      if (!url.endsWith('.tar.gz')) return { ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : rawManifest }
+      return await new Promise((_, reject) => signal?.addEventListener('abort', () => reject(signal.reason), { once: true }))
+    },
+    extract: service.extract,
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  await assert.rejects(timedService.install({ manifest, deadlineMs: 10 }), { code: 'INSTALL_DEADLINE_EXCEEDED' }, 'download, verification, extraction, staging, and activation share a bounded install deadline')
+  await fs.rm(timedRuntime, { recursive: true, force: true })
 } finally {
   await fs.rm(runtime, { recursive: true, force: true })
 }

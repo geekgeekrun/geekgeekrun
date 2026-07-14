@@ -70,6 +70,25 @@ assert.equal(managerStatus.state, 'quarantined')
   assert.equal(installed.health.ready, true)
   assert.equal(current, '1.0.0', 'first install activates and health-checks the staged backend')
 }
+
+{
+  let elapsed = 0
+  let installerDeadline
+  let activationDeadline
+  const deadlineApi = createSupervisorApi({
+    versionStore: { async current() { return null }, async previous() { return null }, async rollback() {} },
+    processManager: {
+      async activateCandidate(version, { deadlineMs }) { activationDeadline = deadlineMs; return { version, health: { ready: true } } },
+      async stop() {}, status() { return { state: 'stopped' } }
+    },
+    backendClient: { async request() { throw new Error('first install has no backend tasks') } },
+    installer: async ({ manifest, deadlineMs }) => { installerDeadline = deadlineMs; elapsed += 80; return { version: manifest.version } },
+    now: () => elapsed
+  })
+  await deadlineApi.dispatch({ id: 'deadline', method: 'update.install', params: { manifest: { version: '1.0.1' }, deadlineMs: 100 } })
+  assert.equal(installerDeadline, 100, 'release download begins with the full request deadline')
+  assert.equal(activationDeadline, 20, 'activation receives only the remaining request deadline')
+}
 let cancelled = false
 const backendClient = {
   async request(method, params) {

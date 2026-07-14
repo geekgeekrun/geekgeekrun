@@ -43,8 +43,8 @@ export function createReleaseService({
     return verifyManifest({ rawManifest, signature: signature.toString('utf8').trim(), publicKey: trustRoot.publicKey, platform, arch, clientVersion, protocolVersion: PROTOCOL_VERSION })
   }
 
-  async function download({ url }) {
-    const response = await fetchImpl(url)
+  async function download({ url, signal }) {
+    const response = await fetchImpl(url, { signal })
     if (!response?.ok) throw failure('DOWNLOAD_FAILED', 'Backend artifact download failed')
     if (response.body) return { stream: Readable.fromWeb(response.body) }
     return { stream: Readable.from([Buffer.from(await response.arrayBuffer())]) }
@@ -52,6 +52,23 @@ export function createReleaseService({
 
   return Object.freeze({
     checkForUpdates,
-    install: async ({ manifest }) => installArtifact({ manifest, download, extract, versionStore, freeSpace })
+    install: async ({ manifest, deadlineMs }) => {
+      const controller = new AbortController()
+      let timer
+      const deadline = new Promise((_, reject) => {
+        if (!Number.isInteger(deadlineMs) || deadlineMs <= 0) return
+        timer = setTimeout(() => {
+          const error = failure('INSTALL_DEADLINE_EXCEEDED', 'Backend installation exceeded its deadline')
+          controller.abort(error)
+          reject(error)
+        }, deadlineMs)
+      })
+      const installation = installArtifact({ manifest, download, extract, versionStore, freeSpace, signal: controller.signal })
+      try {
+        return await (timer ? Promise.race([installation, deadline]) : installation)
+      } finally {
+        if (timer) clearTimeout(timer)
+      }
+    }
   })
 }

@@ -221,17 +221,17 @@ async function regularFile(target) {
   return Boolean(info?.isFile() && !info.isSymbolicLink())
 }
 
-async function downloadToFile({ url, download, destination, artifact, metadataPath }) {
+async function downloadToFile({ url, download, destination, artifact, metadataPath, signal }) {
   let resume = await readPartial(destination, metadataPath, artifact)
   if (!resume) await removePartial(destination, metadataPath)
-  let result = streamFrom(await (download ?? fetchDownload)({ url, resume }))
+  let result = streamFrom(await (download ?? fetchDownload)({ url, resume, signal }))
   if (result.url) httpsUrl(result.url, 'Downloaded artifact URL')
   if (resume && result.resumeValidated !== true) {
     // A range response is only trusted after the server validated the stored
     // ETag/Last-Modified validator. Otherwise start from signed byte zero.
     await removePartial(destination, metadataPath)
     resume = null
-    result = streamFrom(await (download ?? fetchDownload)({ url, resume }))
+    result = streamFrom(await (download ?? fetchDownload)({ url, resume, signal }))
     if (result.url) httpsUrl(result.url, 'Downloaded artifact URL')
   }
   const maximumBytes = artifact.size + ARTIFACT_FRAMING_ALLOWANCE
@@ -276,7 +276,7 @@ async function downloadToFile({ url, download, destination, artifact, metadataPa
  * Downloads and verifies an artifact, then stages it. Installation never points
  * `current` at the new version; callers activate only after their health check.
  */
-export async function installArtifact({ manifest, download, extract, versionStore, freeSpace } = {}) {
+export async function installArtifact({ manifest, download, extract, versionStore, freeSpace, signal } = {}) {
   if (!versionStore?.stage || !versionStore?.stagingDir) throw new TypeError('A version store is required')
   if (extract !== undefined && typeof extract !== 'function') throw new TypeError('extract must be a function')
   const { artifact, extractedSize } = installArtifactMetadata(manifest)
@@ -290,7 +290,7 @@ export async function installArtifact({ manifest, download, extract, versionStor
   const archive = path.join(versionStore.stagingDir, `${downloadKey}.part`)
   const metadataPath = path.join(versionStore.stagingDir, `${downloadKey}.json`)
   const destination = await versionStore.stage(manifest.version, async (stagingDirectory) => {
-    await downloadToFile({ url: artifact.url, download, destination: archive, artifact, metadataPath })
+    await downloadToFile({ url: artifact.url, download, destination: archive, artifact, metadataPath, signal })
     await extractSafely({ archive, extract, destination: stagingDirectory, maximumBytes: extractedSize })
     await validateExtractedTree(stagingDirectory, extractedSize)
     if (!await regularFile(path.join(stagingDirectory, 'bin', 'node')) || !await regularFile(path.join(stagingDirectory, 'app', 'server.mjs'))) {

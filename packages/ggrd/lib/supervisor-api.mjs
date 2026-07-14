@@ -132,16 +132,22 @@ export function createSupervisorApi({ versionStore, processManager, backendClien
     if (typeof installer !== 'function') throw failure('INSTALLER_UNAVAILABLE', 'No installer is configured')
     return serializeInstall(async () => {
       state = 'installing'; candidate = params.manifest.version; progress = 'staging'; lastFailure = null
+      const deadlineAt = now() + params.deadlineMs
+      const remainingDeadline = () => {
+        const remaining = deadlineAt - now()
+        if (remaining <= 0) throw failure('INSTALL_DEADLINE_EXCEEDED', 'Backend installation exceeded its deadline')
+        return remaining
+      }
       try {
-        const installed = await installer({ manifest: params.manifest, correlationId })
+        const installed = await installer({ manifest: params.manifest, correlationId, deadlineMs: remainingDeadline() })
         if (!installed || installed.version !== candidate) throw failure('INSTALL_FAILED', 'Installer did not return the requested candidate version')
         const current = await versionStore.current()
         if (current) {
           progress = 'draining'
-          await drainTasks({ deadlineMs: params.deadlineMs, cancelRunningTasks: Boolean(params.cancelRunningTasks), correlationId })
+          await drainTasks({ deadlineMs: remainingDeadline(), cancelRunningTasks: Boolean(params.cancelRunningTasks), correlationId })
         }
         progress = 'activating'
-        const result = await processManager.activateCandidate(candidate, { deadlineMs: params.deadlineMs, correlationId })
+        const result = await processManager.activateCandidate(candidate, { deadlineMs: remainingDeadline(), correlationId })
         // A successful activation is a fresh backend process, which starts with
         // task admission enabled; do not send a post-activation control message
         // to a potentially stale socket.
