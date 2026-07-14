@@ -300,6 +300,11 @@ const blockCompanyNameRegExp = (() => {
   }
 })()
 const blockCompanyNameRegMatchStrategy = readConfigFile('boss.json').blockCompanyNameRegMatchStrategy ?? MarkAsNotSuitOp.NO_OP
+const resumeImageConfig = readConfigFile('boss.json')
+const sendResumeImageAfterGreeting = resumeImageConfig.sendResumeImageAfterGreeting === true
+const resumeImagePath = typeof resumeImageConfig.resumeImagePath === 'string'
+  ? resumeImageConfig.resumeImagePath.trim()
+  : ''
 
 /**
  * @type { import('puppeteer').Browser }
@@ -313,6 +318,241 @@ let page
 const blockBossNotNewChat = new Set()
 const blockBossNotActive = new Set()
 const blockJobNotSuit = new Set()
+
+const chatImageInputSelectors = [
+  '.toolbar-btn-content.icon.btn-sendimg input[type="file"]',
+  '[class*="sendimg"] input[type="file"]',
+  '.chat-conversation .message-controls input[type="file"]',
+  'input[type="file"][accept*="image"]'
+]
+const chatImageTriggerSelectors = [
+  '.toolbar-btn-content.icon.btn-sendimg',
+  '[class*="sendimg"]',
+  '.chat-conversation .message-controls [class*="upload"]'
+]
+
+const sentImageSelectors = [
+  // The current BOSS chat UI marks outgoing bubbles with `.item-myself`.
+  // Keep the older selectors too, because BOSS ships its chat DOM gradually.
+  '.item-myself img',
+  '.item-myself [class*="image"] img',
+  '.chat-message .message-item.is-self img',
+  '.chat-message .message-item-self img',
+  '.chat-list .message-item.is-self img',
+  '.chat-list .message-item-self img'
+]
+const bossChatUiUrl = 'https://www.zhipin.com/web/geek/chat'
+
+function normaliseChatUrl (value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return ''
+  }
+  try {
+    const url = new URL(value, 'https://www.zhipin.com')
+    return url.pathname.includes('/geek/chat') ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+function findChatUrlDeep (value, seen = new Set()) {
+  if (typeof value === 'string') {
+    return normaliseChatUrl(value)
+  }
+  if (!value || typeof value !== 'object' || seen.has(value)) {
+    return ''
+  }
+  seen.add(value)
+  for (const item of Object.values(value)) {
+    const chatUrl = findChatUrlDeep(item, seen)
+    if (chatUrl) {
+      return chatUrl
+    }
+  }
+  return ''
+}
+
+async function getChatUrlFromStartChatButton (startChatButtonProxy) {
+  const rawUrl = await startChatButtonProxy.evaluate((el) => {
+    return el.getAttribute('redirect-url') ||
+      el.dataset.redirectUrl ||
+      el.getAttribute('href') ||
+      el.getAttribute('data-url') ||
+      el.dataset.url ||
+      ''
+  })
+  return normaliseChatUrl(rawUrl)
+}
+
+async function findChatImageInput (chatPage) {
+  const findExistingInput = async () => {
+    for (const selector of chatImageInputSelectors) {
+      const input = await chatPage.$(selector)
+      if (input) {
+        return input
+      }
+    }
+    return null
+  }
+
+  const existingInput = await findExistingInput()
+  if (existingInput) {
+    return existingInput
+  }
+
+  // BOSS may not mount its hidden file input until the image toolbar action is opened.
+  for (const selector of chatImageTriggerSelectors) {
+    const trigger = await chatPage.$(selector)
+    if (trigger) {
+      await trigger.click().catch(() => void 0)
+      break
+    }
+  }
+  try {
+    await chatPage.waitForFunction((selectors) => {
+      return selectors.some((selector) => document.querySelector(selector))
+    }, { timeout: 5000 }, chatImageInputSelectors)
+    return await findExistingInput()
+  } catch {
+    return null
+  }
+}
+
+async function selectGreetedConversation (chatPage, targetJobData) {
+  const encryptJobId = targetJobData?.jobInfo?.encryptId
+  if (!encryptJobId) {
+    throw new Error('missing job ID for chat conversation selection')
+  }
+
+  await chatPage.waitForFunction(() => {
+    return Array.isArray(document.querySelector('.main-wrap .chat-user')?.__vue__?.list)
+  }, { timeout: 30000 })
+
+  let conversationIndex = -1
+  const deadline = Date.now() + 8000
+  while (Date.now() < deadline && conversationIndex < 0) {
+    conversationIndex = await chatPage.evaluate((jobId) => {
+      const list = document.querySelector('.main-wrap .chat-user')?.__vue__?.list ?? []
+      return list.findIndex((item) => item.encryptJobId === jobId)
+    }, encryptJobId)
+    if (conversationIndex < 0) {
+      await sleep(250)
+    }
+  }
+  if (conversationIndex < 0) {
+    throw new Error(`greeted conversation was not found for job ${encryptJobId}`)
+  }
+
+  await chatPage.evaluate((index) => {
+    document.querySelector('.chat-content .user-list .user-list-content')?.__vue__?.scrollToIndex(index)
+  }, conversationIndex)
+  await sleep(400)
+  const conversationItem = (await chatPage.evaluateHandle((jobId) => {
+    const items = document.querySelectorAll('.main-wrap .chat-user .user-list-content ul[role=group] li[role=listitem]')
+    return [...items].find((item) => item.__vue__?.source?.encryptJobId === jobId) ?? null
+  }, encryptJobId)).asElement()
+  if (!conversationItem) {
+    throw new Error(`greeted conversation element was not rendered for job ${encryptJobId}`)
+  }
+  await Promise.all([
+    chatPage.waitForResponse((response) => response.url().startsWith('https://www.zhipin.com/wapi/zpchat/geek/historyMsg'), { timeout: 30000 }),
+    conversationItem.click()
+  ])
+}
+
+async function sendResumeImageInTemporaryChat (chatUrl, targetJobData) {
+  if (!sendResumeImageAfterGreeting) {
+    return
+  }
+  if (!fs.existsSync(resumeImagePath)) {
+    console.warn('[resume-image] skipped: configured image does not exist', {
+      resumeImagePath,
+      jobId: targetJobData?.jobInfo?.encryptId,
+      bossId: targetJobData?.jobInfo?.encryptUserId
+    })
+    return
+  }
+  let chatPage
+  try {
+    chatPage = await browser.newPage()
+    // Keep this short-lived page visible while it selects the conversation and uploads the image.
+    // The search page is restored in finally without navigating it away from its current job list.
+    await chatPage.bringToFront()
+    await chatPage.goto(chatUrl || bossChatUiUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    if (!normaliseChatUrl(chatPage.url())) {
+      throw new Error(`unexpected chat page URL: ${chatPage.url()}`)
+    }
+    if (!chatUrl) {
+      console.log('[resume-image] no direct chat URL; selecting the greeted conversation from the chat list', {
+        jobId: targetJobData?.jobInfo?.encryptId,
+        bossId: targetJobData?.jobInfo?.encryptUserId
+      })
+      await selectGreetedConversation(chatPage, targetJobData)
+    }
+
+    const beforeImageCount = await chatPage.evaluate((selectors) => {
+      return selectors.reduce((count, selector) => count + document.querySelectorAll(selector).length, 0)
+    }, sentImageSelectors)
+    const fileInput = await findChatImageInput(chatPage)
+    if (!fileInput) {
+      throw new Error('chat image file input was not found')
+    }
+
+    await fileInput.uploadFile(resumeImagePath)
+    // Puppeteer's uploadFile uses CDP DOM.setFileInputFiles. Unlike a user file
+    // selection, that API does not dispatch DOM events, so BOSS never starts its
+    // image-upload handler unless we explicitly emit them.
+    await fileInput.evaluate((input) => {
+      input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const confirmationDeadline = Date.now() + 8000
+    let confirmed = false
+    let fileConsumed = false
+    while (Date.now() < confirmationDeadline) {
+      await sleep(250)
+      const state = await chatPage.evaluate((inputSelectors, selectors) => {
+        const input = inputSelectors
+          .map((selector) => document.querySelector(selector))
+          .find(Boolean)
+        return {
+          fileConsumed: !input?.files || input.files.length === 0,
+          sentImageCount: selectors.reduce((count, selector) => count + document.querySelectorAll(selector).length, 0)
+        }
+      }, chatImageInputSelectors, sentImageSelectors).catch(() => ({ fileConsumed: false, sentImageCount: beforeImageCount }))
+      fileConsumed = fileConsumed || state.fileConsumed
+      // Clearing the file input only means that the UI accepted the selection.
+      // Do not close the temporary page until the outgoing image bubble exists:
+      // closing earlier cancels BOSS's asynchronous upload request.
+      if (state.sentImageCount > beforeImageCount) {
+        confirmed = true
+        break
+      }
+    }
+    if (confirmed) {
+      console.log('[resume-image] sent after greeting', {
+        jobId: targetJobData?.jobInfo?.encryptId,
+        bossId: targetJobData?.jobInfo?.encryptUserId
+      })
+    } else {
+      console.warn('[resume-image] upload was not confirmed before the temporary chat closed; it will not be retried', {
+        jobId: targetJobData?.jobInfo?.encryptId,
+        bossId: targetJobData?.jobInfo?.encryptUserId,
+        fileConsumed
+      })
+    }
+  } catch (err) {
+    console.warn('[resume-image] failed after greeting; continuing search flow', {
+      jobId: targetJobData?.jobInfo?.encryptId,
+      bossId: targetJobData?.jobInfo?.encryptUserId,
+      error: err instanceof Error ? err.message : String(err)
+    })
+  } finally {
+    await chatPage?.close().catch(() => void 0)
+    await page?.bringToFront().catch(() => void 0)
+  }
+}
 
 async function markJobAsNotSuitInRecommendPage (reasonCode) {
   /**
@@ -1522,6 +1762,9 @@ async function toRecommendPage (hooks) {
 
           await hooks.newChatWillStartup?.promise(targetJobData)
           const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
+          const chatUrlFromStartButton = startChatButtonProxy
+            ? await getChatUrlFromStartChatButton(startChatButtonProxy)
+            : ''
           await sleep(500)
           //#region click the chat button
           await startChatButtonProxy.click()
@@ -1553,7 +1796,7 @@ async function toRecommendPage (hooks) {
               }
             }
           }
-          const waitAndHandleChatSuccess = async ({ hasGoToChatPage = false } = {}) => {
+          const waitAndHandleChatSuccess = async ({ hasGoToChatPage = false, chatUrl = '' } = {}) => {
             await hooks.newChatStartup?.promise(
               targetJobData,
               {
@@ -1577,10 +1820,14 @@ async function toRecommendPage (hooks) {
               await closeDialogButtonProxy.click()
               await sleepWithRandomDelay(2000)
             }
+            await sendResumeImageInTemporaryChat(chatUrl, targetJobData)
           }
           const handleAddFriendResponse = async (res, { hasGoToChatPage = false } = {}) => {
             if (res.code === 0) {
-              await waitAndHandleChatSuccess({ hasGoToChatPage })
+              await waitAndHandleChatSuccess({
+                hasGoToChatPage,
+                chatUrl: chatUrlFromStartButton || findChatUrlDeep(res)
+              })
             }
             else if (
               res.zpData.bizCode === 1 &&
