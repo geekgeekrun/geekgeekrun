@@ -85,4 +85,12 @@ for (const [name, value, expected] of [
   }).version, '1.2.3', 'a stable release sorts after its prereleases')
 }
 
+{
+  const { rawManifest, signature } = signed(manifest({ minClientVersion: '9007199254740993.0.0' }))
+  assert.throws(() => verifyManifest({
+    rawManifest, signature, publicKey,
+    platform: 'linux', arch: 'x64', clientVersion: '9007199254740992.0.0', protocolVersion: 1
+  }), { code: 'CLIENT_VERSION_UNSUPPORTED' }, 'large core SemVer identifiers retain their exact decimal precedence')
+}
+
 console.log('ggrd manifest check passed')

@@ -30,7 +30,7 @@ function semver(value) {
   if (parts.some((part) => part.length > 1 && part.startsWith('0'))) return null
   const prerelease = match[4]?.split('.') ?? null
   if (prerelease?.some((identifier) => !/^[0-9A-Za-z-]+$/.test(identifier) || (/^\d+$/.test(identifier) && identifier.length > 1 && identifier.startsWith('0')))) return null
-  return { parts: parts.map(Number), prerelease }
+  return { parts, prerelease }
 }
 
 function compareNumericIdentifiers(left, right) {
@@ -42,7 +42,9 @@ function compareVersions(left, right) {
   const a = semver(left)
   const b = semver(right)
   if (!a || !b) fail('MANIFEST_INVALID', 'Client and manifest versions must be semantic versions')
-  for (let index = 0; index < 3; index++) if (a.parts[index] !== b.parts[index]) return a.parts[index] - b.parts[index]
+  for (let index = 0; index < 3; index++) {
+    if (a.parts[index] !== b.parts[index]) return compareNumericIdentifiers(a.parts[index], b.parts[index])
+  }
   if (a.prerelease === b.prerelease) return 0
   if (a.prerelease === null) return 1
   if (b.prerelease === null) return -1
