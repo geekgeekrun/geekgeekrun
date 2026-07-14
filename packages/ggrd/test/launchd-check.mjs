@@ -27,7 +27,7 @@ const plist = createLaunchAgentPlist({
   label: 'com.geekgeekrun.ggrd'
 })
 assert.match(plist, /<string>com\.geekgeekrun\.ggrd<\/string>/)
-assert.match(plist, new RegExp(`<string>${runtimePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/bin/node</string>`))
+assert.match(plist, new RegExp(`<string>${runtimePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/runtime/bin/node</string>`))
 assert.match(plist, new RegExp(`<string>${runtimePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/server\\.mjs</string>`))
 assert.match(plist, /\.geekgeekrun\/logs\/ggrd\.stdout\.log/)
 assert.match(plist, /\.geekgeekrun\/logs\/ggrd\.stderr\.log/)

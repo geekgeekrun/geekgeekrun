@@ -81,6 +81,7 @@ if (process.env.NODE_ENV) {
 
 export default defineConfig({
   main: {
+    resolve: { alias: { '@geekgeekrun/utils': resolve('src/common/ui-utils') } },
     build: {
       rollupOptions: {
         external: []
@@ -91,6 +92,7 @@ export default defineConfig({
     plugins: mainPlugins
   },
   preload: {
+    resolve: { alias: { '@geekgeekrun/utils': resolve('src/common/ui-utils') } },
     plugins: preloadPlugins,
     build: {
       minify: process.env.NODE_ENV === 'development' ? undefined : 'terser',
@@ -98,9 +100,11 @@ export default defineConfig({
     }
   },
   renderer: {
+    resolve: { alias: { '@geekgeekrun/utils': resolve('src/common/ui-utils') } },
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        '@geekgeekrun/utils': resolve('src/common/ui-utils')
       }
     },
     plugins: rendererPlugins,

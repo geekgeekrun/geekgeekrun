@@ -61,7 +61,6 @@
       "sharp"
     ],
     "patchedDependencies": {
-      "find-chrome-bin@2.0.4": "patches/find-chrome-bin@2.0.4.patch",
       "puppeteer-extra-plugin-anonymize-ua@2.4.6": "patches/puppeteer-extra-plugin-anonymize-ua@2.4.6.patch"
     }
   }

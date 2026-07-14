@@ -30,7 +30,6 @@
     "@geekgeekrun/ggr-client": "workspace:*",
     "@geekgeekrun/ggrd": "workspace:*",
     "@geekgeekrun/ggr-protocol": "workspace:*",
-    "@geekgeekrun/utils": "workspace:*",
     "JSONStream": "^1.3.5",
     "diff": "^7.0.0",
     "electron-updater": "^6.1.7",

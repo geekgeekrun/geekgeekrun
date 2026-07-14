@@ -91,7 +91,7 @@ export function createLaunchAgentPlist({
     plistKey('Label', label),
     '  <key>ProgramArguments</key>',
     '  <array>',
-    `    <string>${xml(path.join(bootstrapDirectory, 'bin', 'node'))}</string>`,
+    `    <string>${xml(path.join(bootstrapDirectory, 'runtime', 'bin', 'node'))}</string>`,
     '    <string>--use-env-proxy</string>',
     `    <string>${xml(path.join(bootstrapDirectory, 'server.mjs'))}</string>`,
     '  </array>',
