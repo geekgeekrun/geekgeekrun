@@ -155,9 +155,13 @@ export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
 
   async function ready() { await prepareLayout(); await recoverPointers() }
 
-  async function stage(version, prepare) {
+  async function stage(version, prepare, { signal } = {}) {
+    const throwIfAborted = () => {
+      if (signal?.aborted) throw signal.reason ?? Object.assign(new Error('Version staging was cancelled'), { code: 'INSTALL_DEADLINE_EXCEEDED' })
+    }
     assertVersion(version)
     if (typeof prepare !== 'function') throw new TypeError('stage requires a preparation function')
+    throwIfAborted()
     await ready()
     const destination = path.join(versionsDir, version)
     if (await lstatOrNull(ops, destination)) throw new Error(`Version already exists: ${version}`)
@@ -165,8 +169,11 @@ export function createVersionStore(runtimeDir, { fsOps = fs } = {}) {
     await ops.mkdir(temporary, { mode: DIRECTORY_MODE })
     try {
       await prepare(temporary)
+      throwIfAborted()
       await validateRuntimeTree(ops, temporary)
+      throwIfAborted()
       await syncTree(ops, temporary)
+      throwIfAborted()
       await ops.rename(temporary, destination)
       await syncPath(ops, versionsDir)
       return destination

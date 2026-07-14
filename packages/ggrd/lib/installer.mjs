@@ -16,6 +16,10 @@ export class InstallerError extends Error {
 
 function fail(code, message) { throw new InstallerError(code, message) }
 
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw signal.reason ?? new InstallerError('INSTALL_DEADLINE_EXCEEDED', 'Backend installation was cancelled')
+}
+
 function httpsUrl(value, label = 'URL') {
   let url
   try { url = new URL(value) } catch { fail('URL_INVALID', `${label} is invalid`) }
@@ -180,15 +184,18 @@ async function writeArchiveFile(root, parts, data, limits) {
   } finally { await handle.close() }
 }
 
-async function extractSafely({ archive, extract, destination, maximumBytes }) {
+async function extractSafely({ archive, extract, destination, maximumBytes, signal }) {
   // Extractor adapters are parsers only: they receive no destination path and
   // return entries for this module to validate and write itself.
-  const entries = await extract(Object.freeze({ archive, maxBytes: maximumBytes }))
+  throwIfAborted(signal)
+  const entries = await extract(Object.freeze({ archive, maxBytes: maximumBytes, signal }))
+  throwIfAborted(signal)
   if (!entries || (typeof entries[Symbol.iterator] !== 'function' && typeof entries[Symbol.asyncIterator] !== 'function')) {
     fail('EXTRACTOR_INVALID', 'Extractor must return an iterable of archive entries')
   }
   const limits = { total: 0, maximum: maximumBytes }
   for await (const entry of entries) {
+    throwIfAborted(signal)
     if (!entry || typeof entry !== 'object') fail('EXTRACTOR_INVALID', 'Extractor returned an invalid archive entry')
     const parts = extractionParts(entry.path)
     if (entry.type === 'directory') {
@@ -222,6 +229,7 @@ async function regularFile(target) {
 }
 
 async function downloadToFile({ url, download, destination, artifact, metadataPath, signal }) {
+  throwIfAborted(signal)
   let resume = await readPartial(destination, metadataPath, artifact)
   if (!resume) await removePartial(destination, metadataPath)
   let result = streamFrom(await (download ?? fetchDownload)({ url, resume, signal }))
@@ -244,6 +252,7 @@ async function downloadToFile({ url, download, destination, artifact, metadataPa
   const file = await fs.open(destination, resume ? 'a' : 'w', 0o600)
   try {
     for await (const value of result.stream) {
+      throwIfAborted(signal)
       const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value)
       received += bytes.length
       if (received > maximumBytes) fail('ARTIFACT_TOO_LARGE', 'Artifact exceeds its signed size allowance')
@@ -277,6 +286,7 @@ async function downloadToFile({ url, download, destination, artifact, metadataPa
  * `current` at the new version; callers activate only after their health check.
  */
 export async function installArtifact({ manifest, download, extract, versionStore, freeSpace, signal } = {}) {
+  throwIfAborted(signal)
   if (!versionStore?.stage || !versionStore?.stagingDir) throw new TypeError('A version store is required')
   if (extract !== undefined && typeof extract !== 'function') throw new TypeError('extract must be a function')
   const { artifact, extractedSize } = installArtifactMetadata(manifest)
@@ -290,13 +300,18 @@ export async function installArtifact({ manifest, download, extract, versionStor
   const archive = path.join(versionStore.stagingDir, `${downloadKey}.part`)
   const metadataPath = path.join(versionStore.stagingDir, `${downloadKey}.json`)
   const destination = await versionStore.stage(manifest.version, async (stagingDirectory) => {
+    throwIfAborted(signal)
     await downloadToFile({ url: artifact.url, download, destination: archive, artifact, metadataPath, signal })
-    await extractSafely({ archive, extract, destination: stagingDirectory, maximumBytes: extractedSize })
+    throwIfAborted(signal)
+    await extractSafely({ archive, extract, destination: stagingDirectory, maximumBytes: extractedSize, signal })
+    throwIfAborted(signal)
     await validateExtractedTree(stagingDirectory, extractedSize)
+    throwIfAborted(signal)
     if (!await regularFile(path.join(stagingDirectory, 'bin', 'node')) || !await regularFile(path.join(stagingDirectory, 'app', 'server.mjs'))) {
       fail('ARTIFACT_LAYOUT_INVALID', 'Extracted artifact must contain bin/node and app/server.mjs')
     }
-  })
+  }, { signal })
+  throwIfAborted(signal)
   await removePartial(archive, metadataPath)
   return Object.freeze({ version: manifest.version, path: destination })
 }
