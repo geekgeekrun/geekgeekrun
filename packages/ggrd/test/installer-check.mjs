@@ -6,10 +6,23 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { createVersionStore } from '../lib/version-store.mjs'
-import { installArtifact } from '../lib/installer.mjs'
+import { installArtifact, validateExtractedTree } from '../lib/installer.mjs'
 
 const runtimeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-installer-'))
 const store = createVersionStore(runtimeDir)
+
+{
+  const validationRoot = path.join(runtimeDir, 'slow-validation')
+  let current = validationRoot
+  for (let index = 0; index < 300; index++) {
+    current = path.join(current, 'd')
+    await fs.mkdir(current, { recursive: true })
+    await fs.writeFile(path.join(current, 'f'), 'x')
+  }
+  const controller = new AbortController()
+  setTimeout(() => controller.abort(Object.assign(new Error('deadline'), { code: 'INSTALL_DEADLINE_EXCEEDED' })), 1)
+  await assert.rejects(validateExtractedTree(validationRoot, Number.MAX_SAFE_INTEGER, controller.signal), { code: 'INSTALL_DEADLINE_EXCEEDED' }, 'deep validation must observe cancellation while walking directory entries')
+}
 
 async function executableTree(directory) {
   await fs.mkdir(path.join(directory, 'bin'), { recursive: true })

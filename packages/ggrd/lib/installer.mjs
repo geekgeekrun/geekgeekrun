@@ -207,10 +207,12 @@ async function extractSafely({ archive, extract, destination, maximumBytes, sign
   }
 }
 
-async function validateExtractedTree(target, maximumBytes) {
+export async function validateExtractedTree(target, maximumBytes, signal) {
   let total = 0
   async function visit(current) {
+    throwIfAborted(signal)
     const info = await fs.lstat(current)
+    throwIfAborted(signal)
     if (info.isSymbolicLink()) fail('EXTRACTION_UNSAFE', `Archive created a symbolic link: ${current}`)
     if (info.isFile()) {
       total += info.size
@@ -218,7 +220,11 @@ async function validateExtractedTree(target, maximumBytes) {
       return
     }
     if (!info.isDirectory()) fail('EXTRACTION_UNSAFE', `Archive created an unsupported file type: ${current}`)
-    for (const name of await fs.readdir(current)) await visit(path.join(current, name))
+    const names = await fs.readdir(current)
+    for (const name of names) {
+      throwIfAborted(signal)
+      await visit(path.join(current, name))
+    }
   }
   await visit(target)
 }
@@ -305,7 +311,7 @@ export async function installArtifact({ manifest, download, extract, versionStor
     throwIfAborted(signal)
     await extractSafely({ archive, extract, destination: stagingDirectory, maximumBytes: extractedSize, signal })
     throwIfAborted(signal)
-    await validateExtractedTree(stagingDirectory, extractedSize)
+    await validateExtractedTree(stagingDirectory, extractedSize, signal)
     throwIfAborted(signal)
     if (!await regularFile(path.join(stagingDirectory, 'bin', 'node')) || !await regularFile(path.join(stagingDirectory, 'app', 'server.mjs'))) {
       fail('ARTIFACT_LAYOUT_INVALID', 'Extracted artifact must contain bin/node and app/server.mjs')
