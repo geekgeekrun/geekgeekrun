@@ -26,7 +26,16 @@ function signatureBytes(value) {
 function semver(value) {
   const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(value)
   if (!match) return null
-  return { parts: match.slice(1, 4).map(Number), prerelease: match[4] ?? null }
+  const parts = match.slice(1, 4)
+  if (parts.some((part) => part.length > 1 && part.startsWith('0'))) return null
+  const prerelease = match[4]?.split('.') ?? null
+  if (prerelease?.some((identifier) => !/^[0-9A-Za-z-]+$/.test(identifier) || (/^\d+$/.test(identifier) && identifier.length > 1 && identifier.startsWith('0')))) return null
+  return { parts: parts.map(Number), prerelease }
+}
+
+function compareNumericIdentifiers(left, right) {
+  if (left.length !== right.length) return left.length > right.length ? 1 : -1
+  return left === right ? 0 : left > right ? 1 : -1
 }
 
 function compareVersions(left, right) {
@@ -37,7 +46,21 @@ function compareVersions(left, right) {
   if (a.prerelease === b.prerelease) return 0
   if (a.prerelease === null) return 1
   if (b.prerelease === null) return -1
-  return a.prerelease.localeCompare(b.prerelease, 'en')
+  const count = Math.max(a.prerelease.length, b.prerelease.length)
+  for (let index = 0; index < count; index++) {
+    const left = a.prerelease[index]
+    const right = b.prerelease[index]
+    if (left === undefined) return -1
+    if (right === undefined) return 1
+    if (left === right) continue
+    const leftNumeric = /^\d+$/.test(left)
+    const rightNumeric = /^\d+$/.test(right)
+    if (leftNumeric && rightNumeric) return compareNumericIdentifiers(left, right)
+    if (leftNumeric) return -1
+    if (rightNumeric) return 1
+    return left < right ? -1 : 1
+  }
+  return 0
 }
 
 function protocolRange(manifest) {

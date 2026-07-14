@@ -64,4 +64,25 @@ for (const [name, value, expected] of [
   assert.throws(() => verifyManifest(options), { code: expected }, name)
 }
 
+{
+  const { rawManifest, signature } = signed(manifest({ minClientVersion: '1.0.0-alpha.10' }))
+  assert.throws(() => verifyManifest({
+    rawManifest, signature, publicKey,
+    platform: 'linux', arch: 'x64', clientVersion: '1.0.0-alpha.2', protocolVersion: 1
+  }), { code: 'CLIENT_VERSION_UNSUPPORTED' }, 'numeric prerelease identifiers use numeric SemVer precedence')
+}
+
+{
+  const numeric = signed(manifest({ minClientVersion: '1.0.0-alpha.beta' }))
+  assert.throws(() => verifyManifest({
+    rawManifest: numeric.rawManifest, signature: numeric.signature, publicKey,
+    platform: 'linux', arch: 'x64', clientVersion: '1.0.0-alpha.1', protocolVersion: 1
+  }), { code: 'CLIENT_VERSION_UNSUPPORTED' }, 'numeric prerelease identifiers sort before nonnumeric identifiers')
+  const stable = signed(manifest({ minClientVersion: '1.0.0-alpha.1' }))
+  assert.equal(verifyManifest({
+    rawManifest: stable.rawManifest, signature: stable.signature, publicKey,
+    platform: 'linux', arch: 'x64', clientVersion: '1.0.0', protocolVersion: 1
+  }).version, '1.2.3', 'a stable release sorts after its prereleases')
+}
+
 console.log('ggrd manifest check passed')

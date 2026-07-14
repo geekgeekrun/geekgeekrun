@@ -39,6 +39,13 @@ try {
   assert.deepEqual((await fs.readdir(path.join(runtimeDir, 'versions'))).sort(), ['1.0.0', '2.0.0'])
 
   await store.stage('3.1.0', executableTree)
+  const unjournaledCurrentNext = path.join(runtimeDir, 'current.next')
+  await fs.symlink(path.join('versions', '3.1.0'), unjournaledCurrentNext)
+  await assert.rejects(store.activate('3.1.0'), /Unjournaled version pointer transaction collision/)
+  assert.equal(await fs.readlink(path.join(runtimeDir, 'current')), path.join('versions', '1.0.0'))
+  assert.equal(await fs.readlink(path.join(runtimeDir, 'previous')), path.join('versions', '2.0.0'))
+  await fs.unlink(unjournaledCurrentNext)
+
   const failingOps = Object.create(fs)
   failingOps.rename = async (source, destination) => {
     if (source.endsWith(`${path.sep}current.next`) && destination.endsWith(`${path.sep}current`)) throw new Error('simulated current swap failure')
