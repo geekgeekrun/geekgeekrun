@@ -5,8 +5,8 @@ MCowBQYDK2VwAyEAZ7McdxYF5TiZtfpsLXkJRr2UFkY2YNqdRp95TfJdHbw=
 -----END PUBLIC KEY-----`
 
 export const CHANNEL_MANIFEST_ENDPOINTS = Object.freeze({
-  stable: 'https://updates.geekgeekrun.com/ggrd/stable/manifest.json',
-  beta: 'https://updates.geekgeekrun.com/ggrd/beta/manifest.json'
+  stable: 'https://github.com/geekgeekrun/geekgeekrun/releases/download/ggrd-stable/manifest.json',
+  beta: 'https://github.com/geekgeekrun/geekgeekrun/releases/download/ggrd-beta/manifest.json'
 })
 
 export function createTrustRoot({ publicKey = RELEASE_PUBLIC_KEY, manifestEndpoints = CHANNEL_MANIFEST_ENDPOINTS } = {}) {

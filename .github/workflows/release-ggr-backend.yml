@@ -21,11 +21,11 @@ jobs:
   verify:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:
           version: 10.33.2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20.16.0
           cache: pnpm
@@ -47,11 +47,11 @@ jobs:
             arch: x64
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:
           version: 10.33.2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20.16.0
           architecture: ${{ matrix.arch }}
@@ -65,6 +65,47 @@ jobs:
         run: >-
           pnpm build:ggr-backend-artifact -- --version "${{ inputs.version }}"
           --channel "${{ inputs.channel }}" --codesign-identity "$GGR_SIGNING_IDENTITY"
+      - name: Extract and health-check the production artifact
+        env:
+          VERSION: ${{ inputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          staging="$(mktemp -d)"
+          backend_pid=''
+          cleanup() {
+            [ -z "$backend_pid" ] || kill "$backend_pid" 2>/dev/null || true
+            rm -rf "$staging"
+          }
+          trap cleanup EXIT
+          tar -xzf "dist/ggr-backend/$VERSION/ggr-backend-$VERSION-darwin-$ARCH.tar.gz" -C "$staging"
+          test -x "$staging/bin/node"
+          test -f "$staging/app/server.mjs"
+          (cd "$staging" && HOME="$staging/home" ./bin/node app/server.mjs) &
+          backend_pid="$!"
+          export SOCKET_PATH="$staging/home/.geekgeekrun/run/backend.sock"
+          export VERSION
+          "$staging/bin/node" --input-type=module <<'NODE'
+          import net from 'node:net'
+          const requestHealth = () => new Promise((resolve, reject) => {
+            const socket = net.createConnection(process.env.SOCKET_PATH)
+            let buffer = ''
+            socket.once('error', reject)
+            socket.on('data', (chunk) => {
+              buffer += chunk
+              const messages = buffer.split('\n').filter(Boolean)
+              if (messages.length < 2) return
+              socket.end()
+              try { resolve(JSON.parse(messages[1]).result) } catch (error) { reject(error) }
+            })
+            socket.once('connect', () => socket.write(`${JSON.stringify({ id: 'handshake', method: 'system.handshake', params: { client: 'release-health', clientVersion: '1.0.0', protocolVersion: 1 } })}\n${JSON.stringify({ id: 'health', method: 'system.health', params: {} })}\n`))
+          })
+          const deadline = Date.now() + 15_000
+          let health
+          while (Date.now() < deadline) {
+            try { health = await requestHealth(); break } catch { await new Promise((resolve) => setTimeout(resolve, 100)) }
+          }
+          if (!health || health.ready !== true || health.version !== process.env.VERSION || health.protocolVersion !== 1) throw new Error('production artifact failed system.health')
+          NODE
       - name: Notarize signed artifact
         env:
           GGR_NOTARY_API_KEY: ${{ secrets.GGR_NOTARY_API_KEY }}
@@ -72,13 +113,15 @@ jobs:
           GGR_NOTARY_ISSUER: ${{ secrets.GGR_NOTARY_ISSUER }}
         run: |
           artifact="dist/ggr-backend/${{ inputs.version }}/ggr-backend-${{ inputs.version }}-darwin-${{ matrix.arch }}.tar.gz"
+          umask 077
           ditto -c -k --keepParent "$artifact" "$artifact.zip"
           key="$RUNNER_TEMP/AuthKey_${GGR_NOTARY_KEY_ID}.p8"
+          cleanup() { rm -f "$key" "$artifact.zip"; }
+          trap cleanup EXIT
           printf '%s' "$GGR_NOTARY_API_KEY" > "$key"
+          chmod 600 "$key"
           xcrun notarytool submit "$artifact.zip" --key "$key" --key-id "$GGR_NOTARY_KEY_ID" --issuer "$GGR_NOTARY_ISSUER" --wait
-          rm -f "$key"
-          rm "$artifact.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ggr-backend-${{ matrix.arch }}
           path: dist/ggr-backend/${{ inputs.version }}/
@@ -88,11 +131,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: downloaded
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20.16.0
       - name: Create the final combined manifest once
@@ -126,3 +169,15 @@ jobs:
           release/ggr-backend-*.tar.gz release/manifest.json release/manifest.sig
           --target "${{ github.sha }}" --title "GGR Backend ${{ inputs.version }}"
           --generate-notes
+      - name: Publish the signed selected-channel manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          tag="ggrd-$CHANNEL"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" release/manifest.json release/manifest.sig --clobber
+          else
+            gh release create "$tag" release/manifest.json release/manifest.sig --target "${{ github.sha }}" --title "GGRD $CHANNEL channel" --notes "Backend channel $CHANNEL now selects $VERSION."
+          fi

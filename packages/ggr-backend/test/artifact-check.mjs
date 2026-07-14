@@ -113,6 +113,11 @@ try {
     arch: process.arch,
     nodeVersion: 'v20.16.0'
   })
+  const browserDependencyCheck = await run(path.join(extractedDirectory, 'bin', 'node'), [
+    '--input-type=module', '--eval',
+    "await import('./app/lib/services/browser/runtime.mjs'); const { initPuppeteer } = await import('./app/node_modules/@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'); const { puppeteer, LaodengPlugin } = await initPuppeteer(); if (!puppeteer || !LaodengPlugin) throw new Error('browser runtime dependencies are unavailable')"
+  ], { cwd: extractedDirectory })
+  assert.equal(browserDependencyCheck.stderr, '', 'artifact browser runtime import must not report dependency errors')
 
   const backend = spawn(path.join(extractedDirectory, 'bin', 'node'), ['app/server.mjs'], {
     cwd: extractedDirectory,
