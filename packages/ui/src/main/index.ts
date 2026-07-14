@@ -1,5 +1,6 @@
 import overrideConsole from './utils/overrideConsole'
 import { openSettingWindow } from './flow/OPEN_SETTING_WINDOW/index'
+import { ensureBackendReady, ensureSupervisorInstalled } from './backend/bootstrap'
 
 const isUiDev = process.env.NODE_ENV === 'development'
 const enableLogToFile = process.env.GEEKGEEKRUN_ENABLE_LOG_TO_FILE === String(1)
@@ -17,4 +18,12 @@ process.on('uncaughtException', (err: Error & { code?: string }) => {
 })
 
 globalThis.GEEKGEEKRUN_PROCESS_ROLE = 'ui'
-openSettingWindow({ headless: process.env.GGR_HEADLESS === 'true' })
+void (async () => {
+  try {
+    await ensureSupervisorInstalled()
+    await ensureBackendReady()
+  } catch (error) {
+    console.error('Backend bootstrap failed; update controls will expose redacted diagnostics', error)
+  }
+  openSettingWindow({ headless: process.env.GGR_HEADLESS === 'true' })
+})()

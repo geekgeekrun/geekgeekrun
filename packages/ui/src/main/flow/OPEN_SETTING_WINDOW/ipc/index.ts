@@ -26,10 +26,35 @@ import { waitForCommonJobConditionDone } from '../../../features/common-job-cond
 import { readBackendConfig, writeBackendConfig } from '../../../backend/register-ipc'
 import { requestBackend } from '../../../backend/client'
 import { backendEvents } from '../../../backend/events'
+import {
+  checkBackendUpdate,
+  getBackendUpdateStatus,
+  installBackendUpdate,
+  rollbackBackendUpdate
+} from '../../../backend/supervisor-client'
 
 const WORKER_STOP_TIMEOUT_MS = 15000
 const BOSS_BROWSER_READY_TIMEOUT_MS = 15000
 const workerExitHandlerByMode = new Map<string, (event: any) => void>()
+
+const redactedUpdateFailure = () => ({
+  current: null,
+  previous: null,
+  candidate: null,
+  progress: 'failed',
+  state: 'failed',
+  rollback: null,
+  lastFailure: { code: 'BACKEND_UPDATE_FAILED', message: 'Backend update failed. Check the redacted diagnostics and retry.', candidate: null },
+  diagnostics: [{ event: 'backend.update.failed', level: 'error', message: 'Backend update failed. Retry the operation from this panel.' }]
+})
+
+async function safeBackendUpdateStatus() {
+  try {
+    return await getBackendUpdateStatus()
+  } catch {
+    return redactedUpdateFailure()
+  }
+}
 
 function subscribeToWorkerExit(mode: string) {
   if (workerExitHandlerByMode.has(mode)) {
@@ -118,6 +143,29 @@ async function stopWorkerAndNotify({ workerId, stoppingEvent, stoppedEvent }) {
 }
 
 export default function initIpc() {
+  ipcMain.handle('backend-update-status', safeBackendUpdateStatus)
+  ipcMain.handle('backend-update-check', async () => {
+    try {
+      return await checkBackendUpdate()
+    } catch {
+      return { availableVersion: null, compatible: false, reason: 'Unable to check for a compatible backend update.' }
+    }
+  })
+  ipcMain.handle('backend-update-install', async () => {
+    try {
+      return await installBackendUpdate()
+    } catch {
+      return await safeBackendUpdateStatus()
+    }
+  })
+  ipcMain.handle('backend-update-rollback', async () => {
+    try {
+      return await rollbackBackendUpdate()
+    } catch {
+      return await safeBackendUpdateStatus()
+    }
+  })
+
   ipcMain.handle('run-geek-auto-start-chat-with-boss', async () => {
     const mode = 'geekAutoStartWithBossMain'
     const { runRecordId } = await runCommon({ mode })

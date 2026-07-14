@@ -89,6 +89,45 @@ assert.doesNotMatch(electronMainSource, /--mode=/, 'Electron entry must not pass
 assert.doesNotMatch(electronMainSource, /launchDaemon/, 'Electron entry must not launch a local daemon')
 assert.doesNotMatch(electronMainSource, /flow\/LAUNCH_|launch-daemon/, 'Electron entry must not import backend flows')
 
+const readTask13Source = async (relativePath) => {
+  try {
+    return await fs.readFile(path.join(repoRoot, relativePath), 'utf8')
+  } catch (error) {
+    assert.fail(`${relativePath} must exist: ${error.message}`)
+  }
+}
+
+const supervisorClientSource = await readTask13Source('packages/ui/src/main/backend/supervisor-client.ts')
+assert.match(supervisorClientSource, /supervisor\.status/, 'Electron must request only supervisor status through its supervisor client')
+assert.match(supervisorClientSource, /update\.check/, 'Electron must request update checks through its supervisor client')
+assert.match(supervisorClientSource, /update\.install/, 'Electron must request installs through its supervisor client')
+assert.match(supervisorClientSource, /update\.rollback/, 'Electron must request rollbacks through its supervisor client')
+assert.doesNotMatch(supervisorClientSource, /https?:\/\/|signature|artifact\.url|manifest\.artifact/i, 'Electron must not contain release URLs or signature material')
+
+const bootstrapSource = await readTask13Source('packages/ui/src/main/backend/bootstrap.ts')
+assert.match(bootstrapSource, /export async function ensureSupervisorInstalled/, 'production bootstrap must install the user-scoped supervisor')
+assert.match(bootstrapSource, /export async function ensureBackendReady/, 'startup must wait for a ready backend')
+assert.match(bootstrapSource, /pnpm dev:backend/, 'development backend failure must tell the user how to start it')
+assert.doesNotMatch(bootstrapSource, /proxy.*(?:password|token|secret)|(?:password|token|secret).*proxy/i, 'proxy credentials must never be renderer-facing bootstrap data')
+assert.match(electronMainSource, /ensureSupervisorInstalled\(\)[\s\S]*?ensureBackendReady\(\)[\s\S]*?openSettingWindow/, 'Electron must install the supervisor and ready the backend before opening a window')
+
+const builderSource = await fs.readFile(path.join(repoRoot, 'packages/ui/electron-builder.yml'), 'utf8')
+assert.match(builderSource, /ggrd-bootstrap/, 'Electron artifacts must ship the supervisor bootstrap')
+assert.match(builderSource, /!.*ggr-backend/, 'Electron artifacts must exclude backend packages')
+assert.match(builderSource, /!.*(?:better-sqlite3|sqlite-plugin)/, 'Electron artifacts must exclude backend native dependencies')
+
+const updatePanelSource = await readTask13Source('packages/ui/src/renderer/src/components/BackendUpdatePanel.vue')
+for (const channel of ['backend-update-status', 'backend-update-check', 'backend-update-install', 'backend-update-rollback']) {
+  assert.match(updatePanelSource, new RegExp(channel), `renderer must use the restricted ${channel} channel`)
+}
+assert.doesNotMatch(updatePanelSource, /https?:\/\/|signature|artifact|\.geekgeekrun|\/Users\//i, 'renderer update UI must not receive release URLs, signatures, or paths')
+const updateIpcSource = await fs.readFile(
+  path.join(repoRoot, 'packages/ui/src/main/flow/OPEN_SETTING_WINDOW/ipc/index.ts'),
+  'utf8'
+)
+assert.match(updateIpcSource, /redactedUpdateFailure/, 'update IPC must return a redacted failure DTO instead of forwarding supervisor errors')
+assert.doesNotMatch(updateIpcSource, /backend-update-install'[\s\S]{0,260}throw error/, 'update install IPC must not forward raw supervisor errors to the renderer')
+
 const mainSourceRoot = path.join(repoRoot, 'packages/ui/src/main')
 const sourceFiles = await fs.readdir(mainSourceRoot, { recursive: true })
 for (const sourceFile of sourceFiles) {

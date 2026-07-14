@@ -4,6 +4,9 @@ directories:
   buildResources: build
 icon: resources/icon.png
 files:
+  - '!**/ggr-backend/**'
+  - '!**/better-sqlite3/**'
+  - '!**/sqlite-plugin/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -17,6 +20,9 @@ files:
   - '!node_modules/typeorm/browser/*'
 asarUnpack:
   - 'resources/**'
+extraResources:
+  - from: resources/ggrd-bootstrap
+    to: ggrd-bootstrap
 win:
   executableName: geekgeekrun
 nsis:

@@ -247,6 +247,9 @@ importers:
       '@geekgeekrun/ggr-protocol':
         specifier: workspace:*
         version: link:../ggr-protocol
+      '@geekgeekrun/ggrd':
+        specifier: workspace:*
+        version: link:../ggrd
       '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
         specifier: workspace:*
         version: link:../launch-bosszhipin-login-page-with-preload-extension

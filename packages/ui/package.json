@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node scripts/run-build-sqlite-plugin.mjs && electron-vite preview",
     "dev": "node scripts/run-build-sqlite-plugin.mjs && electron-vite dev",
-    "build": "node scripts/run-build-sqlite-plugin.mjs && electron-vite build",
+    "build": "node scripts/run-build-sqlite-plugin.mjs && node ../../scripts/build-ggrd-bootstrap.mjs && electron-vite build",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
     "test": "node test/check.mjs && node test/hr-reply-policy-check.mjs",
@@ -29,6 +29,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension": "workspace:*",
     "@geekgeekrun/ggr-client": "workspace:*",
+    "@geekgeekrun/ggrd": "workspace:*",
     "@geekgeekrun/ggr-protocol": "workspace:*",
     "@geekgeekrun/pm": "workspace:*",
     "@geekgeekrun/puppeteer-extra-plugin-laodeng": "workspace:*",

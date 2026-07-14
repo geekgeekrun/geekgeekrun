@@ -48,6 +48,7 @@
             <el-button type="text" size="small" @click="handleFeedbackClick">反馈问题</el-button>
           </div>
         </div>
+        <BackendUpdatePanel />
       </div>
     </div>
     <div class="router-view-wrap">
@@ -68,6 +69,7 @@ import { useUpdateStore, useTaskManagerStore } from '../../store/index'
 import BossPart from './LeftNavBar/BossPart.vue'
 import GlobalConfigPart from './LeftNavBar/GlabalConfigPart.vue'
 import RunDataRecordPart from './LeftNavBar/RunDataRecordPart.vue'
+import BackendUpdatePanel from '../../components/BackendUpdatePanel.vue'
 
 useRouter()
 
