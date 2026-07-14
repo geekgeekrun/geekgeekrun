@@ -6,7 +6,7 @@
   "module": "./main/index.mjs",
   "type": "module",
   "scripts": {
-    "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs",
+    "start": "node ./packages/ggr-backend/server.mjs",
     "start:ggr-mcp": "node ./packages/ggr-mcp/server.mjs",
     "dev:backend": "GGR_BACKEND_DEV=1 node ./packages/ggr-backend/server.mjs",
     "test": "node ./packages/ggr-controller/test/check.mjs && node ./packages/ggr-mcp/test/check.mjs && node ./packages/ui/test/check.mjs && node ./packages/ui/test/hr-reply-policy-check.mjs",

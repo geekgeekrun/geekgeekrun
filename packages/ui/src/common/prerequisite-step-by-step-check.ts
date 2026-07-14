@@ -4,7 +4,7 @@ export const getAutoStartChatSteps = () => [
     describe: '启动子进程'
   },
   {
-    id: 'puppeteer-executable-check',
+    id: 'browser-executable-check',
     describe: 'Puppeteer 可执行程序检查'
   },
   {

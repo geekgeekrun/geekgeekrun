@@ -14,6 +14,7 @@ import { createRecordsService } from './lib/services/records-service.mjs'
 import { createBrowserService } from './lib/services/browser-service.mjs'
 import { createBackendBrowserRuntime } from './lib/services/browser/runtime.mjs'
 import { createBrowserRecords } from './lib/services/browser/records.mjs'
+import { requestNewMessageContent } from './lib/workers/read-no-reply/llm.mjs'
 
 const DEFAULT_WORKER_ENTRIES = Object.freeze({
   geekAutoStartWithBossMain: fileURLToPath(new URL('./lib/workers/auto-chat.mjs', import.meta.url)),
@@ -39,6 +40,7 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     clock
   })
   const records = services.records ?? createRecordsService({ databaseFile: runtimePaths.databaseFile })
+  const llm = services.llm ?? { request: requestNewMessageContent }
   const browser = services.browser ?? (() => {
     const browserRecords = services.browserRecords ?? createBrowserRecords({ getDataSource: records.getDataSource })
     return createBrowserService({ runtime: services.browserRuntime ?? createBackendBrowserRuntime({ runtimePaths, records: browserRecords }), emit })
@@ -56,6 +58,14 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     .register(METHODS.ACCOUNT_STATUS, (params) => {
       if (Object.keys(params).length) throw Object.assign(new Error('account.status does not accept parameters'), { code: 'INVALID_PARAMS' })
       return records.accountStatus()
+    })
+    .register('llm.test', async (params) => {
+      if (!params || !Array.isArray(params.messageList) ||
+          (params.llmConfigIdForPick !== undefined && params.llmConfigIdForPick !== null && !Array.isArray(params.llmConfigIdForPick)) ||
+          Object.keys(params).some((key) => key !== 'messageList' && key !== 'llmConfigIdForPick')) {
+        throw Object.assign(new Error('llm.test requires a message list and optional model ids'), { code: 'INVALID_PARAMS' })
+      }
+      return llm.request(params.messageList, { llmConfigIdForPick: params.llmConfigIdForPick ?? null })
     })
     .register(METHODS.BROWSER_OPEN_LOGIN, (params) => {
       if (Object.keys(params).length) throw Object.assign(new Error('browser.openLogin does not accept parameters'), { code: 'INVALID_PARAMS' })

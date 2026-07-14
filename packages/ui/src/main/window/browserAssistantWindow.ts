@@ -63,7 +63,7 @@ export function createBrowserAssistantWindow(
 
   registerHandleWithWindow(
     browserAssistantWindow,
-    'get-any-available-puppeteer-executable',
+    'get-any-available-browser-executable',
     async (_, { ignoreCached, noSave } = {}) => {
       return await requestBackend('browser.getAvailable', { ignoreCached, noSave })
     }

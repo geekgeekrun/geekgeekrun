@@ -20,7 +20,21 @@ function externalizeMainBareImportsPlugin() {
   }
 }
 
+function forbidBackendImportsPlugin() {
+  const backendImport = /(?:@geekgeekrun\/(?:pm|sqlite-plugin|geek-auto-start-chat-with-boss|puppeteer-extra-plugin-laodeng)|ggr-backend\/)/
+  return {
+    name: 'forbid-backend-imports',
+    resolveId(id: string) {
+      if (backendImport.test(id)) {
+        throw new Error(`Electron must access backend behavior through RPC, not ${id}`)
+      }
+      return null
+    }
+  }
+}
+
 const mainPlugins = [
+  forbidBackendImportsPlugin(),
   externalizeMainBareImportsPlugin(),
   externalizeDepsPlugin(),
   Replace({

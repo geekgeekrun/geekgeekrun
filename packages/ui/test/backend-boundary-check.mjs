@@ -115,8 +115,10 @@ assert.doesNotMatch(electronMainSource, /catch[\s\S]{0,250}openSettingWindow/, '
 
 const builderSource = await fs.readFile(path.join(repoRoot, 'packages/ui/electron-builder.yml'), 'utf8')
 assert.match(builderSource, /ggrd-bootstrap/, 'Electron artifacts must ship the supervisor bootstrap')
-assert.match(builderSource, /!.*ggr-backend/, 'Electron artifacts must exclude backend packages')
-assert.match(builderSource, /!.*(?:better-sqlite3|sqlite-plugin)/, 'Electron artifacts must exclude backend native dependencies')
+assert.doesNotMatch(builderSource, /ggr-backend|better-sqlite3|sqlite-plugin|puppeteer/i, 'Electron artifact config must not package or special-case backend implementation')
+
+const viteSource = await fs.readFile(path.join(repoRoot, 'packages/ui/electron.vite.config.ts'), 'utf8')
+assert.match(viteSource, /forbidBackendImportsPlugin/, 'the Electron build must reject backend implementation imports')
 
 const updatePanelSource = await readTask13Source('packages/ui/src/renderer/src/components/BackendUpdatePanel.vue')
 for (const channel of ['backend-update-status', 'backend-update-check', 'backend-update-install', 'backend-update-rollback']) {
@@ -145,7 +147,9 @@ for (const sourceFile of sourceFiles) {
   const source = await fs.readFile(path.join(mainSourceRoot, sourceFile), 'utf8')
   assert.doesNotMatch(source, /sendToDaemon/, `${relativePath} must use the backend client protocol`)
   assert.doesNotMatch(source, /connectToDaemon/, `${relativePath} must use the backend client protocol`)
-  assert.doesNotMatch(source, /@geekgeekrun\/pm/, `${relativePath} must not import the legacy process manager`)
+  assert.doesNotMatch(source, /@geekgeekrun\/(?:pm|sqlite-plugin|geek-auto-start-chat-with-boss|puppeteer-extra-plugin-laodeng)/, `${relativePath} must not import backend implementation packages`)
+  assert.doesNotMatch(source, /ggr-backend\//, `${relativePath} must not import backend worker sources`)
+  assert.doesNotMatch(source, /puppeteer/, `${relativePath} must not retain backend packaging references`)
   assert.doesNotMatch(source, /downloadDependenciesForInit/, `${relativePath} must not execute backend browser flows directly`)
 }
 
@@ -157,6 +161,7 @@ for (const sourceFile of rendererSourceFiles) {
   const source = await fs.readFile(path.join(rendererSourceRoot, sourceFile), 'utf8')
   assert.doesNotMatch(source, /@geekgeekrun\/(?:sqlite-plugin|geek-auto-start-chat-with-boss)/, `${relativePath} must consume only protocol DTOs, IPC responses, and UI-local presentation data`)
   assert.doesNotMatch(source, /@geekgeekrun\/sqlite-plugin\/src\/(?:entity|utils)/, `${relativePath} must not import persistence entities or helpers`)
+  assert.doesNotMatch(source, /puppeteer/, `${relativePath} must not retain backend packaging references`)
 }
 
 for (const relativePath of [

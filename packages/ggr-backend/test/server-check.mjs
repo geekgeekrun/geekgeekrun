@@ -44,6 +44,9 @@ const backend = await createBackendServer({
       async setExecutable(value) { savedExecutables.push(value); return { browser: value.browser, executablePath: value.executablePath } },
       async cancel(taskId) { cancelledBrowserTasks.push(taskId); return { taskId, state: 'cancelled' } },
       async close() {}
+    },
+    llm: {
+      async request(messageList, options) { return { responseText: 'test reply', messageList, options } }
     }
   }
 })
@@ -90,6 +93,9 @@ try {
   })
   const redactedLlmConfig = await client.request('config.read', { resource: 'llm_config' })
   assert.equal(redactedLlmConfig.data[0].providerApiSecret, '[redacted]')
+  assert.deepEqual(await client.request('llm.test', { messageList: [{ text: 'hello' }], llmConfigIdForPick: ['primary'] }), {
+    responseText: 'test reply', messageList: [{ text: 'hello' }], options: { llmConfigIdForPick: ['primary'] }
+  })
   await client.request('config.write', { resource: 'llm_config', patch: redactedLlmConfig.data })
   assert.equal(
     JSON.parse(await fs.readFile(path.join(runtimePaths.configDir, 'llm.json'), 'utf8'))[0].providerApiSecret,

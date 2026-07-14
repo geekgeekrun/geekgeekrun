@@ -174,34 +174,6 @@ importers:
         specifier: ^3.3.2
         version: 3.3.2
 
-  packages/pm:
-    dependencies:
-      JSONStream:
-        specifier: ^1.3.5
-        version: 1.3.5
-      split2:
-        specifier: ^4.2.0
-        version: 4.2.0
-    devDependencies:
-      electron:
-        specifier: 28.2.0
-        version: 28.2.0
-
-  packages/run-core-of-geek-auto-start-chat-with-boss:
-    dependencies:
-      '@geekgeekrun/dingtalk-plugin':
-        specifier: workspace:*
-        version: link:../dingtalk-plugin
-      '@geekgeekrun/geek-auto-start-chat-with-boss':
-        specifier: workspace:*
-        version: link:../geek-auto-start-chat-with-boss
-      '@geekgeekrun/sqlite-plugin':
-        specifier: workspace:*
-        version: link:../sqlite-plugin
-      '@geekgeekrun/utils':
-        specifier: workspace:*
-        version: link:../utils
-
   packages/sqlite-plugin:
     dependencies:
       better-sqlite3:
@@ -250,18 +222,6 @@ importers:
       '@geekgeekrun/ggrd':
         specifier: workspace:*
         version: link:../ggrd
-      '@geekgeekrun/launch-bosszhipin-login-page-with-preload-extension':
-        specifier: workspace:*
-        version: link:../launch-bosszhipin-login-page-with-preload-extension
-      '@geekgeekrun/pm':
-        specifier: workspace:*
-        version: link:../pm
-      '@geekgeekrun/puppeteer-extra-plugin-laodeng':
-        specifier: workspace:*
-        version: link:../laodeng
-      '@geekgeekrun/sqlite-plugin':
-        specifier: workspace:*
-        version: file:packages/sqlite-plugin(ts-node@10.9.2(@types/node@18.19.130)(typescript@5.9.3))
       '@geekgeekrun/utils':
         specifier: workspace:*
         version: link:../utils
@@ -289,12 +249,6 @@ importers:
       pinia:
         specifier: ^3.0.2
         version: 3.0.4(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))
-      puppeteer:
-        specifier: 24.19.0
-        version: 24.19.0(typescript@5.9.3)
-      puppeteer-extra-plugin-stealth:
-        specifier: 2.11.2
-        version: 2.11.2(playwright-extra@4.3.6)(puppeteer-extra@3.3.6(puppeteer-core@24.19.0)(puppeteer@24.19.0(typescript@5.9.3)))
       uuid:
         specifier: ^11.1.0
         version: 11.1.1
@@ -311,21 +265,12 @@ importers:
       '@electron-toolkit/tsconfig':
         specifier: ^1.0.1
         version: 1.0.1(@types/node@18.19.130)
-      '@geekgeekrun/dingtalk-plugin':
-        specifier: workspace:*
-        version: link:../dingtalk-plugin
-      '@geekgeekrun/geek-auto-start-chat-with-boss':
-        specifier: workspace:*
-        version: link:../geek-auto-start-chat-with-boss
       '@inquirer/prompts':
         specifier: ^7.0.1
         version: 7.10.1(@types/node@18.19.130)
       '@inquirer/select':
         specifier: ^4.0.1
         version: 4.4.2(@types/node@18.19.130)
-      '@puppeteer/browsers':
-        specifier: ^2.11.0
-        version: 2.13.2
       '@rushstack/eslint-patch':
         specifier: ^1.7.1
         version: 1.16.1
@@ -377,9 +322,6 @@ importers:
       eslint-plugin-vue:
         specifier: ^9.20.1
         version: 9.33.0(eslint@8.57.1)
-      find-chrome-bin:
-        specifier: 2.0.4
-        version: 2.0.4(patch_hash=47f6ad4cc334f79d11977f752e8cc3eee2619446c97e2105a5d9e3600d179035)
       js-yaml:
         specifier: ^4.1.0
         version: 4.3.0

@@ -30,7 +30,7 @@ const gtagRenderer = (name, params?: object) => {
 }
 
 async function autoDetectPuppeteerExecutable() {
-  const result = await ipcRenderer.invoke('get-any-available-puppeteer-executable')
+  const result = await ipcRenderer.invoke('get-any-available-browser-executable')
   if (!result) {
     gtagRenderer('first-run-auto-detect-pptr-exe-fail')
     ElMessage({

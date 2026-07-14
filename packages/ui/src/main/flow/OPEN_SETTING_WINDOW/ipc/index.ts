@@ -2,7 +2,6 @@ import { ipcMain, app } from 'electron'
 import { mainWindow } from '../../../window/mainWindow'
 import { createLlmConfigWindow, llmConfigWindow } from '../../../window/llmConfigWindow'
 import { createResumeEditorWindow, resumeEditorWindow } from '../../../window/resumeEditorWindow'
-import { requestNewMessageContent } from '../../READ_NO_REPLY_AUTO_REMINDER_MAIN/boss-operation'
 import {
   checkIsResumeContentValid,
   resumeContentEnoughDetect
@@ -11,7 +10,6 @@ import {
   createReadNoReplyReminderLlmMockWindow,
   readNoReplyReminderLlmMockWindow
 } from '../../../window/readNoReplyReminderLlmMockWindow'
-import { RequestSceneEnum } from '../../../features/llm-request-log'
 import { checkUpdateForUi } from '../../../features/updater'
 import gtag from '../../../utils/gtag'
 import { runCommon } from '../../../features/run-common'
@@ -322,8 +320,8 @@ export default function initIpc() {
       }
     )
     async function requestLlm(_, requestPayload) {
-      return await requestNewMessageContent(requestPayload.messageList, {
-        requestScene: RequestSceneEnum.testing,
+      return await requestBackend('llm.test', {
+        messageList: requestPayload.messageList,
         llmConfigIdForPick: requestPayload.llmConfigIdForPick ?? null
       })
     }
@@ -382,8 +380,8 @@ export default function initIpc() {
         return
       }
     }
-    const puppeteerExecutable = await requestBackend('browser.getAvailable')
-    if (!puppeteerExecutable) {
+    const browserExecutable = await requestBackend('browser.getAvailable')
+    if (!browserExecutable) {
       try {
         await configWithBrowserAssistant({
           windowOption: {

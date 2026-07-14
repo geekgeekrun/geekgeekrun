@@ -4,9 +4,6 @@ directories:
   buildResources: build
 icon: resources/icon.png
 files:
-  - '!**/ggr-backend/**'
-  - '!**/better-sqlite3/**'
-  - '!**/sqlite-plugin/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
