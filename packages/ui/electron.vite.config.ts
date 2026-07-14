@@ -100,7 +100,6 @@ export default defineConfig({
     }
   },
   renderer: {
-    resolve: { alias: { '@geekgeekrun/utils': resolve('src/common/ui-utils') } },
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),
