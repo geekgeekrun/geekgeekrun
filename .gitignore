@@ -20,3 +20,6 @@ docs/superpowers/specs/
 
 # Isolated implementation worktrees
 .worktrees/
+
+# Bundled Node.js runtime - download separately see scripts/build-ggrd-bootstrap.mjs
+packages/ui/resources/ggrd-bootstrap/runtime/bin/node
