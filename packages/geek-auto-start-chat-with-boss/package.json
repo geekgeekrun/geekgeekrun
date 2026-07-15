@@ -6,7 +6,7 @@
   "module": "./index.mjs",
   "type": "module",
   "scripts": {
-    "test": "node ./test/runtime-file-utils-check.mjs && node ./test/area-filter-check.mjs"
+    "test": "node ./test/runtime-file-utils-check.mjs && node ./test/area-filter-check.mjs && node ./test/dom-utils-check.mjs && node ./test/chat-flow-wiring-check.mjs"
   },
   "author": "geekgeekrun",
   "license": "ISC",

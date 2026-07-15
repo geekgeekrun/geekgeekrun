@@ -41,7 +41,7 @@ import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
 import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
 import { isJobAddressInExpectedArea } from './area-filter.mjs'
-import { findByText, waitForText, clickByText, findChatInput, findSendButton, typeInChat, findGreetSendButton } from './dom-utils.mjs'
+import { findGreetCancelButton, findGreetSendButton, findSendButton, findStartChatButton, typeInChat, waitForText } from './dom-utils.mjs'
 const flattedCityList = []
 ;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
   const firstChar = it.firstChar
@@ -1545,8 +1545,7 @@ async function toRecommendPage (hooks) {
                     // just skip
                     continue continueFind
                   }
-                  const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
-                  if (startChatButtonInnerHTML !== '立即沟通') {
+                  if (!await findStartChatButton(page)) {
                     blockBossNotNewChat.add(targetJobData.jobInfo.encryptUserId)
                     continue continueFind
                   }
@@ -1576,14 +1575,10 @@ async function toRecommendPage (hooks) {
             hooks
           })
           await sleepWithRandomDelay(1000)
-          const startChatButtonInnerHTML = await findByText(page, '聊一聊', { tag: 'button', timeout: 3000 }).then(async (btn) => btn ? page.evaluate(el => el.innerHTML.trim(), btn) : '')
-
+          const startChatButtonProxy = await findStartChatButton(page)
+          if (!startChatButtonProxy) throw new Error('START_CHAT_BUTTON_NOT_FOUND')
           await hooks.newChatWillStartup?.promise(targetJobData)
-          const startChatButtonProxy = await findByText(page, '聊一聊', { tag: 'button', timeout: 3000 })
-            ?? await page.$('.job-detail-box .op-btn.op-btn-chat')
           await sleep(500)
-          //#region click the chat button
-          await startChatButtonProxy.click()
 
           const waitAddFriendResponse = async () => {
             const addFriendResponse = await page.waitForResponse(
@@ -1681,8 +1676,7 @@ async function toRecommendPage (hooks) {
                 })
                 await sleepWithRandomDelay(2000)
               } else {
-                const closeDialogButtonProxy = await findByText(page, '取消', { tag: 'button', timeout: 2000 })
-                  ?? await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
+                const closeDialogButtonProxy = await findGreetCancelButton(page)
                 if (closeDialogButtonProxy) {
                   await closeDialogButtonProxy.click()
                   await sleepWithRandomDelay(2000)
@@ -1743,7 +1737,9 @@ async function toRecommendPage (hooks) {
           }
           let res
           try {
-            res = await waitAddFriendResponse()
+            const addFriendResponsePromise = waitAddFriendResponse()
+            await startChatButtonProxy.click()
+            res = await addFriendResponsePromise
             await handleAddFriendResponse(res)
           }
           catch (err) {

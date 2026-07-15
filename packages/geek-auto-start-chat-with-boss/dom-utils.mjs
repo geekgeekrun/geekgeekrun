@@ -11,11 +11,34 @@
  * Find an element by its visible text content within a container.
  * Uses XPath `contains(text(), ...)` which is immune to class changes.
  */
+function buttonXPath(texts) {
+  return `xpath/.//button[not(@disabled) and (${texts.map((text) => `contains(normalize-space(.), ${JSON.stringify(text)})`).join(' or ')})]`
+}
+
+function textXPath(text, tag) {
+  return `xpath///${tag}[contains(normalize-space(.), ${JSON.stringify(text)})]`
+}
+
+async function findVisibleButtonByText(scope, texts) {
+  const buttons = await scope.$$(buttonXPath(texts))
+  for (const button of buttons) {
+    if (await button.evaluate((element) => {
+      const style = window.getComputedStyle(element)
+      return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0
+    })) return button
+  }
+  return null
+}
+
+export async function findStartChatButton(page, { detailSelector = '.job-detail-box' } = {}) {
+  const detail = await page.$(detailSelector)
+  if (!detail) return null
+  return findVisibleButtonByText(detail, ['聊一聊', '立即沟通'])
+}
+
 export async function findByText(page, text, { tag = '*', timeout = 5000 } = {}) {
-  const xpath = `//${tag}[contains(normalize-space(text()), ${JSON.stringify(text)})]`
   try {
-    const [el] = await page.waitForXPath(xpath, { timeout })
-    return el ?? null
+    return await page.waitForSelector(textXPath(text, tag), { timeout })
   } catch {
     return null
   }
@@ -25,8 +48,7 @@ export async function findByText(page, text, { tag = '*', timeout = 5000 } = {})
  * Find ALL elements matching text content (for disambiguation).
  */
 export async function findAllByText(page, text, { tag = '*' } = {}) {
-  const xpath = `//${tag}[contains(normalize-space(text()), ${JSON.stringify(text)})]`
-  return page.$x(xpath)
+  return page.$$(textXPath(text, tag))
 }
 
 /**
@@ -34,9 +56,7 @@ export async function findAllByText(page, text, { tag = '*' } = {}) {
  * Throws if not found within timeout (like waitForSelector).
  */
 export async function waitForText(page, text, { tag = '*', timeout = 10000 } = {}) {
-  const xpath = `//${tag}[contains(normalize-space(text()), ${JSON.stringify(text)})]`
-  const [el] = await page.waitForXPath(xpath, { timeout })
-  return el
+  return page.waitForSelector(textXPath(text, tag), { timeout })
 }
 
 /**
@@ -73,7 +93,13 @@ export async function findChatInput(page, { timeout = 10000 } = {}) {
  */
 export async function findSendButton(page, { timeout = 5000 } = {}) {
   try {
-    // Try by attribute patterns that are more stable than class names
+    const input = await findChatInput(page, { timeout })
+    if (!input) return null
+    const containerHandle = await input.evaluateHandle((element) =>
+      element.closest('form, .chat-input-box, .chat-conversation, [class*="chat-input"], [class*="chat"]') ?? element.parentElement
+    )
+    const container = containerHandle.asElement()
+    if (!container) return null
     const selectors = [
       '[class*="btn-send"]',
       '[class*="send"]',
@@ -82,19 +108,10 @@ export async function findSendButton(page, { timeout = 5000 } = {}) {
       '[class*="icon-message-send"]',
     ]
     for (const sel of selectors) {
-      const el = await page.$(sel)
+      const el = await container.$(sel)
       if (el) return el
     }
-    // Last: any button near the chat input
-    const input = await findChatInput(page, { timeout: 2000 }).catch(() => null)
-    if (input) {
-      const parent = await input.evaluateHandle(el => el.closest('.chat-input-box, .chat-conversation, [class*="chat"]'))
-      if (parent) {
-        const btn = await parent.asElement().$('button')
-        if (btn) return btn
-      }
-    }
-    return null
+    return findVisibleButtonByText(container, ['发送'])
   } catch {
     return null
   }
@@ -107,8 +124,11 @@ export async function typeInChat(page, text, { delay = 30 } = {}) {
   const input = await findChatInput(page)
   if (!input) return false
   await input.click()
-  await page.evaluate(el => el.textContent = '', input) // clear
-  await new Promise(r => setTimeout(r, 300))
+  await input.evaluate((element) => {
+    if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) element.value = ''
+    else element.textContent = ''
+    element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward', data: null }))
+  })
   await input.type(text, { delay })
   return true
 }
@@ -117,14 +137,24 @@ export async function typeInChat(page, text, { delay = 30 } = {}) {
  * Wait for and find the greet dialog button (send or primary action).
  */
 export async function findGreetSendButton(page, { timeout = 5000 } = {}) {
-  // The greet dialog typically has a prominent primary/send button
-  // Try text first, then fallback to CSS
-  const button = await findByText(page, '发送', { tag: 'button', timeout })
-  if (button) return button
-  // Try generic primary button
-  try {
-    return await page.waitForSelector('[class*="btn-primary"], .greet-boss-footer button:not([class*="cancel"])', { timeout })
-  } catch {
-    return null
+  const deadline = Date.now() + timeout
+  while (true) {
+    const dialogs = await page.$$('[role="dialog"], .greet-boss-dialog')
+    for (const dialog of dialogs) {
+      const button = await findVisibleButtonByText(dialog, ['发送'])
+      if (button) return button
+    }
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) return null
+    await new Promise((resolve) => setTimeout(resolve, Math.min(50, remaining)))
   }
+}
+
+export async function findGreetCancelButton(page) {
+  const dialogs = await page.$$('[role="dialog"], .greet-boss-dialog')
+  for (const dialog of dialogs) {
+    const button = await findVisibleButtonByText(dialog, ['取消'])
+    if (button) return button
+  }
+  return null
 }
