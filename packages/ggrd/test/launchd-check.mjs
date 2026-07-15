@@ -31,7 +31,7 @@ assert.match(plist, new RegExp(`<string>${runtimePath.replace(/[.*+?^${}()|[\]\\
 assert.match(plist, new RegExp(`<string>${runtimePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/server\\.mjs</string>`))
 assert.match(plist, /\.geekgeekrun\/logs\/ggrd\.stdout\.log/)
 assert.match(plist, /\.geekgeekrun\/logs\/ggrd\.stderr\.log/)
-assert.match(plist, /<string>--use-env-proxy<\/string>/, 'bundled Node must explicitly honor the user-scoped HTTPS proxy')
+assert.doesNotMatch(plist, /<string>--use-env-proxy<\/string>/, 'the bundled Node must receive only supported Node options')
 assert.doesNotMatch(plist, /\/bin\/(?:ba)?sh|\$\(|`|[;&|]/, 'LaunchAgent arguments must not invoke a shell')
 
 const launchctlCalls = []

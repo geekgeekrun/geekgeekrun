@@ -94,7 +94,6 @@ export function createLaunchAgentPlist({
     '  <key>ProgramArguments</key>',
     '  <array>',
     `    <string>${xml(path.join(bootstrapDirectory, 'runtime', 'bin', 'node'))}</string>`,
-    '    <string>--use-env-proxy</string>',
     `    <string>${xml(path.join(bootstrapDirectory, 'server.mjs'))}</string>`,
     '  </array>',
     plistKey('WorkingDirectory', runtimeDirectory),
