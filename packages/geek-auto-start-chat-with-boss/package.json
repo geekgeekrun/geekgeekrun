@@ -6,7 +6,7 @@
   "module": "./index.mjs",
   "type": "module",
   "scripts": {
-    "test": "node ./test/runtime-file-utils-check.mjs"
+    "test": "node ./test/runtime-file-utils-check.mjs && node ./test/area-filter-check.mjs"
   },
   "author": "geekgeekrun",
   "license": "ISC",

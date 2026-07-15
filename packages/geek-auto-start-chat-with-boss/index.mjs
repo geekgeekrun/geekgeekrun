@@ -40,6 +40,7 @@ import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser.js"
 import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
 import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
+import { isJobAddressInExpectedArea } from './area-filter.mjs'
 const flattedCityList = []
 ;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
   const firstChar = it.firstChar
@@ -1050,17 +1051,6 @@ async function toRecommendPage (hooks) {
                     }
                   }
                 }
-                // Apply area/district address filter if configured
-                const expectAreaList = readConfigFile('boss.json').expectAreaList ?? []
-                if (Array.isArray(expectAreaList) && expectAreaList.length) {
-                  for (const it of jobListData) {
-                    const addr = it.address || ''
-                    if (!expectAreaList.some(area => addr.includes(area))) {
-                      console.log(`area filter: skip job ${it.jobName} (${addr}) - no match for ${expectAreaList.join('/')}`)
-                      blockJobNotSuit.add(it.encryptJobId)
-                    }
-                  }
-                }
               }
               await updateJobListData()
 
@@ -1209,6 +1199,14 @@ async function toRecommendPage (hooks) {
                   selectedJobData = await page.evaluate('document.querySelector(".page-jobs-main").__vue__.currentJob')
                   // save the job detail info
                   await hooks.jobDetailIsGetFromRecommendList?.promise(targetJobData)
+
+                  const expectAreaList = readConfigFile('boss.json').expectAreaList ?? []
+                  const detailAddress = targetJobData?.jobInfo?.address
+                  if (!isJobAddressInExpectedArea(detailAddress, expectAreaList)) {
+                    console.log(`area filter: skip job ${targetJobData?.jobInfo?.jobName ?? selectedJobData?.jobName ?? ''} (${detailAddress ?? ''}) - no match for ${expectAreaList.join('/')}`)
+                    blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                    continue continueFind
+                  }
 
                   //#region collect not suit reasons
                   const notSuitReasonIdToStrategyMap = {}
