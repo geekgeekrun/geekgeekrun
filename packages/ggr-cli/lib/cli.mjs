@@ -2,7 +2,16 @@ import os from 'node:os'
 import path from 'node:path'
 import { createGgrClient } from '../../ggr-client/index.mjs'
 
-const WORKERS = new Set(['auto-chat', 'read-no-reply'])
+const WORKERS = Object.freeze({
+  'auto-chat': 'geekAutoStartWithBossMain',
+  'read-no-reply': 'readNoReplyAutoReminderMain'
+})
+
+function workerId(alias) {
+  const value = WORKERS[alias]
+  if (!value) throw new Error(`Unsupported worker: ${alias ?? ''}`)
+  return value
+}
 
 function defaultSocket(name) {
   return path.join(os.homedir(), '.geekgeekrun', 'run', name)
@@ -49,18 +58,15 @@ export function createCli({
         result = await request(backendSocket, 'ggr-cli', 'task.list')
         break
       case 'start': {
-        const workerId = args[0]
-        if (!WORKERS.has(workerId)) throw new Error(`Unsupported worker: ${workerId}`)
+        const id = workerId(args[0])
         result = await request(backendSocket, 'ggr-cli', 'task.start', {
-          workerId,
+          workerId: id,
           options: { headless: args.includes('--headless') }
         })
         break
       }
       case 'stop': {
-        const workerId = args[0]
-        if (!WORKERS.has(workerId)) throw new Error(`Unsupported worker: ${workerId}`)
-        result = await request(backendSocket, 'ggr-cli', 'task.stop', { workerId })
+        result = await request(backendSocket, 'ggr-cli', 'task.stop', { workerId: workerId(args[0]) })
         break
       }
       case 'update': {

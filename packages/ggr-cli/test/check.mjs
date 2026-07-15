@@ -37,6 +37,7 @@ const backend = await listen(backendSocket, (request) => {
   if (request.method === 'system.handshake') return { protocolMin: 1, protocolMax: 1 }
   if (request.method === 'system.health') return { version: '1.2.3', status: 'ok' }
   if (request.method === 'task.start') return { workerId: request.params.workerId, started: true }
+  if (request.method === 'task.stop') return { workerId: request.params.workerId, stopped: true }
   if (request.method === 'task.list') return [{ workerId: 'auto-chat', status: 'running' }]
   throw new Error(`Unexpected backend method: ${request.method}`)
 })
@@ -59,7 +60,9 @@ const cli = createCli({
 await cli.run(['status'])
 assert.deepEqual(JSON.parse(output.pop()), { version: '1.2.3', status: 'ok' })
 await cli.run(['start', 'auto-chat', '--headless'])
-assert.deepEqual(calls.at(-1), ['backend', 'task.start', { workerId: 'auto-chat', options: { headless: true } }])
+assert.deepEqual(calls.at(-1), ['backend', 'task.start', { workerId: 'geekAutoStartWithBossMain', options: { headless: true } }])
+await cli.run(['stop', 'read-no-reply'])
+assert.deepEqual(calls.at(-1), ['backend', 'task.stop', { workerId: 'readNoReplyAutoReminderMain' }])
 await cli.run(['update', 'check'])
 assert.deepEqual(JSON.parse(output.pop()), { available: '1.2.4' })
 assert.equal(calls.some(([target]) => target === 'supervisor'), true)
