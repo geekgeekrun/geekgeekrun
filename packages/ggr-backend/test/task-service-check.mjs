@@ -288,7 +288,8 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
     },
     workerEntries: { auto: '/tmp/auto.mjs' },
     emit: () => {},
-    stopTimeoutMs: 5
+    stopTimeoutMs: 5,
+    scheduleRestart(callback) { queueMicrotask(callback) }
   })
   await service.start({ workerId: 'auto' })
   children[0].emit('exit', 1, null)
@@ -297,6 +298,43 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
   assert.equal(service.list()[0].restartCount, 1)
   await service.stopAll()
   assert.equal(children.length, 2)
+}
+
+{
+  const children = []
+  const scheduled = []
+  const events = []
+  const service = createTaskService({
+    spawnProcess: () => {
+      const child = fakeChild(400 + children.length)
+      children.push(child)
+      return child
+    },
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: (event, data) => events.push({ event, data }),
+    now: () => 1_000,
+    scheduleRestart(callback, delayMs) {
+      scheduled.push({ callback, delayMs })
+      return scheduled.length
+    },
+    restartPolicy: { maxRestarts: 2, windowMs: 60_000, initialDelayMs: 1_000, maxDelayMs: 10_000 }
+  })
+
+  await service.start({ workerId: 'auto' })
+  children[0].emit('exit', 1, null)
+  assert.deepEqual(scheduled.map(({ delayMs }) => delayMs), [1_000], 'the first retry must be delayed')
+  assert.equal(children.length, 1, 'a crash must not immediately spawn a replacement')
+  scheduled.shift().callback()
+  assert.equal(children.length, 2)
+
+  children[1].emit('exit', 1, null)
+  assert.deepEqual(scheduled.map(({ delayMs }) => delayMs), [2_000], 'retries must back off exponentially')
+  scheduled.shift().callback()
+  assert.equal(children.length, 3)
+
+  children[2].emit('exit', 1, null)
+  assert.equal(scheduled.length, 0, 'the circuit breaker must suppress another restart')
+  assert(events.some(({ event, data }) => event === 'task.exited' && data.restartSuppressed === true), 'the suppressed restart must be observable')
 }
 
 {

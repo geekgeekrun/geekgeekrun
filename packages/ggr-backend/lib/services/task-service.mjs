@@ -8,6 +8,10 @@ const ALLOWED_WORKER_EVENTS = new Set(['task.progress', 'approval.required'])
 const SENSITIVE_ASSIGNMENT = new RegExp(`(?:["']?)(?:${SENSITIVE_KEYS})(?:["']?)\\s*[=:]\\s*`, 'gi')
 const SENSITIVE_KEY = new RegExp(SENSITIVE_KEYS, 'i')
 
+function positiveInteger(value, fallback) {
+  return Number.isInteger(value) && value > 0 ? value : fallback
+}
+
 function redactLine(value) {
   const input = String(value)
   SENSITIVE_ASSIGNMENT.lastIndex = 0
@@ -123,7 +127,11 @@ export function createTaskService({
   emit = () => {},
   stopTimeoutMs = 5000,
   diagnosticLineBytes = DEFAULT_DIAGNOSTIC_LINE_BYTES,
-  diagnosticStreamBytes = DEFAULT_DIAGNOSTIC_STREAM_BYTES
+  diagnosticStreamBytes = DEFAULT_DIAGNOSTIC_STREAM_BYTES,
+  restartPolicy = {},
+  now = () => Date.now(),
+  scheduleRestart = setTimeout,
+  clearScheduledRestart = clearTimeout
 }) {
   if (!workerEntries || typeof workerEntries !== 'object') throw new TypeError('workerEntries are required')
   if (!Number.isInteger(diagnosticLineBytes) || diagnosticLineBytes <= 0) throw new TypeError('diagnosticLineBytes must be a positive integer')
@@ -132,8 +140,21 @@ export function createTaskService({
   const stoppedWorkers = new Set()
   const terminalChildren = new WeakSet()
   const stopPromises = new Map()
+  const restartStates = new Map()
   let updateDrain = false
   let nextRunRecordId = Date.now()
+  const maxRestarts = positiveInteger(restartPolicy.maxRestarts, 3)
+  const restartWindowMs = positiveInteger(restartPolicy.windowMs, 60_000)
+  const initialRestartDelayMs = positiveInteger(restartPolicy.initialDelayMs, 5_000)
+  const maxRestartDelayMs = positiveInteger(restartPolicy.maxDelayMs, 60_000)
+
+  function resetRestartState(workerId) {
+    const current = restartStates.get(workerId)
+    if (current?.timer) clearScheduledRestart(current.timer)
+    const state = { timestamps: [], timer: null }
+    restartStates.set(workerId, state)
+    return state
+  }
 
   function assertWorker(workerId) {
     if (typeof workerId !== 'string' || !Object.hasOwn(workerEntries, workerId)) {
@@ -161,7 +182,7 @@ export function createTaskService({
     if (updateDrain) throw Object.assign(new Error('Backend is draining active tasks for an update'), { code: 'UPDATE_DRAINING' })
   }
 
-  function launch(workerId, restartCount = 0, options = { headless: false }, runRecordId = nextRunRecordId++) {
+  function launch(workerId, restartCount = 0, options = { headless: false }, runRecordId = nextRunRecordId++, restartState = restartStates.get(workerId) ?? resetRestartState(workerId)) {
     const entry = assertWorker(workerId)
     const child = spawnProcess(process.execPath, [entry], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -206,7 +227,22 @@ export function createTaskService({
       resetCarry(record.stdoutCarry)
       resetCarry(record.stderrCarry)
       if (workers.get(workerId) === record) workers.delete(workerId)
-      const restarting = !stoppedWorkers.has(workerId) && code !== 0
+      const restartEligible = !stoppedWorkers.has(workerId) && code !== 0
+      let restarting = false
+      let restartSuppressed = false
+      let restartDelayMs
+      if (restartEligible) {
+        const timestamp = now()
+        restartState.timestamps = restartState.timestamps.filter((item) => timestamp - item <= restartWindowMs)
+        restartState.timestamps.push(timestamp)
+        if (restartState.timestamps.length > maxRestarts) {
+          restartSuppressed = true
+          stoppedWorkers.add(workerId)
+        } else {
+          restarting = true
+          restartDelayMs = Math.min(initialRestartDelayMs * (2 ** (restartState.timestamps.length - 1)), maxRestartDelayMs)
+        }
+      }
       emit('task.exited', {
         workerId,
         runRecordId,
@@ -214,12 +250,17 @@ export function createTaskService({
         signal,
         restarting,
         restartCount: restartCount + (restarting ? 1 : 0),
+        ...(restartDelayMs ? { restartDelayMs } : {}),
+        ...(restartSuppressed ? { restartSuppressed: true } : {}),
         ...(error ? { error: redactLine(error.message) } : {})
       })
       if (restarting) {
-        queueMicrotask(() => {
-          if (!stoppedWorkers.has(workerId) && !workers.has(workerId)) launch(workerId, restartCount + 1, options, runRecordId)
-        })
+        restartState.timer = scheduleRestart(() => {
+          restartState.timer = null
+          if (!stoppedWorkers.has(workerId) && !workers.has(workerId) && restartStates.get(workerId) === restartState) {
+            launch(workerId, restartCount + 1, options, runRecordId, restartState)
+          }
+        }, restartDelayMs)
       }
     }
     child.once?.('error', (error) => finalize(null, null, error))
@@ -238,12 +279,17 @@ export function createTaskService({
     const running = workers.get(workerId)
     if (running) return snapshot(running)
     stoppedWorkers.delete(workerId)
-    return launch(workerId, 0, startOptions)
+    return launch(workerId, 0, startOptions, nextRunRecordId++, resetRestartState(workerId))
   }
 
   async function stop({ workerId } = {}) {
     assertWorker(workerId)
     stoppedWorkers.add(workerId)
+    const restartState = restartStates.get(workerId)
+    if (restartState?.timer) {
+      clearScheduledRestart(restartState.timer)
+      restartState.timer = null
+    }
     if (stopPromises.has(workerId)) return stopPromises.get(workerId)
     const record = workers.get(workerId)
     if (!record) return null
