@@ -177,6 +177,30 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
 }
 
 {
+  const children = []
+  const service = createTaskService({
+    spawnProcess: () => {
+      const child = fakeChild(104, { exitOnSignal: false })
+      children.push(child)
+      return child
+    },
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: () => {}
+  })
+  await service.start({ workerId: 'auto' })
+
+  const stopping = service.stop({ workerId: 'auto' })
+  const queuedStart = service.start({ workerId: 'auto' })
+  service.setUpdateDrain({ enabled: true })
+  children[0].emit('exit', null, 'SIGTERM')
+
+  await stopping
+  await assert.rejects(queuedStart, { code: 'UPDATE_DRAINING' })
+  assert.equal(children.length, 1, 'a start queued behind a stop must not launch while draining')
+  assert.deepEqual(service.list(), [])
+}
+
+{
   const events = []
   const child = fakeChild(150, { exitOnSignal: false })
   const service = createTaskService({

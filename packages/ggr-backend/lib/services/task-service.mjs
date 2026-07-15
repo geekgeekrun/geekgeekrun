@@ -157,6 +157,10 @@ export function createTaskService({
     return { headless: Boolean(options.headless) }
   }
 
+  function assertNotDraining() {
+    if (updateDrain) throw Object.assign(new Error('Backend is draining active tasks for an update'), { code: 'UPDATE_DRAINING' })
+  }
+
   function launch(workerId, restartCount = 0, options = { headless: false }, runRecordId = nextRunRecordId++) {
     const entry = assertWorker(workerId)
     const child = spawnProcess(process.execPath, [entry], {
@@ -226,10 +230,11 @@ export function createTaskService({
 
   async function start({ workerId, options } = {}) {
     assertWorker(workerId)
-    if (updateDrain) throw Object.assign(new Error('Backend is draining active tasks for an update'), { code: 'UPDATE_DRAINING' })
+    assertNotDraining()
     const startOptions = assertStartOptions(options)
     const stopping = stopPromises.get(workerId)
     if (stopping) await stopping
+    assertNotDraining()
     const running = workers.get(workerId)
     if (running) return snapshot(running)
     stoppedWorkers.delete(workerId)
