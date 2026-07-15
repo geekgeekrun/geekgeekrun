@@ -2,7 +2,6 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import buildInfo from '../../common/build-info.json'
-import { ensureStorageFileExist } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import {
   createFirstLaunchNoticeWindow,
   firstLaunchNoticeWindow
@@ -18,7 +17,7 @@ export const firstLaunchNoticeApproveFlagPath = path.join(
 export const isFirstLaunchNoticeApproveFlagExist = () =>
   fs.existsSync(firstLaunchNoticeApproveFlagPath)
 export const createFirstLaunchNoticeApproveFlag = () => {
-  ensureStorageFileExist()
+  fs.mkdirSync(path.dirname(firstLaunchNoticeApproveFlagPath), { recursive: true })
   fs.writeFileSync(firstLaunchNoticeApproveFlagPath, buildInfo.version)
 }
 export async function waitForUserApproveAgreement({ windowOption } = {}) {

@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "platform": "darwin",
+  "entries": [
+    "bin/node",
+    "app/server.mjs",
+    "app/migration.mjs",
+    "app/package.json",
+    "app/node_modules/better-sqlite3/",
+    "app/node_modules/puppeteer/",
+    "metadata/build.json"
+  ],
+  "nodeVersion": "20.16.0",
+  "reproducibility": {
+    "preSigningArchive": "byte-identical when inputs are unchanged",
+    "signedRelease": "timestamped codesigning is not byte-reproducible; verify the final archive by signed manifest SHA-256"
+  }
+}

@@ -8,5 +8,8 @@
   },
   "scripts": {
     "test": "node ./test/check.mjs"
+  },
+  "dependencies": {
+    "@geekgeekrun/ggr-protocol": "workspace:*"
   }
 }

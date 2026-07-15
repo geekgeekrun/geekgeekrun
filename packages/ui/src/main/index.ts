@@ -1,8 +1,7 @@
 import overrideConsole from './utils/overrideConsole'
-import minimist from 'minimist'
-import { runCommon } from './features/run-common'
-import { launchDaemon } from './flow/OPEN_SETTING_WINDOW/launch-daemon'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
+import { openSettingWindow } from './flow/OPEN_SETTING_WINDOW/index'
+import { ensureBackendReady, ensureSupervisorInstalled } from './backend/bootstrap'
 
 const isUiDev = process.env.NODE_ENV === 'development'
 const enableLogToFile = process.env.GEEKGEEKRUN_ENABLE_LOG_TO_FILE === String(1)
@@ -12,83 +11,35 @@ if (isUiDev || enableLogToFile) {
 console.log('NODE_ENV:', process.env.NODE_ENV)
 
 // 捕获未处理的 EPIPE 错误
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', (err: Error & { code?: string }) => {
   if (err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_DESTROYED') {
     return
   }
   throw err
 })
 
-console.log('argv:', process.argv)
-const commandlineArgs = minimist(isUiDev ? process.argv.slice(2) : process.argv.slice(1))
-console.log('parsed commandline args:', commandlineArgs)
-
-const runMode = commandlineArgs['mode']
-
-;(async () => {
-  switch (runMode) {
-    // #region internal use
-    case 'geekAutoStartWithBossMain': {
-      const { waitForProcessHandShakeAndRunAutoChat } = await import(
-        './flow/GEEK_AUTO_START_CHAT_WITH_BOSS_MAIN/index'
-      )
-      waitForProcessHandShakeAndRunAutoChat()
-      break
-    }
-    case 'downloadDependenciesForInit': {
-      const { downloadDependenciesForInit } = await import('./flow/DOWNLOAD_DEPENDENCIES/index')
-      downloadDependenciesForInit()
-      break
-    }
-    case 'launchBossZhipinLoginPageWithPreloadExtension': {
-      const { launchBossZhipinLoginPageWithPreloadExtension } = await import(
-        './flow/LAUNCH_BOSS_ZHIPIN_LOGIN_PAGE_WITH_PRELOAD_EXTENSION'
-      )
-      launchBossZhipinLoginPageWithPreloadExtension()
-      break
-    }
-    case 'launchBossSite': {
-      const { launchBossSite } = await import('./flow/LAUNCH_BOSS_SITE')
-      launchBossSite()
-      break
-    }
-    case 'readNoReplyAutoReminderMain': {
-      const { runEntry } = await import('./flow/READ_NO_REPLY_AUTO_REMINDER_MAIN/index')
-      runEntry()
-      break
-    }
-    case 'launchDaemon': {
-      await import('./flow/LAUNCH_DAEMON')
-      break
-    }
-    // #endregion
-
-    // #region user entry
-    case 'geekAutoStartWithBoss': {
-      app.dock?.hide()
-      await launchDaemon()
-      const { isAlreadyRunning } = await runCommon({ mode: 'geekAutoStartWithBossMain' })
-      if (isAlreadyRunning) {
-        process.exit(0)
-      }
-      break
-    }
-    case 'readNoReplyAutoReminder': {
-      app.dock?.hide()
-      await launchDaemon()
-      const { isAlreadyRunning } = await runCommon({ mode: 'readNoReplyAutoReminderMain' })
-      if (isAlreadyRunning) {
-        process.exit(0)
-      }
-      break
-    }
-    default: {
-      globalThis.GEEKGEEKRUN_PROCESS_ROLE = 'ui'
-      await launchDaemon()
-      const { openSettingWindow } = await import('./flow/OPEN_SETTING_WINDOW/index')
+globalThis.GEEKGEEKRUN_PROCESS_ROLE = 'ui'
+void (async () => {
+  while (true) {
+    try {
+      await ensureSupervisorInstalled()
+      await ensureBackendReady()
       openSettingWindow({ headless: process.env.GGR_HEADLESS === 'true' })
-      break
+      return
+    } catch (error) {
+      console.error('Backend bootstrap failed before opening the main window', error)
+      const { response } = await dialog.showMessageBox({
+        type: 'error',
+        buttons: ['Retry', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+        message: 'The backend could not be started.',
+        detail: 'Retry after checking your network connection or backend release settings.'
+      })
+      if (response !== 0) {
+        app.quit()
+        return
+      }
     }
-    // #region
   }
 })()

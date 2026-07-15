@@ -6,5 +6,9 @@
   "scripts": {
     "start": "node ./server.mjs",
     "test": "node ./test/check.mjs"
+  },
+  "dependencies": {
+    "@geekgeekrun/ggr-client": "workspace:*",
+    "@geekgeekrun/ggr-controller": "workspace:*"
   }
 }

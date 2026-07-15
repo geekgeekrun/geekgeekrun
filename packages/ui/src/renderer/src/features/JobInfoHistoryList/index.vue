@@ -43,8 +43,7 @@
 
 <script setup lang="ts">
 import { PropType, computed, ref, watch } from 'vue'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
-import { JobInfoChangeLog } from '@geekgeekrun/sqlite-plugin/src/entity/JobInfoChangeLog'
+import type { JobHistoryRecordDto, JobRecordDto } from '@geekgeekrun/ggr-protocol'
 import { ElTable, ElTableColumn, ElForm, ElFormItem, ElRow, ElCol, ElDivider } from 'element-plus'
 import TextDiff from '../../components/TextDiff.vue'
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
@@ -52,11 +51,11 @@ import { gtagRenderer } from '@renderer/utils/gtag'
 
 const props = defineProps({
   jobInfo: {
-    type: Object as PropType<VChatStartupLog>,
+    type: Object as PropType<JobRecordDto>,
     required: true
   },
   jobInfoHistoryList: {
-    type: Array as PropType<JobInfoChangeLog[]>,
+    type: Array as PropType<Array<JobHistoryRecordDto & { __ggr_updateTime: string }>>,
     default: () => []
   }
 })

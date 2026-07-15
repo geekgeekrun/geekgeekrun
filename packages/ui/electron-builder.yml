@@ -4,6 +4,7 @@ directories:
   buildResources: build
 icon: resources/icon.png
 files:
+  - '!resources/ggrd-bootstrap/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -17,6 +18,10 @@ files:
   - '!node_modules/typeorm/browser/*'
 asarUnpack:
   - 'resources/**'
+  - '!resources/ggrd-bootstrap/**'
+extraResources:
+  - from: resources/ggrd-bootstrap
+    to: ggrd-bootstrap
 win:
   executableName: geekgeekrun
 nsis:

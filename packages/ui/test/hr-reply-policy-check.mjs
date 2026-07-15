@@ -1,7 +1,4 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
 
 const policy = await import('../src/main/features/hr-reply-policy.mjs')
 
@@ -53,9 +50,6 @@ assert.equal(validateAutoReply('期望薪资15k').ok, false)
 assert.equal(validateAutoReply('明天下午三点可以面试').ok, false)
 assert.equal(validateAutoReply('我是资深专家，保证能胜任').ok, false)
 
-const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-approval-'))
-const queueFilePath = path.join(tmpDir, 'approval-queue.json')
-
 const request = {
   hrName: '张三',
   company: '测试公司',
@@ -68,34 +62,36 @@ const request = {
   reason: 'salary requires approval'
 }
 
-const first = await appendApprovalRequest(request, { queueFilePath })
+const approvalCalls = []
+const approvals = []
+const approvalController = {
+  async createApprovalRequest(value) {
+    approvalCalls.push(['approval.create', value])
+    const existing = approvals.find((item) => item.latestHrMessage === value.latestHrMessage)
+    if (existing) return { created: false, request: existing }
+    const next = { ...value, id: value.id ?? `approval-${approvals.length + 1}`, status: 'pending' }
+    approvals.push(next)
+    return { created: true, request: next }
+  },
+  async listAiReplyApprovals() {
+    approvalCalls.push(['approval.list'])
+    return approvals
+  }
+}
+
+const first = await appendApprovalRequest(request, { approvalController })
 assert.equal(first.created, true)
 assert.equal(first.request.status, 'pending')
 
-const second = await appendApprovalRequest(request, { queueFilePath })
+const second = await appendApprovalRequest(request, { approvalController })
 assert.equal(second.created, false)
 assert.equal(second.request.id, first.request.id)
 
-const pending = await getPendingApprovalRequests({ queueFilePath })
+const pending = await getPendingApprovalRequests({ approvalController })
 assert.equal(pending.length, 1)
 assert.equal(pending[0].latestHrMessage, request.latestHrMessage)
 assert.equal(pending[0].draftSource, 'model_review_draft')
 assert.equal(pending[0].draftSafety, 'needs_human_review')
-
-const concurrentQueueFilePath = path.join(tmpDir, 'concurrent-approval-queue.json')
-await Promise.all(
-  Array.from({ length: 12 }, (_, index) =>
-    appendApprovalRequest(
-      {
-        ...request,
-        hrName: `招聘者${index}`,
-        latestHrMessage: `审批消息${index}`
-      },
-      { queueFilePath: concurrentQueueFilePath }
-    )
-  )
-)
-const concurrentPending = await getPendingApprovalRequests({ queueFilePath: concurrentQueueFilePath })
-assert.equal(concurrentPending.length, 12)
+assert.deepEqual(approvalCalls.map(([method]) => method), ['approval.create', 'approval.create', 'approval.list'])
 
 console.log('hr reply policy check passed')

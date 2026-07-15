@@ -3,13 +3,7 @@ import gtag from './gtag'
 import buildInfo from '../../common/build-info.json'
 import os from 'node:os'
 import fs from 'node:fs'
-import {
-  ensureStorageFileExist,
-  writeStorageFile,
-  configFileNameList,
-  readConfigFile,
-  readStorageFile
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
+import { readBackendConfig, writeBackendConfig } from '../backend/register-ipc'
 
 export default function initPublicIpc() {
   ipcMain.on(
@@ -35,13 +29,13 @@ export default function initPublicIpc() {
       activate: true
     })
   })
-  ipcMain.on('gtag', (ev, { name, params } = {}) => {
+  ipcMain.on('gtag', (_ev, { name, params } = {}) => {
     gtag(name, {
       ...params,
       electron_log_source: 'renderer'
     })
   })
-  ipcMain.on('send-feed-back-to-github-issue', (ev, payload) => {
+  ipcMain.on('send-feed-back-to-github-issue', () => {
     const getIssueUrlWithBody = (issueBody: string = '') => {
       const baseUrl = `https://github.com/geekgeekrun/geekgeekrun/issues/new`
       issueBody = issueBody || ''
@@ -65,14 +59,22 @@ export default function initPublicIpc() {
     )
   })
 
-  ipcMain.handle('read-storage-file', async (ev, payload) => {
-    ensureStorageFileExist()
-    return await readStorageFile(payload.fileName)
+  ipcMain.handle('read-storage-file', async (_ev, payload) => {
+    throw Object.assign(
+      new Error(`Raw storage reads are not available: ${payload?.fileName}`),
+      { code: 'METHOD_NOT_FOUND' }
+    )
   })
 
-  ipcMain.handle('write-storage-file', async (ev, payload) => {
-    ensureStorageFileExist()
-    return await writeStorageFile(payload.fileName, JSON.parse(payload.data))
+  ipcMain.handle('get-boss-session-status', async () => {
+    return await readBackendConfig('boss_cookies')
+  })
+
+  ipcMain.handle('write-storage-file', async (_ev, payload) => {
+    if (payload?.fileName !== 'boss-cookies.json') {
+      throw Object.assign(new Error(`Unsupported storage resource: ${payload?.fileName}`), { code: 'INVALID_PARAMS' })
+    }
+    return await writeBackendConfig('boss_cookies', JSON.parse(payload.data))
   })
   ipcMain.handle('get-os-platform', () => {
     return os.platform()
@@ -88,7 +90,7 @@ export default function initPublicIpc() {
       return dialog.showOpenDialog(win, fileChooserConfig)
     }
   })
-  ipcMain.handle('check-executable-file', (ev, filePath: string) => {
+  ipcMain.handle('check-executable-file', (_ev, filePath: string) => {
     if (!filePath?.trim()) {
       return {
         message: '文件名无效'
@@ -113,18 +115,4 @@ export default function initPublicIpc() {
     return null
   })
 
-  ipcMain.handle('fetch-config-file-content', async () => {
-    const configFileContentList = configFileNameList.map((fileName) => {
-      return readConfigFile(fileName)
-    })
-    const result = {
-      config: {}
-    }
-
-    configFileNameList.forEach((fileName, index) => {
-      result.config[fileName] = configFileContentList[index]
-    })
-
-    return result
-  })
 }

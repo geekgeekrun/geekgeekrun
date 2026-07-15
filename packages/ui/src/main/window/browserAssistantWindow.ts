@@ -1,11 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import { getAnyAvailablePuppeteerExecutable } from '../flow/DOWNLOAD_DEPENDENCIES/utils/puppeteer-executable'
-import {
-  getLastUsedAndAvailableBrowser,
-  saveLastUsedAndAvailableBrowserInfo
-} from '../flow/DOWNLOAD_DEPENDENCIES/utils/browser-history'
 import { openBrowserDownloadWindow } from '../features/open-browser-download-window'
+import { requestBackend } from '../backend/client'
 
 export let browserAssistantWindow: BrowserWindow | null = null
 
@@ -67,9 +63,9 @@ export function createBrowserAssistantWindow(
 
   registerHandleWithWindow(
     browserAssistantWindow,
-    'get-any-available-puppeteer-executable',
+    'get-any-available-browser-executable',
     async (_, { ignoreCached, noSave } = {}) => {
-      return await getAnyAvailablePuppeteerExecutable({ ignoreCached, noSave })
+      return await requestBackend('browser.getAvailable', { ignoreCached, noSave })
     }
   )
 
@@ -77,7 +73,7 @@ export function createBrowserAssistantWindow(
     browserAssistantWindow,
     'get-last-used-and-available-browser',
     async () => {
-      return await getLastUsedAndAvailableBrowser()
+      return await requestBackend('browser.getAvailable')
     }
   )
 
@@ -85,7 +81,7 @@ export function createBrowserAssistantWindow(
     browserAssistantWindow,
     'save-last-used-and-available-browser-info',
     async (_, payload) => {
-      return await saveLastUsedAndAvailableBrowserInfo(payload)
+      return await requestBackend('browser.setExecutable', payload)
     }
   )
 

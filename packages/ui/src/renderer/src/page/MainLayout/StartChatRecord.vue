@@ -99,20 +99,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElPagination, ElDrawer } from 'element-plus'
-import { type VChatStartupLog } from '@geekgeekrun/sqlite-plugin/src/entity/VChatStartupLog'
 import { transformUtcDateToLocalDate } from '@geekgeekrun/utils/date.mjs'
-import { PageReq, PagedRes } from '../../../../common/types/pagination'
+import type { JobRecordDto, PageResult } from '@geekgeekrun/ggr-protocol'
 import JobInfoSnapshot from '../../features/JobInfoSnapshot/index.vue'
 import { gtagRenderer } from '@renderer/utils/gtag'
 
-const tableData = ref<VChatStartupLog[]>([])
+const tableData = ref<JobRecordDto[]>([])
 const pageSizeList = ref<number[]>([100, 200, 300, 400])
-const pagination = ref<Omit<PageReq & PagedRes<unknown>, 'data'>>({
+const pagination = ref({
   pageNo: 1,
   pageSize: pageSizeList.value[0],
   totalItemCount: 0
 })
-const getRowKey = (row: VChatStartupLog) => {
+const getRowKey = (row: JobRecordDto) => {
   return `${row.encryptJobId}@${row.date}`
 }
 const tableRef = ref<InstanceType<typeof ElTable>>()
@@ -124,14 +123,14 @@ async function getAutoStartChatRecord() {
       page_size: pagination.value.pageSize,
     })
     isTableLoading.value = true
-    const { data: res } = (await electron.ipcRenderer.invoke('get-auto-start-chat-record', {
+    const res = (await electron.ipcRenderer.invoke('get-auto-start-chat-record', {
       pageNo: pagination.value.pageNo,
       pageSize: pagination.value.pageSize
-    })) as { data: PagedRes<VChatStartupLog> }
-    tableData.value = res.data
+    })) as PageResult<JobRecordDto>
+    tableData.value = res.items
     pagination.value = {
-      totalItemCount: res.totalItemCount,
-      pageNo: res.pageNo,
+      totalItemCount: res.total,
+      pageNo: res.page,
       pageSize: pagination.value.pageSize
     }
     gtagRenderer('start_chat_record_request_success', {
@@ -167,16 +166,16 @@ onMounted(() => {
   })
 })
 
-async function handleViewJobOnlineButtonClick(encryptJobId: string) {
+async function handleViewJobOnlineButtonClick(encryptJobId: string | number) {
   return await electron.ipcRenderer.invoke('open-site-with-boss-cookie', {
     url: `https://www.zhipin.com/job_detail/${encryptJobId}.html`
   })
 }
 
 const drawVisibleModelValue = ref(false)
-const selectedJobInfoForViewSnapshot = ref<VChatStartupLog | null>(null)
+const selectedJobInfoForViewSnapshot = ref<JobRecordDto | null>(null)
 
-function handleViewJobSnapshotButtonClick(record: VChatStartupLog) {
+function handleViewJobSnapshotButtonClick(record: JobRecordDto) {
   selectedJobInfoForViewSnapshot.value = record
   drawVisibleModelValue.value = true
 }

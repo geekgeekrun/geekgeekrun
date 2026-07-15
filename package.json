@@ -6,9 +6,15 @@
   "module": "./main/index.mjs",
   "type": "module",
   "scripts": {
-    "start": "node ./packages/run-core-of-geek-auto-start-chat-with-boss/daemon-main.mjs",
+    "start": "node ./packages/ggr-backend/server.mjs",
     "start:ggr-mcp": "node ./packages/ggr-mcp/server.mjs",
+    "dev:backend": "GGR_BACKEND_DEV=1 node ./packages/ggr-backend/server.mjs",
     "test": "node ./packages/ggr-controller/test/check.mjs && node ./packages/ggr-mcp/test/check.mjs && node ./packages/ui/test/check.mjs && node ./packages/ui/test/hr-reply-policy-check.mjs",
+    "test:ggr-client": "node ./packages/ggr-client/test/check.mjs",
+    "test:ggr-backend": "node ./packages/ggr-backend/test/server-check.mjs",
+    "build:ggr-backend-artifact": "node ./scripts/build-ggr-backend-artifact.mjs",
+    "sign:ggr-backend-manifest": "node ./scripts/sign-ggr-backend-manifest.mjs",
+    "test:ggr-protocol": "node ./packages/ggr-protocol/test/check.mjs",
     "test:ggr-mcp": "node ./packages/ggr-mcp/test/check.mjs",
     "test:ui": "node ./packages/ui/test/check.mjs"
   },
@@ -55,7 +61,6 @@
       "sharp"
     ],
     "patchedDependencies": {
-      "find-chrome-bin@2.0.4": "patches/find-chrome-bin@2.0.4.patch",
       "puppeteer-extra-plugin-anonymize-ua@2.4.6": "patches/puppeteer-extra-plugin-anonymize-ua@2.4.6.patch"
     }
   }

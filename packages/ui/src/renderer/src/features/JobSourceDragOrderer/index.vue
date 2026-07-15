@@ -219,7 +219,7 @@ import { computed, ref } from 'vue'
 import draggable from 'vuedraggable'
 import { ElMessage as Message } from 'element-plus'
 import { gtagRenderer } from '@renderer/utils/gtag'
-import { JobSource } from '@geekgeekrun/sqlite-plugin/src/enums'
+import { JobSource } from '@renderer/domain/presentation-data'
 const props = defineProps({
   modelValue: {
     type: Array

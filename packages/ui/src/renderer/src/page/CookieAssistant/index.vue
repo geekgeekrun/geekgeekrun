@@ -163,6 +163,12 @@ const formRules = {
 const hasUserMutateInput = ref(false)
 const collectedCookie = ref()
 const handleCookieCollected = (_, payload) => {
+  if (!Array.isArray(payload?.cookies) && payload?.configured) {
+    cookieInvalid.value = false
+    ElMessage.success('BOSS直聘登录状态已保存')
+    window.electron.ipcRenderer.send('cookie-saved')
+    return
+  }
   loginCookieWaitingStatus.value = LOGIN_COOKIE_WAITING_STATUS.COOKIE_COLLECTED
   collectedCookie.value = payload.cookies
   if (!hasUserMutateInput.value) {
@@ -201,9 +207,8 @@ const handleCancel = () => {
 const handleSubmit = async () => {
   gtagRenderer('save_clicked')
   await formRef.value!.validate()
-  await electron.ipcRenderer.invoke('write-storage-file', {
-    fileName: 'boss-cookies.json',
-    data: formContent.value.collectedCookies
+  await electron.ipcRenderer.invoke('save-boss-session', {
+    cookies: JSON.parse(formContent.value.collectedCookies)
   })
   ElMessage.success('BOSS直聘 Cookie 保存成功')
   gtagRenderer('save_cookie_done')
@@ -224,14 +229,8 @@ onMounted(async () => {
   electron.ipcRenderer.once('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)
   electron.ipcRenderer.on('BOSS_ZHIPIN_LOGIN_PAGE_CLOSED', handleBossZhipinLoginPageClosed)
 
-  const cookieFileContent = await electron.ipcRenderer.invoke('read-storage-file', {
-    fileName: 'boss-cookies.json'
-  })
-  if (checkCookieListFormat(cookieFileContent)) {
-    formContent.value.collectedCookies = JSON.stringify(cookieFileContent, null, 2)
-  } else {
-    cookieInvalid.value = true
-  }
+  const session = await electron.ipcRenderer.invoke('get-boss-session-status') as { configured?: boolean }
+  cookieInvalid.value = !session.configured
 })
 onUnmounted(() => {
   electron.ipcRenderer.removeListener('BOSS_ZHIPIN_COOKIE_COLLECTED', handleCookieCollected)

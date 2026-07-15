@@ -1,12 +1,7 @@
-import { ChildProcess } from 'child_process'
 import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import * as childProcess from 'node:child_process'
-import * as JSONStream from 'JSONStream'
-import * as fs from 'node:fs'
-import { cacheDir } from '../constant'
-import { EXPECT_CHROMIUM_BUILD_ID } from '../../common/constant'
-import * as puppeteerManager from '@puppeteer/browsers'
+import { requestBackend } from '../backend/client'
+import { backendEvents } from '../backend/events'
 
 export let browserDownloadProgressWindow: BrowserWindow | null = null
 
@@ -55,70 +50,56 @@ export function createBrowserDownloadProgressWindow(
     )
   }
 
-  let subProcessOfCheckAndDownloadDependencies: ChildProcess | null = null
+  let downloadPromise: Promise<string> | null = null
+  let activeDownload: { taskId: string; reject: (error: Error) => void; removeListener: () => void } | null = null
   registerHandleWithWindow(browserDownloadProgressWindow, 'setup-dependencies', async () => {
-    if (subProcessOfCheckAndDownloadDependencies) {
-      return
-    }
-    subProcessOfCheckAndDownloadDependencies = childProcess.spawn(
-      process.argv[0],
-      process.env.NODE_ENV === 'development'
-        ? [process.argv[1], `--mode=downloadDependenciesForInit`]
-        : [`--mode=downloadDependenciesForInit`],
-      {
-        stdio: [null, null, null, 'pipe', 'ipc']
-      }
-    )
-    return new Promise((resolve, reject) => {
-      subProcessOfCheckAndDownloadDependencies!.stdio[3]!.pipe(JSONStream.parse()).on(
-        'data',
-        (raw) => {
-          const data = raw
-          switch (data.type) {
-            case 'NEED_RESETUP_DEPENDENCIES':
-            case 'PUPPETEER_DOWNLOAD_PROGRESS': {
-              browserDownloadProgressWindow?.webContents.send(data.type, data)
-              break
-            }
-            case 'PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR': {
-              console.error(data)
-              break
-            }
-            default: {
-              return
-            }
+    downloadPromise ??= new Promise<string>(async (resolve, reject) => {
+      try {
+        const task = await requestBackend<{ taskId: string }>('browser.prepare')
+        let executablePath: string | undefined
+        const eventHandler = (event: { event?: string; data?: Record<string, unknown> }) => {
+          const data = event.data
+          if (event.event !== 'task.progress' || data?.taskId !== task.taskId) return
+          if (data.state === 'dependency-download-progress') {
+            browserDownloadProgressWindow?.webContents.send('PUPPETEER_DOWNLOAD_PROGRESS', data)
+            return
+          }
+          if (data.state === 'dependency-ready' && typeof data.executablePath === 'string') {
+            executablePath = data.executablePath
+            return
+          }
+          if (data.state === 'completed' && executablePath) {
+            cleanup()
+            resolve(executablePath)
+            return
+          }
+          if (data.state === 'failed' || data.state === 'cancelled') {
+            cleanup()
+            reject(new Error(String(data.message ?? 'Browser dependency setup failed')))
           }
         }
-      )
-      subProcessOfCheckAndDownloadDependencies!.once('exit', (exitCode) => {
-        const executablePath = puppeteerManager.computeExecutablePath({
-          browser: puppeteerManager.Browser.CHROME,
-          cacheDir,
-          buildId: EXPECT_CHROMIUM_BUILD_ID
-        })
-        if (exitCode === 0 && fs.existsSync(executablePath)) {
-          resolve(executablePath)
-        } else {
-          reject('PUPPETEER_DOWNLOAD_ENCOUNTER_ERROR')
+        const cleanup = () => {
+          backendEvents.off('event', eventHandler)
+          if (activeDownload?.taskId === task.taskId) activeDownload = null
         }
-        subProcessOfCheckAndDownloadDependencies = null
-      })
+        activeDownload = { taskId: task.taskId, reject, removeListener: cleanup }
+        backendEvents.on('event', eventHandler)
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error(String(error)))
+      }
+    }).finally(() => {
+      downloadPromise = null
     })
+    return await downloadPromise
   })
-
-  const killHandler = async () => {
-    try {
-      subProcessOfCheckAndDownloadDependencies?.kill()
-    } catch {
-      //
-    } finally {
-      subProcessOfCheckAndDownloadDependencies = null
+  browserDownloadProgressWindow.once('closed', () => {
+    const current = activeDownload
+    activeDownload = null
+    current?.removeListener()
+    if (current) {
+      current.reject(new Error('USER_CANCELLED_CONFIG_BROWSER'))
+      void requestBackend('browser.cancel', { taskId: current.taskId }).catch(() => {})
     }
-  }
-  browserDownloadProgressWindow.once('closed', () => {
-    killHandler()
-  })
-  browserDownloadProgressWindow.once('closed', () => {
     browserDownloadProgressWindow = null
   })
 

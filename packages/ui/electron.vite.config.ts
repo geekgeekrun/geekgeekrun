@@ -20,7 +20,21 @@ function externalizeMainBareImportsPlugin() {
   }
 }
 
+function forbidBackendImportsPlugin() {
+  const backendImport = /(?:@geekgeekrun\/(?:pm|sqlite-plugin|geek-auto-start-chat-with-boss|puppeteer-extra-plugin-laodeng)|ggr-backend\/)/
+  return {
+    name: 'forbid-backend-imports',
+    resolveId(id: string) {
+      if (backendImport.test(id)) {
+        throw new Error(`Electron must access backend behavior through RPC, not ${id}`)
+      }
+      return null
+    }
+  }
+}
+
 const mainPlugins = [
+  forbidBackendImportsPlugin(),
   externalizeMainBareImportsPlugin(),
   externalizeDepsPlugin(),
   Replace({
@@ -67,6 +81,7 @@ if (process.env.NODE_ENV) {
 
 export default defineConfig({
   main: {
+    resolve: { alias: { '@geekgeekrun/utils': resolve('src/common/ui-utils') } },
     build: {
       rollupOptions: {
         external: []
@@ -77,6 +92,7 @@ export default defineConfig({
     plugins: mainPlugins
   },
   preload: {
+    resolve: { alias: { '@geekgeekrun/utils': resolve('src/common/ui-utils') } },
     plugins: preloadPlugins,
     build: {
       minify: process.env.NODE_ENV === 'development' ? undefined : 'terser',
@@ -86,7 +102,8 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        '@geekgeekrun/utils': resolve('src/common/ui-utils')
       }
     },
     plugins: rendererPlugins,

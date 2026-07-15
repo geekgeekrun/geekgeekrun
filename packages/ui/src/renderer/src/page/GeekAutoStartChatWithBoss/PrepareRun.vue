@@ -10,7 +10,7 @@ import { PropType, computed } from 'vue'
 
 const statusTextMap = {
   _: '请稍后，正在进行一些处理',
-  'locating-puppeteer-executable': '正在寻找可用的浏览器'
+  'locating-browser-executable': '正在寻找可用的浏览器'
 } as const
 
 const props = defineProps({

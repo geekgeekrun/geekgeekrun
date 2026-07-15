@@ -1,4 +1,4 @@
-import { JobDetailRegExpMatchLogic } from '@geekgeekrun/sqlite-plugin/src/enums'
+import { JobDetailRegExpMatchLogic } from '@renderer/domain/presentation-data'
 
 const expectJobFilterTemplateList = [
   {

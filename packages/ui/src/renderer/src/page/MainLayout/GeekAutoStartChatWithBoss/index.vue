@@ -1,7 +1,21 @@
 <template>
   <div class="geek-auto-start-run-with-boss__wrap">
+    <el-alert
+      v-if="presentationDataState.status === 'error'"
+      title="筛选数据加载失败"
+      type="error"
+      :closable="false"
+      show-icon
+    >
+      <template #default>
+        {{ presentationDataState.error }}
+        <el-button size="small" @click="loadConfig">重试</el-button>
+      </template>
+    </el-alert>
     <div
       class="main__wrap"
+      v-loading="isPresentationDataLoading"
+      element-loading-text="正在加载筛选数据"
       :style="{
         display: 'flex',
         flexDirection: 'column'
@@ -1668,8 +1682,10 @@
             paddingRight: 'calc(20px + 16px)'
           }"
         >
-          <el-button @click="handleSave">仅保存配置</el-button>
-          <el-button type="primary" @click="handleSubmit"> 保存配置，并开始求职！ </el-button>
+          <el-button :disabled="isPresentationDataLoading" @click="handleSave">仅保存配置</el-button>
+          <el-button type="primary" :disabled="isPresentationDataLoading" @click="handleSubmit">
+            保存配置，并开始求职！
+          </el-button>
         </div>
       </div>
     </div>
@@ -1720,24 +1736,27 @@ import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import AnyCombineBossRecommendFilter from '@renderer/features/AnyCombineBossRecommendFilter/index.vue'
 import StaticCombineBossRecommendFilter from '@renderer/features/StaticCombineBossRecommendFilter/index.vue'
-import { activeDescList } from '@geekgeekrun/geek-auto-start-chat-with-boss/constant.mjs'
 import {
+  activeDescList,
+  beginPresentationDataLoad,
   calculateTotalCombinations,
   checkAnyCombineBossRecommendFilterHasCondition,
-  formatStaticCombineFilters
-} from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
-import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import {
   CombineRecommendJobFilterType,
+  filterConditions as conditions,
+  formatStaticCombineFilters,
+  JobDetailRegExpMatchLogic,
   MarkAsNotSuitOp,
-  StrategyScopeOptionWhenMarkJobNotMatch,
+  failPresentationDataLoad,
+  isPresentationDataLoading,
+  presentationDataState,
   SalaryCalculateWay,
-  JobDetailRegExpMatchLogic
-} from '@geekgeekrun/sqlite-plugin/src/enums'
+  setPresentationData,
+  StrategyScopeOptionWhenMarkJobNotMatch
+} from '@renderer/domain/presentation-data'
+import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
 import { debounce } from 'lodash'
 import mittBus from '../../../utils/mitt'
 import CityChooser from './components/CityChooser.vue'
-import conditions from '@geekgeekrun/geek-auto-start-chat-with-boss/internal-config/job-filter-conditions-20241002.json'
 import JobSourceDragOrderer from '../../../features/JobSourceDragOrderer/index.vue'
 import expectJobFilterTemplateList from './expectJobFilterTemplateList'
 import RunningOverlay from '@renderer/features/RunningOverlay/index.vue'
@@ -1859,7 +1878,11 @@ const unwatchAnyCombineRecommendJobFilter = ref<null | (() => void)>(null)
 onBeforeUnmount(() => {
   unwatchAnyCombineRecommendJobFilter.value?.()
 })
-electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+// prettier-ignore -- preserve the existing config hydration body without reformatting the full page.
+function loadConfig() {
+  beginPresentationDataLoad()
+  return electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
+  setPresentationData(res.config)
   console.log(res)
   formContent.value.dingtalkRobotAccessToken = res.config['dingtalk.json']['groupRobotAccessToken']
   formContent.value.expectCompanies = res.config['target-company-list.json'].join(',')
@@ -2001,7 +2024,13 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     expectSalaryHigh: res.config['common-job-condition-config.json']?.expectSalaryHigh ?? null,
     expectCityList: res.config['common-job-condition-config.json']?.expectCityList ?? []
   }
-})
+  }).catch((error) => {
+    failPresentationDataLoad(error)
+    ElMessage.error('筛选数据加载失败，请重试')
+  })
+}
+
+void loadConfig()
 
 const jobSourceFormItemSectionEl = ref()
 const jobDetailRegExpSectionEl = ref()

@@ -1,0 +1,19 @@
+{
+  "name": "@geekgeekrun/ggr-client",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs"
+    }
+  },
+  "scripts": {
+    "test": "node ./test/check.mjs"
+  },
+  "dependencies": {
+    "@geekgeekrun/ggr-protocol": "workspace:*"
+  }
+}

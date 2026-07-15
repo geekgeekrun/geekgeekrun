@@ -7,7 +7,9 @@ import './app-menu'
 import initIpc from './ipc'
 import gtag from '../../utils/gtag'
 import initPublicIpc from '../../utils/initPublicIpc'
-import { sendToDaemon, closeDaemonClient } from './connect-to-daemon'
+import { connectBackend, getBackendClient } from '../../backend/client'
+import { installBackendEventBridge } from '../../backend/events'
+import { registerBackendIpc } from '../../backend/register-ipc'
 
 export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
   const isHeadless = headless ?? process.env.GGR_HEADLESS === 'true'
@@ -23,7 +25,7 @@ export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  whenReadyPromise.then(() => {
+  whenReadyPromise.then(async () => {
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.electron')
 
@@ -48,6 +50,13 @@ export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
     ipcMain.on('ping', () => console.log('pong'))
     initPublicIpc()
     initIpc()
+    registerBackendIpc()
+    installBackendEventBridge()
+    try {
+      await connectBackend()
+    } catch (error) {
+      console.error('Backend connection unavailable; backend-backed IPC will retry on demand', error)
+    }
 
     if (!isHeadless) {
       app.on('activate', function () {
@@ -81,23 +90,7 @@ export function openSettingWindow({ headless }: { headless?: boolean } = {}) {
     })
   })
 
-  whenReadyPromise.then(async () => {
-    await sendToDaemon(
-      {
-        type: 'ping'
-      },
-      {
-        needCallback: true
-      }
-    )
-    await sendToDaemon(
-      {
-        type: 'user-process-register'
-      },
-      {
-        needCallback: true
-      }
-    )
+  app.on('before-quit', () => {
+    void getBackendClient().close()
   })
-  app.on('before-quit', closeDaemonClient)
 }

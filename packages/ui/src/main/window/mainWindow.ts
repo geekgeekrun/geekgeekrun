@@ -1,7 +1,7 @@
 import { BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { openDevTools } from '../commands'
-import { daemonEE } from '../flow/OPEN_SETTING_WINDOW/connect-to-daemon'
+import { backendEvents } from '../backend/events'
 
 export let mainWindow: BrowserWindow | null = null
 let shouldQuit = false
@@ -86,8 +86,15 @@ export function createMainWindow(): BrowserWindow {
   mainWindow!.once('closed', () => {
     mainWindow = null
   })
-  daemonEE.on('message', (message) => {
-    if (message.type === 'worker-to-gui-message') {
+  backendEvents.on('event', (event: { event?: string; data?: Record<string, unknown> }) => {
+    if (event.event === 'task.progress' || event.event === 'approval.required') {
+      const message = {
+        type: 'worker-to-gui-message',
+        workerId: event.data?.workerId,
+        data: event.event === 'approval.required'
+          ? { type: 'approval-required', ...event.data }
+          : event.data
+      }
       mainWindow?.webContents?.send('worker-to-gui-message', message)
       // headless 模式下日志打到终端
       if (process.env.GGR_HEADLESS === 'true') {
@@ -99,9 +106,6 @@ export function createMainWindow(): BrowserWindow {
         }
       }
     }
-  })
-  daemonEE.on('error', (err) => {
-    console.log(err)
   })
   return mainWindow!
 }

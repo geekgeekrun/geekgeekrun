@@ -1,0 +1,12 @@
+{
+  "name": "@geekgeekrun/ggrd",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node ./test/manifest-check.mjs && node ./test/trust-root-check.mjs && node ./test/installer-check.mjs && node ./test/migration-service-check.mjs && node ./test/release-service-check.mjs && node ./test/backend-process-check.mjs && node ./test/supervisor-api-check.mjs"
+  },
+  "dependencies": {
+    "@geekgeekrun/ggr-protocol": "workspace:*"
+  }
+}

@@ -1,6 +1,23 @@
 <template>
   <div class="common-job-condition-config" flex flex-col h-full>
-    <div flex-1 of-auto>
+    <el-alert
+      v-if="presentationDataState.status === 'error'"
+      title="筛选数据加载失败"
+      type="error"
+      :closable="false"
+      show-icon
+    >
+      <template #default>
+        {{ presentationDataState.error }}
+        <el-button size="small" @click="loadConfig">重试</el-button>
+      </template>
+    </el-alert>
+    <div
+      v-loading="isPresentationDataLoading"
+      element-loading-text="正在加载筛选数据"
+      flex-1
+      of-auto
+    >
       <el-form
         ref="formRef"
         :model="formContent"
@@ -588,7 +605,9 @@
         }"
       >
         <el-button @click="handleCancel">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="primary" :disabled="isPresentationDataLoading" @click="handleSave"
+          >保存</el-button
+        >
       </div>
     </div>
   </div>
@@ -596,9 +615,18 @@
 
 <script setup lang="tsx">
 import { gtagRenderer as baseGtagRenderer } from '@renderer/utils/gtag'
-import { JobDetailRegExpMatchLogic, SalaryCalculateWay } from '@geekgeekrun/sqlite-plugin/src/enums'
+import {
+  beginPresentationDataLoad,
+  failPresentationDataLoad,
+  isPresentationDataLoading,
+  JobDetailRegExpMatchLogic,
+  presentationDataState,
+  SalaryCalculateWay,
+  setPresentationData
+} from '@renderer/domain/presentation-data'
 import CityChooser from '../MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'
 import { QuestionFilled, ArrowDown } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 import {
   getJobDetailRegExpMatchLogicConfig,
@@ -712,18 +740,28 @@ async function handleSave() {
   ipcRenderer.send('common-job-condition-config-done')
 }
 
-ipcRenderer.invoke('fetch-config-file-content').then((res) => {
-  const commonJobConditionConfig = res.config?.['common-job-condition-config.json'] ?? {}
-  Object.keys(formContent.value).forEach((key) => {
-    if (key in commonJobConditionConfig) {
-      if (key === 'expectCompanies') {
-        formContent.value[key] = (commonJobConditionConfig[key] ?? []).join(',')
-      } else {
-        formContent.value[key] = commonJobConditionConfig[key]
+async function loadConfig() {
+  beginPresentationDataLoad()
+  try {
+    const res = await ipcRenderer.invoke('fetch-config-file-content')
+    setPresentationData(res.config)
+    const commonJobConditionConfig = res.config?.['common-job-condition-config.json'] ?? {}
+    Object.keys(formContent.value).forEach((key) => {
+      if (key in commonJobConditionConfig) {
+        if (key === 'expectCompanies') {
+          formContent.value[key] = (commonJobConditionConfig[key] ?? []).join(',')
+        } else {
+          formContent.value[key] = commonJobConditionConfig[key]
+        }
       }
-    }
-  })
-})
+    })
+  } catch (error) {
+    failPresentationDataLoad(error)
+    ElMessage.error('筛选数据加载失败，请重试')
+  }
+}
+
+void loadConfig()
 </script>
 
 <style lang="scss">

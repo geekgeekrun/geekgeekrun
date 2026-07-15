@@ -1,0 +1,160 @@
+import assert from 'node:assert/strict'
+import { createHash, generateKeyPairSync, sign } from 'node:crypto'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import { Readable } from 'node:stream'
+import { createVersionStore } from '../lib/version-store.mjs'
+import { createSupervisorServer } from '../server.mjs'
+
+let createReleaseService
+try {
+  ({ createReleaseService } = await import('../lib/release-service.mjs'))
+} catch (error) {
+  assert.fail(`release service must exist: ${error.message}`)
+}
+
+const runtime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-first-install-'))
+const { privateKey, publicKey } = generateKeyPairSync('ed25519')
+const archive = Buffer.from('first backend artifact')
+const unsignedManifest = {
+  version: '1.0.0',
+  artifacts: [{ platform: process.platform, arch: process.arch, url: 'https://updates.example.test/backend.tar.gz', size: archive.length, sha256: createHash('sha256').update(archive).digest('hex'), extractionSize: 64 }],
+  protocolMin: 1, protocolMax: 1, minClientVersion: '1.0.0', database: { schemaVersion: 0, rollbackCompatible: true, rehearsalEntrypoint: 'app/migration.mjs' }
+}
+const rawManifest = Buffer.from(JSON.stringify(unsignedManifest))
+const signature = sign(null, rawManifest, privateKey).toString('base64')
+const store = createVersionStore(runtime)
+const service = createReleaseService({
+  versionStore: store,
+  trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+  fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : url.endsWith('.tar.gz') ? archive : rawManifest }),
+  extract: async () => [
+    { path: 'bin/node', type: 'file', data: Readable.from(['node']) },
+    { path: 'app/server.mjs', type: 'file', data: Readable.from(['export {}']) }
+  ],
+  freeSpace: async () => Number.MAX_SAFE_INTEGER,
+  platform: process.platform,
+  arch: process.arch,
+  clientVersion: '1.0.0'
+})
+try {
+  const manifest = await service.checkForUpdates()
+  assert.equal(manifest.version, '1.0.0', 'signed channel manifest is selected for first install')
+  const invalidRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-invalid-signature-'))
+  const invalidStore = createVersionStore(invalidRuntime)
+  const invalidService = createReleaseService({
+    versionStore: invalidStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from('invalid detached signature') : rawManifest }),
+    extract: service.extract, freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  await assert.rejects(invalidService.install({ deadlineMs: 100 }), { code: 'SIGNATURE_INVALID' })
+  await assert.rejects(fs.readdir(path.join(invalidRuntime, 'versions')), { code: 'ENOENT' }, 'an invalid detached signature must never stage an artifact')
+  await fs.rm(invalidRuntime, { recursive: true, force: true })
+  const supervisor = await createSupervisorServer({ runtimeDir: runtime, versionStore: store, releaseService: service })
+  assert.equal((await supervisor.api.dispatch({ id: 'check', method: 'update.check', params: {} })).version, '1.0.0', 'the production supervisor exposes its release service')
+  await supervisor.stop()
+  await service.install({ manifest })
+  assert.equal((await fs.stat(path.join(runtime, 'versions', '1.0.0', 'app', 'server.mjs'))).isFile(), true)
+  assert.equal(await store.current(), null, 'release installation stages before supervisor activation')
+
+  const rehearsalRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-rehearsal-retry-'))
+  const rehearsalStore = createVersionStore(rehearsalRuntime)
+  const rehearsalOptions = {
+    versionStore: rehearsalStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : url.endsWith('.tar.gz') ? archive : rawManifest }),
+    extract: async () => [
+      { path: 'bin/node', type: 'file', data: Buffer.from('#!/bin/sh\n') },
+      { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}') }
+    ],
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  }
+  const failingRehearsal = createReleaseService({
+    ...rehearsalOptions,
+    migrationService: { async rehearse() { throw Object.assign(new Error('fixture rehearsal failed'), { code: 'MIGRATION_REHEARSAL_FAILED' }) } }
+  })
+  await assert.rejects(failingRehearsal.install({ deadlineMs: 100 }), { code: 'MIGRATION_REHEARSAL_FAILED' })
+  assert.equal((await fs.readdir(path.join(rehearsalRuntime, 'versions'))).includes('1.0.0'), false, 'a failed rehearsal removes the staged candidate')
+  const retryRehearsal = createReleaseService({ ...rehearsalOptions, migrationService: { async rehearse() { return { state: 'validated' } } } })
+  await retryRehearsal.install({ deadlineMs: 100 })
+  assert.equal((await fs.readdir(path.join(rehearsalRuntime, 'versions'))).includes('1.0.0'), true, 'the same candidate version can be staged again after rehearsal failure')
+  await fs.rm(rehearsalRuntime, { recursive: true, force: true })
+
+  const timedRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-deadline-'))
+  const timedStore = createVersionStore(timedRuntime)
+  const timedService = createReleaseService({
+    versionStore: timedStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url, { signal } = {}) => {
+      if (!url.endsWith('.tar.gz')) return { ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : rawManifest }
+      return await new Promise((_, reject) => signal?.addEventListener('abort', () => reject(signal.reason), { once: true }))
+    },
+    extract: service.extract,
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  await assert.rejects(timedService.install({ manifest, deadlineMs: 10 }), { code: 'INSTALL_DEADLINE_EXCEEDED' }, 'download, verification, extraction, staging, and activation share a bounded install deadline')
+  await fs.rm(timedRuntime, { recursive: true, force: true })
+
+  const delayedRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-delayed-extract-'))
+  const delayedStore = createVersionStore(delayedRuntime)
+  let delayExtractor = true
+  const delayedService = createReleaseService({
+    versionStore: delayedStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : url.endsWith('.tar.gz') ? archive : rawManifest }),
+    extract: async () => {
+      if (delayExtractor) await new Promise((resolve) => setTimeout(resolve, 30))
+      return [
+        { path: 'bin/node', type: 'file', data: Buffer.from('node') },
+        { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}') }
+      ]
+    },
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  await assert.rejects(delayedService.install({ manifest, deadlineMs: 5 }), { code: 'INSTALL_DEADLINE_EXCEEDED' })
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  assert.equal((await fs.readdir(path.join(delayedRuntime, 'versions'))).includes('1.0.0'), false, 'a delayed extractor must never commit a version after the deadline response')
+  delayExtractor = false
+  await delayedService.install({ manifest, deadlineMs: 100 })
+  assert.equal((await fs.readdir(path.join(delayedRuntime, 'versions'))).includes('1.0.0'), true, 'cancellation cleanup must not block a same-version retry')
+  await fs.rm(delayedRuntime, { recursive: true, force: true })
+
+  const renameRuntime = await fs.mkdtemp(path.join(os.tmpdir(), 'ggrd-delayed-rename-'))
+  const renameDestination = path.join(renameRuntime, 'versions', '1.0.0')
+  const delayedRenameFs = Object.create(fs)
+  let renameCommitted = false
+  delayedRenameFs.rename = async (source, destination) => {
+    if (destination === renameDestination) {
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      const result = await fs.rename(source, destination)
+      renameCommitted = true
+      return result
+    }
+    return fs.rename(source, destination)
+  }
+  const renameStore = createVersionStore(renameRuntime, { fsOps: delayedRenameFs })
+  const renameService = createReleaseService({
+    versionStore: renameStore,
+    trustRoot: { publicKey, manifestEndpoints: { stable: 'https://updates.example.test/manifest.json' } },
+    fetchImpl: async (url) => ({ ok: true, arrayBuffer: async () => url.endsWith('.sig') ? Buffer.from(signature) : url.endsWith('.tar.gz') ? archive : rawManifest }),
+    extract: async () => [
+      { path: 'bin/node', type: 'file', data: Buffer.from('node') },
+      { path: 'app/server.mjs', type: 'file', data: Buffer.from('export {}') }
+    ],
+    freeSpace: async () => Number.MAX_SAFE_INTEGER,
+    platform: process.platform, arch: process.arch, clientVersion: '1.0.0'
+  })
+  await assert.rejects(renameService.install({ deadlineMs: 250 }), { code: 'INSTALL_DEADLINE_EXCEEDED' })
+  assert.equal(renameCommitted, true, 'the deadline response waits for a started staging rename to settle')
+  await assert.rejects(fs.lstat(renameDestination), { code: 'ENOENT' }, 'a delayed rename cannot leave a version after the deadline response')
+  await fs.rm(renameRuntime, { recursive: true, force: true })
+} finally {
+  await fs.rm(runtime, { recursive: true, force: true })
+}
+console.log('ggrd release service check passed')
