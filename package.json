@@ -12,7 +12,7 @@
     "test": "node ./packages/ggr-controller/test/check.mjs && node ./packages/ggr-mcp/test/check.mjs && node ./packages/ui/test/check.mjs && node ./packages/ui/test/hr-reply-policy-check.mjs",
     "test:ggr-client": "node ./packages/ggr-client/test/check.mjs",
     "test:ggr-cli": "pnpm --filter @geekgeekrun/ggr-cli test",
-    "ggr": "pnpm --filter @geekgeekrun/ggr-cli exec ggr",
+    "ggr": "node ./packages/ggr-cli/bin/ggr.mjs",
     "test:ggr-backend": "node ./packages/ggr-backend/test/server-check.mjs",
     "build:ggr-backend-artifact": "node ./scripts/build-ggr-backend-artifact.mjs",
     "sign:ggr-backend-manifest": "node ./scripts/sign-ggr-backend-manifest.mjs",
