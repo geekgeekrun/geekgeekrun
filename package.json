@@ -11,6 +11,7 @@
     "dev:backend": "GGR_BACKEND_DEV=1 node ./packages/ggr-backend/server.mjs",
     "test": "node ./packages/ggr-controller/test/check.mjs && node ./packages/ggr-mcp/test/check.mjs && node ./packages/ui/test/check.mjs && node ./packages/ui/test/hr-reply-policy-check.mjs",
     "test:ggr-client": "node ./packages/ggr-client/test/check.mjs",
+    "test:ggr-cli": "pnpm --filter @geekgeekrun/ggr-cli test",
     "test:ggr-backend": "node ./packages/ggr-backend/test/server-check.mjs",
     "build:ggr-backend-artifact": "node ./scripts/build-ggr-backend-artifact.mjs",
     "sign:ggr-backend-manifest": "node ./scripts/sign-ggr-backend-manifest.mjs",

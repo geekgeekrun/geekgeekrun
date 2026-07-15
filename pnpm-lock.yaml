@@ -112,6 +112,12 @@ importers:
         specifier: workspace:*
         version: link:../ggr-client
 
+  packages/ggr-cli:
+    dependencies:
+      '@geekgeekrun/ggr-client':
+        specifier: workspace:*
+        version: link:../ggr-client
+
   packages/ggr-client:
     dependencies:
       '@geekgeekrun/ggr-protocol':

@@ -1,0 +1,15 @@
+{
+  "name": "@geekgeekrun/ggr-cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ggr": "./bin/ggr.mjs"
+  },
+  "scripts": {
+    "test": "node ./test/check.mjs"
+  },
+  "dependencies": {
+    "@geekgeekrun/ggr-client": "workspace:*"
+  }
+}
