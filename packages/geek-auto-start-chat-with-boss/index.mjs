@@ -41,6 +41,7 @@ import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
 import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
 import { isJobAddressInExpectedArea } from './area-filter.mjs'
+import { findByText, waitForText, clickByText, findChatInput, findSendButton, typeInChat, findGreetSendButton } from './dom-utils.mjs'
 const flattedCityList = []
 ;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
   const firstChar = it.firstChar
@@ -1575,10 +1576,11 @@ async function toRecommendPage (hooks) {
             hooks
           })
           await sleepWithRandomDelay(1000)
-          const startChatButtonInnerHTML = await page.evaluate('document.querySelector(".job-detail-box .op-btn.op-btn-chat")?.innerHTML.trim()')
+          const startChatButtonInnerHTML = await findByText(page, '聊一聊', { tag: 'button', timeout: 3000 }).then(async (btn) => btn ? page.evaluate(el => el.innerHTML.trim(), btn) : '')
 
           await hooks.newChatWillStartup?.promise(targetJobData)
-          const startChatButtonProxy = await page.$('.job-detail-box .op-btn.op-btn-chat')
+          const startChatButtonProxy = await findByText(page, '聊一聊', { tag: 'button', timeout: 3000 })
+            ?? await page.$('.job-detail-box .op-btn.op-btn-chat')
           await sleep(500)
           //#region click the chat button
           await startChatButtonProxy.click()
@@ -1626,7 +1628,8 @@ async function toRecommendPage (hooks) {
             const CUSTOM_OPENING = customOpeningMessage
 
             // Try to find and interact with the greet dialog first
-            const greetSendBtn = await page.$('.greet-boss-dialog .greet-boss-footer .btn-primary, .greet-boss-dialog .greet-boss-footer button:not(.cancel-btn)')
+            const greetSendBtn = await findGreetSendButton(page)
+              ?? await page.$('.greet-boss-dialog .greet-boss-footer .btn-primary, .greet-boss-dialog .greet-boss-footer button:not(.cancel-btn)')
             if (greetSendBtn) {
               console.log('greet dialog: clicking send')
               await greetSendBtn.click()
@@ -1634,19 +1637,9 @@ async function toRecommendPage (hooks) {
               // Send custom opening on the chat page (we're already there due to addFriend redirect)
               if (CUSTOM_OPENING.trim()) {
                 try {
-                  // Try to find chat input on the current page
-                  const chatInput = await page.waitForSelector(
-                    '.chat-input-box, .chat-input, [contenteditable="true"], textarea',
-                    { timeout: 10000 }
-                  )
-                  if (chatInput) {
-                    await chatInput.click()
-                    await sleep(500)
-                    await chatInput.type(CUSTOM_OPENING, { delay: 30 })
-                    await sleep(500)
-                    const sendBtn = await page.$(
-                      '.chat-controls .icon-message-send, .chat-input-box .btn-send, [data-testid="send-button"]'
-                    )
+                  const sent = await typeInChat(page, CUSTOM_OPENING)
+                  if (sent) {
+                    const sendBtn = await findSendButton(page)
                     if (sendBtn) { await sendBtn.click() }
                     else { await page.keyboard.press('Enter') }
                     console.log('custom opening sent on chat page')
@@ -1671,18 +1664,9 @@ async function toRecommendPage (hooks) {
                 // Page already jumped to chat page, send custom opening here before going back
                 if (CUSTOM_OPENING.trim()) {
                   try {
-                    const chatInput = await page.waitForSelector(
-                      '.chat-input-box, .chat-input, [contenteditable="true"], textarea',
-                      { timeout: 5000 }
-                    )
-                    if (chatInput) {
-                      await chatInput.click()
-                      await sleep(500)
-                      await chatInput.type(CUSTOM_OPENING, { delay: 30 })
-                      await sleep(500)
-                      const sendBtn = await page.$(
-                        '.chat-controls .icon-message-send, .chat-input-box .btn-send, [data-testid="send-button"]'
-                      )
+                    const sent = await typeInChat(page, CUSTOM_OPENING)
+                    if (sent) {
+                      const sendBtn = await findSendButton(page)
                       if (sendBtn) { await sendBtn.click() }
                       else { await page.keyboard.press('Enter') }
                       console.log('custom opening sent on chat page (no greet dialog)')
@@ -1697,7 +1681,8 @@ async function toRecommendPage (hooks) {
                 })
                 await sleepWithRandomDelay(2000)
               } else {
-                const closeDialogButtonProxy = await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
+                const closeDialogButtonProxy = await findByText(page, '取消', { tag: 'button', timeout: 2000 })
+                  ?? await page.$('.greet-boss-dialog .greet-boss-footer .cancel-btn')
                 if (closeDialogButtonProxy) {
                   await closeDialogButtonProxy.click()
                   await sleepWithRandomDelay(2000)
@@ -1718,7 +1703,8 @@ async function toRecommendPage (hooks) {
                 tag: 'beforeJobChatStartupAfterTwiceConfirm',
                 hooks
               })
-              const confirmButton = await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn')
+              const confirmButton = await waitForText(page, '确定', { tag: 'button', timeout: 5000 })
+                ?? await page.waitForSelector('.chat-block-dialog .chat-block-footer .sure-btn', { timeout: 5000 })
               await confirmButton.click()
               const nextRes = await waitAddFriendResponse()
               await handleAddFriendResponse(nextRes)
