@@ -62,4 +62,9 @@ assert(serverSource.includes('geekAutoStartWithBossMain'))
 assert(serverSource.includes('readNoReplyAutoReminderMain'))
 assert(!serverSource.includes('services.workerEntries ?? {}'))
 
+const runtimeSource = await fs.readFile(path.join(backendRoot, 'lib/workers/auto-chat-runtime.mjs'), 'utf8')
+assert(runtimeSource.includes("state: 'runtime-error'"))
+assert(runtimeSource.includes('closeError'))
+assert(!runtimeSource.match(/closeBrowserWindow\?\.\s*\(/), 'mainLoop must be the only browser cleanup owner')
+
 console.log('ggr backend worker entry check passed')

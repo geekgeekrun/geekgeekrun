@@ -59,11 +59,24 @@ export interface TaskSummary {
   pid: number | null
   startedAt: string | null
   lastError: string | null
-  runRecordId: number
-  runtimeStorage: {
+  lastExit?: {
+    workerId: string
     runRecordId: number
+    exitedAt: string
+    code: number | null
+    signal: string | null
+    restarting: boolean
+    restartCount: number
+    restartSuppressed: boolean
+    error: string | null
+    closeError: string | null
+    unexpected: boolean
+  } | null
+  runRecordId: number | null
+  runtimeStorage: {
+    runRecordId: number | null
     stepStatusMapByStepId: Record<string, {
-      runRecordId: number
+      runRecordId: number | null
       step: { id: string, status: string }
     }>
   }

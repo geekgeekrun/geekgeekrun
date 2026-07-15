@@ -338,6 +338,76 @@ function fakeChild(pid, { exitOnSignal = true } = {}) {
 }
 
 {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-task-exits-'))
+  const exitHistoryFile = path.join(tempDir, 'private', 'task-exits.json')
+  const children = []
+  const scheduled = []
+  const service = createTaskService({
+    spawnProcess: () => {
+      const child = fakeChild(500 + children.length)
+      children.push(child)
+      return child
+    },
+    workerEntries: { auto: '/tmp/auto.mjs' },
+    emit: () => {},
+    exitHistoryFile,
+    now: () => 1_000,
+    scheduleRestart(callback) { scheduled.push(callback); return scheduled.length },
+    restartPolicy: { maxRestarts: 1, windowMs: 60_000, initialDelayMs: 1, maxDelayMs: 1 }
+  })
+  try {
+    await service.start({ workerId: 'auto' })
+    children[0].stdout.emit('data', `${JSON.stringify({
+      ggrWorkerEvent: 1,
+      event: 'task.progress',
+      data: { workerId: 'auto', state: 'runtime-error', code: 'AUTO_CHAT_FAILED', message: 'navigation failed', closeError: { message: 'browser close failed' } }
+    })}\n`)
+    children[0].emit('exit', 1, null)
+    scheduled.shift()()
+
+    const [restarted] = service.list()
+    assert.equal(restarted.pid, 501)
+    assert.equal(restarted.lastExit.workerId, 'auto')
+    assert.equal(restarted.lastExit.code, 1)
+    assert.equal(restarted.lastExit.signal, null)
+    assert.equal(restarted.lastExit.restartSuppressed, false)
+    assert.equal(restarted.lastExit.error, 'navigation failed')
+    assert.equal(restarted.lastExit.closeError, 'browser close failed')
+    assert.equal(restarted.lastExit.unexpected, true)
+
+    const persisted = JSON.parse(await fs.readFile(exitHistoryFile, 'utf8'))
+    assert.equal(persisted.auto.code, 1)
+    assert.equal(persisted.auto.signal, null)
+    assert.equal(persisted.auto.restartSuppressed, false)
+    assert.equal(persisted.auto.error, 'navigation failed')
+    assert.equal(persisted.auto.closeError, 'browser close failed')
+
+    const afterBackendRestart = createTaskService({
+      spawnProcess: () => { throw new Error('must not launch while reading task history') },
+      workerEntries: { auto: '/tmp/auto.mjs' },
+      emit: () => {},
+      exitHistoryFile
+    })
+    assert.deepEqual(afterBackendRestart.list(), [{
+      workerId: 'auto',
+      status: 'failed',
+      pid: null,
+      startedAt: null,
+      restartCount: 0,
+      runRecordId: null,
+      runtimeStorage: { runRecordId: null, stepStatusMapByStepId: {} },
+      recentStdout: [],
+      recentStderr: [],
+      lastError: 'navigation failed',
+      lastExit: persisted.auto
+    }])
+  } finally {
+    await service.stopAll()
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+}
+
+{
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ggr-approvals-'))
   const queueFilePath = path.join(tempDir, 'private', 'queue.json')
   const events = []

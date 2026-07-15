@@ -1,5 +1,5 @@
 import DingtalkPlugin from '@geekgeekrun/dingtalk-plugin/index.mjs'
-import { closeBrowserWindow, mainLoop } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
+import { mainLoop } from '@geekgeekrun/geek-auto-start-chat-with-boss/index.mjs'
 import { getPublicDbFilePath, readConfigFile, readStorageFile } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import SqlitePluginModule from '@geekgeekrun/sqlite-plugin'
 import { sleep } from '@geekgeekrun/utils/sleep.mjs'
@@ -36,8 +36,20 @@ export async function createAutoChatRuntime({ rerunInterval = resolveRerunInterv
         await mainLoop(hooks)
       } catch (error) {
         const knownCode = KNOWN_FAILURES.find((code) => error instanceof Error && error.message.includes(code))
+        const closeError = error && typeof error === 'object' ? error.closeError : null
+        taskReporter.emit('task.progress', {
+          workerId: 'geekAutoStartWithBossMain',
+          state: 'runtime-error',
+          code: knownCode ?? error?.code ?? 'AUTO_CHAT_FAILED',
+          message: error instanceof Error ? error.message : String(error),
+          ...(closeError ? {
+            closeError: {
+              code: typeof closeError.code === 'string' ? closeError.code : 'BROWSER_CLOSE_FAILED',
+              message: closeError instanceof Error ? closeError.message : String(closeError)
+            }
+          } : {})
+        })
         if (knownCode) throw Object.assign(error, { code: knownCode })
-        closeBrowserWindow?.()
         taskReporter.emit('task.progress', { workerId: 'geekAutoStartWithBossMain', state: 'restarting', delayMs: rerunInterval })
         await sleep(rerunInterval)
       }

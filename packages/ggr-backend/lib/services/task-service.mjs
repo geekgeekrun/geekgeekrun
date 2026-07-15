@@ -1,4 +1,7 @@
 import { spawn as nodeSpawn } from 'node:child_process'
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 
 const RECENT_LINE_LIMIT = 80
 const DEFAULT_DIAGNOSTIC_LINE_BYTES = 4096
@@ -47,7 +50,52 @@ function snapshot(record) {
       stepStatusMapByStepId: structuredClone(record.runtimeStorage.stepStatusMapByStepId)
     },
     recentStdout: [...record.recentStdout],
-    recentStderr: [...record.recentStderr]
+    recentStderr: [...record.recentStderr],
+    lastError: record.lastError ?? null,
+    lastExit: record.lastExit ? structuredClone(record.lastExit) : null
+  }
+}
+
+function readExitHistory(exitHistoryFile) {
+  if (!exitHistoryFile) return new Map()
+  try {
+    const parsed = JSON.parse(readFileSync(exitHistoryFile, 'utf8'))
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return new Map()
+    return new Map(Object.entries(parsed).filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value)))
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error instanceof SyntaxError) return new Map()
+    throw error
+  }
+}
+
+function writeExitHistory(exitHistoryFile, history) {
+  if (!exitHistoryFile) return
+  const directory = path.dirname(exitHistoryFile)
+  mkdirSync(directory, { recursive: true, mode: 0o700 })
+  chmodSync(directory, 0o700)
+  const temporaryPath = `${exitHistoryFile}.${process.pid}.${randomUUID()}.tmp`
+  try {
+    writeFileSync(temporaryPath, `${JSON.stringify(Object.fromEntries(history), null, 2)}\n`, { mode: 0o600 })
+    chmodSync(temporaryPath, 0o600)
+    renameSync(temporaryPath, exitHistoryFile)
+  } finally {
+    rmSync(temporaryPath, { force: true })
+  }
+}
+
+function historicalSnapshot(workerId, lastExit) {
+  return {
+    workerId,
+    status: 'failed',
+    pid: null,
+    startedAt: null,
+    restartCount: 0,
+    runRecordId: null,
+    runtimeStorage: { runRecordId: null, stepStatusMapByStepId: {} },
+    recentStdout: [],
+    recentStderr: [],
+    lastError: lastExit.error ?? null,
+    lastExit: structuredClone(lastExit)
   }
 }
 
@@ -131,7 +179,8 @@ export function createTaskService({
   restartPolicy = {},
   now = () => Date.now(),
   scheduleRestart = setTimeout,
-  clearScheduledRestart = clearTimeout
+  clearScheduledRestart = clearTimeout,
+  exitHistoryFile
 }) {
   if (!workerEntries || typeof workerEntries !== 'object') throw new TypeError('workerEntries are required')
   if (!Number.isInteger(diagnosticLineBytes) || diagnosticLineBytes <= 0) throw new TypeError('diagnosticLineBytes must be a positive integer')
@@ -141,6 +190,7 @@ export function createTaskService({
   const terminalChildren = new WeakSet()
   const stopPromises = new Map()
   const restartStates = new Map()
+  const exitHistory = readExitHistory(exitHistoryFile)
   let updateDrain = false
   let nextRunRecordId = Date.now()
   const maxRestarts = positiveInteger(restartPolicy.maxRestarts, 3)
@@ -205,7 +255,10 @@ export function createTaskService({
       stdoutCarry: { text: '', bytes: 0, truncated: false },
       stderrCarry: { text: '', bytes: 0, truncated: false },
       stdoutDiagnosticBytes: 0,
-      stderrDiagnosticBytes: 0
+      stderrDiagnosticBytes: 0,
+      lastError: null,
+      lastCloseError: null,
+      lastExit: exitHistory.get(workerId) ?? null
     }
     workers.set(workerId, record)
 
@@ -213,6 +266,10 @@ export function createTaskService({
     const report = (event, data) => {
       if (event === 'task.progress' && data.type === 'prerequisite-step-by-step-check' && data.step?.id) {
         record.runtimeStorage.stepStatusMapByStepId[data.step.id] = { runRecordId, step: data.step }
+      }
+      if (event === 'task.progress' && (data.state === 'runtime-error' || data.state === 'failed')) {
+        record.lastError = typeof data.message === 'string' ? data.message : record.lastError
+        record.lastCloseError = typeof data.closeError?.message === 'string' ? data.closeError.message : record.lastCloseError
       }
       emit(event, { ...data, workerId, runRecordId })
     }
@@ -243,6 +300,32 @@ export function createTaskService({
           restartDelayMs = Math.min(initialRestartDelayMs * (2 ** (restartState.timestamps.length - 1)), maxRestartDelayMs)
         }
       }
+      const unexpectedExit = !stoppedWorkers.has(workerId) && (code !== 0 || signal !== null || Boolean(error) || Boolean(record.lastError))
+      const lastExit = {
+        workerId,
+        runRecordId,
+        exitedAt: new Date(now()).toISOString(),
+        code,
+        signal,
+        restarting,
+        restartCount: restartCount + (restarting ? 1 : 0),
+        restartSuppressed,
+        error: record.lastError ?? (error ? redactLine(error.message) : null),
+        closeError: record.lastCloseError ?? null,
+        unexpected: unexpectedExit
+      }
+      exitHistory.set(workerId, lastExit)
+      try {
+        writeExitHistory(exitHistoryFile, exitHistory)
+      } catch (persistError) {
+        emit('task.progress', {
+          workerId,
+          runRecordId,
+          state: 'exit-history-write-failed',
+          code: 'TASK_EXIT_HISTORY_WRITE_FAILED',
+          message: redactLine(persistError.message)
+        })
+      }
       emit('task.exited', {
         workerId,
         runRecordId,
@@ -252,7 +335,8 @@ export function createTaskService({
         restartCount: restartCount + (restarting ? 1 : 0),
         ...(restartDelayMs ? { restartDelayMs } : {}),
         ...(restartSuppressed ? { restartSuppressed: true } : {}),
-        ...(error ? { error: redactLine(error.message) } : {})
+        ...(lastExit.error ? { error: lastExit.error } : {}),
+        ...(lastExit.closeError ? { closeError: lastExit.closeError } : {})
       })
       if (restarting) {
         restartState.timer = scheduleRestart(() => {
@@ -335,7 +419,10 @@ export function createTaskService({
   }
 
   return {
-    list: () => [...workers.values()].map(snapshot),
+    list: () => [
+      ...[...workers.values()].map(snapshot),
+      ...[...exitHistory].filter(([workerId, lastExit]) => !workers.has(workerId) && lastExit.unexpected).map(([workerId, lastExit]) => historicalSnapshot(workerId, lastExit))
+    ],
     start,
     stop,
     stopAll,

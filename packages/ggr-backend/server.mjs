@@ -32,7 +32,8 @@ export async function createBackendServer({ socketPath, version, runtimePaths, s
     spawnProcess: services.spawnProcess,
     workerEntries: services.workerEntries ?? DEFAULT_WORKER_ENTRIES,
     emit,
-    stopTimeoutMs: services.stopTimeoutMs
+    stopTimeoutMs: services.stopTimeoutMs,
+    exitHistoryFile: services.exitHistoryFile ?? path.join(runtimePaths.storageDir, 'task-exits.json')
   })
   const approval = services.approval ?? createApprovalService({
     queueFilePath: path.join(runtimePaths.storageDir, 'hr-reply-approval-queue.json'),

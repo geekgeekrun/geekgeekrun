@@ -1845,22 +1845,26 @@ export async function mainLoop (hooks) {
 
     // ;await browser.close()
   } catch (err) {
-    closeBrowserWindow()
+    const closeError = await closeBrowserWindow()
+    if (closeError && err && typeof err === 'object') {
+      try { err.closeError = closeError } catch {}
+    }
     throw err
   }
 }
 
-export async function closeBrowserWindow () {
-  browser?.close()
-  const browserProcess = browser?.process()
-  if (browserProcess) {
-    try {
-      process.kill(browserProcess.pid)
-    }
-    catch {}
+export async function closeBrowserWindow (browserToClose = browser) {
+  if (browserToClose === browser) {
+    browser = null
+    page = null
   }
-  browser = null
-  page = null
+  if (!browserToClose) return null
+  try {
+    await browserToClose.close()
+    return null
+  } catch (error) {
+    return error
+  }
 }
 
 async function storeStorage (page) {
