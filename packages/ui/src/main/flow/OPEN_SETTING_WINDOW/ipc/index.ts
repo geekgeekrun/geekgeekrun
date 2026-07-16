@@ -215,19 +215,25 @@ export default function initIpc() {
     return await Promise.all(promiseArr)
   })
 
-  ipcMain.handle('run-geek-auto-start-chat-with-boss', async (ev) => {
-    const mode = 'geekAutoStartWithBossMain'
-    const { runRecordId } = await runCommon({ mode })
-    daemonEE.on('message', function handler(message) {
-      if (message.workerId !== mode) {
-        return
-      }
-      if (message.type === 'worker-exited') {
-        mainWindow?.webContents.send('worker-exited', message)
-      }
-    })
-    return { runRecordId }
-  })
+  ipcMain.handle(
+    'run-geek-auto-start-chat-with-boss',
+    async (_ev, options: { restartIfRunning?: boolean } = {}) => {
+      const mode = 'geekAutoStartWithBossMain'
+      const { runRecordId } = await runCommon({
+        mode,
+        restartIfRunning: options.restartIfRunning === true
+      })
+      daemonEE.on('message', function handler(message) {
+        if (message.workerId !== mode) {
+          return
+        }
+        if (message.type === 'worker-exited') {
+          mainWindow?.webContents.send('worker-exited', message)
+        }
+      })
+      return { runRecordId }
+    }
+  )
 
   ipcMain.handle('run-read-no-reply-auto-reminder', async () => {
     const mode = 'readNoReplyAutoReminderMain'

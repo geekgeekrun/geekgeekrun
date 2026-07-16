@@ -2192,7 +2192,8 @@ const handleSubmit = async () => {
   try {
     runningOverlayRef.value?.show()
     const { runRecordId: rrId } = await electron.ipcRenderer.invoke(
-      'run-geek-auto-start-chat-with-boss'
+      'run-geek-auto-start-chat-with-boss',
+      { restartIfRunning: true }
     )
     runRecordId.value = rrId
   } catch (err) {
