@@ -1655,6 +1655,26 @@
               </div>
             </div>
           </el-card>
+          <el-card class="config-section">
+            <div font-size-16px mb8px>简历图片</div>
+            <div font-size-12px lh-1.6em mb12px style="color: #666">
+              导入 Word、PDF、JPG 或 PNG 简历。Word/PDF 多页会合成为一张长图；导入后的图片由应用保存，原文件可以移动或删除。
+            </div>
+            <div flex items-center gap12px flex-wrap>
+              <el-button :loading="isResumeImporting" @click="handleImportResumeImage">
+                导入简历
+              </el-button>
+              <el-checkbox v-model="formContent.sendResumeImageAfterGreeting">
+                打招呼后发送简历图片
+              </el-checkbox>
+            </div>
+            <div mt10px font-size-12px break-all style="color: #666">
+              <template v-if="formContent.resumeImagePath">
+                当前简历图片：{{ formContent.resumeImagePath }}
+              </template>
+              <template v-else>尚未导入简历图片</template>
+            </div>
+          </el-card>
         </el-form>
       </div>
       <div class="bg-#f8f8f8 pb10px pt10px">
@@ -1814,7 +1834,9 @@ const formContent = ref({
   sageTimePauseMinute: 15,
   blockCompanyNameRegExpStr: '',
   blockCompanyNameRegMatchStrategy: MarkAsNotSuitOp.NO_OP,
-  fieldsForUseCommonConfig: {}
+  fieldsForUseCommonConfig: {},
+  resumeImagePath: '',
+  sendResumeImageAfterGreeting: false
 })
 
 const anyCombineBossRecommendFilterHasCondition = computed(() => {
@@ -1978,6 +2000,9 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     res.config['boss.json'].blockCompanyNameRegMatchStrategy ?? MarkAsNotSuitOp.NO_OP
   formContent.value.fieldsForUseCommonConfig =
     res.config['boss.json']?.fieldsForUseCommonConfig ?? {}
+  formContent.value.resumeImagePath = res.config['boss.json']?.resumeImagePath ?? ''
+  formContent.value.sendResumeImageAfterGreeting =
+    res.config['boss.json']?.sendResumeImageAfterGreeting === true
 
   commonJobConditionConfig.value = {
     expectJobNameRegExpStr:
@@ -2083,6 +2108,7 @@ const formRules = {
 }
 
 const formRef = ref<InstanceType<typeof ElForm>>()
+const isResumeImporting = ref(false)
 const runRecordId = ref(null)
 const runningOverlayRef = ref(null)
 const taskManagerStore = useTaskManagerStore()
@@ -2102,6 +2128,29 @@ onMounted(async () => {
     }
   }
 })
+
+const handleImportResumeImage = async () => {
+  if (isResumeImporting.value) {
+    return
+  }
+  isResumeImporting.value = true
+  try {
+    const result = await electron.ipcRenderer.invoke('import-resume-image')
+    if (result?.canceled) {
+      return
+    }
+    formContent.value.resumeImagePath = result.resumeImagePath
+    ElMessage.success(`简历导入成功，已生成 ${result.pageCount} 页合成图片`)
+    gtagRenderer('resume_image_imported', { page_count: result.pageCount })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('导入简历失败', error)
+    ElMessage.error({ message: `导入简历失败：${message}`, grouping: true })
+    gtagRenderer('resume_image_import_failed', { message })
+  } finally {
+    isResumeImporting.value = false
+  }
+}
 
 const handleSubmit = async () => {
   gtagRenderer('save_config_and_launch_clicked', {
@@ -2143,7 +2192,8 @@ const handleSubmit = async () => {
   try {
     runningOverlayRef.value?.show()
     const { runRecordId: rrId } = await electron.ipcRenderer.invoke(
-      'run-geek-auto-start-chat-with-boss'
+      'run-geek-auto-start-chat-with-boss',
+      { restartIfRunning: true }
     )
     runRecordId.value = rrId
   } catch (err) {

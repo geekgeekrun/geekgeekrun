@@ -40,5 +40,7 @@
   "sageTimeOpTimes": 100,
   "sageTimePauseMinute": 15,
   "blockCompanyNameRegExpStr": "",
-  "fieldsForUseCommonConfig": {}
+  "fieldsForUseCommonConfig": {},
+  "sendResumeImageAfterGreeting": false,
+  "resumeImagePath": ""
 }

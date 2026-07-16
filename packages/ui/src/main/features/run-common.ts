@@ -3,7 +3,13 @@ import { daemonEE, sendToDaemon } from '../flow/OPEN_SETTING_WINDOW/connect-to-d
 import { saveAndGetCurrentRunRecord } from '../flow/OPEN_SETTING_WINDOW/utils/db'
 import minimist from 'minimist'
 
-export async function runCommon({ mode }) {
+export async function runCommon({
+  mode,
+  restartIfRunning = false
+}: {
+  mode: string
+  restartIfRunning?: boolean
+}) {
   await sendToDaemon(
     {
       type: 'user-process-register'
@@ -24,12 +30,34 @@ export async function runCommon({ mode }) {
   )?.workers
   const runningTask = taskList?.find((it) => it.workerId === mode)
   if (runningTask) {
-    const commandlineArgs = minimist(runningTask.args ?? [])
-    const runRecordId = Number(commandlineArgs['run-record-id'])
-    console.log('任务已在运行中')
-    return {
-      runRecordId,
-      isAlreadyRunning: true
+    if (restartIfRunning) {
+      const workerExited = new Promise<void>((resolve) => {
+        daemonEE.on('message', function handler(message) {
+          if (message.type !== 'worker-exited' || message.workerId !== mode) {
+            return
+          }
+          daemonEE.off('message', handler)
+          resolve()
+        })
+      })
+      await sendToDaemon(
+        {
+          type: 'stop-worker',
+          workerId: mode
+        },
+        {
+          needCallback: true
+        }
+      )
+      await workerExited
+    } else {
+      const commandlineArgs = minimist(runningTask.args ?? [])
+      const runRecordId = Number(commandlineArgs['run-record-id'])
+      console.log('任务已在运行中')
+      return {
+        runRecordId,
+        isAlreadyRunning: true
+      }
     }
   }
   const currentRunRecord = (await saveAndGetCurrentRunRecord())?.data
