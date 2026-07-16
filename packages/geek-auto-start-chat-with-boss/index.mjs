@@ -38,20 +38,10 @@ import {
 } from './constant.mjs'
 import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser.js"
 import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
-import cityGroupData from './cityGroup.mjs'
 import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
 import { isJobAddressInExpectedArea } from './area-filter.mjs'
+import { applyCityFilter } from './city-filter.mjs'
 import { findGreetCancelButton, findGreetSendButton, findSendButton, findStartChatButton, typeInChat, waitForText } from './dom-utils.mjs'
-const flattedCityList = []
-;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
-  const firstChar = it.firstChar
-  it.cityList.forEach(city => {
-    flattedCityList.push({
-      ...city,
-      firstChar
-    })
-  })
-})
 
 const jobFilterConditionsMapByCode = {}
 Object.values(jobFilterConditions).forEach(arr => {
@@ -561,45 +551,12 @@ async function setFilterCondition (selectedFilters) {
       const onPageSelectedCity = filterDropdownCssList.includes('active') ? (await filterDropdownProxy.evaluate(el => el.textContent.trim())) : null
       if (!onPageSelectedCity && !currentFilterConditions.length) {
         continue
-      } else if (onPageSelectedCity === (currentFilterConditions[0] ?? null)) {
-        continue
+      } else if (!currentFilterConditions.length) {
+        const clearButtonHandle = await page.$(`.page-jobs-main .filter-condition-inner [ka="empty-filter"]`)
+        await clearButtonHandle.click()
       } else {
-        if (!currentFilterConditions.length) {
-          const clearButtonHandle = await page.$(`.page-jobs-main .filter-condition-inner [ka="empty-filter"]`)
-          await clearButtonHandle.click()
-        }
-        else {
-          await filterDropdownProxy?.click()
-          await page.waitForFunction(() => {
-            const dialogEl = document.querySelector('.city-select-dialog')
-            return dialogEl && window.getComputedStyle(dialogEl).display !== 'none'
-          })
-          const citySelectWrapperProxy = await page.waitForSelector('.city-select-wrapper')
-          let targetCityElJsHandle = (await page.evaluateHandle((cityName) => {
-            const targetCityEl = [...document.querySelectorAll('.city-select-dialog .city-select-wrapper ul.city-list-hot li')].find(it => it.textContent.trim() === cityName) ?? null
-            return targetCityEl
-          }, currentFilterConditions[0]))?.asElement()
-          if (!targetCityElJsHandle) {
-            const targetCityItem = flattedCityList.find(it => it.name === currentFilterConditions[0])
-            if (!targetCityItem) {
-              // unexpected condition
-              continue
-            }
-            const firstChar = targetCityItem.firstChar
-            const targetCityCharListEntryHandle = await page.$(`xpath///*[contains(@class, "city-select-dialog")]//*[contains(@class, "city-select-wrapper")]//ul[contains(@class, "city-char-list")]//li[contains(text(), '${firstChar.toUpperCase()}')]`)
-            await targetCityCharListEntryHandle.click()
-            targetCityElJsHandle = (await page.evaluateHandle((cityName) => {
-              const targetCityEl = [...document.querySelectorAll('.city-select-dialog .city-select-wrapper .list-select-list a')].find(it => it.textContent.trim() === cityName) ?? null
-              return targetCityEl
-            }, currentFilterConditions[0]))?.asElement()
-          }
-          if (!targetCityElJsHandle) {
-            // unexpected condition
-            continue
-          }
-          await targetCityElJsHandle.click()
-          await sleep(1000)
-        }
+        await applyCityFilter({ page, cityName: currentFilterConditions[0] })
+        await sleep(1000)
       }
     }
     else {
