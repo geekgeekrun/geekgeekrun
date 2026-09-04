@@ -1869,7 +1869,11 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
     experienceList: [],
     degreeList: [],
     scaleList: [],
-    industryList: []
+    industryList: [],
+    jobTypeList: []
+  }
+  if (!formContent.value.anyCombineRecommendJobFilter.jobTypeList) {
+    formContent.value.anyCombineRecommendJobFilter.jobTypeList = []
   }
   unwatchAnyCombineRecommendJobFilter.value = watch(
     () => formContent.value?.anyCombineRecommendJobFilter,

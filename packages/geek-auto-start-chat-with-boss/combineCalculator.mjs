@@ -160,7 +160,8 @@ export function formatStaticCombineFilters(rawStaticCombineRecommendJobFilterCon
       experienceList: condition.experience ? [condition.experience] : [],
       degreeList: condition.degree ? [condition.degree] : [],
       scaleList: condition.scale ? [condition.scale] : [],
-      industryList: condition.industry ? [condition.industry] : []
+      industryList: condition.industry ? [condition.industry] : [],
+      jobTypeList: condition.jobType ? [condition.jobType] : []
     }
   })
   if (!result.length) {
@@ -170,7 +171,8 @@ export function formatStaticCombineFilters(rawStaticCombineRecommendJobFilterCon
       experienceList: [],
       degreeList: [],
       scaleList: [],
-      industryList: []
+      industryList: [],
+      jobTypeList: []
     })
   }
   return result

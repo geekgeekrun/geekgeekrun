@@ -6,7 +6,8 @@
     "experienceList": [],
     "degreeList": [],
     "scaleList": [],
-    "industryList": []
+    "industryList": [],
+    "jobTypeList": []
   },
   "staticCombineRecommendJobFilterConditions": [],
   "isSkipEmptyConditionForCombineRecommendJobFilter": false,

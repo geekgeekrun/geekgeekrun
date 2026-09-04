@@ -141,6 +141,23 @@
             </el-select>
           </template>
         </el-table-column>
+        <el-table-column :resizable="false" label="求职类型" prop="jobType">
+          <template #default="{ row }">
+            <el-select
+              v-model="row.jobType"
+              :disabled="row.___itemType === 'empty-condition-placeholder'"
+              clearable
+              size="small"
+            >
+              <el-option
+                v-for="it in jobTypeOptions"
+                :key="it.code"
+                :value="it.code"
+                :label="it.name"
+              />
+            </el-select>
+          </template>
+        </el-table-column>
         <el-table-column :resizable="false" label="公司行业" :width="200" prop="industry">
           <template #default="{ row }">
             <el-select
@@ -206,6 +223,12 @@ import CityChooser from '@renderer/page/MainLayout/GeekAutoStartChatWithBoss/com
 
 import { getStaticCombineFilterKey } from '@geekgeekrun/geek-auto-start-chat-with-boss/combineCalculator.mjs'
 
+const jobTypeOptions = [
+  { code: 1, name: '全职' },
+  { code: 2, name: '兼职' },
+  { code: 3, name: '实习' }
+]
+
 const props = defineProps({
   modelValue: {
     type: Array as PropType<
@@ -215,6 +238,7 @@ const props = defineProps({
         degree: number | null
         industry: number | null
         scale: number | null
+        jobType: number | null
       }>
     >,
     default: () => []
@@ -238,7 +262,8 @@ function getNewConditionItem() {
     experience: null,
     degree: null,
     industry: null,
-    scale: null
+    scale: null,
+    jobType: null
   }
 }
 

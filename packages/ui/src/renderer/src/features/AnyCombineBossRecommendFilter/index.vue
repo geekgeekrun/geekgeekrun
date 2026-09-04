@@ -126,6 +126,18 @@
         />
       </el-select>
     </div>
+    <div class="filter-item">
+      <div font-size-12px>求职类型</div>
+      <el-select
+        v-model="modelValue.jobTypeList"
+        multiple
+        clearable
+        collapse-tags
+        collapse-tags-tooltip
+      >
+        <el-option v-for="it in jobTypeOptions" :key="it.code" :value="it.code" :label="it.name" />
+      </el-select>
+    </div>
   </div>
 </template>
 
@@ -135,14 +147,22 @@ import industryFilterExemption from '@geekgeekrun/geek-auto-start-chat-with-boss
 import CityChooser from '@renderer/page/MainLayout/GeekAutoStartChatWithBoss/components/CityChooser.vue'
 import { PropType } from 'vue'
 
+const jobTypeOptions = [
+  { code: 1, name: '全职' },
+  { code: 2, name: '兼职' },
+  { code: 3, name: '实习' }
+]
+
 defineProps({
   modelValue: {
     type: Object as PropType<{
+      cityList: string[]
       salaryList: number[]
       experienceList: number[]
       degreeList: number[]
       industryList: number[]
       scaleList: number[]
+      jobTypeList: number[]
     }>
   }
 })

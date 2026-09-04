@@ -489,12 +489,13 @@ async function setFilterCondition (selectedFilters) {
     experienceList = [],
     degreeList = [],
     scaleList = [],
-    industryList = []
+    industryList = [],
+    jobTypeList = []
   } = selectedFilters
 
-  const placeholderTexts = ['城市', '薪资待遇', '工作经验', '学历要求', '公司行业', '公司规模']
-  const optionKaPrefixes = ['switch_city_dialog_open', 'sel-job-rec-salary-', 'sel-job-rec-exp-', 'sel-job-rec-degree-', 'sel-industry-', 'sel-job-rec-scale-']
-  const conditionArr = [cityList, salaryList, experienceList, degreeList, industryList, scaleList]
+  const placeholderTexts = ['城市', '求职类型', '薪资待遇', '工作经验', '学历要求', '公司行业', '公司规模']
+  const optionKaPrefixes = ['switch_city_dialog_open', 'sel-job-rec-jobtype-', 'sel-job-rec-salary-', 'sel-job-rec-exp-', 'sel-job-rec-degree-', 'sel-industry-', 'sel-job-rec-scale-']
+  const conditionArr = [cityList, jobTypeList, salaryList, experienceList, degreeList, industryList, scaleList]
 
   console.log('current filter condition----')
   for (let i = 0; i < placeholderTexts.length; i++) {
@@ -596,8 +597,16 @@ async function setFilterCondition (selectedFilters) {
             }
           } else {
             // select 不限 immediately
-            const buxianOptionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${0}"]`)
-            await buxianOptionElProxy.click()
+            let buxianOptionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${0}"]`)
+            if (!buxianOptionElProxy && placeholderText === '求职类型') {
+              buxianOptionElProxy = await page.evaluateHandle((dropdownEl) => {
+                const items = dropdownEl.querySelectorAll('ul li, a, div')
+                return Array.from(items).find(el => el.textContent.trim() === '不限')
+              }, filterDropdownProxy).then(h => h.asElement())
+            }
+            if (buxianOptionElProxy) {
+              await buxianOptionElProxy.click()
+            }
           }
         } else {
           //#region uncheck options perviously checked but not existed in current filter.
@@ -647,11 +656,24 @@ async function setFilterCondition (selectedFilters) {
               filterDropdownElBBox.y + filterDropdownElBBox.height / 2,
             )
             await sleepWithRandomDelay(500)
-            const optionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${optionValue}"]`)
+            let optionElProxy = await page.$(`.page-jobs-main .filter-condition-inner [ka="${optionKaPrefix}${optionValue}"]`)
+            if (!optionElProxy && placeholderText === '求职类型') {
+              const textMap = { '0': '不限', '1': '全职', '2': '兼职', '3': '实习' }
+              const targetText = textMap[optionValue]
+              if (targetText) {
+                optionElProxy = await page.evaluateHandle((dropdownEl, text) => {
+                  const items = dropdownEl.querySelectorAll('ul li, a, div')
+                  return Array.from(items).find(el => el.textContent.trim() === text)
+                }, filterDropdownProxy, targetText).then(h => h.asElement())
+              }
+            }
             if (!optionElProxy) {
               continue;
             }
-            await optionElProxy.click()
+            const isOptionAlreadyActive = await optionElProxy.evaluate(el => el.classList.contains('active'))
+            if (!isOptionAlreadyActive) {
+              await optionElProxy.click()
+            }
           }
           //#endregion
           //#region move out dropdown entry to make dropdown hidden
@@ -828,6 +850,9 @@ async function toRecommendPage (hooks) {
     iterateFilterCondition: for (
       const filterCondition of filterConditions
     ) {
+      if (filterCondition.jobTypeList === undefined) {
+        filterCondition.jobTypeList = anyCombineRecommendJobFilter.jobTypeList || []
+      }
       filterConditionIndex++
       console.log(`current filter condition index to apply: ${filterConditionIndex}`, JSON.stringify(filterCondition))
       findInCurrentFilterCondition: while(true) {
@@ -950,6 +975,9 @@ async function toRecommendPage (hooks) {
 
                 // skip invalid salaryData (兼职、日结、实习 etc)
                 jobListData.forEach(it => {
+                  if (it.salaryDesc && (it.salaryDesc.includes('天') || it.salaryDesc.includes('日'))) {
+                    return
+                  }
                   const salaryData = parseSalary(it.salaryDesc)
                   if (!salaryData.high || !salaryData.low) {
                     blockJobNotSuit.add(it.encryptJobId)
