@@ -1,7 +1,14 @@
 import { bootstrap, launchBoss } from './bootstrap'
 import { MsgStatus, type ChatListItem } from './types'
 import { Browser, Page } from 'puppeteer'
-import { getGptContent, sendLookForwardReplyEmotion, sendMessage } from './boss-operation'
+import {
+  getGptContent,
+  sendLookForwardReplyEmotion,
+  sendMessage,
+  sendResumeViaToolbar,
+  requestDynamicDialogueReply,
+  sendAgentNotificationEmail
+} from './boss-operation'
 import { sleep, sleepWithRandomDelay } from '@geekgeekrun/utils/sleep.mjs'
 import { waitForPage } from '@geekgeekrun/utils/puppeteer/wait.mjs'
 import { app, dialog } from 'electron'
@@ -21,6 +28,7 @@ import {
   readStorageFile
 } from '@geekgeekrun/geek-auto-start-chat-with-boss/runtime-file-utils.mjs'
 import { BossInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/BossInfo'
+import { JobInfo } from '@geekgeekrun/sqlite-plugin/dist/entity/JobInfo'
 import { messageForSaveFilter } from '../../../common/utils/chat-list'
 import {
   AUTO_CHAT_ERROR_EXIT_CODE,
@@ -59,6 +67,9 @@ const rechatContentSource =
 const rechatLlmFallback =
   readConfigFile('boss.json').autoReminder?.rechatLlmFallback ??
   RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
+
+const dynamicChatTurnCountMap = new Map<string, number>()
+const handledLastMsgMap = new Map<string, string>()
 
 const fieldsForUseCommonConfig = readConfigFile('boss.json').fieldsForUseCommonConfig ?? {}
 const commonJobConditionConfig = readConfigFile('common-job-condition-config.json') ?? {}
@@ -489,6 +500,17 @@ const mainLoop = async () => {
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
+    // 每次扫描实时读取最新配置，确保热生效且避免变量 TDZ
+    const bossConf = readConfigFile('boss.json')?.autoReminder || {}
+    const enableUnrepliedFollowUp = bossConf.enableUnrepliedFollowUp ?? true
+    const enableDynamicChatWithHr = bossConf.enableDynamicChatWithHr ?? true
+    const maxDynamicChatTurns = bossConf.maxDynamicChatTurns ?? 10
+    const enableLlmSendResumeTool = bossConf.enableLlmSendResumeTool ?? true
+    const enableEmailForwardTool = bossConf.enableEmailForwardTool ?? true
+    const enableLlmDoNothing = bossConf.enableLlmDoNothing ?? true
+    const notifyEmail = process.env.NOTIFY_EMAIL || bossConf.notifyEmail || process.env.SMTP_USER || bossConf.smtpUser || ''
+    const emailForwardReplyMessage = bossConf.emailForwardReplyMessage ?? ''
+
     await pageMapByName.boss?.waitForFunction(() => {
       return Array.isArray(document.querySelector('.main-wrap .chat-user')?.__vue__?.list)
     })
@@ -499,21 +521,46 @@ const mainLoop = async () => {
       `
     )) as Array<ChatListItem>
     const toCheckItemAtIndex = friendListData.findIndex((it, index) => {
-      return (
-        index >= cursorToContinueFind &&
-        (onlyRemindBossWithoutBlockCompanyName && blockCompanyNameRegExp
-          ? !blockCompanyNameRegExp.test(it.brandName)
-          : true) &&
-        (rechatLimitDay && it.updateTime
-          ? +new Date() - it.updateTime < rechatLimitDay * 24 * 60 * 60 * 1000
-          : true) &&
+      if (index < cursorToContinueFind) {
+        return false
+      }
+      if (
+        onlyRemindBossWithoutBlockCompanyName &&
+        blockCompanyNameRegExp &&
+        blockCompanyNameRegExp.test(it.brandName)
+      ) {
+        return false
+      }
+      if (
+        rechatLimitDay &&
+        it.updateTime &&
+        +new Date() - it.updateTime >= rechatLimitDay * 24 * 60 * 60 * 1000
+      ) {
+        return false
+      }
+
+      // 1. 已读不回跟进条件（可开启/关闭）
+      const isUnrepliedFollowUp =
+        enableUnrepliedFollowUp &&
         ((((it.lastIsSelf &&
           it.lastMsgStatus === MsgStatus.HAS_READ &&
           !it.lastText.includes('你撤回了')) ||
           canNotConfirmIfHasReadMsgTemplateList.some((regExp) => regExp.test(it.lastText))) &&
           !it.unreadCount) ||
           (!it.lastIsSelf && it.lastText === '开场问题，期待你的回答'))
-      )
+
+      // 2. HR 回复后动态多轮对话条件（未达10轮上限）
+      const currentTurns = dynamicChatTurnCountMap.get(it.encryptBossId) || 0
+      const isAlreadyHandled =
+        handledLastMsgMap.get(it.encryptBossId) === (it.lastMessageId || it.lastText || String(it.lastTS || '')) &&
+        !it.unreadCount
+      const isHrReplied =
+        enableDynamicChatWithHr &&
+        currentTurns < maxDynamicChatTurns &&
+        !isAlreadyHandled &&
+        ((!it.lastIsSelf && it.lastText !== '开场问题，期待你的回答') || it.unreadCount > 0)
+
+      return isUnrepliedFollowUp || isHrReplied
     })
 
     if (toCheckItemAtIndex < 0) {
@@ -527,7 +574,7 @@ const mainLoop = async () => {
         // go back to first job
         cursorToContinueFind = 0
         await pageMapByName.boss?.evaluate(() => {
-          ;(() => {
+          ; (() => {
             document
               .querySelector('.chat-content .user-list .user-list-content')
               ?.__vue__.scrollToIndex(0)
@@ -537,7 +584,7 @@ const mainLoop = async () => {
       } else {
         cursorToContinueFind = friendListData.length - 1
         await pageMapByName.boss?.evaluate(() => {
-          ;(() => {
+          ; (() => {
             document
               .querySelector('.chat-content .user-list .user-list-content')
               ?.__vue__.scrollToBottom()
@@ -549,7 +596,7 @@ const mainLoop = async () => {
     } else {
       cursorToContinueFind = toCheckItemAtIndex
       await pageMapByName.boss?.evaluate((toCheckItemAtIndex) => {
-        ;(() => {
+        ; (() => {
           document
             .querySelector('.chat-content .user-list .user-list-content')
             ?.__vue__.scrollToIndex(toCheckItemAtIndex)
@@ -579,12 +626,14 @@ const mainLoop = async () => {
       })
     }
     await sleepWithRandomDelay(1500)
+    // 获取当前会话头部选中的招聘者与职位元数据
+    const selectedFriendInfo = await pageMapByName.boss?.evaluate(
+      `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`
+    )
+
     // check if expect job type match
     let isExpectJobTypeMatch = true
     if (onlyRemindBossWithExpectJobType) {
-      const selectedFriendInfo = await pageMapByName.boss?.evaluate(
-        `document.querySelector('.chat-conversation')?.__vue__?.selectedFriend$`
-      )
       if (!selectedFriendInfo) {
         isExpectJobTypeMatch = false
       } else {
@@ -610,20 +659,297 @@ const mainLoop = async () => {
 
     const lastGeekMessageSendTime = historyMessageList.findLast((it) => it.isSelf)?.time ?? 0
     const isJobClosed = await checkJobIsClosed()
+
+    const targetBoss = friendListData[toCheckItemAtIndex]
+    const lastMsg = historyMessageList[historyMessageList.length - 1]
+    const hasHrReplied = historyMessageList.some((it) => !it.isSelf)
+    const isLastMessageFromHr = lastMsg && !lastMsg.isSelf
+    const currentTurns = dynamicChatTurnCountMap.get(targetBoss.encryptBossId) || 0
+
+    // 已处理会话去重：若此条 HR 消息此前已处理过，跳过重复调用
+    const lastMsgKey = targetBoss.lastMessageId || targetBoss.lastText || String(targetBoss.lastTS || '')
+    if (
+      isLastMessageFromHr &&
+      handledLastMsgMap.get(targetBoss.encryptBossId) === lastMsgKey
+    ) {
+      console.log(`[dynamicChat] 会话 【${targetBoss.name}】 最新消息在上一轮已处理，跳过重复调用`)
+      cursorToContinueFind = toCheckItemAtIndex + 1
+      continue
+    }
+
+    // 从数据库获取岗位原始 JD 信息并直接作为上下文
+    const currentEncryptJobId = targetBoss.encryptJobId || conversationInfo?.encryptJobId
+    let jobInfoRecord: JobInfo | null = null
+    try {
+      const ds = await dbInitPromise
+      if (currentEncryptJobId && ds) {
+        jobInfoRecord = await ds.getRepository(JobInfo).findOne({ where: { encryptJobId: currentEncryptJobId } })
+      }
+    } catch (e) {
+      console.warn('[jobContext] 查询岗位详情异常:', e)
+    }
+
+    // 1. 从当前聊天窗口提取头部 DOM 数据（.left-content 中的 .position-name, .salary, .city 等）
+    const headerJobDetail = await pageMapByName.boss?.evaluate(() => {
+      const leftContentEl =
+        document.querySelector('.chat-conversation .left-content') ||
+        document.querySelector('#main .chat-conversation [ka="geek_chat_job_detail"] .left-content') ||
+        document.querySelector('[ka="geek_chat_job_detail"]')
+
+      let positionFromDom = ''
+      let salaryFromDom = ''
+      let cityFromDom = ''
+
+      if (leftContentEl) {
+        const positionEl = leftContentEl.querySelector('.position-name, .name, .title, .job-title')
+        if (positionEl) {
+          positionFromDom = (positionEl as HTMLElement).innerText?.trim() || ''
+        }
+
+        const salaryEl = leftContentEl.querySelector('.salary, [class*="salary"], .badge-salary, .job-salary, .red')
+        if (salaryEl) {
+          salaryFromDom = (salaryEl as HTMLElement).innerText?.trim() || ''
+        }
+
+        const cityEl = leftContentEl.querySelector('.city, [class*="city"]')
+        if (cityEl) {
+          cityFromDom = (cityEl as HTMLElement).innerText?.trim() || ''
+        }
+
+        // 若直接选择器未命中，使用正则做兜底提取
+        const rawText = (leftContentEl as HTMLElement).innerText || ''
+        if (!salaryFromDom) {
+          const m = rawText.match(/\d+[ \s-–~至]+\d+\s*(?:K|k|元|万|元\/天|元\/月|\/天|\/月)(?:[·*]?\s*\d+薪)?/)
+          if (m) salaryFromDom = m[0].trim()
+        }
+      }
+
+      return {
+        positionName: positionFromDom,
+        salaryDesc: salaryFromDom,
+        cityName: cityFromDom
+      }
+    })
+
+    // 2. 组装职位背景：先本地 SQLite，再 DOM 提取，最后联系人元数据
+    const positionName =
+      jobInfoRecord?.positionName ||
+      jobInfoRecord?.jobName ||
+      headerJobDetail?.positionName ||
+      selectedFriendInfo?.positionName ||
+      targetBoss.sourceTitle ||
+      ''
+
+    const companyName =
+      targetBoss.brandName ||
+      selectedFriendInfo?.brandName ||
+      ''
+
+    let salaryDesc = ''
+    if (jobInfoRecord?.salaryLow && jobInfoRecord?.salaryHigh) {
+      salaryDesc = `${jobInfoRecord.salaryLow}-${jobInfoRecord.salaryHigh}K${jobInfoRecord.salaryMonth ? `·${jobInfoRecord.salaryMonth}薪` : ''
+        }`
+    }
+    if (!salaryDesc) {
+      salaryDesc = headerJobDetail?.salaryDesc || selectedFriendInfo?.salaryDesc || ''
+    }
+
+    const cityName =
+      jobInfoRecord?.address ||
+      headerJobDetail?.cityName ||
+      selectedFriendInfo?.cityName ||
+      ''
+
+    const degreeName =
+      jobInfoRecord?.degreeName ||
+      selectedFriendInfo?.degreeName ||
+      ''
+
+    const experienceName =
+      jobInfoRecord?.experienceName ||
+      selectedFriendInfo?.experienceName ||
+      ''
+
+    const metaLines = [
+      positionName ? `【职位名称】：${positionName}` : '',
+      companyName ? `【招聘公司】：${companyName}` : '',
+      salaryDesc ? `【薪资待遇】：${salaryDesc}` : '',
+      cityName ? `【工作地点】：${cityName}` : '',
+      degreeName ? `【要求学历】：${degreeName}` : '',
+      experienceName ? `【经验要求】：${experienceName}` : ''
+    ].filter(Boolean).join('\n')
+
+    const detailedJd = jobInfoRecord?.description?.trim()
+    const jobInfoText = detailedJd
+      ? `${metaLines}\n\n【岗位职责与任职要求】：\n${detailedJd}`
+      : metaLines
+
+    // 检查是否达到多轮对话上限并记录持久化日志
+    if (isLastMessageFromHr && currentTurns >= maxDynamicChatTurns) {
+      console.log(
+        `[dynamicChat] 会话 【${targetBoss.name} / ${targetBoss.brandName || targetBoss.sourceTitle || ''}】(encryptBossId: ${targetBoss.encryptBossId}) 已达到对话轮数上限 (${maxDynamicChatTurns} 轮)，停止自动回复，转为人工接管。`
+      )
+      try {
+        const logEntry = {
+          time: new Date().toISOString(),
+          encryptBossId: targetBoss.encryptBossId,
+          bossName: targetBoss.name,
+          brandName: targetBoss.brandName || targetBoss.sourceTitle || '',
+          turns: currentTurns,
+          maxTurns: maxDynamicChatTurns,
+          message: '达到最大多轮对话上限，转为人工接管'
+        }
+        const existingLogs = (await readStorageFile('dynamic-chat-turn-limit-logs.json')) || []
+        if (Array.isArray(existingLogs)) {
+          existingLogs.push(logEntry)
+          await writeStorageFile('dynamic-chat-turn-limit-logs.json', existingLogs)
+        }
+      } catch (e) {
+        console.error('[dynamicChat] 写入轮数上限日志失败:', e)
+      }
+      gtag('dynamic_chat_turn_limit_reached', {
+        encryptBossId: targetBoss.encryptBossId,
+        turns: currentTurns
+      })
+    }
+
+    // 分支 1：HR 回复了消息，进行拟人化动态多轮对话（上限 10 轮）
     if (
       !isJobClosed &&
       isExpectJobTypeMatch &&
-      historyMessageList[historyMessageList.length - 1].isSelf &&
-      historyMessageList[historyMessageList.length - 1].status === MsgStatus.HAS_READ &&
+      enableDynamicChatWithHr &&
+      isLastMessageFromHr &&
+      currentTurns < maxDynamicChatTurns
+    ) {
+      console.log(
+        `[dynamicChat] 检测到 HR (${targetBoss.name}) 发来新消息，准备拟人多轮回复 (第 ${currentTurns + 1}/${maxDynamicChatTurns} 轮)...`
+      )
+      // 模拟真人阅读与思考延迟 2s ~ 4s
+      await sleepWithRandomDelay(2000, 4000)
+
+      try {
+        const replyResult = await requestDynamicDialogueReply(historyMessageList, {
+          enableSendResumeTool: enableLlmSendResumeTool,
+          enableEmailForwardTool,
+          enableDoNothing: enableLlmDoNothing,
+          jobInfoText,
+          emailForwardReplyMessage
+        })
+
+        // 记录当前已处理的消息标识
+        handledLastMsgMap.set(targetBoss.encryptBossId, lastMsgKey)
+
+        if (replyResult.action === 'send_resume') {
+          console.log(`[dynamicChat] 大模型决定通过工具栏主动发送简历 (原因: ${replyResult.reason})`)
+          const sendRes = await sendResumeViaToolbar(pageMapByName.boss!)
+          if (sendRes.success) {
+            console.log('[dynamicChat] 简历已成功通过工具栏发送')
+            await sleepWithRandomDelay(1000, 2000)
+            if (replyResult.textToSend) {
+              await sendMessage(pageMapByName.boss!, replyResult.textToSend)
+            }
+            gtag('dynamic_chat_send_resume_executed')
+          } else {
+            console.warn('[dynamicChat] 工具栏发送简历未成功:', sendRes.error)
+            // 发送失败兜底：拦截虚假“已发送”回复，改发缓兵回复并发送邮件报警
+            const fallbackReply = '您好，收到您的要求！我稍后在手机端为您发送附件简历，请稍候查阅。'
+            await sendMessage(pageMapByName.boss!, fallbackReply)
+
+            const failEmailSubject = `【求职提醒】HR: ${targetBoss.name} 索要简历，自动发送未成功（需手机端手动发送）`
+            const failEmailHtml = `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 680px; margin: 0 auto; padding: 12px;">
+                <div style="background: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                  <strong style="color: #b91c1c; font-size: 15px;">⚠️ 自动发简历未成功提醒</strong>
+                  <p style="margin: 6px 0 0 0; color: #7f1d1d; font-size: 13px;">HR <strong>${targetBoss.name}</strong> 索要简历，但浏览器自动发送失败（原因: ${sendRes.error || '未检测到简历卡片或触发平台限制'}）。已向 HR 发送缓兵回复，请尽快在手机 BOSS 直聘 APP 上手动点击发送附件简历！</p>
+                </div>
+              </div>
+            `
+            sendAgentNotificationEmail({
+              to: notifyEmail,
+              subject: failEmailSubject,
+              html: failEmailHtml
+            }).catch((err) => console.error('[dynamicChat] 简历失败报警邮件发送异常:', err))
+          }
+        } else if (replyResult.action === 'send_email') {
+          console.log(`[dynamicChat] 大模型决定调用邮件工具转告候选人 (原因: ${replyResult.reason})`)
+          if (replyResult.textToSend?.trim()) {
+            await sendMessage(pageMapByName.boss!, replyResult.textToSend)
+          } else {
+            console.log(`[dynamicChat] 转告邮件同时回复 HR 话术未配置或留空，仅在后台静默发送邮件通知本人`)
+          }
+          gtag('dynamic_chat_email_forward_sent')
+
+          const company = targetBoss.brandName || targetBoss.sourceTitle || '招聘方'
+          const reasonText = replyResult.reason || '提出了新要求'
+          const emailSubject = `【${company}】${reasonText}`
+
+          const recentChatHtml = historyMessageList.slice(-10).map((it) => {
+            const isSys = (it as any).isSystem || it.messageType === 'dialog' || it.messageType === 'system'
+            const sender = isSys ? '【系统卡片】' : (it.isSelf ? '【候选人/Agent】' : `【HR ${targetBoss.name}】`)
+            const bg = isSys ? '#fffbeb' : (it.isSelf ? '#f0f9ff' : '#f8f9fa')
+            const color = isSys ? '#b45309' : (it.isSelf ? '#0284c7' : '#334155')
+            return `<div style="background:${bg};padding:8px 12px;border-radius:6px;margin-bottom:6px;font-size:13px;"><strong style="color:${color};">${sender}：</strong>${(it.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+          }).join('')
+
+          const jdHtml = jobInfoText?.trim()
+            ? `<div style="margin-top: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; border-radius: 6px; padding: 12px 16px;">
+                <div style="font-weight: bold; font-size: 14px; color: #1e40af; margin-bottom: 8px;">📄 岗位职责与任职要求 (JD)</div>
+                <div style="white-space: pre-wrap; font-size: 13px; color: #334155; line-height: 1.6; word-break: break-word;">${jobInfoText.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              </div>`
+            : ''
+
+          const emailHtml = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; max-width: 680px; margin: 0 auto; padding: 16px; background: #ffffff;">
+              <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 0;">📌 招聘者与岗位信息</h3>
+              <ul style="padding-left: 20px; margin: 8px 0; font-size: 13.5px;">
+                <li><strong>招聘者：</strong>${targetBoss.name} (${targetBoss.sourceTitle || 'HR'})</li>
+                <li><strong>公司：</strong>${company}</li>
+                <li><strong>触发原因：</strong>${reasonText}</li>
+                <li><strong>已回复 HR：</strong>${replyResult.textToSend?.trim() ? replyResult.textToSend : '（未配置回复 HR，仅在后台静默邮件通知本人）'}</li>
+              </ul>
+
+              <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 20px;">💬 对话历史记录</h3>
+              <div style="margin-top: 10px;">
+                ${recentChatHtml}
+              </div>
+
+              ${jdHtml}
+            </div>
+          `
+
+          sendAgentNotificationEmail({
+            to: notifyEmail,
+            subject: emailSubject,
+            html: emailHtml
+          }).catch((err) => console.error('[dynamicChat] 邮件发送异常:', err))
+        } else if (replyResult.action === 'do_nothing' || !replyResult.textToSend?.trim()) {
+          console.log(`[dynamicChat] 大模型判断无需回复 HR (${targetBoss.name})，保持静默`)
+        } else {
+          console.log(`[dynamicChat] 发送拟人文本回复: ${replyResult.textToSend}`)
+          await sendMessage(pageMapByName.boss!, replyResult.textToSend)
+          gtag('dynamic_chat_text_sent')
+        }
+
+        dynamicChatTurnCountMap.set(targetBoss.encryptBossId, currentTurns + 1)
+      } catch (err: any) {
+        console.error('[dynamicChat] 动态回复异常:', err)
+      }
+    }
+    // 分支 2：HR 已读不回，进行自动跟进（需在 enableUnrepliedFollowUp 开启时才执行）
+    else if (
+      enableUnrepliedFollowUp &&
+      !isJobClosed &&
+      isExpectJobTypeMatch &&
+      lastMsg &&
+      lastMsg.isSelf &&
+      lastMsg.status === MsgStatus.HAS_READ &&
       ((conversationInfo &&
         Object.hasOwn(conversationInfo, 'bothTalked') &&
         !conversationInfo.bothTalked) ||
-        !historyMessageList.filter(
-          (it) => !it.isSelf // not sent by me
-        ).length) &&
+        !hasHrReplied) &&
       // don't disturb too much
       Date.now() - lastGeekMessageSendTime >=
-        (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
+      (throttleIntervalMinutes + 4 * Math.random()) * 60 * 1000
     ) {
       await sleepWithRandomDelay(3250)
       const messageList = historyMessageList
@@ -635,7 +961,7 @@ const mainLoop = async () => {
           gtag('rnrr_llm_content_sent')
         } else {
           try {
-            const textToSend = await getGptContent(messageList)
+            const textToSend = await getGptContent(messageList, jobInfoText)
             await sendMessage(pageMapByName.boss!, textToSend)
             gtag('rnrr_llm_content_sent')
           } catch (err) {
@@ -649,7 +975,7 @@ const mainLoop = async () => {
       } else {
         if (rechatContentSource === RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT) {
           try {
-            const textToSend = await getGptContent(messageList)
+            const textToSend = await getGptContent(messageList, jobInfoText)
             await sendMessage(pageMapByName.boss!, textToSend)
             gtag('rnrr_llm_content_sent')
           } catch (err) {
@@ -671,9 +997,8 @@ const mainLoop = async () => {
           gtag('rnrr_look_forward_reply_emotion_sent')
         }
       }
-    } else {
-      cursorToContinueFind += 1
     }
+    cursorToContinueFind = toCheckItemAtIndex + 1
     await sleep(1000)
     await saveCurrentChatRecord(pageMapByName.boss!)
     await sleep(3000)

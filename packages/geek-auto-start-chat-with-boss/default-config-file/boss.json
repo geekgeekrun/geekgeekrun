@@ -28,7 +28,16 @@
     "rechatContentSource": 1,
     "recentMessageQuantityForLlm": 8,
     "rechatLlmFallback": 1,
-    "onlyRemindBossWithExpectJobType": true
+    "onlyRemindBossWithExpectJobType": true,
+    "enableUnrepliedFollowUp": true,
+    "enableDynamicChatWithHr": true,
+    "maxDynamicChatTurns": 10,
+    "enableLlmSendResumeTool": true,
+    "enableEmailForwardTool": false,
+    "enableLlmDoNothing": true,
+    "notifyEmail": "",
+    "smtpPass": "",
+    "emailForwardReplyMessage": ""
   },
   "jobSourceList": [
     {

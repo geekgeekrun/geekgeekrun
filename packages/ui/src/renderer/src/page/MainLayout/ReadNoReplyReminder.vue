@@ -54,6 +54,16 @@
             </template>
           </div>
         </el-form-item>
+        <el-form-item label="已读不回自动跟进设置">
+          <div w-full>
+            <div>
+              <el-checkbox v-model="formContent.autoReminder.enableUnrepliedFollowUp">
+                启用“已读不回自动跟进”（当向 HR 发送消息后，HR 处于已读未回复状态时，自动定时跟进提醒）
+              </el-checkbox>
+            </div>
+          </div>
+        </el-form-item>
+        <template v-if="formContent.autoReminder.enableUnrepliedFollowUp">
         <el-form-item label="开场白话术">
           <el-radio-group v-model="formContent.autoReminder.openContentSource" w-full>
             <div w-full>
@@ -191,6 +201,110 @@
               </div>
             </div>
           </el-radio-group>
+        </el-form-item>
+        </template>
+        <el-form-item label="HR 回复后动态多轮对话与智能跟进">
+          <div w-full>
+            <div>
+              <el-checkbox v-model="formContent.autoReminder.enableDynamicChatWithHr">
+                当 HR 回复消息时，由大语言模型基于简历与上下文进行拟人化多轮对话
+              </el-checkbox>
+            </div>
+            <div v-if="formContent.autoReminder.enableDynamicChatWithHr" ml30px mt8px>
+              <el-form-item class="mb8px" label="单会话最大自动回复轮数（达到上限后转为人工接管）：">
+                <el-input-number
+                  v-model="formContent.autoReminder.maxDynamicChatTurns"
+                  class="w-120px"
+                  :min="1"
+                  :max="20"
+                  :precision="0"
+                  :step="1"
+                />&nbsp;轮（建议 10 轮）
+              </el-form-item>
+              <el-form-item class="mb8px">
+                <el-checkbox v-model="formContent.autoReminder.enableLlmSendResumeTool">
+                  允许大模型在 HR 明确索要简历时，调用 Tool 主动点击工具栏发送简历
+                </el-checkbox>
+              </el-form-item>
+              <el-form-item class="mb8px">
+                <el-checkbox v-model="formContent.autoReminder.enableEmailForwardTool">
+                  允许大模型在遇到超纲要求（如留实操题/Demo、索要特定截图/数据、HR留言转告等）时，自动触发邮件转告本人
+                </el-checkbox>
+              </el-form-item>
+              <el-form-item class="mb8px">
+                <el-checkbox v-model="formContent.autoReminder.enableLlmDoNothing">
+                  允许大语言模型在对话自然闭环（如 HR 仅回复“好的”、“收到”等）时选择不回复（保持静默）
+                </el-checkbox>
+                <div ml1.5em color-gray font-size-12px>
+                  若开启，遇到无需继续追问的闭环消息时大模型将保持静默；若关闭，大模型将始终礼貌回复直到达到最大轮数上限或 HR 不再发消息
+                </div>
+              </el-form-item>
+              <el-form-item v-if="formContent.autoReminder.enableEmailForwardTool" class="mb8px" label="邮件接收邮箱：">
+                <el-input
+                  v-model="formContent.autoReminder.notifyEmail"
+                  class="w-260px"
+                  placeholder="例如：your_email@qq.com"
+                  clearable
+                />
+              </el-form-item>
+              <el-form-item v-if="formContent.autoReminder.enableEmailForwardTool" class="mb8px" label="SMTP 授权码：">
+                <el-input
+                  v-model="formContent.autoReminder.smtpPass"
+                  class="w-260px"
+                  type="password"
+                  show-password
+                  placeholder="邮箱 SMTP 授权码"
+                  clearable
+                />
+                <div ml1.5em color-gray font-size-12px>
+                  用于发信服务。留空则优先从根目录 .env 中的 SMTP_PASS 读取
+                </div>
+              </el-form-item>
+              <el-form-item v-if="formContent.autoReminder.enableEmailForwardTool" class="mb8px" label="转告同时回复 HR 话术：">
+                <el-input
+                  v-model="formContent.autoReminder.emailForwardReplyMessage"
+                  class="w-400px"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="留空则不向 HR 发送任何消息，仅静默发送邮件"
+                  clearable
+                />
+                <div ml1.5em color-gray font-size-12px>
+                  留空则不向 HR 回复任何消息，仅在后台静默发送邮件通知本人
+                </div>
+              </el-form-item>
+              <el-form-item class="mb4px">
+                <div>
+                  <div>
+                    <el-button
+                      size="small"
+                      type="primary"
+                      @click="handleClickEditPrompt({ type: 'dynamicChat' })"
+                    >
+                      使用外部编辑器编辑“HR 多轮对话”提示词模板 (Markdown)
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="primary"
+                      @click="
+                        () => {
+                          restoreDefaultTemplate({
+                            type: 'dynamicChat',
+                            gaEvName: 'reset_dynamic_chat_template_clicked'
+                          })
+                        }
+                      "
+                    >
+                      还原默认“HR 多轮对话”提示词模板
+                    </el-button>
+                  </div>
+                  <div class="font-size-12px color-#666">
+                    大模型将基于此模板与 HR 拟人化沟通。提示词模板中包含 __REPLACE_REAL_RESUME_HERE__ 简历占位符。
+                  </div>
+                </div>
+              </el-form-item>
+            </div>
+          </div>
         </el-form-item>
         <div mt10px>
           <el-form-item mb0 label="大语言模型公共设置及效果预览" />
@@ -385,7 +499,16 @@ const formContent = ref({
     onlyRemindBossWithoutBlockCompanyName: true,
     openContentSource: OPEN_CONTENT_SOURCE.CONSTANT_CONTENT,
     // openLlmFallback: OPEN_LLM_FALLBACK.SEND_CONSTANT_CONTENT,
-    constantOpenContent: ''
+    constantOpenContent: '',
+    enableUnrepliedFollowUp: true,
+    enableDynamicChatWithHr: true,
+    maxDynamicChatTurns: 10,
+    enableLlmSendResumeTool: true,
+    enableEmailForwardTool: false,
+    enableLlmDoNothing: true,
+    notifyEmail: '',
+    smtpPass: '',
+    emailForwardReplyMessage: ''
   }
 })
 
@@ -422,6 +545,15 @@ electron.ipcRenderer.invoke('fetch-config-file-content').then((res) => {
   conf.rechatLlmFallback = conf.rechatLlmFallback ?? RECHAT_LLM_FALLBACK.SEND_LOOK_FORWARD_EMOTION
   conf.openContentSource = conf.openContentSource ?? OPEN_CONTENT_SOURCE.CONSTANT_CONTENT
   conf.constantOpenContent = conf.constantOpenContent ?? ''
+  conf.enableUnrepliedFollowUp = conf.enableUnrepliedFollowUp ?? true
+  conf.enableDynamicChatWithHr = conf.enableDynamicChatWithHr ?? true
+  conf.maxDynamicChatTurns = conf.maxDynamicChatTurns ?? 10
+  conf.enableLlmSendResumeTool = conf.enableLlmSendResumeTool ?? true
+  conf.enableEmailForwardTool = conf.enableEmailForwardTool ?? false
+  conf.enableLlmDoNothing = conf.enableLlmDoNothing ?? true
+  conf.notifyEmail = conf.notifyEmail ?? ''
+  conf.smtpPass = conf.smtpPass ?? ''
+  conf.emailForwardReplyMessage = conf.emailForwardReplyMessage ?? ''
   formContent.value.autoReminder = conf
 })
 
@@ -604,6 +736,40 @@ async function checkIsCanRun() {
     return false
   }
 
+  if (formContent.value.autoReminder?.enableDynamicChatWithHr) {
+    try {
+      await electron.ipcRenderer.invoke('check-if-auto-remind-prompt-valid', { type: 'dynamicChat' })
+    } catch (err) {
+      console.log(err)
+      if (err?.message?.includes(`RESUME_PLACEHOLDER_NOT_EXIST`)) {
+        ElMessageBox.confirm(
+          '“HR 多轮对话”提示词模板缺少简历内容占位符：<br /><b>__REPLACE_REAL_RESUME_HERE__</b><br /><br />您是否希望还原默认模板？',
+          '',
+          {
+            confirmButtonText: '是',
+            cancelButtonText: '否',
+            type: 'warning',
+            closeOnClickModal: false,
+            dangerouslyUseHTMLString: true
+          }
+        )
+          .then(async () => {
+            await restoreDefaultTemplate({
+              type: 'dynamicChat',
+              gaEvName: 'confirm_invalid_dynamic_chat_dialog'
+            })
+          })
+          .catch(() => {})
+      } else {
+        ElMessage({
+          type: 'error',
+          message: '“HR 多轮对话”提示词检查未通过，请重试'
+        })
+      }
+      return false
+    }
+  }
+
   return true
 }
 const runRecordId = ref(null)
@@ -638,7 +804,10 @@ const handleSubmit = async () => {
       formContent.value.autoReminder.onlyRemindBossWithoutBlockCompanyName,
     rechat_llm_fallback: formContent.value.autoReminder.rechatLlmFallback,
     open_content_source: formContent.value.autoReminder.openContentSource,
-    constant_open_content_text_length: formContent.value.autoReminder.constantOpenContent.length ?? 0
+    constant_open_content_text_length: formContent.value.autoReminder.constantOpenContent.length ?? 0,
+    enable_dynamic_chat_with_hr: formContent.value.autoReminder.enableDynamicChatWithHr,
+    max_dynamic_chat_turns: formContent.value.autoReminder.maxDynamicChatTurns,
+    enable_llm_send_resume_tool: formContent.value.autoReminder.enableLlmSendResumeTool
   })
   await formRef.value!.validate()
   await electron.ipcRenderer.invoke('save-config-file-from-ui', JSON.stringify(formContent.value))
@@ -647,7 +816,8 @@ const handleSubmit = async () => {
     formContent.value.autoReminder?.rechatContentSource ===
       RECHAT_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT ||
     formContent.value.autoReminder?.openContentSource ===
-      OPEN_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT
+      OPEN_CONTENT_SOURCE.GEMINI_WITH_CHAT_CONTEXT ||
+    formContent.value.autoReminder?.enableDynamicChatWithHr
   ) {
     if (!(await checkIsCanRun())) {
       return
