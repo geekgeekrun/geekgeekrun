@@ -125,6 +125,28 @@ export function getRuleOfExpectJobDescRegExpStr({ gtagRenderer, jobDetailRegExpS
   }
 }
 
+export function getRuleOfPosterHrTitleRegExpStr({
+  gtagRenderer,
+  posterHrTitleRegExpSectionEl
+}) {
+  return (_, value, cb) => {
+    if (!value) {
+      cb()
+      gtagRenderer('empty_reg_exp_for_poster_hr')
+      return
+    }
+    try {
+      new RegExp(value, 'ig')
+      gtagRenderer('valid_reg_exp_for_poster_hr', { v: value })
+      cb()
+    } catch (err) {
+      cb(new Error(`正则无效：${err?.message}`))
+      posterHrTitleRegExpSectionEl.value?.scrollIntoViewIfNeeded()
+      gtagRenderer('invalid_reg_exp_for_poster_hr', { v: value })
+    }
+  }
+}
+
 export function getRuleOfBlockCompanyNameRegExpStr({
   gtagRenderer,
   blockCompanyNameRegExpSectionEl

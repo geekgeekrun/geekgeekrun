@@ -3,6 +3,8 @@
   "expectJobNameRegExpStr": "",
   "expectJobTypeRegExpStr": "",
   "expectJobDescRegExpStr": "",
+  "isPosterHrFilterEnabled": false,
+  "posterHrTitleRegExpStr": "HR|HRBP|HRG|Recruiter|Talent Acquisition|招聘|人事|人力|人资",
   "expectCompanies": [],
   "blockCompanyNameRegExpStr": "",
   "jobDetailRegExpMatchLogic": 1,

@@ -18,9 +18,9 @@ import {
   checkAnyCombineBossRecommendFilterHasCondition,
   formatStaticCombineFilters,
 } from './combineCalculator.mjs'
-import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json'
-import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json'
-import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog'
+import { default as jobFilterConditions } from './internal-config/job-filter-conditions-20241002.json' assert { type: 'json' }
+import { default as rawIndustryFilterExemption } from './internal-config/job-filter-industry-filter-exemption-20241002.json' assert { type: 'json' }
+import { ChatStartupFrom } from '@geekgeekrun/sqlite-plugin/dist/entity/ChatStartupLog.js'
 import {
   MarkAsNotSuitReason,
   MarkAsNotSuitOp,
@@ -29,16 +29,17 @@ import {
   JobDetailRegExpMatchLogic,
   JobSource,
   CombineRecommendJobFilterType
-} from '@geekgeekrun/sqlite-plugin/dist/enums'
+} from '@geekgeekrun/sqlite-plugin/dist/enums.js'
 import {
   activeDescList,
   RECOMMEND_JOB_ENTRY_SELECTOR,
   USER_SET_EXPECT_JOB_ENTRIES_SELECTOR,
   SEARCH_BOX_SELECTOR,
 } from './constant.mjs'
-import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser"
+import { parseSalary } from "@geekgeekrun/sqlite-plugin/dist/utils/parser.js"
 import { waitForSageTimeOrJustContinue } from './sage-time.mjs'
 import cityGroupData from './cityGroup.mjs'
+import { testIfPosterTitleSuit as testIfPosterTitleSuitByConfig } from './tests/poster-title-filter.mjs'
 import { hasIntersection } from '@geekgeekrun/utils/number.mjs';
 const flattedCityList = []
 ;(cityGroupData?.zpData?.cityGroup ?? []).forEach(it => {
@@ -210,6 +211,8 @@ let {
   expectJobNameRegExpStr,
   expectJobTypeRegExpStr,
   expectJobDescRegExpStr,
+  isPosterHrFilterEnabled,
+  posterHrTitleRegExpStr,
 } = !fieldsForUseCommonConfig.jobDetail ? readConfigFile('boss.json') : commonJobConditionConfig
 if (
   !fieldsForUseCommonConfig.jobDetail &&
@@ -232,6 +235,17 @@ if (
 ) {
   jobDetailRegExpMatchLogic = JobDetailRegExpMatchLogic.EVERY
 }
+const posterHrNotMatchStrategy = readConfigFile('boss.json').posterHrNotMatchStrategy ?? MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL
+const posterHrTitleRegExp = (() => {
+  if (!isPosterHrFilterEnabled || !posterHrTitleRegExpStr?.trim()) {
+    return null
+  }
+  try {
+    return new RegExp(posterHrTitleRegExpStr, 'im')
+  } catch {
+    return null
+  }
+})()
 
 let {
   jobSourceList
@@ -447,6 +461,13 @@ async function markJobAsNotSuitInRecommendPage (reasonCode) {
     }
   }
   return result
+}
+
+export function testIfPosterTitleSuit (bossInfo) {
+  return testIfPosterTitleSuitByConfig(bossInfo, {
+    isPosterHrFilterEnabled,
+    posterHrTitleRegExpStr,
+  })
 }
 
 export function testIfJobTitleOrDescriptionSuit (jobInfo, matchLogic) {
@@ -1319,6 +1340,52 @@ async function toRecommendPage (hooks) {
                         }
                       }
                     },
+                    async posterTitle() {
+                      blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
+                      const extInfo = {
+                        posterTitle: targetJobData.bossInfo?.title ?? null,
+                        posterHrTitleRegExpStr,
+                      }
+                      if (posterHrNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL || !await page.$('.job-detail-box .job-detail-operate .not-suitable')) {
+                        try {
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.POSTER_TITLE_NOT_SUIT,
+                              extInfo,
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
+                            }
+                          )
+                        } catch {
+                        }
+                      }
+                      else if (posterHrNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS) {
+                        try {
+                          await waitForSageTimeOrJustContinue({
+                            tag: 'beforeJobNotSuitMarked',
+                            hooks
+                          })
+                          const { chosenReasonInUi } = await markJobAsNotSuitInRecommendPage(MarkAsNotSuitReason.POSTER_TITLE_NOT_SUIT)
+                          await hooks.jobMarkedAsNotSuit.promise(
+                            targetJobData,
+                            {
+                              markFrom: ChatStartupFrom.AutoFromRecommendList,
+                              markReason: MarkAsNotSuitReason.POSTER_TITLE_NOT_SUIT,
+                              extInfo: {
+                                ...extInfo,
+                                chosenReasonInUi
+                              },
+                              markOp: MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_BOSS,
+                              jobSource: JobSource[computedSourceList[currentSourceIndex]?.type]
+                            }
+                          )
+                        } catch(err) {
+                          console.log(`mark poster title not suit failed`, err)
+                        }
+                      }
+                    },
                     async jobDetail() {
                       blockJobNotSuit.add(targetJobData.jobInfo.encryptId)
                       if (jobNotMatchStrategy === MarkAsNotSuitOp.MARK_AS_NOT_SUIT_ON_LOCAL || !await page.$('.job-detail-box .job-detail-operate .not-suitable')) {
@@ -1439,6 +1506,11 @@ async function toRecommendPage (hooks) {
                     (Array.isArray(expectWorkExpList) && expectWorkExpList.length) && !expectWorkExpList.includes(selectedJobData.jobExperience)
                   ) {
                     notSuitReasonIdToStrategyMap.workExp = expectWorkExpNotMatchStrategy
+                  }
+                  if (
+                    isPosterHrFilterEnabled && !testIfPosterTitleSuit(targetJobData.bossInfo)
+                  ) {
+                    notSuitReasonIdToStrategyMap.posterTitle = posterHrNotMatchStrategy
                   }
                   if (
                     !testIfJobTitleOrDescriptionSuit(targetJobData.jobInfo, jobDetailRegExpMatchLogic)
@@ -1727,6 +1799,7 @@ export async function mainLoop (hooks) {
       jobNotMatchStrategy,
       jobNotActiveStrategy,
       expectCityNotMatchStrategy,
+      posterHrNotMatchStrategy,
       blockJobNotSuit,
       blockBossNotActive,
       blockBossNotNewChat
