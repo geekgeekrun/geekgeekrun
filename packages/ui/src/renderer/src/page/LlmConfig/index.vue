@@ -218,7 +218,7 @@
               <div
                 v-if="index !== formContent.length - 1"
                 class="mt6px mb20px h1px"
-                style="background-color: #dcdcdc"
+                style="background-color: var(--el-border-color-light)"
               />
             </div>
           </div>
@@ -339,7 +339,7 @@ const handleSubmit = async () => {
     formContent.value = [getNewConfigItem()]
     return
   } else if (formContent.value.length > 1) {
-    const firstEnabledModel = formContent.value.find(it => it.enabled)
+    const firstEnabledModel = formContent.value.find((it) => it.enabled)
     if (!firstEnabledModel) {
       gtagRenderer('no_enabled_model_find_in_model_list')
       ElMessage.warning({
@@ -546,7 +546,7 @@ const openExternalLink = (url) => {
     }
   }
   footer {
-    background-color: #f0f0f0;
+    background-color: var(--el-fill-color-light);
   }
 }
 </style>

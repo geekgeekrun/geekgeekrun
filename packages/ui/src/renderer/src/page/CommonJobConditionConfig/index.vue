@@ -313,7 +313,7 @@
                               v-for="(text, i) in ['月薪下限', '月薪上限', '']"
                               :key="i"
                               :style="{
-                                borderBottom: '2px solid #f0f0f0'
+                                borderBottom: '2px solid var(--el-border-color-light)'
                               }"
                             >
                               {{ text }}
@@ -411,7 +411,7 @@
                 :style="{
                   width: '100%',
                   height: '1px',
-                  backgroundColor: '#f0f0f0',
+                  backgroundColor: 'var(--el-border-color-light)',
                   marginTop: '0.5lh'
                 }"
               />

@@ -6,8 +6,12 @@ import { createPinia } from 'pinia'
 import 'normalize.css'
 import './style/public.scss'
 import 'element-plus/dist/index.css'
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import 'virtual:uno.css'
 import 'animate.css'
+import { initColorScheme } from './hooks/useColorScheme'
+
+initColorScheme()
 
 const pinia = createPinia()
 createApp(App).use(pinia).use(router).use(ElementPlus).mount('#app')

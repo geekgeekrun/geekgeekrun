@@ -25,8 +25,8 @@
                   >DeepSeek-V3</span
                 >
                 <span
-                  class="ml4px pl6px pr6px pt4px pb2px color-black border-rd-full font-size-0.8em"
-                  style="background-color: #fff"
+                  class="ml4px pl6px pr6px pt4px pb2px border-rd-full font-size-0.8em"
+                  style="background-color: var(--el-bg-color); color: var(--el-text-color-primary)"
                   >GPT-4o mini</span
                 >
                 <span
@@ -42,6 +42,7 @@
           <TopRight w-1em h-1em mr10px />
         </div>
       </a>
+      <RouterLink to="./OtherSettings">其他设置</RouterLink>
     </div>
   </div>
 </template>

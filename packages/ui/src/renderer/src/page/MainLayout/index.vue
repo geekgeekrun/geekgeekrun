@@ -97,13 +97,13 @@ void taskManagerStore
 
 <style lang="scss" scoped>
 .aside-nav {
-  background-image: linear-gradient(45deg, #eaf4f1, #dcf6f2);
+  background-image: linear-gradient(45deg, var(--app-aside-bg-from), var(--app-aside-bg-to));
   .nav-list {
     hr.group-divider {
       width: 100%;
       border: 0 solid;
       height: 1px;
-      background-color: #b3c8c3;
+      background-color: var(--app-aside-divider-color);
       margin-top: 4px;
       margin-bottom: 4px;
       margin-right: 0;
@@ -122,6 +122,6 @@ void taskManagerStore
   display: flex;
   flex: 1;
   height: 100%;
-  box-shadow: -4px 1px 20px rgb(50 114 108 / 29%);
+  box-shadow: -4px 1px 20px var(--app-aside-shadow-color);
 }
 </style>

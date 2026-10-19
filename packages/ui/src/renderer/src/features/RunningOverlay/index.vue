@@ -14,7 +14,8 @@
           h160px
           w-full
           :style="{
-            backgroundImage: 'linear-gradient(#666, #666)'
+            backgroundImage:
+              'linear-gradient(var(--el-fill-color-darker), var(--el-fill-color-darker))'
           }"
         ></div>
       </div>
@@ -221,7 +222,7 @@ ipcRenderer.on('worker-exited', (ev, payload) => {
   backdrop-filter: blur(3px);
 
   background-color: transparent;
-  background-image: radial-gradient(transparent 1px, #fff 1px);
+  background-image: radial-gradient(transparent 1px, var(--el-bg-color) 1px);
   background-size: 4px 4px;
 
   .el-overlay-dialog {

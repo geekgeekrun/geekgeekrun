@@ -306,7 +306,7 @@ const getSearchSourceTipText = (element) => {
     margin-left: 20px;
   }
   .list-group-item {
-    background-color: #fff;
+    background-color: var(--el-bg-color);
     list-style: none;
     display: flex;
     flex-direction: column;

@@ -1,6 +1,6 @@
 .group-item {
   .group-title {
-    color: #849492;
+    color: var(--el-text-color-secondary);
     font-size: 12px;
     padding: 0.25em 0;
   }
@@ -14,12 +14,12 @@
       padding-left: 1em;
       font-size: 14px;
       &.router-link-active {
-        background-color: #fff;
+        background-color: var(--el-bg-color);
         font-weight: 700;
         color: #2faa9e;
         border-radius: 9999px 0 0 9999px;
         position: relative;
-        box-shadow: 0px 0px 10px rgba(50, 114, 108, 0.187);
+        box-shadow: 0px 0px 10px var(--app-aside-shadow-color);
       }
     }
   }

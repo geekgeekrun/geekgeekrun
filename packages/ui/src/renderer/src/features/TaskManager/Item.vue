@@ -3,15 +3,25 @@
     <div>
       <div flex flex-col position-relative>
         <div>
-          <el-button type="danger" size="small" @click="stopTask(task.workerId)">结束任务</el-button>
+          <el-button type="danger" size="small" @click="stopTask(task.workerId)"
+            >结束任务</el-button
+          >
         </div>
         <img block :src="task.screenshot" height="190" width="360" />
-        <div position-absolute bottom-0 right-0 font-size-12px :style="{
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          color: '#fff',
-          padding: '2px 4px 2px 6px',
-          borderRadius: '8px 0 0 0'
-        }">{{ task.screenshotAt ? dayjs(task.screenshotAt).format('YYYY-MM-DD HH:mm:ss') : ' - ' }}</div>
+        <div
+          position-absolute
+          bottom-0
+          right-0
+          font-size-12px
+          :style="{
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            color: '#fff',
+            padding: '2px 4px 2px 6px',
+            borderRadius: '8px 0 0 0'
+          }"
+        >
+          {{ task.screenshotAt ? dayjs(task.screenshotAt).format('YYYY-MM-DD HH:mm:ss') : ' - ' }}
+        </div>
       </div>
     </div>
     <div ml-30px>
@@ -73,7 +83,7 @@ const stopTask = async (workerId: string) => {
     display: flex;
     padding-top: 4px;
     padding-bottom: 4px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--el-border-color-light);
     dt {
       width: 6em;
       flex: 0 0 6em;

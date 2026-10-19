@@ -79,6 +79,13 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'OtherSettings',
+        component: () => import('@renderer/page/OtherSettings/index.vue'),
+        meta: {
+          title: '其他设置'
+        }
+      },
+      {
         path: 'GeekAutoStartChatWithBoss',
         component: () => import('@renderer/page/MainLayout/GeekAutoStartChatWithBoss/index.vue'),
         meta: {

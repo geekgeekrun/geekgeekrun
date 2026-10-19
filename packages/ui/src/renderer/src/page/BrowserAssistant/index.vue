@@ -398,7 +398,7 @@ a:link,
 a:visited,
 a:hover,
 a:active {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .faq-main {
@@ -407,7 +407,7 @@ a:active {
       padding: 4px 0;
     }
     .faq-answer {
-      color: #666;
+      color: var(--el-text-color-secondary);
       margin-left: 12px;
       ul {
         margin-top: 0;

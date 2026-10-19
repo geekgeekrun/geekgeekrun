@@ -1,12 +1,43 @@
-html, body {
+:root {
+  --app-aside-bg-from: #eaf4f1;
+  --app-aside-bg-to: #dcf6f2;
+  --app-aside-divider-color: #b3c8c3;
+  --app-aside-shadow-color: rgb(50 114 108 / 29%);
+  --app-diff-added-bg: #eaf2c2;
+  --app-diff-added-color: #406619;
+  --app-diff-removed-bg: #fadad7;
+  --app-diff-removed-color: #b30000;
+  --app-diff-chunk-header-color: #8a008b;
+  --app-chat-bubble-bg: #d1f0ef;
+  --app-chat-bubble-color: #333;
+}
+html.dark {
+  --app-aside-bg-from: #1d2927;
+  --app-aside-bg-to: #141c1b;
+  --app-aside-divider-color: #32423f;
+  --app-aside-shadow-color: rgb(0 0 0 / 45%);
+  --app-diff-added-bg: #2b3a1c;
+  --app-diff-added-color: #b6d78a;
+  --app-diff-removed-bg: #4a2320;
+  --app-diff-removed-color: #f0a49e;
+  --app-diff-chunk-header-color: #d98bda;
+  --app-chat-bubble-bg: #213230;
+  --app-chat-bubble-color: #e5eaf3;
+}
+html,
+body {
   --monospace-font-family: Monaco, Consolas, Menlo;
   --sans-serif-font-family: 'PingFang SC', 'Microsoft Yahei', Helvetica, Arial;
   font-family: var(--monospace-font-family), var(--sans-serif-font-family);
   position: relative;
   width: 100%;
   height: 100%;
+  background-color: var(--el-bg-color);
+  color: var(--el-text-color-primary);
 }
-button, input, textarea {
+button,
+input,
+textarea {
   font-family: inherit;
 }
 #app {
@@ -19,5 +50,21 @@ a {
   &:visited {
     color: inherit;
     text-decoration: none;
+  }
+}
+html.dark {
+  [class~='bg-#f0f0f0'] {
+    background-color: var(--el-border-color-light);
+  }
+  [class~='bg-#f6f6f6'],
+  [class~='bg-#f8f8f8'] {
+    background-color: var(--el-fill-color-light);
+  }
+  [class~='color-#999'],
+  [class~='color-#666'] {
+    color: var(--el-text-color-secondary);
+  }
+  [class~='color-#bbb'] {
+    color: var(--el-text-color-disabled);
   }
 }

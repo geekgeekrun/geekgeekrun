@@ -46,7 +46,7 @@
               <div pl-1.5em font-size-12px>
                 <div
                   :style="{
-                    color: formContent.isSageTimeEnabled ? '' : '#aaa'
+                    color: formContent.isSageTimeEnabled ? '' : 'var(--el-text-color-disabled)'
                   }"
                 >
                   当如下行为的次数总计达
@@ -470,7 +470,7 @@
                     : commonJobConditionConfig
                   ).blockCompanyNameRegExpStr?.length
                     ? {
-                        borderLeft: '1px solid #f0f0f0'
+                        borderLeft: '1px solid var(--el-border-color-light)'
                       }
                     : {
                         borderLeft: '1px solid transparent',
@@ -620,7 +620,7 @@
                   "
                   :style="{
                     width: '400px',
-                    borderLeft: '1px solid #f0f0f0',
+                    borderLeft: '1px solid var(--el-border-color-light)',
                     paddingLeft: '10px',
                     flex: `0 0 auto`
                   }"
@@ -831,7 +831,7 @@
                                     v-for="(text, i) in ['月薪下限', '月薪上限', '']"
                                     :key="i"
                                     :style="{
-                                      borderBottom: '2px solid #f0f0f0'
+                                      borderBottom: '2px solid var(--el-border-color-light)'
                                     }"
                                   >
                                     {{ text }}
@@ -988,7 +988,7 @@
                                     v-for="(text, i) in ['月薪下限', '月薪上限', '']"
                                     :key="i"
                                     :style="{
-                                      borderBottom: '2px solid #f0f0f0'
+                                      borderBottom: '2px solid var(--el-border-color-light)'
                                     }"
                                   >
                                     {{ text }}
@@ -1041,7 +1041,7 @@
                   v-if="isShowSalaryMarkAsNotSuitStrategy"
                   :style="{
                     width: '400px',
-                    borderLeft: '1px solid #f0f0f0',
+                    borderLeft: '1px solid var(--el-border-color-light)',
                     paddingLeft: '10px',
                     flex: `0 0 auto`
                   }"
@@ -1143,7 +1143,7 @@
                   v-if="formContent.expectWorkExpList?.length"
                   :style="{
                     width: '400px',
-                    borderLeft: '1px solid #f0f0f0',
+                    borderLeft: '1px solid var(--el-border-color-light)',
                     paddingLeft: '10px',
                     flex: `0 0 auto`
                   }"
@@ -1326,7 +1326,7 @@
                     :style="{
                       width: '100%',
                       height: '1px',
-                      backgroundColor: '#f0f0f0',
+                      backgroundColor: 'var(--el-border-color-light)',
                       marginTop: '0.5lh'
                     }"
                   />
@@ -1571,7 +1571,7 @@
                   "
                   :style="{
                     width: '400px',
-                    borderLeft: '1px solid #f0f0f0',
+                    borderLeft: '1px solid var(--el-border-color-light)',
                     paddingLeft: '10px',
                     flex: `0 0 auto`
                   }"
@@ -2526,7 +2526,7 @@ const fillCommonConfigField = (field) => {
     margin-bottom: 0;
     .job-source-drag-orderer {
       margin-top: 10px;
-      background-color: #fff;
+      background-color: var(--el-bg-color);
       padding: 20px;
       border: 1px solid var(--el-card-border-color);
       border-radius: 4px;

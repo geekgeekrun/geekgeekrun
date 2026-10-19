@@ -14,7 +14,7 @@
             return {
               backgroundColor:
                 duplicatedMap.get(getStaticCombineFilterKey(row))?.length > 1
-                  ? '#fcd4b7'
+                  ? 'var(--el-color-warning-light-8)'
                   : 'transparent'
             }
           }

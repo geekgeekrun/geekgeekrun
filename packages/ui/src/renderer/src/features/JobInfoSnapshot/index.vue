@@ -52,7 +52,7 @@ defineProps({
 <style lang="scss" scoped>
 .form {
   :deep(.el-form-item__label) {
-    color: #999;
+    color: var(--el-text-color-secondary);
   }
 }
 </style>

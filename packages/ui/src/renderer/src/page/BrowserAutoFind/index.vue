@@ -58,6 +58,6 @@ a:link,
 a:visited,
 a:hover,
 a:active {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 </style>

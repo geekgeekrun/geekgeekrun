@@ -175,7 +175,7 @@
                   <div
                     v-if="index !== formContent.geekWorkExpList.length - 1"
                     class="mt20px mb20px h1px"
-                    style="background-color: #dcdcdc"
+                    style="background-color: var(--el-border-color-light)"
                   />
                 </div>
               </div>
@@ -295,7 +295,7 @@
                   <div
                     v-if="index !== formContent.geekProjExpList.length - 1"
                     class="mt20px mb20px h1px"
-                    style="background-color: #dcdcdc"
+                    style="background-color: var(--el-border-color-light)"
                   />
                 </div>
               </div>
@@ -556,7 +556,7 @@ onMounted(() => {
     }
   }
   footer {
-    background-color: #f0f0f0;
+    background-color: var(--el-fill-color-light);
   }
 }
 </style>

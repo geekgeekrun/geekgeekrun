@@ -2,18 +2,24 @@
   <div>
     <el-form>
       <el-row>
-        <el-col :span="6"><el-form-item label="公司">{{ jobInfo.companyName }}</el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="BOSS及其身份">{{ jobInfo.bossName }} {{ jobInfo.bossTitle }}</el-form-item></el-col>
+        <el-col :span="6"
+          ><el-form-item label="公司">{{ jobInfo.companyName }}</el-form-item></el-col
+        >
+        <el-col :span="6"
+          ><el-form-item label="职位名称">{{ jobInfo.jobName }}</el-form-item></el-col
+        >
+        <el-col :span="6"
+          ><el-form-item label="职位分类">{{ jobInfo.positionName }}</el-form-item></el-col
+        >
+        <el-col :span="6"
+          ><el-form-item label="BOSS及其身份"
+            >{{ jobInfo.bossName }} {{ jobInfo.bossTitle }}</el-form-item
+          ></el-col
+        >
       </el-row>
     </el-form>
     <el-divider content-position="left">变更记录</el-divider>
-    <el-table
-      class="diff-table"
-      :data="dataForRender"
-      :row-style="getRowStyle"
-    >
+    <el-table class="diff-table" :data="dataForRender" :row-style="getRowStyle">
       <el-table-column prop="title" label="" width="150px" fixed />
       <el-table-column
         v-for="(item, index) in tableProps"
@@ -29,7 +35,9 @@
               :disabled="tableProps.length > 1"
               @show="gtagRenderer('tooltip_show_about_lake_of_compare_item')"
             >
-              <el-radio v-model="diffPivot" :label="item.value" :disabled="tableProps.length <= 1">作为diff基准</el-radio>
+              <el-radio v-model="diffPivot" :label="item.value" :disabled="tableProps.length <= 1"
+                >作为diff基准</el-radio
+              >
             </el-tooltip>
           </div>
         </template>
@@ -113,15 +121,12 @@ watch(
   }
 )
 
-function getRowStyle ({ row }) {
-  const propsToCompare = tableProps.value.map(it => it.value)
+function getRowStyle({ row }) {
+  const propsToCompare = tableProps.value.map((it) => it.value)
   for (let i = 0; i < propsToCompare.length - 1; i++) {
-    if (
-      row[propsToCompare[i]]?.trim() !==
-      row[propsToCompare[i + 1]]?.trim()
-    ) {
+    if (row[propsToCompare[i]]?.trim() !== row[propsToCompare[i + 1]]?.trim()) {
       return {
-        backgroundColor: '#fffeef'
+        backgroundColor: 'var(--el-color-warning-light-9)'
       }
     }
   }
@@ -132,7 +137,7 @@ function getRowStyle ({ row }) {
 <style lang="scss" scoped>
 .form {
   :deep(.el-form-item__label) {
-    color: #999;
+    color: var(--el-text-color-secondary);
   }
 }
 .diff-table {

@@ -38,18 +38,18 @@ pre {
 }
 del {
   text-decoration: line-through;
-  color: #b30000;
-  background: #fadad7;
+  color: var(--app-diff-removed-color);
+  background: var(--app-diff-removed-bg);
 }
 
 ins {
-  background: #eaf2c2;
-  color: #406619;
+  background: var(--app-diff-added-bg);
+  color: var(--app-diff-added-color);
   text-decoration: none;
 }
 
 .chunk-header {
-  color: #8a008b;
+  color: var(--app-diff-chunk-header-color);
   text-decoration: none;
 }
 </style>

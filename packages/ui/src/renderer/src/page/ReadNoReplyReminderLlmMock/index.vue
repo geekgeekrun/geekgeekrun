@@ -43,7 +43,7 @@
               </div>
             </template>
             <!-- eslint-disable-next-line prettier/prettier -->
-            <template v-if="(typeof item.usedLlmConfig !== 'string')">
+            <template v-if="typeof item.usedLlmConfig !== 'string'">
               <div
                 :style="{
                   width: 'fit-content',
@@ -61,7 +61,7 @@
                   whiteSpace: 'nowrap',
                   textOverflow: 'ellipsis',
                   alignSelf: 'flex-end',
-                  color: '#bbb'
+                  color: 'var(--el-text-color-disabled)'
                 }"
                 font-size-10px
                 w-fit-content
@@ -111,7 +111,7 @@
         height: `fit-content`,
         paddingTop: `10px`,
         paddingBottom: `10px`,
-        backgroundColor: `#f0f0f0`
+        backgroundColor: `var(--el-fill-color-light)`
       }"
     >
       <el-select v-model="selectedLlmConfig" ml10px w160px placeholder="随机使用一个模型">
@@ -142,7 +142,7 @@
           <div
             v-if="it?.providerCompleteApiUrl?.trim?.()"
             :style="{
-              color: '#bbb',
+              color: 'var(--el-text-color-disabled)',
               width: '35em',
               fontSize: '12px',
               overflow: 'hidden',
@@ -343,8 +343,8 @@ gtagRenderer('enter_mock_chat_page')
   .message-item {
     line-height: 1.25em;
     font-size: 14px;
-    background-color: #d1f0ef;
-    color: #333;
+    background-color: var(--app-chat-bubble-bg);
+    color: var(--app-chat-bubble-color);
     padding: 10px;
     border-radius: 8px 8px 0 0;
     &.will-enter-context {
